@@ -3,7 +3,7 @@ import { Bell, CheckCheck, Receipt, AlertTriangle, CheckCircle2, MessageSquare, 
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { cn } from '../lib/utils';
-import { GlassIconMoon } from './GlassIcons';
+import { GlassIconClock } from './GlassIcons';
 
 const iconMap = {
   invoice: Receipt,
@@ -71,7 +71,7 @@ export function TopHeader() {
         ) : mode === 'dark' ? (
           <Moon size={18} className="text-indigo-400 drop-shadow-[0_2px_6px_rgba(99,102,241,0.3)]" />
         ) : (
-          <GlassIconMoon size={19} className="shrink-0" />
+          <GlassIconClock size={19} className="shrink-0" />
         )}
         <span className="text-xs font-semibold">
           {getThemeLabel()}

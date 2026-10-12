@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { GlassIconProfile, GlassIconLocation, GlassIconHome, GlassIconMoon } from './GlassIcons';
+import { GlassIconProfile, GlassIconLocation, GlassIconHome, GlassIconClock } from './GlassIcons';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
 import { cn } from '../lib/utils';
 
@@ -279,7 +279,7 @@ export function Profile() {
               )}
             >
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
-                <GlassIconMoon size={22} />
+                <GlassIconClock size={24} />
               </div>
               <div>
                 <span className="text-sm font-bold block">Tự động</span>
