@@ -6,7 +6,6 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { apiFetch, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
-import { subscribeRealtimeNotifications, subscribeRealtimeRoom } from '../services/firebaseCloudService';
 
 export interface InvoiceDetailItem {
   name: string;
@@ -970,79 +969,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [profile.room?.roomNumber, profile.room?.building]);
 
-  // Live realtime updates via Firebase Cloud Firestore with fallback polling
+  // Periodic notification polling (every 8s)
   useEffect(() => {
     refreshNotifications();
-    const interval = setInterval(refreshNotifications, 10000);
-
-    // Subscribe to Firestore Realtime updates
-    const room = profile.room?.roomNumber || '';
-    const building = profile.room?.building || '';
-    const unsubscribeFirestore = subscribeRealtimeNotifications(room, building, (firestoreNotifs) => {
-      if (firestoreNotifs && firestoreNotifs.length > 0) {
-        setNotifications(prev => {
-          const fsIds = new Set(firestoreNotifs.map(n => n.id));
-          const localOnly = prev.filter(n => !fsIds.has(n.id));
-          const merged = [...firestoreNotifs, ...localOnly];
-          storage.setItem('ecostay_notifications', JSON.stringify(merged));
-          return merged;
-        });
-      }
-    });
-
-    return () => {
-      clearInterval(interval);
-      if (unsubscribeFirestore) unsubscribeFirestore();
-    };
-  }, [refreshNotifications, profile.room?.roomNumber, profile.room?.building]);
-
-  // Live Realtime Firestore Room Status Listener for Resident (Instant sub-second payment status updates)
-  useEffect(() => {
-    const roomNum = profile.room?.roomNumber;
-    if (!roomNum || profile.isAdmin) return;
-
-    const unsubRoom = subscribeRealtimeRoom(roomNum, (roomData) => {
-      if (!roomData) return;
-      const pStatus = roomData.paymentStatus || roomData.status;
-      if (pStatus === 'paid') {
-        setInvoices(prev => {
-          if (!prev || prev.length === 0) return prev;
-          return prev.map((inv, idx) => {
-            if (idx === 0) {
-              return {
-                ...inv,
-                status: 'paid',
-                paymentMethod: inv.paymentMethod || 'qr',
-                paidAt: inv.paidAt || 'Vừa thanh toán'
-              };
-            }
-            return inv;
-          });
-        });
-      } else if (pStatus === 'unpaid') {
-        setInvoices(prev => {
-          if (!prev || prev.length === 0) return prev;
-          // CRITICAL: Google Sheet is the Source of Truth. If invoice is already paid, do NOT revert to unpaid.
-          if (prev[0] && prev[0].status === 'paid') {
-            return prev;
-          }
-          return prev.map((inv, idx) => {
-            if (idx === 0) {
-              return {
-                ...inv,
-                status: 'unpaid'
-              };
-            }
-            return inv;
-          });
-        });
-      }
-    });
-
-    return () => {
-      unsubRoom();
-    };
-  }, [profile.room?.roomNumber, profile.isAdmin]);
+    const interval = setInterval(refreshNotifications, 8000);
+    return () => clearInterval(interval);
+  }, [refreshNotifications]);
 
   // Default to launching tour guide every time for residents as requested
   useEffect(() => {

@@ -185,6 +185,26 @@ async function startServer() {
   });
 
   // =========================================================================
+  // TWO-WAY SYNC HELPER: GOOGLE APPS SCRIPT WEB APP
+  // Direct bidirectional communication with Google Sheets
+  // =========================================================================
+  const GOOGLE_APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec";
+
+  function pushPaymentToGoogleSheet(room: string, status: 'paid' | 'unpaid', month: string = '10/2026') {
+    try {
+      const qParams = new URLSearchParams({
+        action: 'update_payment',
+        room: String(room),
+        status,
+        month
+      });
+      fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+    } catch (e) {
+      console.warn('[GoogleSheetSync] Error pushing payment to Google Sheet:', e);
+    }
+  }
+
+  // =========================================================================
   // SEPAY WEBHOOK INTEGRATION ENDPOINT
   // Receives automatic bank notifications when resident transfers money
   // Webhook URL to configure in SePAY: https://[your-app-domain]/api/sepay/webhook
@@ -236,6 +256,7 @@ async function startServer() {
       if (matchedRoom) {
         const txnRef = referenceCode || `SEPAY-${id || Date.now()}`;
         setInvoicePaidByWebhook(matchedRoom, txnRef, transferAmount, 'qr');
+        pushPaymentToGoogleSheet(matchedRoom, 'paid');
         console.log(`[SePAY Webhook] Successfully marked Room ${matchedRoom} as PAID (Cột P: GREEN) via transaction ${txnRef}`);
       }
 
@@ -263,6 +284,7 @@ async function startServer() {
 
       const txn = transactionId || `TXN-${Date.now()}`;
       setInvoicePaidByWebhook(roomNumber, txn, amount, 'qr');
+      pushPaymentToGoogleSheet(roomNumber, 'paid', month);
 
       const status = getRoomColumnPStatus(roomNumber);
       return res.json({
@@ -287,6 +309,7 @@ async function startServer() {
 
       const txn = transactionId || `TXN-${Date.now()}`;
       setInvoicePaidByWebhook(roomNumber, txn, amount, 'qr');
+      pushPaymentToGoogleSheet(roomNumber, 'paid', month);
 
       const status = getRoomColumnPStatus(roomNumber);
       return res.json({
@@ -304,12 +327,13 @@ async function startServer() {
   // Backend API: Mark unpaid -> Cột P: RED
   app.post('/api/payment/mark-unpaid', async (req, res) => {
     try {
-      const { roomNumber } = req.body || {};
+      const { roomNumber, month = '10/2026' } = req.body || {};
       if (!roomNumber) {
         return res.status(400).json({ success: false, error: 'Thiếu mã phòng' });
       }
 
       const status = setRoomColumnPStatus(roomNumber, 'RED');
+      pushPaymentToGoogleSheet(roomNumber, 'unpaid', month);
       return res.json({
         success: true,
         roomNumber,
@@ -461,8 +485,10 @@ async function startServer() {
       const { roomNumber, status, month } = req.body || {};
       if (status === 'paid') {
         setRoomColumnPStatus(roomNumber, 'GREEN', { month });
+        pushPaymentToGoogleSheet(roomNumber, 'paid', month);
       } else {
         setRoomColumnPStatus(roomNumber, 'RED', { month });
+        pushPaymentToGoogleSheet(roomNumber, 'unpaid', month);
       }
       res.json({ success: true, message: `Đã cập nhật trạng thái phòng ${roomNumber}` });
     } catch (e: any) {
@@ -590,60 +616,16 @@ async function startServer() {
   });
 
   // =========================================================================
-  // GOOGLE SHEETS -> FIREBASE CLOUD FIRESTORE SYNC
+  // GOOGLE SHEETS LIVE SYNC ENDPOINT
   // =========================================================================
   app.post('/api/admin/sync-firestore', async (req, res) => {
     try {
       const { month = '10/2026' } = req.body || {};
       const billing = await getMonthlyBilling(month);
-      const apiKey = "AIzaSyD9ncRfQXciyMwYIAkxGf95kEp8btzFe4s";
-      const baseUrl = "https://firestore.googleapis.com/v1/projects/tro-hub/databases/(default)/documents";
-
-      let count = 0;
-      for (const item of billing) {
-        if (!item.room) continue;
-        const cleanRoomId = item.room.replace(/[^a-zA-Z0-9]/g, '_');
-        const url = `${baseUrl}/rooms/${cleanRoomId}?key=${apiKey}`;
-        const firestoreFields: any = {};
-        for (const [k, v] of Object.entries(item)) {
-          if (typeof v === 'number') {
-            firestoreFields[k] = { integerValue: String(v) };
-          } else if (typeof v === 'boolean') {
-            firestoreFields[k] = { booleanValue: v };
-          } else {
-            firestoreFields[k] = { stringValue: String(v || '') };
-          }
-        }
-        firestoreFields['month'] = { stringValue: month };
-        firestoreFields['updatedAt'] = { stringValue: new Date().toISOString() };
-        firestoreFields['statusText'] = { stringValue: item.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng' };
-
-        await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields: firestoreFields })
-        });
-        count++;
-      }
-
-      const sysUrl = `${baseUrl}/system_info/last_sync?key=${apiKey}`;
-      await fetch(sysUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: {
-            totalRooms: { integerValue: String(count) },
-            month: { stringValue: month },
-            lastSyncedAt: { stringValue: new Date().toISOString() },
-            status: { stringValue: 'success' }
-          }
-        })
-      });
-
-      console.log(`[API /api/admin/sync-firestore] Synced ${count} rooms for month ${month} to Firestore`);
-      res.json({ success: true, count, month });
+      console.log(`[API /api/admin/sync] Verified ${billing.length} rooms for month ${month} directly from Google Sheet`);
+      res.json({ success: true, count: billing.length, month });
     } catch (e: any) {
-      console.error('[API /api/admin/sync-firestore] Error:', e);
+      console.error('[API /api/admin/sync] Error:', e);
       res.status(500).json({ success: false, error: e.message });
     }
   });

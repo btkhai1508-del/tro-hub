@@ -31,18 +31,14 @@ import {
   Moon,
   Send,
   Check,
-  AlertTriangle,
-  CloudUpload
+  AlertTriangle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
 import { cn } from '../lib/utils';
 import { apiFetch } from '../lib/api';
-import { db } from '../lib/firebase';
-import { collection, getDocs, doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { pushNotificationToFirestore, subscribeRealtimeAllRooms } from '../services/firebaseCloudService';
-import { syncGoogleSheetToFirestore, canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
+import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { GlassIconMoon } from './GlassIcons';
 import { 
   IconHome3D, 
@@ -236,14 +232,7 @@ export function AdminPortal() {
       console.warn('Could not save notification to storage', e);
     }
 
-    // Push to Cloud Firestore for instantaneous Realtime distribution to residents
-    pushNotificationToFirestore({
-      ...newNotifItem,
-      target: notifTarget,
-      customRooms: selectedCustomRooms,
-      scheduledAt: notifScheduleMode === 'scheduled' ? notifScheduledDate : null,
-      createdAt: new Date().toISOString()
-    }).catch(err => console.warn('[Firestore] pushNotification error:', err));
+    // Push to backend store for realtime distribution to residents
 
     apiFetch('/api/admin/notifications', {
       method: 'POST',
@@ -272,32 +261,7 @@ export function AdminPortal() {
 
   // Loading
   const [isLoading, setIsLoading] = useState(false);
-  const [isSyncingFirestore, setIsSyncingFirestore] = useState(false);
-  const [syncStatusMsg, setSyncStatusMsg] = useState('');
 
-  const handleSyncFirestore = async () => {
-    playSound('click');
-    setIsSyncingFirestore(true);
-    setSyncStatusMsg('');
-    try {
-      const res = await apiFetch('/api/admin/sync-firestore', {
-        method: 'POST',
-        body: JSON.stringify({ month: selectedMonth })
-      });
-      const data = await res.json();
-      setIsSyncingFirestore(false);
-      if (data && data.success) {
-        playSound('success');
-        setSyncStatusMsg(`✅ Đã đồng bộ ${data.count} phòng từ Google Sheet sang Firebase Firestore!`);
-        setTimeout(() => setSyncStatusMsg(''), 5000);
-      } else {
-        alert('Lỗi đồng bộ: ' + (data?.error || 'Vui lòng thử lại'));
-      }
-    } catch (e: any) {
-      setIsSyncingFirestore(false);
-      alert('Không thể kết nối máy chủ đồng bộ: ' + e.message);
-    }
-  };
 
   // Payment Gate state
   const [paymentGate, setPaymentGate] = useState<'START' | 'STOP'>('STOP');
@@ -461,54 +425,23 @@ export function AdminPortal() {
     });
   };
 
-  // Realtime instant Firestore sync for all rooms and system info
+  // Realtime Google Sheet sync for all rooms and payment gate status
   useEffect(() => {
     loadTabContent(activeMenu, selectedMonth);
     loadPaymentGateStatus(selectedMonth);
 
-    // 1. Instant Realtime Firestore Listener (only applies when viewing the current active month)
-    const unsubRooms = subscribeRealtimeAllRooms((rooms) => {
-      if (selectedMonth === '10/2026' && rooms && rooms.length > 0) {
-        setRoomsList(rooms);
-        setBillingList(rooms);
-        updateDashboardStats(rooms, selectedMonth);
-
-        // Keep active room modal updated in real-time
-        setCurrentRoomData(prev => {
-          if (!prev) return prev;
-          const updated = rooms.find(r => canonicalRoomId(r.room) === canonicalRoomId(prev.room));
-          return updated ? { ...prev, ...updated } : prev;
-        });
+    // Periodic auto-polling for Google Sheet updates (every 8 seconds)
+    const interval = setInterval(() => {
+      if (activeMenu === 'dashboard' || activeMenu === 'rooms' || activeMenu === 'billing') {
+        fetchRooms(selectedMonth);
       }
-    });
+      loadPaymentGateStatus(selectedMonth);
+    }, 8000);
 
-    // 2. Realtime Payment Gate Listener
-    const unsubGate = onSnapshot(doc(db, 'system_info', 'payment_gate'), (snap) => {
-      if (snap.exists() && snap.data()?.value) {
-        setPaymentGate(snap.data().value);
-      }
-    });
-
-    // 3. Background sync with Google Sheet into Firebase Firestore (only for active month)
-    if (selectedMonth === '10/2026') {
-      syncGoogleSheetToFirestore(selectedMonth).catch(err =>
-        console.warn('[AutoSync] Background sheet sync error:', err)
-      );
-    }
-
-    return () => {
-      unsubRooms();
-      unsubGate();
-    };
+    return () => clearInterval(interval);
   }, [selectedMonth, activeMenu]);
 
   const loadPaymentGateStatus = (m: string) => {
-    getDoc(doc(db, 'system_info', 'payment_gate')).then(snap => {
-      if (snap.exists() && snap.data().value) {
-        setPaymentGate(snap.data().value);
-      }
-    }).catch(() => {});
-
     apiFetch(`/api/admin/payment-gate?month=${m}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
@@ -525,13 +458,6 @@ export function AdminPortal() {
     playSound('click');
     const nextVal = paymentGate === 'START' ? 'STOP' : 'START';
     setPaymentGate(nextVal);
-    try {
-      await setDoc(doc(db, 'system_info', 'payment_gate'), {
-        month: selectedMonth,
-        value: nextVal,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (e) {}
 
     apiFetch('/api/admin/payment-gate', {
       method: 'POST',
@@ -541,81 +467,9 @@ export function AdminPortal() {
     playSound('success');
   };
 
-  const fetchRoomsFromFirestore = async (month: string) => {
-    try {
-      const snap = await getDocs(collection(db, 'rooms'));
-      if (!snap.empty) {
-        // Deduplicate rooms by canonicalRoomId (ignoring underscore aliases like LVC_101)
-        const roomMap = new Map<string, any>();
-        snap.docs.forEach(d => {
-          const data = d.data();
-          const cleanKey = canonicalRoomId(data.room || d.id);
-          if (!cleanKey) return;
-          // Prefer canonical format if already exists
-          if (!roomMap.has(cleanKey) || !d.id.includes('_')) {
-            roomMap.set(cleanKey, {
-              room: cleanKey,
-              name: data.name || data.nguoi1 || `Phòng ${cleanKey}`,
-              phone: data.phone || data.sdt1 || '',
-              status: data.paymentStatus || data.status || 'unpaid',
-              statusText: data.statusText || (data.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'),
-              paymentStatus: data.paymentStatus || data.status || 'unpaid',
-              statusHTML: data.paymentStatus === 'paid'
-                ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
-                : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>',
-              tongTien: Number(data.tongTien) || 0,
-              tienPhong: Number(data.tienPhong) || 0,
-              tienDien: Number(data.tienDien) || 0,
-              tienNuoc: Number(data.tienNuoc) || 0,
-              tienRac: Number(data.tienRac) || 0,
-              tienNet: Number(data.tienNet) || 0,
-              tienXe: Number(data.tienXe) || 0,
-              tienKhac: Number(data.tienKhac) || 0,
-              tienCoc: Number(data.tienCoc) || 0,
-              dienCu: Number(data.dienCu) || 0,
-              dienMoi: Number(data.dienMoi) || 0,
-              dienUsed: Number(data.dienUsed) || 0,
-              nuocCu: Number(data.nuocCu) || 0,
-              nuocMoi: Number(data.nuocMoi) || 0,
-              nuocUsed: Number(data.nuocUsed) || 0,
-              nguoi1: data.nguoi1 || '',
-              cccd1: data.cccd1 || '',
-              sdt1: data.sdt1 || '',
-              xe1: data.xe1 || '',
-              nguoi2: data.nguoi2 || '',
-              cccd2: data.cccd2 || '',
-              sdt2: data.sdt2 || '',
-              xe2: data.xe2 || '',
-              nguoi3: data.nguoi3 || '',
-              cccd3: data.cccd3 || '',
-              sdt3: data.sdt3 || '',
-              xe3: data.xe3 || '',
-              soNguoi: Number(data.soNguoi) || 1,
-              soXe: Number(data.soXe) || 1,
-              ...data
-            });
-          }
-        });
-
-        const list = Array.from(roomMap.values());
-        if (list.length > 0) {
-          setRoomsList(list);
-          setBillingList(list);
-          updateDashboardStats(list, month);
-        }
-      }
-    } catch (e) {
-      console.warn('Firestore fetch error:', e);
-    }
-    setIsLoading(false);
-  };
-
   const loadTabContent = async (menuKey: string, month: string) => {
     if (menuKey === 'dashboard') {
       setIsLoading(true);
-      if (month === '10/2026') {
-        fetchRoomsFromFirestore(month);
-      }
       apiFetch(`/api/admin/dashboard?month=${month}`)
         .then(res => {
           const ct = res.headers.get('content-type') || '';
@@ -639,30 +493,13 @@ export function AdminPortal() {
         })
         .then(d => {
           if (d.success && d.billing?.length) setBillingList(d.billing);
-          else if (month === '10/2026') fetchRoomsFromFirestore(month);
         })
-        .catch(() => {
-          if (month === '10/2026') fetchRoomsFromFirestore(month);
-        });
+        .catch(() => {});
     } else if (menuKey === 'plates') {
       fetchPlates(month, plateQuery);
     } else if (menuKey === 'declaration') {
       loadDeclaration(month, declarationHouse);
     } else if (menuKey === 'config') {
-      getDoc(doc(db, 'system_info', 'unit_config')).then(snap => {
-        if (snap.exists()) {
-          const d = snap.data();
-          setUnitConfig(prev => ({
-            ...prev,
-            dien: d.dien || prev.dien,
-            nuoc: d.nuoc || prev.nuoc,
-            rac: d.rac || prev.rac,
-            net: d.net || prev.net,
-            xe: d.xe || prev.xe
-          }));
-        }
-      }).catch(() => {});
-
       apiFetch(`/api/admin/config?month=${month}`)
         .then(res => {
           const ct = res.headers.get('content-type') || '';
@@ -689,10 +526,6 @@ export function AdminPortal() {
 
   const fetchRooms = (month: string) => {
     setIsLoading(true);
-    if (month === '10/2026') {
-      fetchRoomsFromFirestore(month);
-    }
-
     apiFetch(`/api/admin/rooms?month=${month}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
@@ -733,22 +566,7 @@ export function AdminPortal() {
       setIsLoading(false);
     }
 
-    // 2. Fetch fresh document from Firestore
-    getDoc(doc(db, 'rooms', cleanId)).then(snap => {
-      if (snap.exists()) {
-        const firestoreData = snap.data();
-        setCurrentRoomData(prev => ({
-          ...prev,
-          ...firestoreData,
-          statusHTML: firestoreData.paymentStatus === 'paid'
-            ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
-            : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>'
-        }));
-      }
-      setIsLoading(false);
-    }).catch(() => setIsLoading(false));
-
-    // 3. Optional backend call
+    // 2. Fetch fresh document from backend
     apiFetch(`/api/admin/room-detail?month=${selectedMonth}&room=${cleanId}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
@@ -756,11 +574,12 @@ export function AdminPortal() {
         return res.json();
       })
       .then(d => {
+        setIsLoading(false);
         if (d.success && d.data) {
           setCurrentRoomData(prev => ({ ...prev, ...d.data }));
         }
       })
-      .catch(() => {});
+      .catch(() => setIsLoading(false));
   };
 
   const fetchPlates = (month: string, q: string) => {
@@ -847,14 +666,6 @@ export function AdminPortal() {
   const saveDeclaration = async () => {
     playSound('click');
     try {
-      await setDoc(doc(db, 'system_info', `declaration_${declarationHouse}_${selectedMonth.replace('/', '_')}`), {
-        month: selectedMonth,
-        houseKey: declarationHouse,
-        rows: declarationRows,
-        sigDate: declarationSigDate,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-
       const res = await apiFetch('/api/admin/declaration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -881,12 +692,6 @@ export function AdminPortal() {
   const saveConfig = async () => {
     playSound('click');
     try {
-      await setDoc(doc(db, 'system_info', 'unit_config'), {
-        month: selectedMonth,
-        ...unitConfig,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-
       const res = await apiFetch('/api/admin/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -916,28 +721,7 @@ export function AdminPortal() {
       ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
       : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>';
 
-    // 1. Direct Firestore update
-    try {
-      await setDoc(doc(db, 'rooms', cleanId), {
-        paymentStatus: status,
-        status: status,
-        statusText,
-        statusHTML,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-
-      if (cleanId.includes('LVC-')) {
-        await setDoc(doc(db, 'rooms', cleanId.replace('-', '_')), {
-          paymentStatus: status,
-          status: status,
-          statusText
-        }, { merge: true });
-      }
-    } catch (err) {
-      console.warn('[Admin] Firestore payment status update error:', err);
-    }
-
-    // 2. Update local state
+    // 1. Update local state
     setRoomsList(prev => {
       const updated = prev.map(r => canonicalRoomId(r.room) === cleanId ? {
         ...r,
@@ -968,7 +752,7 @@ export function AdminPortal() {
       });
     }
 
-    // 3. Fallback backend call
+    // 2. Call backend
     apiFetch('/api/admin/payment-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -979,7 +763,7 @@ export function AdminPortal() {
       })
     }).catch(() => {});
 
-    // 4. Two-way sync: Push directly into Google Sheet
+    // 3. Two-way sync: Push directly into Google Sheet
     pushUpdateToGoogleSheet({
       action: 'update_payment',
       room: cleanId,
