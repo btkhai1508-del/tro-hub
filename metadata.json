@@ -1,0 +1,6 @@
+{
+  "name": "EcoStay",
+  "description": "Hệ sinh thái nhà trọ dành cho người thuê",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

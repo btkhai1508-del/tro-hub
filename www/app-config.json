@@ -1,0 +1,30 @@
+{
+  "app": {
+    "title": "EcoStay",
+    "headerTitle": {
+      "vi": "EcoStay - Trọ của tôi",
+      "en": "EcoStay"
+    },
+    "headerColor": {
+      "light": "#ffffff",
+      "dark": "#0b0f14"
+    },
+    "textColor": {
+      "light": "black",
+      "dark": "white"
+    },
+    "leftButton": "none",
+    "statusBar": "transparent",
+    "actionBarHidden": true,
+    "hideAndroidBottomNavigationBar": false,
+    "hideIOSSafeAreaBottom": false,
+    "selfControlLoading": false
+  },
+  "listCSS": [
+    "assets/index.BlHNBuoi.css"
+  ],
+  "listSyncJS": [
+    "assets/index.OIVq69Re.module.js"
+  ],
+  "listAsyncJS": []
+}

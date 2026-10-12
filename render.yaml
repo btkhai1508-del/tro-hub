@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: tro-hub
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: ecostay_jwt_secret_61954560911870422_super_secure_2026_auth
+      - key: ZALO_APP_ID
+        value: "61954560911870422"
+      - key: ZALO_APP_SECRET
+        value: "O1V2j2lf2G6hWQnJEXQN"
