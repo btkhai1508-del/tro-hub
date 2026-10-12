@@ -75,6 +75,11 @@ async function startServer() {
   // JSON Body parsing
   app.use(express.json());
 
+  // Health check endpoint for keep-alive cron pings (prevents Render spin-down)
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+  });
+
   // Backend API Route: Authenticate tenant workflow (phone + password)
   app.post('/api/auth/login', async (req, res) => {
     try {
