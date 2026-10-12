@@ -311,6 +311,10 @@ export function AdminPortal() {
   });
   const [configSaveMsg, setConfigSaveMsg] = useState('');
 
+  // Batch Meters State
+  const [batchMeters, setBatchMeters] = useState<Record<string, { dienCu?: number; dienMoi?: number; nuocCu?: number; nuocMoi?: number }>>({});
+  const [isSavingBatchMeters, setIsSavingBatchMeters] = useState(false);
+
   // Format currency
   const fmt = (n: number) => Number(n || 0).toLocaleString('vi-VN');
 
@@ -710,6 +714,52 @@ export function AdminPortal() {
       playSound('success');
       setConfigSaveMsg('✅ Đã lưu cấu hình đơn giá vào hệ thống!');
       setTimeout(() => setConfigSaveMsg(''), 3000);
+    }
+  };
+
+  const handleBatchMeterChange = (room: string, field: 'dienCu' | 'dienMoi' | 'nuocCu' | 'nuocMoi', val: number) => {
+    setBatchMeters(prev => ({
+      ...prev,
+      [room]: {
+        ...prev[room],
+        [field]: val
+      }
+    }));
+  };
+
+  const saveBatchMeters = async () => {
+    playSound('click');
+    const entries = Object.entries(batchMeters);
+    if (entries.length === 0) {
+      alert('Chưa có chỉ số nào được chỉnh sửa.');
+      return;
+    }
+    setIsSavingBatchMeters(true);
+    try {
+      for (const [room, meters] of entries) {
+        await apiFetch('/api/admin/room-detail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            month: selectedMonth,
+            room,
+            data: {
+              dienCu: meters.dienCu,
+              dienMoi: meters.dienMoi,
+              nuocCu: meters.nuocCu,
+              nuocMoi: meters.nuocMoi
+            }
+          })
+        });
+      }
+      playSound('success');
+      alert('✅ Đã lưu và đồng bộ chỉ số điện nước lên Google Sheets thành công!');
+      fetchRooms(selectedMonth);
+      setBatchMeters({});
+    } catch (err: any) {
+      alert('Lỗi lưu chỉ số: ' + (err.message || 'Vui lòng thử lại'));
+    } finally {
+      setIsSavingBatchMeters(false);
     }
   };
 
@@ -1175,7 +1225,7 @@ export function AdminPortal() {
                             <span>Kỳ thu phí {selectedMonth}</span>
                           </span>
                         </div>
-                        <h2 className="type-h2 text-slate-900 font-bold">
+                        <h2 className="type-h2 text-slate-900 dark:text-white font-bold">
                           Tổng Doanh Thu Thực Tế Cả 2 Tòa
                         </h2>
                       </div>
@@ -1194,19 +1244,19 @@ export function AdminPortal() {
                     <p className="type-label text-slate-400 mb-1">
                       Tổng tiền đã hạch toán cột P
                     </p>
-                    <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-slate-900">
+                    <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-slate-900 dark:text-white">
                       {fmt(dashboardData?.doanhThu ?? 0)}
                       <span className="text-2xl font-normal text-slate-400">₫</span>
                     </div>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="space-y-2 pt-4 border-t border-slate-900/5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                  <div className="space-y-2 pt-4 border-t border-slate-900/5 dark:border-white/5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
                       <span>Tỷ lệ hoàn thành thu phí:</span>
-                      <span className="font-num text-blue-600">{collectionPercent}%</span>
+                      <span className="font-num text-blue-600 dark:text-blue-400">{collectionPercent}%</span>
                     </div>
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-700"
                         style={{ width: `${collectionPercent}%` }}
@@ -1225,7 +1275,7 @@ export function AdminPortal() {
                     <div className="flex items-center gap-3">
                       <IconElectricity3D size={42} className="shrink-0 drop-shadow-xs" />
                       <div>
-                        <h3 className="type-h4 text-slate-900 font-bold">Điện tiêu thụ</h3>
+                        <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Điện tiêu thụ</h3>
                         <p className="text-[11px] text-slate-400 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
                       </div>
                     </div>
@@ -1239,7 +1289,7 @@ export function AdminPortal() {
                     <div className="flex items-center gap-3">
                       <IconWater3D size={42} className="shrink-0 drop-shadow-xs" />
                       <div>
-                        <h3 className="type-h4 text-slate-900 font-bold">Nước tiêu thụ</h3>
+                        <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Nước tiêu thụ</h3>
                         <p className="text-[11px] text-slate-400 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
                       </div>
                     </div>
@@ -1252,15 +1302,15 @@ export function AdminPortal() {
                   <div className="flex items-center gap-3">
                     <IconProfile3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{dashboardData?.soNguoi ?? 0} Cư dân</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-white">{dashboardData?.soNguoi ?? 0} Cư dân</p>
                       <p className="text-[10px] text-slate-400">Đang lưu trú</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 border-l border-slate-100 pl-4">
+                  <div className="flex items-center gap-3 border-l border-slate-100 dark:border-slate-800 pl-4">
                     <IconLocation3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{dashboardData?.soXe ?? 0} Xe máy</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-white">{dashboardData?.soXe ?? 0} Xe máy</p>
                       <p className="text-[10px] text-slate-400">Đăng ký giữ xe</p>
                     </div>
                   </div>
@@ -1272,13 +1322,13 @@ export function AdminPortal() {
                   LINE GRAPH (BIỂU ĐỒ ĐIỆN NƯỚC THEO YÊU CẦU CỦA USER)
                  ========================================================================= */}
               <div className="md:col-span-12 soft-card p-6 sm:p-8 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                       <TrendingUp size={22} />
                     </div>
                     <div>
-                      <h3 className="type-h4 text-slate-900 font-bold">Biểu đồ tiêu thụ Điện & Nước (Line Graph)</h3>
+                      <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Biểu đồ tiêu thụ Điện & Nước (Line Graph)</h3>
                       <p className="text-xs text-slate-400">Diễn biến chỉ số qua các chu kỳ tháng</p>
                     </div>
                   </div>
@@ -1309,7 +1359,7 @@ export function AdminPortal() {
                   const pointsNuoc = list.map((item: any, i: number) => `${x(i).toFixed(1)},${y(item.nuoc * 10).toFixed(1)}`).join(' ');
 
                   return (
-                    <div className="w-full h-64 bg-slate-50/70 rounded-2xl p-2 flex items-center justify-center">
+                    <div className="w-full h-64 bg-slate-50/70 dark:bg-slate-900/60 rounded-2xl p-2 flex items-center justify-center">
                       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
                         {/* Grid Lines */}
                         {[0, 0.25, 0.5, 0.75, 1].map((t, idx) => {
@@ -1383,13 +1433,13 @@ export function AdminPortal() {
                     className="soft-card p-5 flex flex-col justify-between hover:border-blue-500 transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-900 font-bold text-base group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base group-hover:bg-slate-900 dark:group-hover:bg-blue-600 group-hover:text-white transition-colors">
                         {r.room}
                       </span>
                       <span
                         className={cn(
                           "text-[10px] font-bold uppercase px-2.5 py-1 rounded-full",
-                          isPaid ? "badge-paid" : (isPending ? "bg-amber-100 text-amber-800" : "badge-unpaid")
+                          isPaid ? "badge-paid" : (isPending ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400" : "badge-unpaid")
                         )}
                       >
                         {r.statusText || (isPaid ? 'Đã đóng' : 'Chưa đóng')}
@@ -1397,7 +1447,7 @@ export function AdminPortal() {
                     </div>
 
                     <div className="space-y-1">
-                      <h4 className="font-bold text-slate-900 text-sm">{r.name}</h4>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">{r.name}</h4>
                       <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
@@ -1443,12 +1493,12 @@ export function AdminPortal() {
               <div className="flex items-center gap-3">
                 <IconProfile3D size={40} className="shrink-0 drop-shadow-xs" />
                 <div>
-                  <h4 className="font-bold text-slate-900 text-base">Thông tin người cư trú Phòng {selectedRoomId}</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-base">Thông tin người cư trú Phòng {selectedRoomId}</h4>
                   <p className="text-xs text-slate-400">Tối đa 3 người cư trú trên hợp đồng</p>
                 </div>
               </div>
               {[1, 2, 3].map(slot => (
-                <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60">
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Họ tên người {slot}</label>
                     <input
@@ -1456,7 +1506,7 @@ export function AdminPortal() {
                       value={currentRoomData[`nguoi${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`nguoi${slot}`]: e.target.value })}
                       placeholder={`Người ${slot}`}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                   <div>
@@ -1466,7 +1516,7 @@ export function AdminPortal() {
                       value={currentRoomData[`cccd${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`cccd${slot}`]: e.target.value })}
                       placeholder="12 số CCCD"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                   <div>
@@ -1476,7 +1526,7 @@ export function AdminPortal() {
                       value={currentRoomData[`sdt${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`sdt${slot}`]: e.target.value })}
                       placeholder="SĐT liên lạc"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                   <div>
@@ -1486,7 +1536,7 @@ export function AdminPortal() {
                       value={currentRoomData[`xe${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`xe${slot}`]: e.target.value })}
                       placeholder="Biển số xe"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none uppercase font-mono"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none uppercase font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                 </div>
@@ -1499,7 +1549,7 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconElectricity3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
                     <p className="text-[11px] text-slate-400">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
                   </div>
                 </div>
@@ -1522,7 +1572,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + tienDien + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-slate-50 rounded-xl p-3 text-sm font-bold border border-slate-200" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
                     />
                   </div>
                   <div>
@@ -1543,13 +1593,13 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + tienDien + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-slate-50 rounded-xl p-3 text-sm font-bold border border-slate-200" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
                     />
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100">
+                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
                   <span>Tiền điện:</span>
-                  <span className="text-amber-600 font-bold">{fmt(currentRoomData.tienDien)} đ</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">{fmt(currentRoomData.tienDien)} đ</span>
                 </div>
               </div>
 
@@ -1557,7 +1607,7 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconWater3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
                     <p className="text-[11px] text-slate-400">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
                   </div>
                 </div>
@@ -1580,7 +1630,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + tienNuoc + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-slate-50 rounded-xl p-3 text-sm font-bold border border-slate-200" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
                     />
                   </div>
                   <div>
@@ -1601,13 +1651,13 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + tienNuoc + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-slate-50 rounded-xl p-3 text-sm font-bold border border-slate-200" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
                     />
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100">
+                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
                   <span>Tiền nước:</span>
-                  <span className="text-blue-600 font-bold">{fmt(currentRoomData.tienNuoc)} đ</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">{fmt(currentRoomData.tienNuoc)} đ</span>
                 </div>
               </div>
             </div>
@@ -1618,19 +1668,19 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconWallet3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
-                    <h4 className="font-bold text-slate-900 text-base">Chi Phí Dịch Vụ & Hóa Đơn Chi Tiết</h4>
+                    <h4 className="font-bold text-slate-900 dark:text-white text-base">Chi Phí Dịch Vụ & Hóa Đơn Chi Tiết</h4>
                     <p className="text-xs text-slate-400">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId}</span>
-                  <span className="text-lg font-black text-slate-900 font-num">{fmt(currentRoomData.tongTien)} đ</span>
+                  <span className="text-lg font-black text-slate-900 dark:text-white font-num">{fmt(currentRoomData.tongTien)} đ</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tiền phòng (Cột J)</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền phòng (Cột J)</label>
                   <input
                     type="number"
                     value={currentRoomData.tienPhong || ''}
@@ -1642,12 +1692,12 @@ export function AdminPortal() {
                         tongTien: tienPhong + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                       });
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tiền rác (Cột K)</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền rác (Cột K)</label>
                   <input
                     type="number"
                     value={currentRoomData.tienRac || ''}
@@ -1659,12 +1709,12 @@ export function AdminPortal() {
                         tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + tienRac + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                       });
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
                   <input
                     type="number"
                     value={currentRoomData.tienNet || ''}
@@ -1676,12 +1726,12 @@ export function AdminPortal() {
                         tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + tienNet + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                       });
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
                   <input
                     type="number"
                     value={currentRoomData.tienXe || ''}
@@ -1693,12 +1743,12 @@ export function AdminPortal() {
                         tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + tienXe + (currentRoomData.tienKhac || 0)
                       });
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Chi phí khác / Phát sinh (Cột N)</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Chi phí khác / Phát sinh (Cột N)</label>
                   <input
                     type="number"
                     value={currentRoomData.tienKhac || 0}
@@ -1710,25 +1760,25 @@ export function AdminPortal() {
                         tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + tienKhac
                       });
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
                   <input
                     type="number"
                     value={currentRoomData.tienCoc || 0}
                     onChange={e => setCurrentRoomData({ ...currentRoomData, tienCoc: Number(e.target.value) || 0 })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               {/* Action save button */}
-              <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <p className="text-xs text-slate-400">
-                  Tổng hợp: Tiền phòng + Điện ({fmt(currentRoomData.tienDien)} đ) + Nước ({fmt(currentRoomData.tienNuoc)} đ) + Dịch vụ = <strong className="text-slate-900 font-mono font-bold">{fmt(currentRoomData.tongTien)} đ</strong>
+                  Tổng hợp: Tiền phòng + Điện ({fmt(currentRoomData.tienDien)} đ) + Nước ({fmt(currentRoomData.tienNuoc)} đ) + Dịch vụ = <strong className="text-slate-900 dark:text-white font-mono font-bold">{fmt(currentRoomData.tongTien)} đ</strong>
                 </p>
                 <button
                   type="button"
@@ -1773,7 +1823,7 @@ export function AdminPortal() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
                       <th className="p-4">Phòng</th>
                       <th className="p-4">Khách thuê</th>
                       <th className="p-4">Tiền phòng</th>
@@ -1782,24 +1832,24 @@ export function AdminPortal() {
                       <th className="p-4">Rác</th>
                       <th className="p-4">Net</th>
                       <th className="p-4">Xe</th>
-                      <th className="p-4 font-bold text-slate-900">Tổng cộng</th>
+                      <th className="p-4 font-bold text-slate-900 dark:text-white">Tổng cộng</th>
                       <th className="p-4 text-center">Trạng thái</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {billingList.map(item => {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
-                        <tr key={item.room} className={isPaid ? "bg-emerald-50/30" : "hover:bg-slate-50/50"}>
-                          <td className="p-4 font-bold text-slate-900">{item.room}</td>
-                          <td className="p-4 font-medium text-slate-700">{item.name}</td>
+                        <tr key={item.room} className={isPaid ? "bg-emerald-50/30 dark:bg-emerald-950/20" : "hover:bg-slate-50/50 dark:hover:bg-slate-800/40"}>
+                          <td className="p-4 font-bold text-slate-900 dark:text-white">{item.room}</td>
+                          <td className="p-4 font-medium text-slate-700 dark:text-slate-200">{item.name}</td>
                           <td className="p-4 font-mono">{fmt(item.tienPhong)} đ</td>
-                          <td className="p-4 font-mono text-amber-600">{fmt(item.tienDien)} đ</td>
-                          <td className="p-4 font-mono text-blue-600">{fmt(item.tienNuoc)} đ</td>
+                          <td className="p-4 font-mono text-amber-600 dark:text-amber-400">{fmt(item.tienDien)} đ</td>
+                          <td className="p-4 font-mono text-blue-600 dark:text-blue-400">{fmt(item.tienNuoc)} đ</td>
                           <td className="p-4 font-mono">{fmt(item.tienRac)} đ</td>
                           <td className="p-4 font-mono">{fmt(item.tienNet)} đ</td>
                           <td className="p-4 font-mono">{fmt(item.tienXe)} đ</td>
-                          <td className="p-4 font-bold text-sm text-slate-900">{fmt(item.tongTien)} đ</td>
+                          <td className="p-4 font-bold text-sm text-slate-900 dark:text-white">{fmt(item.tongTien)} đ</td>
                           <td className="p-4 text-center">
                             <button
                               onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid')}
@@ -1849,7 +1899,7 @@ export function AdminPortal() {
             <div className="soft-card p-6 sm:p-8 space-y-4 text-center">
               <IconLocation3D size={52} className="mx-auto drop-shadow-xs mb-1" />
               <div className="text-center max-w-md mx-auto space-y-1 mb-4">
-                <h3 className="type-h2 font-bold text-slate-900">Tra Cứu Biển Số Xe</h3>
+                <h3 className="type-h2 font-bold text-slate-900 dark:text-white">Tra Cứu Biển Số Xe</h3>
                 <p className="text-xs text-slate-400">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
               </div>
 
@@ -1863,7 +1913,7 @@ export function AdminPortal() {
                     fetchPlates(selectedMonth, e.target.value);
                   }}
                   placeholder="Nhập biển số xe (VD: 59-X1, 888.88...)"
-                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-bold uppercase outline-none focus:bg-white"
+                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -1872,14 +1922,14 @@ export function AdminPortal() {
               {plateResults.map((r, i) => (
                 <div key={i} className="soft-card p-5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 bg-slate-100 text-slate-900 font-bold rounded-lg text-xs">
+                    <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold rounded-lg text-xs">
                       Phòng {r.room}
                     </span>
-                    <span className="font-mono text-sm font-bold text-slate-900 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                    <span className="font-mono text-sm font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700">
                       {r.plate}
                     </span>
                   </div>
-                  <p className="font-bold text-sm text-slate-800">{r.name}</p>
+                  <p className="font-bold text-sm text-slate-800 dark:text-white">{r.name}</p>
                   <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                 </div>
               ))}
@@ -1942,10 +1992,10 @@ export function AdminPortal() {
                 <select
                   value={contractHouse}
                   onChange={e => setContractHouse(e.target.value as any)}
-                  className="bg-slate-100 font-bold text-xs p-2.5 rounded-xl border-none outline-none cursor-pointer"
+                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-slate-700 outline-none cursor-pointer"
                 >
-                  <option value="TRUNG_KIM">Nhà trọ Trung Kim (116/32)</option>
-                  <option value="LVC">Nhà trọ 109/6 (Lê Văn Chí)</option>
+                  <option value="TRUNG_KIM" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Nhà trọ Trung Kim (116/32)</option>
+                  <option value="LVC" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
                 </select>
                 <button
                   onClick={() => window.print()}
@@ -2153,23 +2203,22 @@ export function AdminPortal() {
 
             <div className="soft-card p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="type-h3 font-bold text-slate-900">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
+                <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
                 <button
-                  onClick={() => {
-                    playSound('success');
-                    alert('Đã lưu chỉ số điện nước thành công!');
-                  }}
-                  className="primary-button py-2 px-5 text-xs font-bold flex items-center gap-2 cursor-pointer"
+                  type="button"
+                  onClick={saveBatchMeters}
+                  disabled={isSavingBatchMeters}
+                  className="primary-button py-2 px-5 text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Save size={15} />
-                  <span>Lưu tất cả</span>
+                  <span>{isSavingBatchMeters ? 'Đang lưu...' : 'Lưu tất cả'}</span>
                 </button>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-400 font-bold uppercase">
+                    <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-400 font-bold uppercase">
                       <th className="p-3">Phòng</th>
                       <th className="p-3">Điện cũ</th>
                       <th className="p-3">Điện mới</th>
@@ -2177,16 +2226,50 @@ export function AdminPortal() {
                       <th className="p-3">Nước mới</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {roomsList.map((r) => (
-                      <tr key={r.room}>
-                        <td className="p-3 font-bold text-slate-900">{r.room}</td>
-                        <td className="p-2"><input type="number" defaultValue={r.dienCu ?? ''} className="w-24 bg-slate-50 p-2 rounded-lg border border-slate-200 font-bold" /></td>
-                        <td className="p-2"><input type="number" defaultValue={r.dienMoi ?? ''} className="w-24 bg-slate-50 p-2 rounded-lg border border-slate-200 font-bold text-amber-600" /></td>
-                        <td className="p-2"><input type="number" defaultValue={r.nuocCu ?? ''} className="w-24 bg-slate-50 p-2 rounded-lg border border-slate-200 font-bold" /></td>
-                        <td className="p-2"><input type="number" defaultValue={r.nuocMoi ?? ''} className="w-24 bg-slate-50 p-2 rounded-lg border border-slate-200 font-bold text-blue-600" /></td>
-                      </tr>
-                    ))}
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {roomsList.map((r) => {
+                      const currentDienCu = batchMeters[r.room]?.dienCu !== undefined ? batchMeters[r.room]?.dienCu : (r.dienCu ?? '');
+                      const currentDienMoi = batchMeters[r.room]?.dienMoi !== undefined ? batchMeters[r.room]?.dienMoi : (r.dienMoi ?? '');
+                      const currentNuocCu = batchMeters[r.room]?.nuocCu !== undefined ? batchMeters[r.room]?.nuocCu : (r.nuocCu ?? '');
+                      const currentNuocMoi = batchMeters[r.room]?.nuocMoi !== undefined ? batchMeters[r.room]?.nuocMoi : (r.nuocMoi ?? '');
+                      return (
+                        <tr key={r.room} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="p-3 font-bold text-slate-900 dark:text-white">{r.room}</td>
+                          <td className="p-2">
+                            <input 
+                              type="number" 
+                              value={currentDienCu} 
+                              onChange={e => handleBatchMeterChange(r.room, 'dienCu', Number(e.target.value) || 0)}
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" 
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input 
+                              type="number" 
+                              value={currentDienMoi} 
+                              onChange={e => handleBatchMeterChange(r.room, 'dienMoi', Number(e.target.value) || 0)}
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-amber-600 dark:text-amber-400 outline-none focus:ring-2 focus:ring-blue-500" 
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input 
+                              type="number" 
+                              value={currentNuocCu} 
+                              onChange={e => handleBatchMeterChange(r.room, 'nuocCu', Number(e.target.value) || 0)}
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" 
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input 
+                              type="number" 
+                              value={currentNuocMoi} 
+                              onChange={e => handleBatchMeterChange(r.room, 'nuocMoi', Number(e.target.value) || 0)}
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500" 
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2220,61 +2303,61 @@ export function AdminPortal() {
             </div>
 
             <div className="soft-card p-6 sm:p-8 space-y-6">
-              <h3 className="type-h3 font-bold text-slate-900">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
+              <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Điện (1 kW)</label>
                   <input
                     type="number"
                     value={unitConfig.dien}
                     onChange={e => setUnitConfig({ ...unitConfig, dien: Number(e.target.value) })}
-                    className="w-full bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm font-num"
+                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Nước (1 m³)</label>
                   <input
                     type="number"
                     value={unitConfig.nuoc}
                     onChange={e => setUnitConfig({ ...unitConfig, nuoc: Number(e.target.value) })}
-                    className="w-full bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm font-num"
+                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Tiền Rác</label>
                   <input
                     type="number"
                     value={unitConfig.rac}
                     onChange={e => setUnitConfig({ ...unitConfig, rac: Number(e.target.value) })}
-                    className="w-full bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm font-num"
+                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Internet / người</label>
                   <input
                     type="number"
                     value={unitConfig.net}
                     onChange={e => setUnitConfig({ ...unitConfig, net: Number(e.target.value) })}
-                    className="w-full bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm font-num"
+                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Xe máy / chiếc</label>
                   <input
                     type="number"
                     value={unitConfig.xe}
                     onChange={e => setUnitConfig({ ...unitConfig, xe: Number(e.target.value) })}
-                    className="w-full bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm font-num"
+                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={saveConfig}
                   className="primary-button py-3 px-8 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs"
@@ -2323,10 +2406,10 @@ export function AdminPortal() {
                     setDeclarationHouse(h);
                     loadDeclaration(selectedMonth, h);
                   }}
-                  className="bg-slate-100 font-bold text-xs p-2.5 rounded-xl border-none outline-none cursor-pointer"
+                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-slate-700 outline-none cursor-pointer"
                 >
-                  <option value="TRUNG_KIM">Hộ KD Trung Kim (116/32)</option>
-                  <option value="LVC">Nhà trọ 109/6 (Lê Văn Chí)</option>
+                  <option value="TRUNG_KIM" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Hộ KD Trung Kim (116/32)</option>
+                  <option value="LVC" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
                 </select>
               </div>
 

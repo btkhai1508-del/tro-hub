@@ -514,7 +514,9 @@ async function startServer() {
     try {
       const { month = '10/2026', room, data } = req.body || {};
       if (room && data) {
+        const dienCu = data.dienCu !== undefined ? Number(data.dienCu) : undefined;
         const dienMoi = data.dienMoi !== undefined ? Number(data.dienMoi) : undefined;
+        const nuocCu = data.nuocCu !== undefined ? Number(data.nuocCu) : undefined;
         const nuocMoi = data.nuocMoi !== undefined ? Number(data.nuocMoi) : undefined;
         const status = data.paymentStatus || data.status;
 
@@ -528,7 +530,9 @@ async function startServer() {
             action: 'update_meters',
             room: String(room),
             month,
+            dienCu: dienCu !== undefined && !isNaN(dienCu) ? String(dienCu) : '',
             dienMoi: dienMoi !== undefined && !isNaN(dienMoi) ? String(dienMoi) : '',
+            nuocCu: nuocCu !== undefined && !isNaN(nuocCu) ? String(nuocCu) : '',
             nuocMoi: nuocMoi !== undefined && !isNaN(nuocMoi) ? String(nuocMoi) : '',
             status: status || ''
           });

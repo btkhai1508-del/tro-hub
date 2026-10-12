@@ -618,7 +618,7 @@ function markRowPending() {
                 placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs... hoặc ID bảng tính"
                 value={sheetInput}
                 onChange={(e) => setSheetInput(e.target.value)}
-                className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
               />
               <button
                 type="button"
@@ -634,30 +634,30 @@ function markRowPending() {
 
           {/* SePAY Webhook Integration Guide */}
           {showSepayGuide && (
-            <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-xs space-y-3.5 animate-in fade-in duration-200">
+            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs space-y-3.5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between">
-                <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                <div className="font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
                   <Database size={16} className="text-emerald-600" />
                   <span>Tích hợp Cổng thanh toán tự động SePAY</span>
                 </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 text-[10px] font-bold">
                   Tự động 100%
                 </span>
               </div>
 
-              <p className="text-slate-700 text-xs leading-relaxed">
+              <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">
                 Khi cư dân chuyển khoản ngân hàng, SePAY sẽ bắn Webhook ngay lập tức để cập nhật trạng thái <strong>Cột P sang Đã thanh toán (Màu xanh lá)</strong> và thông báo cho cư dân.
               </p>
 
               {/* Webhook URL Box */}
-              <div className="space-y-1 bg-white p-3 rounded-xl border border-emerald-200">
-                <span className="text-[11px] font-bold text-slate-700 block">1. Đường dẫn Webhook URL (Điền vào SePAY):</span>
+              <div className="space-y-1 bg-white dark:bg-slate-900 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">1. Đường dẫn Webhook URL (Điền vào SePAY):</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     readOnly
                     value={webhookUrl}
-                    className="flex-1 px-2.5 py-1.5 text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg text-slate-800 select-all"
+                    className="flex-1 px-2.5 py-1.5 text-[11px] font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 select-all"
                   />
                   <button
                     type="button"
@@ -764,15 +764,15 @@ function markRowPending() {
           {/* 4. Tab selection and room targeting */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-700 block mb-1">Tab Thông Tin Cư Dân</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Tab Thông Tin Cư Dân</label>
               {availableTabs.length > 0 ? (
                 <select
                   value={selectedProfileTab}
                   onChange={(e) => setSelectedProfileTab(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 >
                   {availableTabs.map((tab, idx) => (
-                    <option key={idx} value={tab}>{tab}</option>
+                    <option key={idx} value={tab} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">{tab}</option>
                   ))}
                 </select>
               ) : (
@@ -781,21 +781,21 @@ function markRowPending() {
                   placeholder="Thông tin cá nhân"
                   value={selectedProfileTab}
                   onChange={(e) => setSelectedProfileTab(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 />
               )}
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700 block mb-1">Tab Hóa Đơn Tháng</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Tab Hóa Đơn Tháng</label>
               {availableTabs.length > 0 ? (
                 <select
                   value={selectedInvoiceTab}
                   onChange={(e) => setSelectedInvoiceTab(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 >
                   {availableTabs.map((tab, idx) => (
-                    <option key={idx} value={tab}>{tab}</option>
+                    <option key={idx} value={tab} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">{tab}</option>
                   ))}
                 </select>
               ) : (
@@ -804,19 +804,19 @@ function markRowPending() {
                   placeholder="10/2026 hoặc T10"
                   value={selectedInvoiceTab}
                   onChange={(e) => setSelectedInvoiceTab(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 />
               )}
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700 block mb-1">Số Phòng Đồng Bộ</label>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Số Phòng Đồng Bộ</label>
               <input
                 type="text"
                 placeholder="203"
                 value={targetRoom}
                 onChange={(e) => setTargetRoom(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 font-num focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-num focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
               />
             </div>
           </div>

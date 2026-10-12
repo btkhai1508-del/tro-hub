@@ -152,23 +152,23 @@ export function LoginPage() {
         
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-[22px] bg-slate-900 text-white flex items-center justify-center shadow-xl shadow-slate-900/20 ring-4 ring-white mb-4">
+          <div className="w-16 h-16 rounded-[22px] bg-slate-900 text-white flex items-center justify-center shadow-xl shadow-slate-900/20 ring-4 ring-white dark:ring-slate-800 mb-4">
             <Building2 size={32} className="text-white" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
             EcoStay Residence
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
             Cổng dịch vụ cư dân thông minh
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-[32px] border border-white/80 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] p-6 sm:p-8">
+        <div className="bg-white/95 dark:bg-[#111827]/95 backdrop-blur-xl rounded-[32px] border border-white/80 dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] p-6 sm:p-8">
           
           {/* Switch Mode: Login vs Register */}
           {mode !== 'forgot' && mode !== 'pending_approval' && (
-            <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl mb-6">
+            <div className="grid grid-cols-2 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl mb-6">
               <button
                 type="button"
                 onClick={() => {
@@ -178,8 +178,8 @@ export function LoginPage() {
                 }}
                 className={`py-2 text-xs sm:text-[13px] font-bold rounded-xl transition-all cursor-pointer ${
                   mode === 'login'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
                 Đăng nhập
@@ -193,8 +193,8 @@ export function LoginPage() {
                 }}
                 className={`py-2 text-xs sm:text-[13px] font-bold rounded-xl transition-all cursor-pointer ${
                   mode === 'register'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
                 Đăng ký mới
@@ -237,16 +237,16 @@ export function LoginPage() {
 
               {/* Divider */}
               <div className="relative flex items-center justify-center pt-1 pb-1">
-                <div className="border-t border-slate-200/80 w-full" />
-                <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">hoặc số điện thoại</span>
-                <div className="border-t border-slate-200/80 w-full" />
+                <div className="border-t border-slate-200/80 dark:border-slate-800 w-full" />
+                <span className="bg-white dark:bg-[#111827] px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">hoặc số điện thoại</span>
+                <div className="border-t border-slate-200/80 dark:border-slate-800 w-full" />
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
               
               {/* Phone Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Số điện thoại
                 </label>
                 <div className="relative flex items-center">
@@ -259,7 +259,7 @@ export function LoginPage() {
                     placeholder="Ví dụ: 0902 371 800"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-3 text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:outline-none transition-all font-num"
+                    className="w-full pl-10 pr-3.5 py-3 text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:outline-none transition-all font-num placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
@@ -267,11 +267,11 @@ export function LoginPage() {
               {/* Password Input */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700">Mật khẩu</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Mật khẩu</label>
                   <button
                     type="button"
                     onClick={() => setMode('forgot')}
-                    className="text-[11px] font-medium text-indigo-600 hover:underline cursor-pointer"
+                    className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
                   >
                     Quên mật khẩu?
                   </button>
@@ -286,12 +286,12 @@ export function LoginPage() {
                     placeholder="Nhập mật khẩu"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:outline-none transition-all font-mono"
+                    className="w-full pl-10 pr-10 py-3 text-xs sm:text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:outline-none transition-all font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
                     title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -341,7 +341,7 @@ export function LoginPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Họ và tên cư dân</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Họ và tên cư dân</label>
                 <div className="relative flex items-center">
                   <div className="absolute left-3.5 text-slate-400 pointer-events-none">
                     <User size={16} />
@@ -352,70 +352,70 @@ export function LoginPage() {
                     placeholder="Ví dụ: Bùi Trung Khải"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Số điện thoại</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Số điện thoại</label>
                   <input
                     type="tel"
                     required
                     placeholder="09xx xxx xxx"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs sm:text-sm font-num rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Số phòng thuê</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Số phòng thuê</label>
                   <input
                     type="text"
                     required
                     placeholder="P. 203"
                     value={regRoom}
                     onChange={(e) => setRegRoom(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs sm:text-sm font-num rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email liên hệ (tùy chọn)</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email liên hệ (tùy chọn)</label>
                 <input
                   type="email"
                   placeholder="cudan@ecostay.vn"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Mật khẩu</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mật khẩu</label>
                   <input
                     type="password"
                     required
                     placeholder="Ít nhất 6 ký tự"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Nhập lại MK</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nhập lại MK</label>
                   <input
                     type="password"
                     required
                     placeholder="Xác nhận MK"
                     value={regConfirmPass}
                     onChange={(e) => setRegConfirmPass(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900/10 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>

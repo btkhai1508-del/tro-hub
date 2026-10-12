@@ -128,6 +128,20 @@
     line-height: 1.5;
     color: var(--text-tertiary);
   }
+
+  /* Universal Dark Mode Form Controls Fail-safe */
+  .dark input:not([type="checkbox"]):not([type="radio"]):not(.keep-white):not(.administrative-document *):not(.contract-document-a4 *),
+  .dark select:not(.keep-white):not(.administrative-document *):not(.contract-document-a4 *),
+  .dark textarea:not(.keep-white):not(.administrative-document *):not(.contract-document-a4 *) {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border-color: #334155;
+  }
+
+  .dark input:not(.administrative-document *):not(.contract-document-a4 *)::placeholder,
+  .dark textarea:not(.administrative-document *):not(.contract-document-a4 *)::placeholder {
+    color: #64748b;
+  }
 }
 
 @layer utilities {
