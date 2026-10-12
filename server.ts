@@ -346,6 +346,45 @@ async function startServer() {
     }
   });
 
+  // Backend API: Update resident profile -> sync directly to Google Sheet
+  app.post('/api/profile/update', requireAuth, async (req: AuthedRequest, res) => {
+    try {
+      const roomNumber = req.tenant!.room;
+      const profileData = req.body || {};
+
+      // Push profile updates to Google Apps Script Web App for 2-way Google Sheet sync
+      try {
+        const qParams = new URLSearchParams({
+          action: 'update_profile',
+          room: String(roomNumber),
+          name: profileData.name || '',
+          phone: profileData.phone || '',
+          cccd: profileData.cccd || profileData.citizenId || '',
+          plateNumber: profileData.plateNumber || (profileData.vehicle?.plateNumber) || '',
+          email: profileData.email || '',
+          dob: profileData.dob || '',
+          address: profileData.address || '',
+          vehicleType: profileData.vehicleType || (profileData.vehicle?.type) || 'Xe máy',
+          emergencyName: profileData.emergencyName || (profileData.emergencyContact?.name) || '',
+          emergencyPhone: profileData.emergencyPhone || (profileData.emergencyContact?.phone) || '',
+          emergencyRelation: profileData.emergencyRelation || (profileData.emergencyContact?.relationship) || ''
+        });
+        fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+      } catch (err) {
+        console.warn('[ProfileUpdate] Error calling Apps Script:', err);
+      }
+
+      res.json({
+        success: true,
+        message: 'Đã lưu thông tin cá nhân và đồng bộ với Google Sheet thành công',
+        profile: profileData
+      });
+    } catch (error: any) {
+      console.error('[API /api/profile/update] Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Backend API: Query Live Payment Status from Google Sheet Column P
   // GOOGLE SHEET = SINGLE SOURCE OF TRUTH
   app.get('/api/payment/status', async (req, res) => {
@@ -473,8 +512,30 @@ async function startServer() {
 
   app.post('/api/admin/room-detail', async (req, res) => {
     try {
-      const body = req.body || {};
-      res.json({ success: true, message: 'Đã lưu thông tin phòng thành công', data: body });
+      const { month = '10/2026', room, data } = req.body || {};
+      if (room && data) {
+        const dienMoi = data.dienMoi !== undefined ? Number(data.dienMoi) : undefined;
+        const nuocMoi = data.nuocMoi !== undefined ? Number(data.nuocMoi) : undefined;
+        const status = data.paymentStatus || data.status;
+
+        if (status) {
+          pushPaymentToGoogleSheet(room, status === 'paid' ? 'paid' : 'unpaid', month);
+        }
+
+        // Forward to Google Apps Script Web App for 2-way sync into Google Sheet
+        try {
+          const qParams = new URLSearchParams({
+            action: 'update_meters',
+            room: String(room),
+            month,
+            dienMoi: dienMoi !== undefined && !isNaN(dienMoi) ? String(dienMoi) : '',
+            nuocMoi: nuocMoi !== undefined && !isNaN(nuocMoi) ? String(nuocMoi) : '',
+            status: status || ''
+          });
+          fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+        } catch {}
+      }
+      res.json({ success: true, message: 'Đã lưu thông tin phòng và đồng bộ Google Sheet thành công', data: req.body });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }

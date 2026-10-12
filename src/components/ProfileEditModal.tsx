@@ -146,65 +146,44 @@ export function ProfileEditModal() {
 
     const effectiveSheetId = sheetConfig.spreadsheetId || DEFAULT_SPREADSHEET_ID;
 
-    // 2. Write directly to Google Sheet
+    // 2. Write directly to Backend & Google Sheet via 2-way sync
     try {
-      let token = await getAccessToken();
-      
-      // If no token yet, prompt user to sign in to Google
-      if (!token) {
-        try {
-          const authRes = await googleSignIn();
-          token = authRes?.accessToken || null;
-          if (token) setHasGoogleToken(true);
-        } catch (authErr) {
-          console.warn('User dismissed Google Sign In popup:', authErr);
-        }
-      }
+      const res = await apiFetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: cleanName,
+          phone: cleanPhone,
+          cccd: formData.cccd.trim(),
+          email: formData.email.trim(),
+          dob: formData.dob.trim(),
+          address: formData.address.trim(),
+          plateNumber: formData.plateNumber.trim(),
+          vehicleType: formData.vehicleType.trim() || 'Xe máy',
+          roomNumber: cleanRoom,
+          emergencyName: formData.emergencyName.trim(),
+          emergencyRelation: formData.emergencyRelation.trim(),
+          emergencyPhone: formData.emergencyPhone.trim()
+        })
+      });
 
-      if (token && effectiveSheetId) {
-        const updateRes = await updateResidentProfileToSheet(
-          effectiveSheetId,
-          sheetConfig.profileTab || DEFAULT_PROFILE_TAB,
-          token,
-          {
-            name: cleanName,
-            phone: cleanPhone,
-            cccd: formData.cccd.trim(),
-            email: formData.email.trim(),
-            dob: formData.dob.trim(),
-            address: formData.address.trim(),
-            plateNumber: formData.plateNumber.trim(),
-            vehicleType: formData.vehicleType.trim() || 'Xe máy',
-            roomNumber: cleanRoom,
-            emergencyName: formData.emergencyName.trim(),
-            emergencyRelation: formData.emergencyRelation.trim(),
-            emergencyPhone: formData.emergencyPhone.trim(),
-            password: '180505'
-          }
-        );
-
+      if (res.ok) {
         setSyncStatus({
           type: 'success',
-          message: `Đã cập nhật trực tiếp vào dòng ${updateRes.rowIndex} tab "${updateRes.sheetName}" trên Google Sheet thành công!`
+          message: '✅ Đã cập nhật và đồng bộ trực tiếp vào Google Sheet thành công!'
         });
 
         setTimeout(() => {
           setIsSaving(false);
           closeProfileEditModal();
-        }, 1200);
+        }, 1000);
         return;
-      } else {
-        // Saved locally, but inform user about Google Sheet permission
-        setSyncStatus({
-          type: 'warning',
-          message: 'Đã lưu trên ứng dụng! (Chưa cấp quyền Google để ghi trực tiếp lên file Google Sheet).'
-        });
       }
     } catch (err: any) {
-      console.error('Error syncing to sheet:', err);
+      console.warn('Backend profile update error:', err);
       setSyncStatus({
         type: 'error',
-        message: 'Lỗi ghi Google Sheet: ' + (err.message || 'Kiểm tra quyền truy cập file')
+        message: 'Lỗi cập nhật Google Sheet: ' + (err.message || 'Vui lòng thử lại')
       });
     } finally {
       setIsSaving(false);
