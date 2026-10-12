@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, Zap, Droplet, Calendar, Layers } from 'lucide-react';
+import { TrendingUp, Zap, Droplet } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export interface MonthTrendItem {
@@ -170,7 +170,6 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
   const activeIndex = hoveredIndex !== null 
     ? hoveredIndex 
     : Math.max(0, sixMonths.findIndex(d => d.month === selectedMonth));
-  const activeItem = sixMonths[activeIndex] || sixMonths[sixMonths.length - 1];
 
   // Mouse move handler to find closest month
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -200,16 +199,11 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
             <TrendingUp size={22} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="type-h4 text-slate-900 dark:text-white font-bold">
-                Biểu đồ tiêu thụ Điện & Nước
-              </h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/50 font-num">
-                6 Tháng Gần Nhất
-              </span>
-            </div>
+            <h3 className="type-h4 text-slate-900 dark:text-white font-bold">
+              Biểu đồ tiêu thụ Điện & Nước
+            </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Diễn biến chỉ số tiêu thụ và thành tiền theo từng chu kỳ tháng
+              Diễn biến chỉ số qua các chu kỳ tháng
             </p>
           </div>
         </div>
@@ -226,7 +220,6 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <Layers size={13} />
             <span>Tất cả</span>
           </button>
 
@@ -259,63 +252,6 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
           </button>
         </div>
       </div>
-
-      {/* Focus Month Metrics Card (Synchronized with chart hover) */}
-      {activeItem && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-gradient-to-r from-slate-50 to-slate-100/70 dark:from-slate-900/80 dark:to-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 shadow-xs flex items-center justify-center text-slate-700 dark:text-slate-200">
-              <Calendar size={15} />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Kỳ đối soát</span>
-              <span className="text-xs font-bold font-num text-slate-900 dark:text-white">Tháng {activeItem.month}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-              <Zap size={15} />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Điện tiêu thụ</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-xs font-bold font-num text-amber-600 dark:text-amber-400">{fmt(activeItem.dien)} kW</span>
-                {activeItem.tienDien && (
-                  <span className="text-[10px] text-slate-400 hidden md:inline font-num">({fmt(activeItem.tienDien)}đ)</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-              <Droplet size={15} />
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Nước sinh hoạt</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-xs font-bold font-num text-blue-600 dark:text-blue-400">{fmt(activeItem.nuoc)} m³</span>
-                {activeItem.tienNuoc && (
-                  <span className="text-[10px] text-slate-400 hidden md:inline font-num">({fmt(activeItem.tienNuoc)}đ)</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs font-num">
-              ₫
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Doanh thu tháng</span>
-              <span className="text-xs font-bold font-num text-emerald-600 dark:text-emerald-400">
-                {activeItem.doanhThu ? `${fmt(activeItem.doanhThu)} ₫` : 'Đang đồng bộ'}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* SVG Canvas Container */}
       <div className="relative w-full bg-slate-50/60 dark:bg-slate-900/50 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 p-2 sm:p-3 overflow-hidden select-none">
@@ -545,21 +481,6 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
             );
           })}
         </svg>
-
-        {/* Legend Footnote */}
-        <div className="flex items-center justify-between text-[11px] text-slate-400 px-2 pt-1 border-t border-slate-100 dark:border-slate-800/60 font-medium">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-              <span>Chỉ số Điện (kWh)</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-              <span>Chỉ số Nước (m³)</span>
-            </span>
-          </div>
-          <span className="italic hidden sm:inline">Di chuột hoặc chạm vào điểm để xem chi tiết từng kỳ</span>
-        </div>
       </div>
     </div>
   );
