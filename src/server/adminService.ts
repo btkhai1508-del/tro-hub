@@ -1,9 +1,38 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import AdmZip from 'adm-zip';
 import { GoogleGenAI } from '@google/genai';
 import { setRoomColumnPStatus, getRoomColumnPStatus } from './columnPStatusStore.js';
 import { mapColorToPaymentStatus } from './googleSheetColorService.js';
 import { fetchSheetDataViaGviz } from './googleSheetsBackendService.js';
 import { GOOGLE_APPS_SCRIPT_WEBAPP_URL } from './notificationStore.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PAYMENT_GATE_STORE_PATH = path.resolve(__dirname, 'paymentGateStore.json');
+
+interface GateRecord {
+  value: 'START' | 'STOP';
+  updatedAt: number;
+  source: 'admin' | 'sheet';
+}
+
+function loadPaymentGateFile(): Record<string, GateRecord> {
+  try {
+    if (fs.existsSync(PAYMENT_GATE_STORE_PATH)) {
+      const raw = fs.readFileSync(PAYMENT_GATE_STORE_PATH, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return {};
+}
+
+function savePaymentGateFile(data: Record<string, GateRecord>): void {
+  try {
+    fs.writeFileSync(PAYMENT_GATE_STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {}
+}
 
 export function getCurrentMonthStr(): string {
   const d = new Date();
@@ -672,6 +701,16 @@ export function saveDeclarationData(month: string, houseKey: string, rows: any[]
  * Row 1 (Excel row 2), Column Q (index 16).
  */
 export async function getPaymentGate(month: string = getCurrentMonthStr()): Promise<string> {
+  const fileData = loadPaymentGateFile();
+  const existing = fileData[month];
+
+  // If Admin explicitly set a value within the last 30 minutes, retain Admin's decision
+  // so that slow Google Sheet Gviz CDN caching (which can lag 1-5 minutes) doesn't flip it back!
+  if (existing && existing.source === 'admin' && (Date.now() - existing.updatedAt < 30 * 60 * 1000)) {
+    paymentGateState[month] = existing.value;
+    return existing.value;
+  }
+
   try {
     const candidateTabs = [month, month.replace('/', ''), `Tháng ${month}`, `T${month}`];
     for (const tab of candidateTabs) {
@@ -681,6 +720,8 @@ export async function getPaymentGate(month: string = getCurrentMonthStr()): Prom
           const rawQ2 = String(rows[1]?.[16] || '').trim().toUpperCase();
           if (rawQ2 === 'START' || rawQ2 === 'STOP') {
             paymentGateState[month] = rawQ2;
+            fileData[month] = { value: rawQ2, updatedAt: Date.now(), source: 'sheet' };
+            savePaymentGateFile(fileData);
             return rawQ2;
           }
         }
@@ -689,19 +730,30 @@ export async function getPaymentGate(month: string = getCurrentMonthStr()): Prom
   } catch (err) {
     console.warn('[getPaymentGate] Error reading cell Q2 from Google Sheet:', err);
   }
-  return paymentGateState[month] || 'STOP';
+
+  return existing?.value || paymentGateState[month] || 'STOP';
 }
 
 export function setPaymentGate(month: string = getCurrentMonthStr(), value: string = 'STOP'): string {
   const normVal = String(value).toUpperCase() === 'START' ? 'START' : 'STOP';
   paymentGateState[month] = normVal;
 
+  const fileData = loadPaymentGateFile();
+  fileData[month] = {
+    value: normVal,
+    updatedAt: Date.now(),
+    source: 'admin'
+  };
+  savePaymentGateFile(fileData);
+
   // 2-Way Direct Sync to Google Sheet Cell Q2 via Google Apps Script Web App
   try {
     const qParams = new URLSearchParams({
       action: 'update_q2',
       month,
-      value: normVal
+      value: normVal,
+      status: normVal,
+      cell: 'Q2'
     });
     fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
 
@@ -711,7 +763,9 @@ export function setPaymentGate(month: string = getCurrentMonthStr(), value: stri
       body: JSON.stringify({
         action: 'update_q2',
         month,
-        value: normVal
+        value: normVal,
+        status: normVal,
+        cell: 'Q2'
       })
     }).catch(() => {});
   } catch (e) {

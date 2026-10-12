@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Home, 
@@ -271,6 +271,7 @@ export function AdminPortal() {
 
   // Payment Gate state
   const [paymentGate, setPaymentGate] = useState<'START' | 'STOP'>('STOP');
+  const lastGateToggleTimeRef = useRef<number>(0);
 
   // Data States
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -449,6 +450,9 @@ export function AdminPortal() {
   }, [selectedMonth, activeMenu]);
 
   const loadPaymentGateStatus = (m: string) => {
+    // If Admin clicked toggle within last 20 seconds, ignore background polling so UI doesn't flicker or flip back
+    if (Date.now() - lastGateToggleTimeRef.current < 20000) return;
+
     apiFetch(`/api/admin/payment-gate?month=${m}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
@@ -456,6 +460,7 @@ export function AdminPortal() {
         return res.json();
       })
       .then(data => {
+        if (Date.now() - lastGateToggleTimeRef.current < 20000) return;
         if (data.success && data.value) setPaymentGate(data.value);
       })
       .catch(() => {});
@@ -463,14 +468,23 @@ export function AdminPortal() {
 
   const togglePaymentGate = async () => {
     playSound('click');
+    lastGateToggleTimeRef.current = Date.now();
     const nextVal = paymentGate === 'START' ? 'STOP' : 'START';
     setPaymentGate(nextVal);
 
-    apiFetch('/api/admin/payment-gate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month: selectedMonth, value: nextVal })
-    }).catch(() => {});
+    try {
+      const res = await apiFetch('/api/admin/payment-gate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: selectedMonth, value: nextVal })
+      });
+      const data = await res.json();
+      if (data && data.success && data.value) {
+        setPaymentGate(data.value);
+      }
+    } catch (e) {
+      console.warn('Payment gate toggle error:', e);
+    }
     playSound('success');
   };
 

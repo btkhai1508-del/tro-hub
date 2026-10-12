@@ -51,13 +51,17 @@ function handleRequest(e) {
       }
 
       var sheet = null;
-      // Tìm sheet theo tên tháng (102026 hoặc 10/2026)
+      // Tìm sheet theo tên tháng (10/2026, 102026, Tháng 10/2026, T10/2026...)
       if (month) {
         var rawDigits = month.replace(/\D/g, "");
-        sheet = ss.getSheetByName(rawDigits) || ss.getSheetByName(month);
+        sheet = ss.getSheetByName(month) || 
+                ss.getSheetByName(rawDigits) || 
+                ss.getSheetByName("Tháng " + month) || 
+                ss.getSheetByName("T" + month) || 
+                ss.getSheetByName("Tháng " + rawDigits);
       }
       if (!sheet) {
-        // Mặc định lấy sheet đầu tiên hoặc sheet chứa chữ số
+        // Mặc định lấy sheet đầu tiên có chứa chữ số tháng
         var sheets = ss.getSheets();
         for (var i = 0; i < sheets.length; i++) {
           var name = sheets[i].getName();
@@ -69,8 +73,9 @@ function handleRequest(e) {
       }
 
       if (sheet) {
-        // Ghi trực tiếp vào ô Q2
+        // Ghi trực tiếp vào ô Q2 (Cột Q, dòng 2)
         sheet.getRange("Q2").setValue(status);
+        SpreadsheetApp.flush(); // Áp dụng ngay lập tức trên Google Sheet
         return createJsonResponse({
           success: true,
           message: "Đã cập nhật ô Q2 thành " + status + " trên sheet " + sheet.getName(),
@@ -105,6 +110,7 @@ function handleRequest(e) {
       var contentVal = params.content || "";
 
       notifSheet.appendRow([dateVal, roomVal, typeVal, contentVal]);
+      SpreadsheetApp.flush();
 
       return createJsonResponse({
         success: true,
@@ -121,7 +127,7 @@ function handleRequest(e) {
     // ----------------------------------------------------
     if (action === "update_payment") {
       var monthTab = String(params.month || "").replace(/\D/g, "");
-      var targetSheet = ss.getSheetByName(monthTab) || ss.getSheetByName(params.month);
+      var targetSheet = ss.getSheetByName(params.month) || ss.getSheetByName(monthTab) || ss.getSheetByName("Tháng " + params.month);
       if (!targetSheet) {
         return createJsonResponse({ success: false, error: "Không tìm thấy sheet tháng: " + params.month });
       }
@@ -135,6 +141,7 @@ function handleRequest(e) {
         if (rowRoom.toLowerCase() === targetRoom.toLowerCase() || 
             rowRoom.replace(/\D/g, "") === targetRoom.replace(/\D/g, "")) {
           targetSheet.getRange(r + 1, 16).setValue(newStatus); // Cột P (cột 16)
+          SpreadsheetApp.flush();
           return createJsonResponse({
             success: true,
             message: "Đã cập nhật trạng thái phòng " + targetRoom + " thành " + newStatus,
