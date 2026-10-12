@@ -359,12 +359,10 @@ export function IconFigmaElectricWater({ size = 52, className = '', style }: Ico
             <feGaussianBlur stdDeviation="2" />
           </filter>
         </defs>
-        {/* Water background drop / plate */}
-        <path d="M62 30C62 30 46 50 46 64C46 73 53 80 62 80C71 80 78 73 78 64C78 50 62 30 62 30Z" fill="url(#ew_water_grad)" />
-        {/* Frosted glass overlay */}
-        <rect x="12" y="16" width="76" height="68" rx="22" fill="rgba(255, 255, 255, 0.4)" stroke="rgba(255, 255, 255, 0.9)" strokeWidth="1.5" />
+        {/* Water background drop */}
+        <path d="M62 26C62 26 44 48 44 64C44 74 52 82 62 82C72 82 80 74 80 64C80 48 62 26 62 26Z" fill="url(#ew_water_grad)" />
         {/* Yellow Electric Ray with blur / glow */}
-        <path d="M42 22L22 50H38L32 76L58 46H42L48 22H42Z" fill="url(#ew_zap_grad)" stroke="#FFFFFF" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M42 18L20 48H36L30 76L58 44H42L48 18H42Z" fill="url(#ew_zap_grad)" stroke="#FFFFFF" strokeWidth="1.5" strokeLinejoin="round" />
         {/* Blue droplet inside */}
         <path d="M68 44C68 44 56 56 56 64C56 70 61 74 67 74C73 74 78 70 78 64C78 56 68 44 68 44Z" fill="#42A0F0" fillOpacity="0.85" stroke="#FFFFFF" strokeWidth="1" />
       </svg>
@@ -424,54 +422,44 @@ export function IconGlassBell3D({ size = 52, className = '', style }: Icon3DProp
           </linearGradient>
         </defs>
 
-        {/* 1. Frosted white squircle background container */}
-        <rect 
-          x="12" 
-          y="12" 
-          width="76" 
-          height="76" 
-          rx="24" 
-          fill="url(#bell_card_bg)" 
-          stroke="rgba(255, 255, 255, 0.95)" 
-          strokeWidth="1.5"
-          filter="url(#bell_card_glow)" 
-        />
+        {/* 3D Glass Bell (Cutout Transparent Background) */}
+        <g transform="translate(50, 50) scale(1.3) translate(-50, -48)">
+          {/* Bottom Clapper sphere peeking out from underneath the bell */}
+          <circle cx="50" cy="59" r="11" fill="url(#bell_clapper_grad)" />
 
-        {/* 2. Bottom Clapper sphere peeking out from underneath the bell */}
-        <circle cx="50" cy="59" r="11" fill="url(#bell_clapper_grad)" />
+          {/* Luminous emerald center glow behind frosted skin */}
+          <circle cx="50" cy="49" r="14" fill="url(#bell_inner_glow_grad)" />
 
-        {/* 3. Luminous emerald center glow behind frosted skin */}
-        <circle cx="50" cy="49" r="14" fill="url(#bell_inner_glow_grad)" />
+          {/* Bell main dome body */}
+          <path 
+            d="M32 53 C32 38 40 31 50 31 C60 31 68 38 68 53 Z" 
+            fill="url(#bell_glass_skin)" 
+            stroke="rgba(255, 255, 255, 0.85)" 
+            strokeWidth="1" 
+          />
 
-        {/* 4. Bell main dome body */}
-        <path 
-          d="M32 53 C32 38 40 31 50 31 C60 31 68 38 68 53 Z" 
-          fill="url(#bell_glass_skin)" 
-          stroke="rgba(255, 255, 255, 0.85)" 
-          strokeWidth="1"
-        />
+          {/* Flared bottom lip pill */}
+          <rect 
+            x="26" 
+            y="50.5" 
+            width="48" 
+            height="7" 
+            rx="3.5" 
+            fill="url(#bell_glass_skin)" 
+            stroke="rgba(255, 255, 255, 0.9)" 
+            strokeWidth="1" 
+          />
 
-        {/* 5. Flared bottom lip pill */}
-        <rect 
-          x="26" 
-          y="50.5" 
-          width="48" 
-          height="7" 
-          rx="3.5" 
-          fill="url(#bell_glass_skin)" 
-          stroke="rgba(255, 255, 255, 0.9)" 
-          strokeWidth="1"
-        />
-
-        {/* 6. Top Knob sphere */}
-        <circle 
-          cx="50" 
-          cy="26" 
-          r="6.5" 
-          fill="url(#bell_knob_grad)" 
-          stroke="rgba(255, 255, 255, 0.85)" 
-          strokeWidth="0.8"
-        />
+          {/* Top Knob sphere */}
+          <circle 
+            cx="50" 
+            cy="26" 
+            r="6.5" 
+            fill="url(#bell_knob_grad)" 
+            stroke="rgba(255, 255, 255, 0.85)" 
+            strokeWidth="0.8" 
+          />
+        </g>
       </svg>
     </div>
   );
@@ -510,31 +498,21 @@ export function IconGlassSearchPlate3D({ size = 52, className = '', style }: Ico
           </linearGradient>
         </defs>
 
-        {/* Frosted card container */}
-        <rect 
-          x="12" 
-          y="12" 
-          width="76" 
-          height="76" 
-          rx="24" 
-          fill="url(#search_card_bg)" 
-          stroke="rgba(255, 255, 255, 0.95)" 
-          strokeWidth="1.5"
-          filter="url(#search_card_glow)" 
-        />
+        {/* 3D License Plate & Magnifier (Cutout Transparent Background) */}
+        <g transform="translate(50, 50) scale(1.2) translate(-50, -48)">
+          {/* License plate card inside */}
+          <rect x="18" y="28" width="60" height="36" rx="9" fill="#F1F5F9" stroke="#94A3B8" strokeWidth="1.5" />
+          <rect x="22" y="34" width="22" height="4" rx="2" fill="#64748B" />
+          <rect x="22" y="42" width="42" height="5.5" rx="2.75" fill="#334155" />
+          <rect x="22" y="52" width="32" height="5" rx="2.5" fill="#0EA5E9" />
 
-        {/* License plate card inside */}
-        <rect x="22" y="30" width="56" height="34" rx="8" fill="#F1F5F9" stroke="#CBD5E1" strokeWidth="1.2" />
-        <rect x="26" y="35" width="22" height="3.5" rx="1.75" fill="#94A3B8" />
-        <rect x="26" y="42" width="40" height="5" rx="2.5" fill="#475569" />
-        <rect x="26" y="51" width="30" height="4.5" rx="2.25" fill="#0EA5E9" />
-
-        {/* 3D Frosted Glass Magnifier */}
-        <circle cx="56" cy="44" r="15" fill="url(#search_lens_grad)" stroke="url(#search_rim_grad)" strokeWidth="3" />
-        <line x1="67" y1="55" x2="78" y2="66" stroke="url(#search_handle_grad)" strokeWidth="5" strokeLinecap="round" />
-        
-        {/* Specular curved reflection on lens */}
-        <path d="M48 37 C51 34 56 34 59 36" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+          {/* 3D Frosted Glass Magnifier */}
+          <circle cx="58" cy="46" r="17" fill="url(#search_lens_grad)" stroke="url(#search_rim_grad)" strokeWidth="3" />
+          <line x1="70" y1="58" x2="84" y2="72" stroke="url(#search_handle_grad)" strokeWidth="5.5" strokeLinecap="round" />
+          
+          {/* Specular curved reflection on lens */}
+          <path d="M49 38 C53 34 59 34 63 37" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
       </svg>
     </div>
   );
@@ -557,7 +535,7 @@ export function IconGlassLogout3D({ size = 52, className = '', style }: Icon3DPr
           </filter>
           <linearGradient id="logout_door_grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#FDA4AF" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#F43F5E" strokeOpacity="0.95" />
           </linearGradient>
           <linearGradient id="logout_arrow_grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#FB7185" />
@@ -569,35 +547,25 @@ export function IconGlassLogout3D({ size = 52, className = '', style }: Icon3DPr
           </linearGradient>
         </defs>
 
-        {/* Frosted card container */}
-        <rect 
-          x="12" 
-          y="12" 
-          width="76" 
-          height="76" 
-          rx="24" 
-          fill="url(#logout_card_bg)" 
-          stroke="rgba(255, 255, 255, 0.95)" 
-          strokeWidth="1.5"
-          filter="url(#logout_card_glow)" 
-        />
+        {/* 3D Exit Frame & Forward Arrow (Cutout Transparent Background) */}
+        <g transform="translate(50, 50) scale(1.25) translate(-50, -50)">
+          {/* 3D Exit Frame */}
+          <path 
+            d="M48 26 H32 C28 26 25 29 25 33 V67 C25 71 28 74 32 74 H48" 
+            stroke="url(#logout_door_grad)" 
+            strokeWidth="4.5" 
+            strokeLinecap="round" 
+          />
 
-        {/* 3D Exit Frame */}
-        <path 
-          d="M48 28 H34 C30.6863 28 28 30.6863 28 34 V66 C28 69.3137 30.6863 72 34 72 H48" 
-          stroke="url(#logout_door_grad)" 
-          strokeWidth="4" 
-          strokeLinecap="round" 
-        />
-
-        {/* Forward Arrow */}
-        <path 
-          d="M42 50 H68 M58 40 L68 50 L58 60" 
-          stroke="url(#logout_arrow_grad)" 
-          strokeWidth="4" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
-        />
+          {/* Forward Arrow */}
+          <path 
+            d="M40 50 H72 M60 38 L72 50 L60 62" 
+            stroke="url(#logout_arrow_grad)" 
+            strokeWidth="4.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+          />
+        </g>
       </svg>
     </div>
   );

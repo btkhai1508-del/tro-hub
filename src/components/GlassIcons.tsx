@@ -835,3 +835,188 @@ export function GlassIconChart({ size = 32, className = '', style }: GlassIconPr
     </svg>
   );
 }
+
+// 22. Bell / Notification Icon (Mint / Emerald Green Glass Bell - Pure Transparent Cutout)
+export function GlassIconBell({ size = 32, className = '', style }: GlassIconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 100 100" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`shrink-0 drop-shadow-[0_8px_16px_rgba(16,185,129,0.35)] transition-transform duration-200 ${className}`} 
+      style={style}
+    >
+      <defs>
+        <linearGradient id="gradBellBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#34D399" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+        <radialGradient id="gradBellInnerGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#2ECC71" stopOpacity="0.9" />
+          <stop offset="60%" stopColor="#48E58D" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#7EF5B5" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="gradBellGlass" x1="20%" y1="10%" x2="80%" y2="90%">
+          <stop offset="0%" stopColor="#A8F8CE" stopOpacity="0.95" />
+          <stop offset="45%" stopColor="#63E79D" stopOpacity="0.82" />
+          <stop offset="100%" stopColor="#3CD67E" stopOpacity="0.9" />
+        </linearGradient>
+        <linearGradient id="gradBellClapper" x1="30%" y1="20%" x2="70%" y2="90%">
+          <stop offset="0%" stopColor="#3BD57D" />
+          <stop offset="100%" stopColor="#1B8748" />
+        </linearGradient>
+      </defs>
+      {/* Back Solid Emerald Accent (Rotated squircle) */}
+      <rect x="22" y="10" width="56" height="56" rx="18" fill="url(#gradBellBg)" transform="rotate(15 22 10)" />
+      {/* Bottom Clapper Sphere */}
+      <circle cx="50" cy="74" r="10" fill="url(#gradBellClapper)" />
+      {/* Inner Glow */}
+      <circle cx="50" cy="46" r="14" fill="url(#gradBellInnerGlow)" />
+      {/* Front Frosted Glass Bell Dome */}
+      <path 
+        d="M50 16 C36 16 28 28 28 46 L28 62 L20 70 L80 70 L72 62 L72 46 C72 28 64 16 50 16 Z" 
+        fill="url(#gradBellGlass)" 
+        stroke="rgba(255, 255, 255, 0.85)" 
+        strokeWidth="1.5" 
+      />
+      {/* Top Knob Sphere */}
+      <circle cx="50" cy="14" r="6" fill="#A8F8CE" stroke="#FFFFFF" strokeWidth="1" />
+    </svg>
+  );
+}
+
+// 23. Electricity & Water Icon (Blue Water Droplet + Golden 3D Lightning - Pure Transparent Cutout)
+export function GlassIconElectricWater({ size = 32, className = '', style }: GlassIconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 100 100" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`shrink-0 drop-shadow-[0_8px_16px_rgba(59,130,246,0.35)] transition-transform duration-200 ${className}`} 
+      style={style}
+    >
+      <defs>
+        <linearGradient id="gradEWWater" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#60A5FA" />
+          <stop offset="100%" stopColor="#2563EB" />
+        </linearGradient>
+        <linearGradient id="gradEWZap" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="50%" stopColor="#FACC15" />
+          <stop offset="100%" stopColor="#EAB308" />
+        </linearGradient>
+        <linearGradient id="gradEWGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+          <stop offset="100%" stopColor="rgba(191, 219, 254, 0.4)" />
+        </linearGradient>
+      </defs>
+      {/* Back Solid Blue Water Droplet Plate */}
+      <path 
+        d="M62 18 C62 18 38 46 38 64 C38 78 49 88 62 88 C75 88 86 78 86 64 C86 46 62 18 62 18 Z" 
+        fill="url(#gradEWWater)" 
+      />
+      {/* Front Frosted Glass Droplet Outline */}
+      <path 
+        d="M62 26 C62 26 44 48 44 62 C44 72 52 80 62 80 C72 80 80 72 80 62 C80 48 62 26 62 26 Z" 
+        fill="url(#gradEWGlass)" 
+        stroke="rgba(255, 255, 255, 0.75)" 
+        strokeWidth="1.5" 
+      />
+      {/* Golden 3D Lightning Zap across the front */}
+      <path 
+        d="M42 16 L20 48 L38 48 L30 84 L62 44 L44 44 L52 16 Z" 
+        fill="url(#gradEWZap)" 
+        stroke="#FFFFFF" 
+        strokeWidth="2" 
+        strokeLinejoin="round" 
+      />
+    </svg>
+  );
+}
+
+// 24. License Plate Search Icon (Cyan / Sky Plate + 3D Frosted Glass Magnifier - Pure Transparent Cutout)
+export function GlassIconSearchPlate({ size = 32, className = '', style }: GlassIconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 100 100" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`shrink-0 drop-shadow-[0_8px_16px_rgba(14,165,233,0.35)] transition-transform duration-200 ${className}`} 
+      style={style}
+    >
+      <defs>
+        <linearGradient id="gradPlateBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#0284C7" />
+        </linearGradient>
+        <linearGradient id="gradLensGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+          <stop offset="100%" stopColor="rgba(186, 230, 253, 0.45)" />
+        </linearGradient>
+        <linearGradient id="gradLensRim" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#E0F2FE" />
+          <stop offset="100%" stopColor="#38BDF8" />
+        </linearGradient>
+        <linearGradient id="gradLensHandle" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#0369A1" />
+        </linearGradient>
+      </defs>
+      {/* Back Solid Accent Plate (Rotated License Plate) */}
+      <rect x="16" y="20" width="58" height="38" rx="10" fill="url(#gradPlateBg)" transform="rotate(-12 16 20)" />
+      {/* Plate lines */}
+      <g transform="rotate(-12 16 20)">
+        <rect x="22" y="26" width="20" height="4" rx="2" fill="#FFFFFF" opacity="0.85" />
+        <rect x="22" y="34" width="44" height="6" rx="3" fill="#FFFFFF" />
+        <rect x="22" y="44" width="30" height="5" rx="2.5" fill="#E0F2FE" opacity="0.9" />
+      </g>
+      {/* Front 3D Frosted Glass Magnifier */}
+      <circle cx="58" cy="52" r="21" fill="url(#gradLensGlass)" stroke="url(#gradLensRim)" strokeWidth="3" />
+      {/* Magnifier Handle */}
+      <line x1="73" y1="67" x2="89" y2="83" stroke="url(#gradLensHandle)" strokeWidth="6" strokeLinecap="round" />
+      {/* Specular Curved Reflection on Glass Lens */}
+      <path d="M47 43 C52 38 60 38 66 42" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 25. Logout / Exit Icon (Rose / Red 3D Glass Door & Arrow - Pure Transparent Cutout)
+export function GlassIconLogout({ size = 32, className = '', style }: GlassIconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 100 100" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`shrink-0 drop-shadow-[0_8px_16px_rgba(244,63,94,0.35)] transition-transform duration-200 ${className}`} 
+      style={style}
+    >
+      <defs>
+        <linearGradient id="gradLogoutBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FB7185" />
+          <stop offset="100%" stopColor="#E11D48" />
+        </linearGradient>
+        <linearGradient id="gradLogoutGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+          <stop offset="100%" stopColor="rgba(254, 205, 211, 0.35)" />
+        </linearGradient>
+      </defs>
+      {/* Back Solid Rose Accent (Rotated squircle) */}
+      <rect x="20" y="12" width="58" height="58" rx="18" fill="url(#gradLogoutBg)" transform="rotate(-12 20 12)" />
+      {/* Front Frosted Glass Door Frame */}
+      <rect x="16" y="20" width="46" height="62" rx="12" fill="url(#gradLogoutGlass)" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" />
+      {/* Exit Doorway Line */}
+      <path d="M42 32 H28 C26 32 24 34 24 36 V66 C24 68 26 70 28 70 H42" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" />
+      {/* Forward Arrow */}
+      <path d="M38 51 H76 M64 39 L76 51 L64 63" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+

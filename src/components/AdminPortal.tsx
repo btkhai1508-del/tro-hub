@@ -39,7 +39,16 @@ import { storage } from '../lib/storage';
 import { cn, getCurrentMonthStr } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
-import { GlassIconClock, GlassIconDocument, GlassIconCalendar, GlassIconSetting } from './GlassIcons';
+import { 
+  GlassIconClock, 
+  GlassIconDocument, 
+  GlassIconCalendar, 
+  GlassIconSetting,
+  GlassIconBell,
+  GlassIconElectricWater,
+  GlassIconSearchPlate,
+  GlassIconLogout
+} from './GlassIcons';
 import { ModernLineGraph } from './ModernLineGraph';
 import { 
   IconHome3D, 
@@ -53,11 +62,7 @@ import {
   IconTick3D,
   IconElectricity3D,
   IconWater3D,
-  IconElectricWater3D,
-  IconPencil3D,
-  IconGlassBell3D,
-  IconGlassSearchPlate3D,
-  IconGlassLogout3D
+  IconPencil3D
 } from './Icons3D';
 
 // Procedural Web Audio Sound Manager
@@ -1302,9 +1307,9 @@ export function AdminPortal() {
         {activeMenu === 'utilities' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6 animate-in fade-in duration-300">
             {[
-              { key: 'createNotification', label: 'Tạo thông báo', icon: IconGlassBell3D },
-              { key: 'meter', label: 'Điện nước', icon: IconElectricWater3D },
-              { key: 'plates', label: 'Tra biển số', icon: IconGlassSearchPlate3D },
+              { key: 'createNotification', label: 'Tạo thông báo', icon: GlassIconBell },
+              { key: 'meter', label: 'Điện nước', icon: GlassIconElectricWater },
+              { key: 'plates', label: 'Tra biển số', icon: GlassIconSearchPlate },
               { key: 'contract', label: 'Hợp đồng & CT01', icon: GlassIconDocument },
               { key: 'declaration', label: 'Kỳ kê khai', icon: GlassIconCalendar },
               { key: 'config', label: 'Cài đặt phí', icon: GlassIconSetting }
@@ -1339,7 +1344,7 @@ export function AdminPortal() {
               className="soft-card p-4 min-h-26 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 hover:border-rose-300 transition-all cursor-pointer group"
             >
               <div className="group-hover:scale-105 transition-transform duration-200">
-                <IconGlassLogout3D size={34} />
+                <GlassIconLogout size={34} />
               </div>
               <span>Đăng xuất</span>
             </button>
@@ -2652,7 +2657,7 @@ export function AdminPortal() {
               </button>
 
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <IconGlassBell3D size={20} />
+                <GlassIconBell size={20} />
                 <span>Mẫu gửi thông báo cư dân</span>
               </div>
             </div>
@@ -2661,7 +2666,7 @@ export function AdminPortal() {
             <div className="soft-surface p-6 sm:p-8 space-y-7 relative overflow-hidden">
               <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
                 <h2 className="type-h2 font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                  <IconGlassBell3D size={42} />
+                  <GlassIconBell size={42} />
                   <span>Tạo Thông Báo Mới</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
