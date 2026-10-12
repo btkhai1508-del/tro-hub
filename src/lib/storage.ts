@@ -49,11 +49,17 @@ export const storage = {
   }
 };
 
+// Purge any legacy invoice / payment cache on startup.
+// Payment status must NEVER be stored in frontend storage; it solely depends on backend / Google Sheet Column P.
+try {
+  storage.removeItem('ecostay_invoices');
+  storage.removeItem('ecostay_payment_cache');
+} catch {}
+
 /** Keys used across the app */
 export const STORAGE_KEYS = {
   AUTH: 'ecostay_auth',
   TOKEN: 'ecostay_jwt',
   USER_PHONE: 'ecostay_user_phone',
-  PROFILE_SYNCED: 'ecostay_profile_row_synced',
-  INVOICES: 'ecostay_invoices'
+  PROFILE_SYNCED: 'ecostay_profile_row_synced'
 } as const;

@@ -225,9 +225,10 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    // Clear any stale cached invoice data so fresh Google Sheet data is always used
+    // Payment status & invoices are strictly NEVER stored in client storage.
+    // Payment status solely depends on backend (Google Sheet Column P).
     try {
-      storage.removeItem(STORAGE_KEYS.INVOICES);
+      storage.removeItem('ecostay_invoices');
       storage.removeItem('ecostay_payment_cache');
     } catch {}
     return initialInvoices;
@@ -406,17 +407,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 }
               });
 
-              // CRITICAL: Do not downgrade an invoice already confirmed 'paid' by Google Sheet Column P
-              const updatedInvoices = data.invoices.map((freshInv: Invoice) => {
-                const existing = prevInvoices.find(i => i.id === freshInv.id || i.month === freshInv.month);
-                if (existing && existing.status === 'paid' && freshInv.status === 'unpaid') {
-                  return { ...freshInv, status: 'paid' as const, paidAt: existing.paidAt };
-                }
-                return freshInv;
-              });
-
-              storage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(updatedInvoices));
-              return updatedInvoices;
+              // Payment status solely depends on backend (Google Sheet Column P)
+              // No frontend caching, no refusal to downgrade, no localStorage write
+              return data.invoices;
             });
           }
 
@@ -433,14 +426,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const directInvoice = await fetchMonthlyInvoicesFromSheet(sheetId, sheetConfig.monthlyTab || '10/2026', null, cleanRoom, profile.phone || cleanName);
           if (directInvoice) {
             setInvoices(prevInvoices => {
-              const currentFirst = prevInvoices[0];
-              const mergedInv = (currentFirst && currentFirst.status === 'paid' && directInvoice.status === 'unpaid')
-                ? { ...directInvoice, status: 'paid' as const, paidAt: currentFirst.paidAt }
-                : directInvoice;
-              const others = prevInvoices.filter(i => i.month !== mergedInv.month && i.id !== mergedInv.id);
-              const result = [mergedInv, ...others];
-              storage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(result));
-              return result;
+              const others = prevInvoices.filter(i => i.month !== directInvoice.month && i.id !== directInvoice.id);
+              return [directInvoice, ...others];
             });
           }
         }
@@ -643,7 +630,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (res.invoices && res.invoices.length > 0) {
         setInvoices(res.invoices);
-        storage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(res.invoices));
       }
 
       return { 
@@ -684,7 +670,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (res.invoices && res.invoices.length > 0) {
         setInvoices(res.invoices);
-        storage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(res.invoices));
       }
 
       return { 
@@ -755,10 +740,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    storage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(invoices));
-  }, [invoices]);
-
-  useEffect(() => {
     storage.setItem('ecostay_profile', JSON.stringify(profile));
   }, [profile]);
 
@@ -789,12 +770,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         if (liveInv && !isCancelled) {
           setInvoices(prev => {
-            const currentFirst = prev[0];
-            const effectiveInv = (currentFirst && currentFirst.status === 'paid' && liveInv.status === 'unpaid')
-              ? { ...liveInv, status: 'paid' as const, paidAt: currentFirst.paidAt }
-              : liveInv;
-            const others = prev.filter(i => i.month !== effectiveInv.month && i.id !== effectiveInv.id);
-            return [effectiveInv, ...others];
+            const others = prev.filter(i => i.month !== liveInv.month && i.id !== liveInv.id);
+            return [liveInv, ...others];
           });
           fetchPaymentStatus(targetRoom);
         }
@@ -881,7 +858,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     setInvoices(updatedInvoices);
-    storage.setItem(STORAGE_KEYS.INVOICES, JSON.stringify(updatedInvoices));
 
     // Call backend API to set Column P (GREEN for QR/transfer)
     apiFetch('/api/payment/mark-paid', {

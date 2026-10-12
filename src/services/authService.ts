@@ -318,7 +318,10 @@ export const authService = {
     storage.removeItem(STORAGE_KEYS.AUTH);
     storage.removeItem(STORAGE_KEYS.USER_PHONE);
     storage.removeItem(STORAGE_KEYS.PROFILE_SYNCED);
-    storage.removeItem(STORAGE_KEYS.INVOICES);
+    try {
+      storage.removeItem('ecostay_invoices');
+      storage.removeItem('ecostay_payment_cache');
+    } catch {}
   },
 
   /**

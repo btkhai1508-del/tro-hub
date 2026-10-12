@@ -1003,9 +1003,9 @@ export async function fetchMonthlyInvoicesFromSheet(
                 const statusRes = await fetch(statusUrl);
                 if (statusRes.ok) {
                   const statusData = await statusRes.json();
-                  if (statusData && statusData.success && statusData.paymentStatus === 'paid') {
-                    effectiveStatus = 'paid';
-                    effectivePaidLabel = statusData.label || 'Đã thanh toán (Google Sheet Cột P)';
+                  if (statusData && statusData.success) {
+                    effectiveStatus = statusData.paymentStatus;
+                    effectivePaidLabel = statusData.paymentStatus === 'paid' ? (statusData.label || 'Đã thanh toán (Google Sheet Cột P)') : undefined;
                   }
                 }
               } catch {}
@@ -1126,34 +1126,11 @@ export async function fetchMonthlyInvoicesFromSheet(
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 if (statusData && statusData.success) {
-                  if (statusData.paymentStatus === 'paid') {
-                    effectivePaymentStatus = 'paid';
-                    effectivePaidAt = statusData.label || 'Đã thanh toán (Google Sheet Cột P)';
-                  }
+                  effectivePaymentStatus = statusData.paymentStatus;
+                  effectivePaidAt = statusData.paymentStatus === 'paid' ? (statusData.label || 'Đã thanh toán (Google Sheet Cột P)') : undefined;
                 }
               }
             } catch {}
-
-            // Fallback: Check Tab "Logs" for bank transfer if Column P color could not be confirmed
-            if (effectivePaymentStatus !== 'paid') {
-              try {
-                const logsUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=Logs`;
-                const lRes = await fetch(logsUrl);
-                if (lRes.ok) {
-                  const lText = await lRes.text();
-                  const lRows = parseCSV(lText);
-                  const cleanR = (cleanTargetRoom || roomNumber).replace(/[^0-9A-Za-z]/g, '').toUpperCase();
-                  for (const lr of lRows) {
-                    const desc = String(lr[5] || '').toUpperCase();
-                    if (cleanR && (desc.includes(cleanR) || desc.includes(`P${cleanR}`) || desc.includes(`LVC${cleanR}`))) {
-                      effectivePaymentStatus = 'paid';
-                      effectivePaidAt = lr[1] || 'Đã nhận chuyển khoản (Logs)';
-                      break;
-                    }
-                  }
-                }
-              } catch {}
-            }
 
             const details: InvoiceDetailItem[] = [
               { name: 'Tiền thuê phòng', amount: roomCost, type: 'room', note: `Phòng ${roomNumber}` },

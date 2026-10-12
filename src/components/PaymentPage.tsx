@@ -36,6 +36,16 @@ export function PaymentPage() {
   // Single-execution flag to prevent repeated looping
   const isCompletedRef = useRef(isAlreadyPaid || paymentMode === 'success');
 
+  useEffect(() => {
+    if (targetInvoice.status === 'paid') {
+      isCompletedRef.current = true;
+      setPaymentMode('success');
+    } else if (targetInvoice.status === 'unpaid') {
+      isCompletedRef.current = false;
+      setPaymentMode(prev => prev === 'success' ? 'qr' : prev);
+    }
+  }, [targetInvoice.status]);
+
   // Format currency
   const formatCurrency = (val: number) => {
     return val.toLocaleString('vi-VN');
@@ -85,6 +95,15 @@ export function PaymentPage() {
           } else if (data.paymentStatus === 'unpaid') {
             // Sheet is RED: Must be unpaid!
             isCompletedRef.current = false;
+            setInvoices(prev => prev.map(inv =>
+              (inv.id === targetInvoice.id || inv.month === targetInvoice.month)
+                ? {
+                    ...inv,
+                    status: 'unpaid' as const,
+                    paidAt: undefined
+                  }
+                : inv
+            ));
             if (paymentMode === 'success') {
               setPaymentMode('qr');
             }
