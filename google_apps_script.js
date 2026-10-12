@@ -213,6 +213,44 @@ function handleRequest(e) {
       return createJsonResponse({ success: false, error: "Không tìm thấy phòng " + targetRoom + " trong sheet " + targetSheet.getName() });
     }
 
+    // ----------------------------------------------------
+    // ACTION 4: CẬP NHẬT ĐƠN GIÁ PHÍ DỊCH VỤ (DÒNG 5)
+    // Cột H5: Đơn giá điện, I5: Đơn giá nước, K5: Tiền rác, L5: Tiền internet, M5: Tiền xe
+    // ----------------------------------------------------
+    if (action === "update_config" || action === "set_config") {
+      var month = String(params.month || "").trim();
+      var rawDigits = month.replace(/\D/g, "");
+      var targetSheet = ss.getSheetByName(month) || 
+                        ss.getSheetByName(rawDigits) || 
+                        ss.getSheetByName("Tháng " + month) || 
+                        ss.getSheetByName("T" + month) || 
+                        ss.getSheetByName("Tháng " + rawDigits);
+
+      if (!targetSheet) targetSheet = ss.getActiveSheet();
+
+      // Cột H5 (cột 8): Đơn giá điện
+      if (params.dien !== undefined && params.dien !== "") targetSheet.getRange("H5").setValue(Number(params.dien));
+      // Cột I5 (cột 9): Đơn giá nước
+      if (params.nuoc !== undefined && params.nuoc !== "") targetSheet.getRange("I5").setValue(Number(params.nuoc));
+      // Cột K5 (cột 11): Tiền rác
+      if (params.rac !== undefined && params.rac !== "") targetSheet.getRange("K5").setValue(Number(params.rac));
+      // Cột L5 (cột 12): Tiền internet
+      if (params.net !== undefined && params.net !== "") targetSheet.getRange("L5").setValue(Number(params.net));
+      // Cột M5 (cột 13): Tiền xe
+      if (params.xe !== undefined && params.xe !== "") targetSheet.getRange("M5").setValue(Number(params.xe));
+
+      SpreadsheetApp.flush();
+      return createJsonResponse({
+        success: true,
+        message: "Đã cập nhật đơn giá tháng " + targetSheet.getName() + " vào các ô H5, I5, K5, L5, M5 thành công",
+        dien: params.dien,
+        nuoc: params.nuoc,
+        rac: params.rac,
+        net: params.net,
+        xe: params.xe
+      });
+    }
+
     return createJsonResponse({ success: true, message: "EcoStay Apps Script Web App is active" });
   } catch (error) {
     return createJsonResponse({ success: false, error: error.toString() });

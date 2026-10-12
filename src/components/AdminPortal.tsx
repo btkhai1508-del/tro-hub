@@ -45,6 +45,8 @@ import {
   GlassIconCalendar, 
   GlassIconSetting,
   GlassIconBell,
+  GlassIconAlert,
+  GlassIconInvoice,
   GlassIconElectricWater,
   GlassIconSearchPlate,
   GlassIconLogout
@@ -628,6 +630,17 @@ export function AdminPortal() {
       .catch(() => setIsLoading(false));
   };
 
+  const isValidLicensePlate = (val: any): boolean => {
+    if (!val) return false;
+    const str = String(val).trim();
+    if (/^\d+(\.0+)?$/.test(str)) return false;
+    if (!/\d/.test(str)) return false;
+    if (/^\d{9,12}$/.test(str.replace(/\s+/g, ''))) return false;
+    const clean = str.replace(/[\s.-]/g, '');
+    if (clean.length < 4 || clean.length > 12) return false;
+    return true;
+  };
+
   const fetchPlates = (month: string, q: string) => {
     const cleanQ = (q || '').trim().toLowerCase().replace(/[\s.-]/g, '');
     const searchFromRooms = (list: any[]) => {
@@ -638,7 +651,7 @@ export function AdminPortal() {
           { plate: r.xe2, name: r.nguoi2, phone: r.sdt2 },
           { plate: r.xe3, name: r.nguoi3, phone: r.sdt3 }
         ].forEach(item => {
-          if (!item.plate || item.plate === '1' || item.plate === '2.0' || item.plate === '3.0') return;
+          if (!isValidLicensePlate(item.plate)) return;
           if (!cleanQ || item.plate.toLowerCase().replace(/[\s.-]/g, '').includes(cleanQ)) {
             results.push({
               room: r.room,
@@ -2036,7 +2049,7 @@ export function AdminPortal() {
                       {r.plate}
                     </span>
                   </div>
-                  <p className="font-bold text-sm text-slate-800 dark:text-white">{r.name}</p>
+                  <p className="font-bold text-sm text-slate-800 dark:text-white">{r.name || r.tenant || 'Chưa cập nhật tên'}</p>
                   <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                 </div>
               ))}
@@ -2410,7 +2423,12 @@ export function AdminPortal() {
             </div>
 
             <div className="soft-card p-6 sm:p-8 space-y-6">
-              <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
+              <div>
+                <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Đồng bộ trực tiếp các ô <span className="font-semibold text-blue-600 dark:text-blue-400">H5</span> (Điện), <span className="font-semibold text-blue-600 dark:text-blue-400">I5</span> (Nước), <span className="font-semibold text-blue-600 dark:text-blue-400">K5</span> (Rác), <span className="font-semibold text-blue-600 dark:text-blue-400">L5</span> (Internet), <span className="font-semibold text-blue-600 dark:text-blue-400">M5</span> (Xe) trên Google Sheet.
+                </p>
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
@@ -2897,8 +2915,8 @@ export function AdminPortal() {
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Bell size={16} />
+                        <div className="flex items-center gap-2.5">
+                          <GlassIconBell size={24} />
                           <span className="text-xs font-bold">Thông báo</span>
                         </div>
                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thong_bao' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
@@ -2923,8 +2941,8 @@ export function AdminPortal() {
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle size={16} />
+                        <div className="flex items-center gap-2.5">
+                          <GlassIconAlert size={24} />
                           <span className="text-xs font-bold">Nhắc nhở</span>
                         </div>
                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'nhac_nho' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
@@ -2949,8 +2967,8 @@ export function AdminPortal() {
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Receipt size={16} />
+                        <div className="flex items-center gap-2.5">
+                          <GlassIconInvoice size={24} />
                           <span className="text-xs font-bold">Thanh toán</span>
                         </div>
                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thanh_toan' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
@@ -2964,7 +2982,7 @@ export function AdminPortal() {
                   {/* Banner tự động báo của Thanh toán */}
                   {notifType === 'thanh_toan' && (
                     <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center gap-3 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in duration-200">
-                      <Receipt size={18} className="text-slate-900 dark:text-white shrink-0" />
+                      <GlassIconInvoice size={24} className="shrink-0" />
                       <div>
                         <span className="font-bold">Hệ thống tự động kích hoạt:</span> Cư dân khi nhận thông báo này sẽ có nút liên kết quét mã VietQR tự động kèm số tiền và đúng cú pháp chuyển khoản của phòng họ.
                       </div>

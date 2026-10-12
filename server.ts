@@ -670,16 +670,24 @@ async function startServer() {
     res.json({ success: true, month, value });
   });
 
-  app.get('/api/admin/config', (req, res) => {
-    const month = (req.query.month as string) || '10/2026';
-    const config = getAdminConfig(month);
-    res.json({ success: true, config });
+  app.get('/api/admin/config', async (req, res) => {
+    try {
+      const month = (req.query.month as string) || '10/2026';
+      const config = await getAdminConfig(month);
+      res.json({ success: true, config });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
   });
 
-  app.post('/api/admin/config', (req, res) => {
-    const { month = '10/2026', config = {} } = req.body || {};
-    const result = saveAdminConfig(month, config);
-    res.json(result);
+  app.post('/api/admin/config', async (req, res) => {
+    try {
+      const { month = '10/2026', config = {} } = req.body || {};
+      const result = await saveAdminConfig(month, config);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
   });
 
   app.post('/api/admin/legal/chat', async (req, res) => {

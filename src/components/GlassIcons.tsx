@@ -887,6 +887,52 @@ export function GlassIconBell({ size = 32, className = '', style }: GlassIconPro
   );
 }
 
+// 22b. Alert / Warning Triangle Icon (Icon:=Warning / Alert with Amber 3D Glass)
+export function GlassIconAlert({ size = 32, className = '', style }: GlassIconProps) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 100 100" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`shrink-0 drop-shadow-[0_8px_16px_rgba(245,158,11,0.35)] transition-transform duration-200 ${className}`} 
+      style={style}
+    >
+      <defs>
+        <linearGradient id="gradAlertBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FBBF24" />
+          <stop offset="100%" stopColor="#D97706" />
+        </linearGradient>
+        <radialGradient id="gradAlertInnerGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.9" />
+          <stop offset="60%" stopColor="#FBBF24" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#FDE68A" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="gradAlertGlass" x1="20%" y1="10%" x2="80%" y2="90%">
+          <stop offset="0%" stopColor="#FEF3C7" stopOpacity="0.95" />
+          <stop offset="45%" stopColor="#FDE68A" stopOpacity="0.82" />
+          <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
+      {/* Back Solid Amber Accent (Rotated squircle) */}
+      <rect x="22" y="10" width="56" height="56" rx="18" fill="url(#gradAlertBg)" transform="rotate(15 22 10)" />
+      {/* Inner Glow Sphere */}
+      <circle cx="50" cy="54" r="16" fill="url(#gradAlertInnerGlow)" />
+      {/* Front Frosted Glass Warning Triangle */}
+      <path 
+        d="M50 18 L86 78 C88 82 85 86 80 86 L20 86 C15 86 12 82 14 78 L50 18 Z" 
+        fill="url(#gradAlertGlass)" 
+        stroke="rgba(255, 255, 255, 0.9)" 
+        strokeWidth="1.5" 
+      />
+      {/* White Exclamation mark */}
+      <line x1="50" y1="40" x2="50" y2="60" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="50" cy="72" r="3.5" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
 // 23. Electricity & Water Icon (Blue Water Droplet + Golden 3D Lightning - Pure Transparent Cutout)
 export function GlassIconElectricWater({ size = 32, className = '', style }: GlassIconProps) {
   return (

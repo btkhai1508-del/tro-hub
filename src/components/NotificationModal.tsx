@@ -2,13 +2,13 @@ import React from 'react';
 import { X, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { IconNotification3D, IconWallet3D, IconSecurity3D } from './Icons3D';
+import { GlassIconBell, GlassIconAlert, GlassIconInvoice, GlassIconSecurity } from './GlassIcons';
 
 const badgeColorMap = {
-  invoice: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-  alert: 'bg-rose-50 text-rose-600 border-rose-100',
-  success: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  info: 'bg-blue-50 text-blue-600 border-blue-100',
+  invoice: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800',
+  alert: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800',
+  success: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800',
+  info: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800',
 };
 
 export function NotificationModal() {
@@ -17,9 +17,11 @@ export function NotificationModal() {
 
   if (!activeNotification) return null;
 
+  const isInvoice = activeNotification.type === 'invoice';
+
   const handleAction = () => {
     closeNotificationModal();
-    if (activeNotification.type === 'invoice' || activeNotification.type === 'alert') {
+    if (isInvoice) {
       navigate('/payment');
     }
   };
@@ -37,8 +39,8 @@ export function NotificationModal() {
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeColorMap[activeNotification.type]} dark:bg-slate-800 dark:border-slate-700`}>
-              {activeNotification.type === 'invoice' && 'Hóa đơn tiền phòng'}
-              {activeNotification.type === 'alert' && 'Cảnh báo quan trọng'}
+              {activeNotification.type === 'invoice' && 'Thông báo thanh toán'}
+              {activeNotification.type === 'alert' && 'Nhắc nhở cư dân'}
               {activeNotification.type === 'success' && 'Giao dịch thành công'}
               {activeNotification.type === 'info' && 'Thông báo chung'}
             </span>
@@ -58,11 +60,13 @@ export function NotificationModal() {
         <div className="p-6 space-y-4">
           <div className="flex items-start gap-4">
             {activeNotification.type === 'invoice' ? (
-              <IconWallet3D size={48} />
+              <GlassIconInvoice size={48} />
+            ) : activeNotification.type === 'alert' ? (
+              <GlassIconAlert size={48} />
             ) : activeNotification.type === 'success' ? (
-              <IconSecurity3D size={48} />
+              <GlassIconSecurity size={48} />
             ) : (
-              <IconNotification3D size={48} />
+              <GlassIconBell size={48} />
             )}
 
             <div className="min-w-0 flex-1">
@@ -89,16 +93,19 @@ export function NotificationModal() {
           <button
             type="button"
             onClick={closeNotificationModal}
-            className="soft-button px-5 py-2.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+            className={isInvoice 
+              ? "soft-button px-5 py-2.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+              : "primary-button px-6 py-2.5 text-xs cursor-pointer font-bold"
+            }
           >
-            Đóng
+            {isInvoice ? 'Để sau' : 'Đã hiểu'}
           </button>
 
-          {(activeNotification.type === 'invoice' || activeNotification.type === 'alert') && (
+          {isInvoice && (
             <button
               type="button"
               onClick={handleAction}
-              className="primary-button px-5 py-2.5 text-xs flex items-center gap-1.5 shadow-sm cursor-pointer font-bold"
+              className="primary-button px-5 py-2.5 text-xs flex items-center gap-1.5 shadow-sm cursor-pointer font-bold bg-blue-600 hover:bg-blue-700 text-white"
             >
               <span>Thanh toán ngay</span>
               <ArrowRight size={14} />

@@ -583,11 +583,30 @@ export async function getMonthlyBilling(month: string = '10/2026') {
 }
 
 /**
+ * Validate Vietnamese License Plate
+ * Rejects pure counts (1, 1.0, 2.0), phone numbers, CCCD, and pure text names without digits (Tuyền, Phạm Huyền Trâm...)
+ */
+export function isValidLicensePlate(val: any): boolean {
+  if (!val) return false;
+  const str = String(val).trim();
+  // Filter out headcount or vehicle count (0, 1, 1.0, 2, 2.0, 3, 3.0...)
+  if (/^\d+(\.0+)?$/.test(str)) return false;
+  // Must contain digits
+  if (!/\d/.test(str)) return false;
+  // Filter out phone numbers and CCCD numbers (pure digits length >= 9)
+  const cleanDigits = str.replace(/\D/g, '');
+  if (/^\d{9,12}$/.test(str.replace(/\s+/g, ''))) return false;
+  // Must contain at least 4 alphanumeric characters (e.g. 59X1, 78C1, 1234)
+  const clean = str.replace(/[\s.-]/g, '');
+  if (clean.length < 4 || clean.length > 12) return false;
+  return true;
+}
+
+/**
  * Search License Plates across all rooms
  */
 export async function searchLicensePlates(month: string = '10/2026', query: string = '') {
-  const q = String(query || '').replace(/\s+/g, '').toLowerCase();
-  if (!q) return [];
+  const q = String(query || '').replace(/[\s.-]/g, '').toLowerCase();
 
   try {
     const zip = await fetchSheetXlsx();
@@ -595,9 +614,9 @@ export async function searchLicensePlates(month: string = '10/2026', query: stri
     const results: any[] = [];
 
     const slots = [
-      { idx: 1, nameCol: 'Q', plateCol: 'T', phoneCol: 'S' },
-      { idx: 2, nameCol: 'U', plateCol: 'X', phoneCol: 'W' },
-      { idx: 3, nameCol: 'Y', plateCol: 'AB', phoneCol: 'AA' }
+      { idx: 1, nameCol: 'Q', cccdCol: 'R', phoneCol: 'S', plateCol: 'T' },
+      { idx: 2, nameCol: 'U', cccdCol: 'V', phoneCol: 'W', plateCol: 'X' },
+      { idx: 3, nameCol: 'Y', cccdCol: 'Z', phoneCol: 'AA', plateCol: 'AB' }
     ];
 
     roomsList.forEach(r => {
@@ -607,12 +626,24 @@ export async function searchLicensePlates(month: string = '10/2026', query: stri
         if (!room) return;
 
         slots.forEach(slot => {
-          const plateRaw = c[slot.plateCol]?.value || '';
-          const cleanPlate = String(plateRaw).replace(/\s+/g, '');
-          const name = c[slot.nameCol]?.value || '';
-          const phone = c[slot.phoneCol]?.value || '';
+          let plateRaw = c[slot.plateCol]?.value || '';
+          let name = c[slot.nameCol]?.value || c.Q?.value || '';
+          let phone = c[slot.phoneCol]?.value || c.S?.value || '';
 
-          if (cleanPlate && cleanPlate.toLowerCase().includes(q)) {
+          // If plate column is invalid (e.g. empty or pure text name like "Phạm Huyền Trâm"), check if plate was placed in phone/cccd column
+          if (!isValidLicensePlate(plateRaw)) {
+            if (isValidLicensePlate(c[slot.phoneCol]?.value)) {
+              plateRaw = c[slot.phoneCol]?.value;
+              phone = c.S?.value || '';
+            } else if (isValidLicensePlate(c[slot.cccdCol]?.value)) {
+              plateRaw = c[slot.cccdCol]?.value;
+            } else {
+              return;
+            }
+          }
+
+          const cleanPlate = String(plateRaw).replace(/[\s.-]/g, '').toLowerCase();
+          if (!q || cleanPlate.includes(q)) {
             results.push({
               room: canonicalRoom(room),
               personIndex: slot.idx,
@@ -774,20 +805,71 @@ export function setPaymentGate(month: string = getCurrentMonthStr(), value: stri
 }
 
 /**
- * Cost Configuration
+ * Cost Configuration:
+ * Đồng bộ trực tiếp với dòng 5 trên Google Sheet:
+ * - Cột H5: Đơn giá tiền điện
+ * - Cột I5: Đơn giá tiền nước
+ * - Cột K5: Tiền rác
+ * - Cột L5: Tiền internet
+ * - Cột M5: Tiền xe
  */
-export function getConfig(month: string = '10/2026') {
+export async function getConfig(month: string = '10/2026') {
+  try {
+    const zip = await fetchSheetXlsx();
+    if (zip) {
+      const { rows } = await parseSheetXmlRows(zip, month);
+      const r5 = rows.find(r => r.rowNumber === 5);
+      if (r5 && r5.cells) {
+        const c = r5.cells;
+        // H5: Điện, I5: Nước, K5: Rác, L5: Net, M5: Xe
+        const dien = c.H?.num || c.G?.num || 0;
+        const nuoc = c.I?.num || 0;
+        const rac = c.K?.num || c.J?.num || 0;
+        const net = c.L?.num || 0;
+        const xe = c.M?.num || 0;
+        if (dien || nuoc || rac || net || xe) {
+          const config = {
+            dien: dien || unitConfigState[month]?.dien || 3500,
+            nuoc: nuoc || unitConfigState[month]?.nuoc || 20000,
+            rac: rac || unitConfigState[month]?.rac || 30000,
+            net: net || unitConfigState[month]?.net || 40000,
+            xe: xe || unitConfigState[month]?.xe || 50000
+          };
+          unitConfigState[month] = config;
+          return config;
+        }
+      }
+    }
+  } catch (e) {}
   return unitConfigState[month] || { dien: 3500, nuoc: 20000, rac: 30000, net: 40000, xe: 50000 };
 }
 
-export function saveConfig(month: string, data: any) {
-  unitConfigState[month] = {
+export async function saveConfig(month: string, data: any) {
+  const config = {
     dien: Number(data.dien) || 3500,
     nuoc: Number(data.nuoc) || 20000,
     rac: Number(data.rac) || 30000,
     net: Number(data.net) || 40000,
     xe: Number(data.xe) || 50000
   };
+  unitConfigState[month] = config;
+
+  // Đẩy cập nhật trực tiếp vào Google Sheet các ô H5, I5, K5, L5, M5 qua Apps Script
+  try {
+    const qParams = new URLSearchParams({
+      action: 'update_config',
+      month,
+      dien: String(config.dien),
+      nuoc: String(config.nuoc),
+      rac: String(config.rac),
+      net: String(config.net),
+      xe: String(config.xe)
+    });
+    fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+  } catch (e) {
+    console.warn('[saveConfig] Error pushing config to Google Sheet:', e);
+  }
+
   return { success: true, config: unitConfigState[month] };
 }
 
