@@ -904,28 +904,27 @@ export function AdminPortal() {
           isSidebarCollapsed ? "w-[105px]" : "w-[260px]"
         )}
       >
+        {/* Toggle Arrow Button - Placed outside the inner scroll container so it is NEVER clipped */}
+        <button
+          type="button"
+          onClick={() => {
+            playSound('click');
+            setIsSidebarCollapsed(!isSidebarCollapsed);
+          }}
+          className="absolute -right-4.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white dark:bg-slate-800 shadow-[0_4px_16px_rgba(0,0,0,0.15)] border border-slate-200/90 dark:border-slate-700/90 hover:scale-110 active:scale-95 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all z-50 cursor-pointer"
+          title={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+        >
+          {isSidebarCollapsed ? (
+            <ChevronRight size={18} className="stroke-[2.5]" />
+          ) : (
+            <ChevronLeft size={18} className="stroke-[2.5]" />
+          )}
+        </button>
+
         <div className={cn(
           "relative w-full h-full bg-white/85 dark:bg-[#101726]/90 backdrop-blur-[16px] border border-white/80 dark:border-white/10 shadow-[8px_8px_24px_rgba(166,175,195,0.2),-8px_-8px_24px_rgba(255,255,255,0.95)] rounded-[31px] flex flex-col justify-between py-5 overflow-y-auto no-scrollbar transition-all duration-300",
           isSidebarCollapsed ? "px-3 items-center" : "px-4"
         )}>
-          
-          {/* Toggle Arrow Button */}
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click');
-              setIsSidebarCollapsed(!isSidebarCollapsed);
-            }}
-            className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-white dark:border-slate-700 shadow-md hover:scale-105 active:scale-95 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all z-50 cursor-pointer"
-            title={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
-          >
-            {isSidebarCollapsed ? (
-              <ChevronRight size={18} className="stroke-[2.5]" />
-            ) : (
-              <ChevronLeft size={18} className="stroke-[2.5]" />
-            )}
-          </button>
-
           {/* Top Brand */}
           <div className="w-full">
             {isSidebarCollapsed ? (
