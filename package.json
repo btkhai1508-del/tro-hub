@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "deploy": "vite build && npx firebase-tools deploy --only hosting",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "update": "git add . && git commit -m 'chore: update app' && git push"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

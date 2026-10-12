@@ -75,6 +75,7 @@ export default defineConfig(() => {
     },
     build: {
       target: 'es2020',
+      chunkSizeWarningLimit: 3500,
       rollupOptions: {
         output: {
           // Output with .module.js extension so Zalo Mini App executes it as ES Module
