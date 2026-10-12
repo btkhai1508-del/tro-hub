@@ -6,6 +6,7 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { apiFetch, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
+import { getCurrentMonthStr } from '../lib/utils';
 
 export interface InvoiceDetailItem {
   name: string;
@@ -206,46 +207,7 @@ const initialEmptyProfile: UserProfile = {
   }
 };
 
-const initialNotifications: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    title: 'Hóa đơn tháng 10/2026 đã sẵn sàng',
-    desc: 'Hóa đơn tiền phòng và phí dịch vụ tháng 10/2026 của bạn đã được lập với tổng tiền 3.550.000đ. Hạn thanh toán đến hết ngày 05/10/2026. Bạn có thể thanh toán tự động qua mã VietQR.',
-    time: '2 giờ trước',
-    type: 'invoice',
-    unread: true,
-    link: '/invoices',
-    sender: 'Ban Quản Lý Tòa Nhà'
-  },
-  {
-    id: 'notif-2',
-    title: 'Nhắc nhở: Sắp đến hạn thanh toán',
-    desc: 'Hạn thanh toán tiền phòng tháng 10 chỉ còn 2 ngày (05/10/2026). Vui lòng thanh toán sớm để đảm bảo quyền lợi và tiện ích phòng hoạt động ổn định.',
-    time: '5 giờ trước',
-    type: 'alert',
-    unread: true,
-    link: '/invoices',
-    sender: 'Hệ Thống Thu Phí'
-  },
-  {
-    id: 'notif-3',
-    title: 'Thanh toán thành công tháng 09/2026',
-    desc: 'Hệ thống đã nhận thanh toán 3.450.000đ cho hóa đơn tháng 09/2026 qua hình thức VietQR. Biên lai điện tử đã được lưu vào mục Hóa đơn của bạn.',
-    time: '04/09/2026',
-    type: 'success',
-    unread: false,
-    sender: 'Kế Toán EcoStay'
-  },
-  {
-    id: 'notif-4',
-    title: 'Thông báo vệ sinh bồn nước chung',
-    desc: 'Bảo trì vệ sinh hệ thống lọc nước sạch tầng 2 diễn ra từ 09:00 - 11:00 thứ Bảy tuần này. Trong khoảng thời gian này nước có thể tạm ngắt trong 30 phút.',
-    time: '28/08/2026',
-    type: 'info',
-    unread: false,
-    sender: 'Đội Kỹ Thuật Tòa Nhà'
-  }
-];
+const initialNotifications: NotificationItem[] = [];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -283,8 +245,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    const saved = storage.getItem('ecostay_notifications');
-    return saved ? JSON.parse(saved) : initialNotifications;
+    // Clear old mock notification cache so only live Google Sheet notifications appear
+    try {
+      const saved = storage.getItem('ecostay_notifications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0 && String(parsed[0]?.id || '').startsWith('notif-')) {
+          storage.removeItem('ecostay_notifications');
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch {}
+    return [];
   });
 
   // Modal states
@@ -305,7 +278,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const defaultVal = {
       spreadsheetId: '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A',
       profileTab: 'THÔNG TIN CÁ NHÂN',
-      monthlyTab: '10/2026',
+      monthlyTab: getCurrentMonthStr(),
       syncRoom: '203',
       lastSynced: undefined
     };
@@ -502,7 +475,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Real-time Background Auto-Sync Loop (Every 5 seconds & on tab visibility)
   useEffect(() => {
-    // Initial fetch on mount: fetch tenant data AND live payment status
+    // Initial fetch on mount: fetch tenant data & live payment status
     refreshTenantDataFromSheet(true);
     fetchPaymentStatus();
 

@@ -2,6 +2,15 @@ import AdmZip from 'adm-zip';
 import { GoogleGenAI } from '@google/genai';
 import { setRoomColumnPStatus, getRoomColumnPStatus } from './columnPStatusStore.js';
 import { mapColorToPaymentStatus } from './googleSheetColorService.js';
+import { fetchSheetDataViaGviz } from './googleSheetsBackendService.js';
+import { GOOGLE_APPS_SCRIPT_WEBAPP_URL } from './notificationStore.js';
+
+export function getCurrentMonthStr(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const y = d.getFullYear();
+  return `${m}/${y}`;
+}
 
 export const ADMIN_SPREADSHEET_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
 export const SHEET_LVC_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
@@ -121,7 +130,10 @@ export async function getMonthList(spreadsheetId: string = ADMIN_SPREADSHEET_ID)
         months.push(name);
       }
     });
-    if (months.length === 0) return [];
+    const curMonth = getCurrentMonthStr();
+    if (!months.includes(curMonth)) {
+      months.push(curMonth);
+    }
     const unique = Array.from(new Set(months));
     unique.sort((a, b) => {
       const p1 = a.split('/'), p2 = b.split('/');
@@ -129,7 +141,7 @@ export async function getMonthList(spreadsheetId: string = ADMIN_SPREADSHEET_ID)
     });
     return unique;
   } catch (e) {
-    return [];
+    return [getCurrentMonthStr()];
   }
 }
 
@@ -508,8 +520,8 @@ export async function getMonthlyBilling(month: string = '10/2026') {
             soXe: c.AD?.num || [c.T?.value, c.X?.value, c.AB?.value].filter(Boolean).length,
             soNet: c.AE?.num || 0,
             paymentStatus: mapped.paymentStatus,
-            statusText: mapped.paymentStatus === 'paid' ? 'Đã đóng' : (mapped.paymentStatus === 'pending' ? 'Chờ xác nhận' : 'Chưa đóng'),
-            status: mapped.paymentStatus === 'paid' ? 'paid' : (mapped.paymentStatus === 'pending' ? 'pending' : 'unpaid')
+            statusText: mapped.paymentStatus === 'paid' ? 'Đã đóng' : ((mapped.paymentStatus as string) === 'pending' ? 'Chờ xác nhận' : 'Chưa đóng'),
+            status: mapped.paymentStatus === 'paid' ? 'paid' : ((mapped.paymentStatus as string) === 'pending' ? 'pending' : 'unpaid')
           });
         }
       }
@@ -656,14 +668,57 @@ export function saveDeclarationData(month: string, houseKey: string, rows: any[]
 
 /**
  * Payment Gate (Cổng thanh toán Q2)
+ * Reads cell Q2 directly from the Google Sheet tab for that month.
+ * Row 1 (Excel row 2), Column Q (index 16).
  */
-export function getPaymentGate(month: string = '10/2026') {
+export async function getPaymentGate(month: string = getCurrentMonthStr()): Promise<string> {
+  try {
+    const candidateTabs = [month, month.replace('/', ''), `Tháng ${month}`, `T${month}`];
+    for (const tab of candidateTabs) {
+      try {
+        const rows = await fetchSheetDataViaGviz(ADMIN_SPREADSHEET_ID, tab);
+        if (rows && rows.length >= 2) {
+          const rawQ2 = String(rows[1]?.[16] || '').trim().toUpperCase();
+          if (rawQ2 === 'START' || rawQ2 === 'STOP') {
+            paymentGateState[month] = rawQ2;
+            return rawQ2;
+          }
+        }
+      } catch {}
+    }
+  } catch (err) {
+    console.warn('[getPaymentGate] Error reading cell Q2 from Google Sheet:', err);
+  }
   return paymentGateState[month] || 'STOP';
 }
 
-export function setPaymentGate(month: string = '10/2026', value: string = 'STOP') {
-  paymentGateState[month] = value === 'START' ? 'START' : 'STOP';
-  return paymentGateState[month];
+export function setPaymentGate(month: string = getCurrentMonthStr(), value: string = 'STOP'): string {
+  const normVal = String(value).toUpperCase() === 'START' ? 'START' : 'STOP';
+  paymentGateState[month] = normVal;
+
+  // 2-Way Direct Sync to Google Sheet Cell Q2 via Google Apps Script Web App
+  try {
+    const qParams = new URLSearchParams({
+      action: 'update_q2',
+      month,
+      value: normVal
+    });
+    fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+
+    fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'update_q2',
+        month,
+        value: normVal
+      })
+    }).catch(() => {});
+  } catch (e) {
+    console.warn('[setPaymentGate] Error pushing Q2 to Google Sheet:', e);
+  }
+
+  return normVal;
 }
 
 /**

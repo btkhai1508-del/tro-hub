@@ -18,6 +18,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { updateResidentProfileToSheet, DEFAULT_SPREADSHEET_ID, DEFAULT_PROFILE_TAB } from '../lib/googleSheetsService';
 import { getAccessToken, googleSignIn, auth } from '../lib/googleAuth';
+import { apiFetch } from '../lib/api';
 
 const sampleAvatars = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',

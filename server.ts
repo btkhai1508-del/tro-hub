@@ -22,7 +22,8 @@ import {
   getConfig as getAdminConfig,
   saveConfig as saveAdminConfig,
   chatWithLegalAI,
-  fetchLegalNews
+  fetchLegalNews,
+  getCurrentMonthStr
 } from './src/server/adminService.js';
 import {
   addNotification,
@@ -642,16 +643,23 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/payment-gate', (req, res) => {
-    const month = (req.query.month as string) || '10/2026';
-    const value = getPaymentGate(month);
+  app.get('/api/admin/payment-gate', async (req, res) => {
+    const month = (req.query.month as string) || getCurrentMonthStr();
+    const value = await getPaymentGate(month);
     res.json({ success: true, month, value });
   });
 
   app.post('/api/admin/payment-gate', (req, res) => {
-    const { month = '10/2026', value = 'STOP' } = req.body || {};
+    const { month = getCurrentMonthStr(), value = 'STOP' } = req.body || {};
     const updated = setPaymentGate(month, value);
     res.json({ success: true, month, value: updated });
+  });
+
+  // Public endpoint for residents to check if payment gate is open
+  app.get('/api/payment/gate', async (req, res) => {
+    const month = (req.query.month as string) || getCurrentMonthStr();
+    const value = await getPaymentGate(month);
+    res.json({ success: true, month, value });
   });
 
   app.get('/api/admin/config', (req, res) => {
@@ -728,21 +736,21 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/notifications', (req, res) => {
+  app.get('/api/admin/notifications', async (req, res) => {
     try {
-      const list = loadNotificationsStore();
+      const list = await getNotificationsForResident('');
       res.json({ success: true, notifications: list });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
   });
 
-  // Resident public/authenticated endpoint to fetch notifications for their room
-  app.get('/api/notifications', (req, res) => {
+  // Resident public/authenticated endpoint to fetch notifications for their room based on Google Sheet
+  app.get('/api/notifications', async (req, res) => {
     try {
       const room = (req.query.room as string) || '';
       const building = (req.query.building as string) || '';
-      const list = getNotificationsForResident(room, building);
+      const list = await getNotificationsForResident(room, building);
       res.json({ success: true, notifications: list });
     } catch (e: any) {
       console.error('[API /api/notifications] Error:', e);

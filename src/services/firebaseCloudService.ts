@@ -1,4 +1,4 @@
-import { NotificationItem } from '../types';
+import { NotificationItem } from '../context/AppContext';
 
 export function subscribeRealtimeRoom(
   _roomNumber: string,

@@ -373,6 +373,237 @@ export function IconFigmaElectricWater({ size = 52, className = '', style }: Ico
 }
 
 // =========================================================================
+// 14. 3D GLASS BELL NOTIFICATION (Mint Green Frosted Glass Bell with Glow)
+// Faithfully matches user Figma & uploaded 3D glass bell asset
+// =========================================================================
+export function IconGlassBell3D({ size = 52, className = '', style }: Icon3DProps) {
+  return (
+    <div 
+      className={`inline-flex items-center justify-center shrink-0 ${className}`} 
+      style={{ width: size, height: size, ...style }}
+    >
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          {/* Outer soft ambient shadow for frosted squircle */}
+          <filter id="bell_card_glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="rgba(46, 204, 113, 0.2)" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0, 0, 0, 0.04)" />
+          </filter>
+          
+          {/* Inner luminous glow for mint bell dome */}
+          <radialGradient id="bell_inner_glow_grad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#2ECC71" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="#48E58D" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#7EF5B5" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Bell frosted translucent skin */}
+          <linearGradient id="bell_glass_skin" x1="20%" y1="10%" x2="80%" y2="90%">
+            <stop offset="0%" stopColor="#A8F8CE" stopOpacity="0.95" />
+            <stop offset="45%" stopColor="#63E79D" stopOpacity="0.82" />
+            <stop offset="100%" stopColor="#3CD67E" stopOpacity="0.9" />
+          </linearGradient>
+
+          {/* Bell clapper / bottom sphere */}
+          <linearGradient id="bell_clapper_grad" x1="30%" y1="20%" x2="70%" y2="90%">
+            <stop offset="0%" stopColor="#3BD57D" />
+            <stop offset="50%" stopColor="#25AC5E" />
+            <stop offset="100%" stopColor="#1B8748" />
+          </linearGradient>
+
+          {/* Bell top knob sphere */}
+          <linearGradient id="bell_knob_grad" x1="20%" y1="10%" x2="80%" y2="90%">
+            <stop offset="0%" stopColor="#A4F9CA" />
+            <stop offset="100%" stopColor="#4EE08E" />
+          </linearGradient>
+
+          {/* Frosted card gradient */}
+          <linearGradient id="bell_card_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.98" />
+            <stop offset="100%" stopColor="#F5FCF8" stopOpacity="0.92" />
+          </linearGradient>
+        </defs>
+
+        {/* 1. Frosted white squircle background container */}
+        <rect 
+          x="12" 
+          y="12" 
+          width="76" 
+          height="76" 
+          rx="24" 
+          fill="url(#bell_card_bg)" 
+          stroke="rgba(255, 255, 255, 0.95)" 
+          strokeWidth="1.5"
+          filter="url(#bell_card_glow)" 
+        />
+
+        {/* 2. Bottom Clapper sphere peeking out from underneath the bell */}
+        <circle cx="50" cy="59" r="11" fill="url(#bell_clapper_grad)" />
+
+        {/* 3. Luminous emerald center glow behind frosted skin */}
+        <circle cx="50" cy="49" r="14" fill="url(#bell_inner_glow_grad)" />
+
+        {/* 4. Bell main dome body */}
+        <path 
+          d="M32 53 C32 38 40 31 50 31 C60 31 68 38 68 53 Z" 
+          fill="url(#bell_glass_skin)" 
+          stroke="rgba(255, 255, 255, 0.85)" 
+          strokeWidth="1"
+        />
+
+        {/* 5. Flared bottom lip pill */}
+        <rect 
+          x="26" 
+          y="50.5" 
+          width="48" 
+          height="7" 
+          rx="3.5" 
+          fill="url(#bell_glass_skin)" 
+          stroke="rgba(255, 255, 255, 0.9)" 
+          strokeWidth="1"
+        />
+
+        {/* 6. Top Knob sphere */}
+        <circle 
+          cx="50" 
+          cy="26" 
+          r="6.5" 
+          fill="url(#bell_knob_grad)" 
+          stroke="rgba(255, 255, 255, 0.85)" 
+          strokeWidth="0.8"
+        />
+      </svg>
+    </div>
+  );
+}
+
+// =========================================================================
+// 15. 3D GLASS SEARCH & LICENSE PLATE ICON
+// =========================================================================
+export function IconGlassSearchPlate3D({ size = 52, className = '', style }: Icon3DProps) {
+  return (
+    <div 
+      className={`inline-flex items-center justify-center shrink-0 ${className}`} 
+      style={{ width: size, height: size, ...style }}
+    >
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="search_card_glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="rgba(59, 130, 246, 0.2)" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0, 0, 0, 0.04)" />
+          </filter>
+          <linearGradient id="search_lens_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#CBE6FE" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#60A5FA" stopOpacity="0.75" />
+          </linearGradient>
+          <linearGradient id="search_rim_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#93C5FD" />
+            <stop offset="100%" stopColor="#2563EB" />
+          </linearGradient>
+          <linearGradient id="search_handle_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#60A5FA" />
+            <stop offset="100%" stopColor="#1D4ED8" />
+          </linearGradient>
+          <linearGradient id="search_card_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.98" />
+            <stop offset="100%" stopColor="#F8FAFC" stopOpacity="0.92" />
+          </linearGradient>
+        </defs>
+
+        {/* Frosted card container */}
+        <rect 
+          x="12" 
+          y="12" 
+          width="76" 
+          height="76" 
+          rx="24" 
+          fill="url(#search_card_bg)" 
+          stroke="rgba(255, 255, 255, 0.95)" 
+          strokeWidth="1.5"
+          filter="url(#search_card_glow)" 
+        />
+
+        {/* License plate card inside */}
+        <rect x="22" y="30" width="56" height="34" rx="8" fill="#F1F5F9" stroke="#CBD5E1" strokeWidth="1.2" />
+        <rect x="26" y="35" width="22" height="3.5" rx="1.75" fill="#94A3B8" />
+        <rect x="26" y="42" width="40" height="5" rx="2.5" fill="#475569" />
+        <rect x="26" y="51" width="30" height="4.5" rx="2.25" fill="#0EA5E9" />
+
+        {/* 3D Frosted Glass Magnifier */}
+        <circle cx="56" cy="44" r="15" fill="url(#search_lens_grad)" stroke="url(#search_rim_grad)" strokeWidth="3" />
+        <line x1="67" y1="55" x2="78" y2="66" stroke="url(#search_handle_grad)" strokeWidth="5" strokeLinecap="round" />
+        
+        {/* Specular curved reflection on lens */}
+        <path d="M48 37 C51 34 56 34 59 36" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
+// =========================================================================
+// 16. 3D GLASS LOGOUT / EXIT ICON
+// =========================================================================
+export function IconGlassLogout3D({ size = 52, className = '', style }: Icon3DProps) {
+  return (
+    <div 
+      className={`inline-flex items-center justify-center shrink-0 ${className}`} 
+      style={{ width: size, height: size, ...style }}
+    >
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="logout_card_glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="rgba(244, 63, 94, 0.2)" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(0, 0, 0, 0.04)" />
+          </filter>
+          <linearGradient id="logout_door_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FDA4AF" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.95" />
+          </linearGradient>
+          <linearGradient id="logout_arrow_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FB7185" />
+            <stop offset="100%" stopColor="#E11D48" />
+          </linearGradient>
+          <linearGradient id="logout_card_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.98" />
+            <stop offset="100%" stopColor="#FFF1F2" stopOpacity="0.92" />
+          </linearGradient>
+        </defs>
+
+        {/* Frosted card container */}
+        <rect 
+          x="12" 
+          y="12" 
+          width="76" 
+          height="76" 
+          rx="24" 
+          fill="url(#logout_card_bg)" 
+          stroke="rgba(255, 255, 255, 0.95)" 
+          strokeWidth="1.5"
+          filter="url(#logout_card_glow)" 
+        />
+
+        {/* 3D Exit Frame */}
+        <path 
+          d="M48 28 H34 C30.6863 28 28 30.6863 28 34 V66 C28 69.3137 30.6863 72 34 72 H48" 
+          stroke="url(#logout_door_grad)" 
+          strokeWidth="4" 
+          strokeLinecap="round" 
+        />
+
+        {/* Forward Arrow */}
+        <path 
+          d="M42 50 H68 M58 40 L68 50 L58 60" 
+          stroke="url(#logout_arrow_grad)" 
+          strokeWidth="4" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+        />
+      </svg>
+    </div>
+  );
+}
+
+// =========================================================================
 // CENTRALIZED SEMANTIC MAPPINGS ACROSS THE APP
 // =========================================================================
 export const IconHome3D = IconFigmaHome;
@@ -380,7 +611,7 @@ export const IconWallet3D = IconFigmaWallet;
 export const IconInvoice3D = IconFigmaWallet;
 export const IconSecurity3D = IconFigmaSecurity;
 export const IconProfile3D = IconFigmaProfile;
-export const IconNotification3D = IconFigmaNotification;
+export const IconNotification3D = IconGlassBell3D;
 export const IconCalendar3D = IconFigmaCalendar;
 export const IconDocument3D = IconFigmaCalendar;
 export const IconChat3D = IconFigmaMessage;

@@ -12,7 +12,7 @@ import { apiFetch, setAuthToken } from '../lib/api';
 import { requestZaloLogin } from '../lib/zaloAuth';
 import { fetchAllResidentsFromSheet, fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
 
-export type PersonType = 'person1' | 'person2' | 'person3';
+export type PersonType = 'person1' | 'person2' | 'person3' | 'tenant';
 
 export type AuthErrorCode =
   | 'AUTH_INVALID_CREDENTIALS'
@@ -25,12 +25,17 @@ export interface AuthenticatedTenantUser {
   roomNumber: string;
   personType: PersonType;
   name: string;
-  citizenId: string;
+  citizenId?: string;
+  cccd?: string;
   phone: string;
-  licensePlate: string;
+  licensePlate?: string;
+  plateNumber?: string;
   email?: string;
   dob?: string;
   address?: string;
+  building?: string;
+  floor?: string;
+  startDate?: string;
   vehicleType?: string;
   emergencyName?: string;
   emergencyRelation?: string;
@@ -328,14 +333,14 @@ export const authService = {
       name: user.name,
       phone: user.phone,
       email: user.email || '',
-      cccd: user.citizenId,
+      cccd: user.citizenId || user.cccd || '',
       dob: user.dob || '',
       address: user.address || '',
       avatar: existingAvatar,
       personType: user.personType,
       vehicle: {
         type: user.vehicleType || 'Xe máy',
-        plateNumber: user.licensePlate,
+        plateNumber: user.licensePlate || user.plateNumber || '',
         parkingSlot: 'Vị trí B1 (Tầng hầm)',
         registeredDate: '01/06/2026'
       },

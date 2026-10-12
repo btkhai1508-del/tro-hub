@@ -36,10 +36,10 @@ import {
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
-import { cn } from '../lib/utils';
+import { cn, getCurrentMonthStr } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
-import { GlassIconMoon } from './GlassIcons';
+import { GlassIconMoon, GlassIconDocument, GlassIconCalendar, GlassIconSetting } from './GlassIcons';
 import { ModernLineGraph } from './ModernLineGraph';
 import { 
   IconHome3D, 
@@ -54,7 +54,10 @@ import {
   IconElectricity3D,
   IconWater3D,
   IconElectricWater3D,
-  IconPencil3D
+  IconPencil3D,
+  IconGlassBell3D,
+  IconGlassSearchPlate3D,
+  IconGlassLogout3D
 } from './Icons3D';
 
 // Procedural Web Audio Sound Manager
@@ -146,7 +149,8 @@ function readVietnameseNumber(n: number): string {
   return str.charAt(0).toUpperCase() + str.slice(1) + ' đồng';
 }
 
-export const DEFAULT_MONTH_TABS = [
+const currentMonth = getCurrentMonthStr();
+export const DEFAULT_MONTH_TABS = Array.from(new Set([
   '03/2026',
   '04/2026',
   '05/2026',
@@ -154,8 +158,9 @@ export const DEFAULT_MONTH_TABS = [
   '07/2026',
   '08/2026',
   '09/2026',
-  '10/2026'
-];
+  '10/2026',
+  currentMonth
+]));
 
 export function AdminPortal() {
   const navigate = useNavigate();
@@ -255,7 +260,7 @@ export function AdminPortal() {
 
   // Months
   const [months, setMonths] = useState<string[]>(DEFAULT_MONTH_TABS);
-  const [selectedMonth, setSelectedMonth] = useState<string>('10/2026');
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthStr());
 
   // Sidebar Collapse
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -583,7 +588,7 @@ export function AdminPortal() {
       .then(d => {
         setIsLoading(false);
         if (d.success && d.data) {
-          setCurrentRoomData(prev => ({ ...prev, ...d.data }));
+          setCurrentRoomData((prev: any) => ({ ...prev, ...d.data }));
         }
       })
       .catch(() => setIsLoading(false));
@@ -1160,12 +1165,12 @@ export function AdminPortal() {
         {activeMenu === 'utilities' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6 animate-in fade-in duration-300">
             {[
-              { key: 'createNotification', label: 'Tạo thông báo', icon: Bell, highlight: true },
-              { key: 'meter', label: 'Điện nước', icon: Zap },
-              { key: 'plates', label: 'Tra biển số', icon: Search },
-              { key: 'contract', label: 'Hợp đồng & CT01', icon: FileText },
-              { key: 'declaration', label: 'Kỳ kê khai', icon: BookOpen },
-              { key: 'config', label: 'Cài đặt phí', icon: Settings }
+              { key: 'createNotification', label: 'Tạo thông báo', icon: IconGlassBell3D },
+              { key: 'meter', label: 'Điện nước', icon: IconElectricWater3D },
+              { key: 'plates', label: 'Tra biển số', icon: IconGlassSearchPlate3D },
+              { key: 'contract', label: 'Hợp đồng & CT01', icon: GlassIconDocument },
+              { key: 'declaration', label: 'Kỳ kê khai', icon: GlassIconCalendar },
+              { key: 'config', label: 'Cài đặt phí', icon: GlassIconSetting }
             ].map(item => {
               const Icon = item.icon;
               return (
@@ -1176,14 +1181,11 @@ export function AdminPortal() {
                     playSound('click');
                     setActiveMenu(item.key as any);
                   }}
-                  className={cn(
-                    "soft-card p-4 min-h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition-colors cursor-pointer relative",
-                    (item as any).highlight 
-                      ? "text-blue-600 dark:text-blue-400 hover:border-blue-400 ring-1 ring-blue-500/20" 
-                      : "text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:border-slate-400"
-                  )}
+                  className="soft-card p-4 min-h-26 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:border-slate-400/80 transition-all cursor-pointer relative group"
                 >
-                  <Icon size={22} className={(item as any).highlight ? "text-blue-600 dark:text-blue-400" : ""} />
+                  <div className="group-hover:scale-105 transition-transform duration-200">
+                    <Icon size={34} />
+                  </div>
                   <span>{item.label}</span>
                 </button>
               );
@@ -1197,9 +1199,11 @@ export function AdminPortal() {
                 logoutUser();
                 navigate('/login');
               }}
-              className="soft-card p-4 min-h-24 flex flex-col items-center justify-center gap-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors cursor-pointer"
+              className="soft-card p-4 min-h-26 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 hover:border-rose-300 transition-all cursor-pointer group"
             >
-              <LogOut size={22} className="text-rose-600" />
+              <div className="group-hover:scale-105 transition-transform duration-200">
+                <IconGlassLogout3D size={34} />
+              </div>
               <span>Đăng xuất</span>
             </button>
           </div>
@@ -2496,8 +2500,8 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <Bell size={15} className="text-blue-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <IconGlassBell3D size={20} />
                 <span>Mẫu gửi thông báo cư dân</span>
               </div>
             </div>
@@ -2505,10 +2509,8 @@ export function AdminPortal() {
             {/* Notification Template Form Card */}
             <div className="soft-surface p-6 sm:p-8 space-y-7 relative overflow-hidden">
               <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-                <h2 className="type-h2 font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-                    <Bell size={18} />
-                  </span>
+                <h2 className="type-h2 font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                  <IconGlassBell3D size={42} />
                   <span>Tạo Thông Báo Mới</span>
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -2553,14 +2555,14 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'ALL'
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-blue-900 dark:text-blue-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">1. Tất cả</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'ALL' ? "border-blue-600 bg-blue-600" : "border-slate-300")}>
-                          {notifTarget === 'ALL' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'ALL' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifTarget === 'ALL' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">Toàn bộ cư dân 2 khu</span>
@@ -2576,14 +2578,14 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'LVC'
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-blue-900 dark:text-blue-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">2. Lê Văn Chí (LVC)</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'LVC' ? "border-blue-600 bg-blue-600" : "border-slate-300")}>
-                          {notifTarget === 'LVC' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'LVC' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifTarget === 'LVC' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">109/6 Lê Văn Chí</span>
@@ -2599,14 +2601,14 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'TRUNG_KIM'
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-blue-900 dark:text-blue-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">3. Trung Kim (TK)</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'TRUNG_KIM' ? "border-blue-600 bg-blue-600" : "border-slate-300")}>
-                          {notifTarget === 'TRUNG_KIM' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'TRUNG_KIM' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifTarget === 'TRUNG_KIM' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">Khu nhà Trung Kim</span>
@@ -2622,14 +2624,14 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'CUSTOM'
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-blue-900 dark:text-blue-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">4. Phòng tùy chọn</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'CUSTOM' ? "border-blue-600 bg-blue-600" : "border-slate-300")}>
-                          {notifTarget === 'CUSTOM' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'CUSTOM' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifTarget === 'CUSTOM' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
@@ -2649,7 +2651,7 @@ export function AdminPortal() {
                           <button
                             type="button"
                             onClick={() => setSelectedCustomRooms(availableRoomNumbers)}
-                            className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
+                            className="text-[11px] font-bold text-slate-900 dark:text-white hover:underline cursor-pointer"
                           >
                             Chọn tất cả
                           </button>
@@ -2674,13 +2676,13 @@ export function AdminPortal() {
                               onClick={() => {
                                 playSound('click');
                                 setSelectedCustomRooms(prev => 
-                                  isSelected ? prev.filter(r => r !== rNum) : [...prev, rNum]
+                                   isSelected ? prev.filter(r => r !== rNum) : [...prev, rNum]
                                 );
                               }}
                               className={cn(
                                 "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 font-num",
                                 isSelected
-                                  ? "bg-blue-600 text-white shadow-xs"
+                                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
                                   : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-400"
                               )}
                             >
@@ -2711,17 +2713,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifType === 'thong_bao'
-                          ? "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/30 text-indigo-900 dark:text-indigo-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Bell size={16} className="text-indigo-600" />
+                          <Bell size={16} />
                           <span className="text-xs font-bold">Thông báo</span>
                         </div>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thong_bao' ? "border-indigo-600 bg-indigo-600" : "border-slate-300")}>
-                          {notifType === 'thong_bao' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thong_bao' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifType === 'thong_bao' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">Bảo trì, sửa chữa, thông tin chung</span>
@@ -2737,17 +2739,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifType === 'nhac_nho'
-                          ? "bg-amber-50 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/30 text-amber-900 dark:text-amber-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <AlertTriangle size={16} className="text-amber-600" />
+                          <AlertTriangle size={16} />
                           <span className="text-xs font-bold">Nhắc nhở</span>
                         </div>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'nhac_nho' ? "border-amber-600 bg-amber-600" : "border-slate-300")}>
-                          {notifType === 'nhac_nho' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'nhac_nho' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifType === 'nhac_nho' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">Trật tự, khóa cổng, giữ gìn vệ sinh</span>
@@ -2763,17 +2765,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifType === 'thanh_toan'
-                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/30 text-emerald-900 dark:text-emerald-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Receipt size={16} className="text-emerald-600" />
+                          <Receipt size={16} />
                           <span className="text-xs font-bold">Thanh toán</span>
                         </div>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thanh_toan' ? "border-emerald-600 bg-emerald-600" : "border-slate-300")}>
-                          {notifType === 'thanh_toan' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thanh_toan' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                          {notifType === 'thanh_toan' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                         </div>
                       </div>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">Hệ thống tự động báo cú pháp VietQR</span>
@@ -2782,8 +2784,8 @@ export function AdminPortal() {
 
                   {/* Banner tự động báo của Thanh toán */}
                   {notifType === 'thanh_toan' && (
-                    <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3 text-xs text-emerald-900 dark:text-emerald-200 animate-in fade-in duration-200">
-                      <Receipt size={18} className="text-emerald-600 shrink-0" />
+                    <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center gap-3 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in duration-200">
+                      <Receipt size={18} className="text-slate-900 dark:text-white shrink-0" />
                       <div>
                         <span className="font-bold">Hệ thống tự động kích hoạt:</span> Cư dân khi nhận thông báo này sẽ có nút liên kết quét mã VietQR tự động kèm số tiền và đúng cú pháp chuyển khoản của phòng họ.
                       </div>
@@ -2802,7 +2804,7 @@ export function AdminPortal() {
                       value={notifTitle}
                       onChange={e => setNotifTitle(e.target.value)}
                       placeholder="Nhập tiêu đề thông báo..."
-                      className="w-full px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-white"
                     />
                   </div>
 
@@ -2815,7 +2817,7 @@ export function AdminPortal() {
                       value={notifContent}
                       onChange={e => setNotifContent(e.target.value)}
                       placeholder="Nhập toàn bộ nội dung muốn truyền tải đến cư dân..."
-                      className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed"
+                      className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-white leading-relaxed"
                     />
                   </div>
                 </div>
@@ -2836,7 +2838,7 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between",
                         notifScheduleMode === 'none'
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-blue-900 dark:text-blue-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
@@ -2844,8 +2846,8 @@ export function AdminPortal() {
                         <div className="text-xs font-bold">Không (Mặc định)</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Gửi ngay tức thì</div>
                       </div>
-                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'none' ? "border-blue-600 bg-blue-600" : "border-slate-300")}>
-                        {notifScheduleMode === 'none' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'none' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                        {notifScheduleMode === 'none' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                       </div>
                     </button>
 
@@ -2858,7 +2860,7 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between",
                         notifScheduleMode === 'scheduled'
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-blue-900 dark:text-blue-100 font-semibold"
+                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
                           : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
                       )}
                     >
@@ -2866,8 +2868,8 @@ export function AdminPortal() {
                         <div className="text-xs font-bold">Đặt lịch hẹn gửi</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Chọn ngày giờ phát thông báo</div>
                       </div>
-                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'scheduled' ? "border-blue-600 bg-blue-600" : "border-slate-300")}>
-                        {notifScheduleMode === 'scheduled' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'scheduled' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
+                        {notifScheduleMode === 'scheduled' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
                       </div>
                     </button>
                   </div>
@@ -2875,14 +2877,14 @@ export function AdminPortal() {
                   {notifScheduleMode === 'scheduled' && (
                     <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in duration-200">
                       <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Clock size={14} className="text-blue-600" />
+                        <Clock size={14} className="text-slate-900 dark:text-white" />
                         <span>Thời gian kích hoạt gửi:</span>
                       </span>
                       <input
                         type="datetime-local"
                         value={notifScheduledDate}
                         onChange={e => setNotifScheduledDate(e.target.value)}
-                        className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-white cursor-pointer"
                       />
                     </div>
                   )}
@@ -2905,7 +2907,7 @@ export function AdminPortal() {
                     type="button"
                     disabled={isSendingNotif}
                     onClick={handleSendNotification}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isSendingNotif ? (
                       <RefreshCw size={15} className="animate-spin" />
