@@ -407,26 +407,27 @@ export function AdminPortal() {
     const totalPeople = list.reduce((acc, r) => acc + (Number(r.soNguoi) || [r.nguoi1, r.nguoi2, r.nguoi3].filter(n => n && n !== '1' && n !== '2.0').length || 1), 0);
     const totalVehicles = list.reduce((acc, r) => acc + (Number(r.soXe) || [r.xe1, r.xe2, r.xe3].filter(x => x && x !== '1' && x !== '2.0' && x !== '3.0').length || 1), 0);
 
-    setDashboardData({
+    setDashboardData((prev: any) => ({
+      ...prev,
       month,
-      doanhThu: totalRev,
+      doanhThu: prev?.doanhThu ? prev.doanhThu : totalRev,
       daThu: collectedRev,
-      conLai: totalRev - collectedRev,
-      tongPhong: list.length,
+      conLai: (prev?.doanhThu || totalRev) - collectedRev,
+      tongPhong: list.length || prev?.tongPhong || 0,
       daDong: paidCount,
-      chuaDong: list.length - paidCount,
-      dien: totalDien,
-      tienDien: totalTienDien,
-      nuoc: totalNuoc,
-      tienNuoc: totalTienNuoc,
-      soNguoi: totalPeople,
-      soXe: totalVehicles,
-      usageTrend: [
+      chuaDong: (list.length || prev?.tongPhong || 0) - paidCount,
+      dien: prev?.dien ? prev.dien : totalDien,
+      tienDien: prev?.tienDien ? prev.tienDien : totalTienDien,
+      nuoc: prev?.nuoc ? prev.nuoc : totalNuoc,
+      tienNuoc: prev?.tienNuoc ? prev.tienNuoc : totalTienNuoc,
+      soNguoi: prev?.soNguoi ? prev.soNguoi : totalPeople,
+      soXe: prev?.soXe ? prev.soXe : totalVehicles,
+      usageTrend: (prev?.usageTrend && prev.usageTrend.length > 0) ? prev.usageTrend : [
         { month: '08/2026', dien: Math.round(totalDien * 0.92), nuoc: Math.round(totalNuoc * 0.95) },
         { month: '09/2026', dien: Math.round(totalDien * 0.97), nuoc: Math.round(totalNuoc * 0.98) },
         { month: '10/2026', dien: totalDien, nuoc: totalNuoc }
       ]
-    });
+    }));
   };
 
   // Realtime Google Sheet sync for all rooms and payment gate status
@@ -482,7 +483,12 @@ export function AdminPortal() {
         })
         .then(d => {
           setIsLoading(false);
-          if (d.success && d.data) setDashboardData(d.data);
+          if (d.success && d.data) {
+            setDashboardData((prev: any) => ({
+              ...prev,
+              ...d.data
+            }));
+          }
         })
         .catch(() => setIsLoading(false));
       fetchRooms(month);
@@ -825,8 +831,10 @@ export function AdminPortal() {
   };
 
   // Rent collection progress stats
-  const totalRoomsCount = roomsList.length || 8;
-  const paidRoomsCount = roomsList.filter(r => r.paymentStatus === 'paid' || r.status === 'paid').length;
+  const totalRoomsCount = roomsList.length || dashboardData?.tongPhong || 0;
+  const paidRoomsCount = roomsList.length 
+    ? roomsList.filter(r => r.paymentStatus === 'paid' || r.status === 'paid').length 
+    : (dashboardData?.daDong ?? 0);
   const collectionPercent = totalRoomsCount > 0 ? Math.round((paidRoomsCount / totalRoomsCount) * 100) : 0;
 
   // Landlord houses information

@@ -89,7 +89,57 @@ export const authService = {
       };
     }
 
-    // 0. Instant Admin Check - Works 100% offline & on static Firebase Hosting
+    // 1. Authenticate via Backend API (issues JWT token for all roles including Admin)
+    try {
+      const response = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: cleanPhone,
+          password: cleanPassword,
+          sheetId
+        })
+      });
+
+      let data: any;
+      try {
+        const ct = response.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          data = await response.json();
+        }
+      } catch (e: any) {
+        console.warn('Backend returned non-JSON:', e);
+      }
+
+      if (response.ok && data && data.success) {
+        const rawUser = data.user;
+        const sanitizedUser = sanitizeUser(rawUser, cleanPhone);
+
+        // Persist auth tokens in unified storage
+        if (data.token) {
+          setAuthToken(data.token);
+        }
+        storage.setItem(STORAGE_KEYS.AUTH, 'true');
+        storage.setItem(STORAGE_KEYS.USER_PHONE, cleanPhone);
+
+        return {
+          success: true,
+          user: sanitizedUser,
+          invoices: data.invoices || [],
+          token: data.token,
+          isAdmin: !!data.isAdmin
+        };
+      } else if (data && !data.success && data.error) {
+        return {
+          success: false,
+          errorCode: data?.errorCode || 'AUTH_INVALID_CREDENTIALS',
+          error: data.error
+        };
+      }
+    } catch (err: any) {
+      console.warn('[AuthService] Backend API unreachable, falling back to local/sheet check:', err);
+    }
+
+    // 2. Instant Admin Check Fallback (if backend is unreachable or offline)
     const isLandlordAdmin = cleanPhone === '0902371800' ||
       cleanPhone.endsWith('902371800') ||
       cleanPhone.toLowerCase() === 'admin' ||
@@ -132,109 +182,8 @@ export const authService = {
       }
     }
 
+    // 3. Direct Resident Fallback via Google Sheet CSV export
     try {
-      const response = await apiFetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          phone: cleanPhone,
-          password: cleanPassword,
-          sheetId
-        })
-      });
-
-      let data: any;
-      try {
-        const ct = response.headers.get('content-type') || '';
-        if (!ct.includes('application/json')) {
-          throw new Error('Static hosting endpoint returned non-JSON');
-        }
-        data = await response.json();
-      } catch (e: any) {
-        throw new Error('Fallback to direct Sheet/Firebase: ' + (e.message || ''));
-      }
-
-      if (!response.ok || !data || !data.success) {
-        if (response.status === 404 || !data) {
-          throw new Error('Endpoint not found, fallback');
-        }
-        return {
-          success: false,
-          errorCode: data?.errorCode || 'AUTH_INVALID_CREDENTIALS',
-          error: data?.error || 'Số điện thoại hoặc mật khẩu không chính xác.'
-        };
-      }
-
-      const rawUser = data.user;
-      if (!rawUser || !rawUser.name) {
-        return {
-          success: false,
-          errorCode: 'AUTH_DATA_INCOMPLETE',
-          error: 'Dữ liệu người thuê chưa đầy đủ trong hệ thống (thiếu thông tin bắt buộc).'
-        };
-      }
-
-      const sanitizedUser = sanitizeUser(rawUser, cleanPhone);
-
-      // Persist auth tokens in unified storage
-      if (data.token) {
-        setAuthToken(data.token);
-      }
-      storage.setItem(STORAGE_KEYS.AUTH, 'true');
-      storage.setItem(STORAGE_KEYS.USER_PHONE, cleanPhone);
-
-      return {
-        success: true,
-        user: sanitizedUser,
-        invoices: data.invoices || [],
-        token: data.token,
-        isAdmin: !!data.isAdmin
-      };
-    } catch (err: any) {
-      console.warn('[AuthService] Backend API not reachable, falling back to direct Google Sheet check:', err);
-
-      // 1. Direct Admin Fallback
-      const isLandlordAdmin = cleanPhone === '0902371800' ||
-        cleanPhone.endsWith('902371800') ||
-        cleanPhone.toLowerCase() === 'admin' ||
-        cleanPhone === '079205019765' ||
-        cleanPhone.endsWith('79205019765');
-
-      if (isLandlordAdmin) {
-        const isPassOk = cleanPassword === '180505' || cleanPassword === '1' || cleanPassword === 'admin';
-        if (isPassOk) {
-          storage.setItem(STORAGE_KEYS.AUTH, 'true');
-          storage.setItem(STORAGE_KEYS.USER_PHONE, '0902371800');
-          return {
-            success: true,
-            isAdmin: true,
-            user: {
-              name: 'Bùi Trung Khải',
-              phone: '0902371800',
-              cccd: '079205019765',
-              email: 'btkhai1508@gmail.com',
-              dob: '15/08/2005',
-              address: '109/6 Lê Văn Chí, P. Linh Xuân, TP. Thủ Đức',
-              vehicleType: 'Xe máy',
-              plateNumber: '',
-              roomNumber: 'admin',
-              building: 'Hệ Thống EcoStay Hub',
-              floor: 'BQL',
-              startDate: '01/01/2026',
-              personType: 'tenant'
-            },
-            invoices: []
-          };
-        } else {
-          return {
-            success: false,
-            errorCode: 'AUTH_INVALID_CREDENTIALS',
-            error: 'Mật khẩu quản trị viên không chính xác (mặc định là 180505 hoặc 1).'
-          };
-        }
-      }
-
-      // 2. Direct Resident Fallback via Google Sheet CSV export
-      try {
         const effectiveSheetId = sheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
         const residents = await fetchAllResidentsFromSheet(effectiveSheetId);
         const match = residents.find(r => {
@@ -296,15 +245,14 @@ export const authService = {
             };
           }
         }
-      } catch (fallbackErr) {
+      } catch (fallbackErr: any) {
         console.error('[AuthService] Direct Sheet fallback error:', fallbackErr);
       }
 
       return {
         success: false,
-        error: 'Lỗi kết nối máy chủ xác thực: ' + (err.message || 'Vui lòng thử lại')
+        error: 'Số điện thoại hoặc mật khẩu không chính xác hoặc không thể kết nối tới Google Sheet.'
       };
-    }
   },
 
   /**
