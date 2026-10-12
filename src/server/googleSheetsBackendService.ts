@@ -147,6 +147,12 @@ export function setInvoicePaidByWebhook(
   };
 }
 
+export function setInvoiceUnpaid(roomOrCode: string) {
+  const cleanKey = roomOrCode.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  delete invoiceStatusOverrides[cleanKey];
+  setRoomColumnPStatus(cleanKey, 'RED');
+}
+
 /**
  * Robust CSV parser for Google Sheet export text
  */

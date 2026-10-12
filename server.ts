@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { fetchFreshTenantDataFromSheet, DEFAULT_SPREADSHEET_ID, setInvoicePaidByWebhook, authenticateUser, normalizePhone } from './src/server/googleSheetsBackendService.js';
+import { fetchFreshTenantDataFromSheet, DEFAULT_SPREADSHEET_ID, setInvoicePaidByWebhook, setInvoiceUnpaid, authenticateUser, normalizePhone } from './src/server/googleSheetsBackendService.js';
 import { getRoomColumnPStatus, setRoomColumnPStatus } from './src/server/columnPStatusStore.js';
 import { getLiveRoomPaymentStatus, fetchAllSheetColumnPStatuses } from './src/server/googleSheetColorService.js';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
@@ -556,9 +556,11 @@ async function startServer() {
       const { roomNumber, status, month } = req.body || {};
       if (status === 'paid') {
         setRoomColumnPStatus(roomNumber, 'GREEN', { month });
+        setInvoicePaidByWebhook(roomNumber, `ADMIN-${Date.now()}`);
         pushPaymentToGoogleSheet(roomNumber, 'paid', month);
       } else {
         setRoomColumnPStatus(roomNumber, 'RED', { month });
+        setInvoiceUnpaid(roomNumber);
         pushPaymentToGoogleSheet(roomNumber, 'unpaid', month);
       }
       res.json({ success: true, message: `Đã cập nhật trạng thái phòng ${roomNumber}` });

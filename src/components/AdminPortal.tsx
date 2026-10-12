@@ -1738,8 +1738,15 @@ export function AdminPortal() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId}</span>
-                  <span className="text-lg font-black text-slate-900 dark:text-white font-num">{fmt(currentRoomData.tongTien)} đ</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
+                  <span className={cn(
+                    "text-lg font-black font-num px-2.5 py-1 rounded-xl transition-all inline-block",
+                    currentRoomData.paymentStatus === 'paid'
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/30"
+                      : "text-slate-900 dark:text-white"
+                  )}>
+                    {fmt(currentRoomData.tongTien)} đ
+                  </span>
                 </div>
               </div>
 
@@ -1914,7 +1921,14 @@ export function AdminPortal() {
                           <td className="p-4 font-mono">{fmt(item.tienRac)} đ</td>
                           <td className="p-4 font-mono">{fmt(item.tienNet)} đ</td>
                           <td className="p-4 font-mono">{fmt(item.tienXe)} đ</td>
-                          <td className="p-4 font-bold text-sm text-slate-900 dark:text-white">{fmt(item.tongTien)} đ</td>
+                          <td className={cn(
+                            "p-4 font-bold text-sm transition-colors",
+                            isPaid 
+                              ? "bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black rounded-lg" 
+                              : "text-slate-900 dark:text-white"
+                          )}>
+                            {fmt(item.tongTien)} đ
+                          </td>
                           <td className="p-4 text-center">
                             <button
                               onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid')}

@@ -124,33 +124,68 @@ function handleRequest(e) {
 
     // ----------------------------------------------------
     // ACTION 3: CẬP NHẬT TRẠNG THÁI THANH TOÁN (CỘT P)
+    // Nút xác nhận thu tiền: Tô highlight cột P tương ứng row/phòng sang màu xanh lá
     // ----------------------------------------------------
     if (action === "update_payment") {
-      var monthTab = String(params.month || "").replace(/\D/g, "");
-      var targetSheet = ss.getSheetByName(params.month) || ss.getSheetByName(monthTab) || ss.getSheetByName("Tháng " + params.month);
+      var month = String(params.month || "").trim();
+      var rawDigits = month.replace(/\D/g, "");
+      var targetSheet = ss.getSheetByName(month) || 
+                        ss.getSheetByName(rawDigits) || 
+                        ss.getSheetByName("Tháng " + month) || 
+                        ss.getSheetByName("T" + month) ||
+                        ss.getSheetByName("Tháng " + rawDigits);
+      
       if (!targetSheet) {
-        return createJsonResponse({ success: false, error: "Không tìm thấy sheet tháng: " + params.month });
+        var allSheets = ss.getSheets();
+        for (var s = 0; s < allSheets.length; s++) {
+          var sName = allSheets[s].getName().toLowerCase();
+          if (sName.indexOf(month.toLowerCase()) !== -1 || (rawDigits && sName.indexOf(rawDigits) !== -1)) {
+            targetSheet = allSheets[s];
+            break;
+          }
+        }
+      }
+
+      if (!targetSheet) {
+        targetSheet = ss.getActiveSheet();
       }
 
       var targetRoom = String(params.room || "").trim();
-      var newStatus = params.status === "paid" ? "ĐÃ ĐÓNG" : "CHƯA ĐÓNG";
+      var isPaid = String(params.status || "").toLowerCase() === "paid";
       var data = targetSheet.getDataRange().getValues();
 
       for (var r = 1; r < data.length; r++) {
-        var rowRoom = String(data[r][1] || "").trim(); // Cột B: Phòng
-        if (rowRoom.toLowerCase() === targetRoom.toLowerCase() || 
-            rowRoom.replace(/\D/g, "") === targetRoom.replace(/\D/g, "")) {
-          targetSheet.getRange(r + 1, 16).setValue(newStatus); // Cột P (cột 16)
+        var colA = String(data[r][0] || "").trim(); // Cột A
+        var colB = String(data[r][1] || "").trim(); // Cột B
+        
+        var matches = false;
+        [colA, colB].forEach(function(val) {
+          if (!val) return;
+          if (val.toLowerCase() === targetRoom.toLowerCase()) matches = true;
+          if (val.replace(/\D/g, "") && targetRoom.replace(/\D/g, "") && val.replace(/\D/g, "") === targetRoom.replace(/\D/g, "")) matches = true;
+          if (val.replace(/^(P\.|P\s*)/i, "").trim().toLowerCase() === targetRoom.replace(/^(P\.|P\s*)/i, "").trim().toLowerCase()) matches = true;
+        });
+
+        if (matches) {
+          var cellP = targetSheet.getRange(r + 1, 16); // Cột P (cột 16)
+          if (isPaid) {
+            // Xác nhận thu tiền: Tô highlight cột P tương ứng chuyển sang màu xanh lá
+            cellP.setBackground("#b6d7a8"); // Màu xanh lá Google Sheets tiêu chuẩn (Light green)
+          } else {
+            // Hủy thu tiền: Chuyển lại màu đỏ pastel chưa đóng
+            cellP.setBackground("#F8D7DA");
+          }
           SpreadsheetApp.flush();
           return createJsonResponse({
             success: true,
-            message: "Đã cập nhật trạng thái phòng " + targetRoom + " thành " + newStatus,
+            message: "Đã cập nhật highlight cột P phòng " + targetRoom + " sang " + (isPaid ? "màu xanh lá (#b6d7a8)" : "màu đỏ pastel (#F8D7DA)"),
             row: r + 1,
-            status: newStatus
+            color: isPaid ? "#b6d7a8" : "#F8D7DA",
+            status: isPaid ? "paid" : "unpaid"
           });
         }
       }
-      return createJsonResponse({ success: false, error: "Không tìm thấy phòng " + targetRoom });
+      return createJsonResponse({ success: false, error: "Không tìm thấy phòng " + targetRoom + " trong sheet " + targetSheet.getName() });
     }
 
     return createJsonResponse({ success: true, message: "EcoStay Apps Script Web App is active" });
