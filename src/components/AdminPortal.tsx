@@ -277,6 +277,7 @@ export function AdminPortal() {
   // Payment Gate state
   const [paymentGate, setPaymentGate] = useState<'START' | 'STOP'>('STOP');
   const lastGateToggleTimeRef = useRef<number>(0);
+  const recentPaymentTogglesRef = useRef<Map<string, { status: 'paid' | 'unpaid'; time: number }>>(new Map());
 
   // Data States
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -566,9 +567,23 @@ export function AdminPortal() {
       .then(d => {
         setIsLoading(false);
         if (d.success && d.rooms?.length) {
-          setRoomsList(d.rooms);
-          setBillingList(d.rooms);
-          updateDashboardStats(d.rooms, month);
+          const now = Date.now();
+          const merged = d.rooms.map((r: any) => {
+            const cleanId = canonicalRoomId(r.room);
+            const override = recentPaymentTogglesRef.current.get(cleanId);
+            if (override && now - override.time < 20000) {
+              const status = override.status;
+              const statusText = status === 'paid' ? 'Đã đóng' : 'Chưa đóng';
+              const statusHTML = status === 'paid'
+                ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
+                : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>';
+              return { ...r, status, paymentStatus: status, statusText, statusHTML };
+            }
+            return r;
+          });
+          setRoomsList(merged);
+          setBillingList(merged);
+          updateDashboardStats(merged, month);
         }
       })
       .catch(() => {
@@ -790,13 +805,19 @@ export function AdminPortal() {
     }
   };
 
-  const updateRoomPaymentStatus = async (roomNumber: string, status: 'paid' | 'unpaid') => {
+  const updateRoomPaymentStatus = async (roomNumber: string, status: 'paid' | 'unpaid', row?: number) => {
     playSound('click');
     const cleanId = canonicalRoomId(roomNumber);
+    recentPaymentTogglesRef.current.set(cleanId, { status, time: Date.now() });
+
     const statusText = status === 'paid' ? 'Đã đóng' : 'Chưa đóng';
     const statusHTML = status === 'paid'
       ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
       : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>';
+
+    // Auto-detect row number if not passed directly
+    const foundRoom = roomsList.find(r => canonicalRoomId(r.room) === cleanId) || billingList.find(r => canonicalRoomId(r.room) === cleanId);
+    const rowNum = row || foundRoom?.row;
 
     // 1. Update local state
     setRoomsList(prev => {
@@ -836,7 +857,8 @@ export function AdminPortal() {
       body: JSON.stringify({
         roomNumber: cleanId,
         status,
-        month: selectedMonth
+        month: selectedMonth,
+        row: rowNum
       })
     }).catch(() => {});
 
@@ -845,7 +867,8 @@ export function AdminPortal() {
       action: 'update_payment',
       room: cleanId,
       status,
-      month: selectedMonth
+      month: selectedMonth,
+      row: rowNum
     });
 
     playSound('success');
@@ -1545,7 +1568,7 @@ export function AdminPortal() {
               <div className="flex items-center gap-3">
                 <div dangerouslySetInnerHTML={{ __html: currentRoomData.statusHTML }} />
                 <button
-                  onClick={() => updateRoomPaymentStatus(selectedRoomId, currentRoomData.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
+                  onClick={() => updateRoomPaymentStatus(selectedRoomId, currentRoomData.paymentStatus === 'paid' ? 'unpaid' : 'paid', currentRoomData.row)}
                   className={cn(
                     "py-2 px-4 rounded-2xl text-xs font-bold cursor-pointer transition-all",
                     currentRoomData.paymentStatus === 'paid'
@@ -1936,7 +1959,7 @@ export function AdminPortal() {
                           </td>
                           <td className="p-4 text-center">
                             <button
-                              onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid')}
+                              onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
                               className={cn(
                                 "px-3 py-1 rounded-xl font-bold text-[11px] cursor-pointer transition-all",
                                 isPaid ? "badge-paid" : "badge-unpaid"

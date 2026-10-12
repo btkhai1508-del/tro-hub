@@ -145,6 +145,7 @@ export async function pushUpdateToGoogleSheet(params: {
   month?: string;
   dienMoi?: number;
   nuocMoi?: number;
+  row?: number;
 }): Promise<void> {
   if (!GOOGLE_APPS_SCRIPT_WEBAPP_URL) return;
   const cleanRoom = canonicalRoomId(params.room);
@@ -154,7 +155,8 @@ export async function pushUpdateToGoogleSheet(params: {
     status: params.status || '',
     month: params.month || '10/2026',
     dienMoi: params.dienMoi ? String(params.dienMoi) : '',
-    nuocMoi: params.nuocMoi ? String(params.nuocMoi) : ''
+    nuocMoi: params.nuocMoi ? String(params.nuocMoi) : '',
+    row: params.row ? String(params.row) : ''
   });
 
   // Try both GET and POST with no-cors fallback so it never blocks in browser
@@ -176,7 +178,8 @@ export async function pushUpdateToGoogleSheet(params: {
         status: params.status,
         month: params.month || '10/2026',
         dienMoi: params.dienMoi,
-        nuocMoi: params.nuocMoi
+        nuocMoi: params.nuocMoi,
+        row: params.row
       })
     }).catch(() => {});
   } catch {}

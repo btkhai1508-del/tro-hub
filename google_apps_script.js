@@ -132,7 +132,7 @@ function handleRequest(e) {
       var targetSheet = ss.getSheetByName(month) || 
                         ss.getSheetByName(rawDigits) || 
                         ss.getSheetByName("Tháng " + month) || 
-                        ss.getSheetByName("T" + month) ||
+                        ss.getSheetByName("T" + month) || 
                         ss.getSheetByName("Tháng " + rawDigits);
       
       if (!targetSheet) {
@@ -152,39 +152,64 @@ function handleRequest(e) {
 
       var targetRoom = String(params.room || "").trim();
       var isPaid = String(params.status || "").toLowerCase() === "paid";
+      var targetRow = parseInt(params.row, 10);
+
+      // 1. Nếu có chỉ định số dòng chính xác (phòng trọ luôn từ dòng 7 đến 50)
+      if (targetRow && targetRow >= 7 && targetRow <= 50) {
+        var cellP = targetSheet.getRange(targetRow, 16);
+        cellP.setBackground(isPaid ? "#b6d7a8" : "#F8D7DA");
+        SpreadsheetApp.flush();
+        return createJsonResponse({
+          success: true,
+          message: "Đã cập nhật highlight cột P dòng " + targetRow + " sang " + (isPaid ? "màu xanh lá (#b6d7a8)" : "màu đỏ pastel (#F8D7DA)"),
+          row: targetRow,
+          color: isPaid ? "#b6d7a8" : "#F8D7DA",
+          status: isPaid ? "paid" : "unpaid"
+        });
+      }
+
+      // Hàm chuẩn hóa mã phòng để khớp chính xác cột A
+      function normRoom(val) {
+        if (!val) return "";
+        var str = String(val).trim().toUpperCase()
+          .replace(/^(P\.|P\s+|PHÒNG\s+)/i, "")
+          .replace(/\.0+$/, "");
+        if (str.indexOf("LVC") !== -1) {
+          var n = str.replace(/\D/g, "");
+          return n ? "LVC-" + n : str;
+        }
+        if (/^G\d+$/i.test(str)) {
+          var n = str.replace(/\D/g, "");
+          return "G" + (n.length === 1 ? "0" + n : n);
+        }
+        if (/^\d+$/.test(str)) {
+          return str.replace(/^0+/, "") || str;
+        }
+        return str;
+      }
+
+      var cleanTarget = normRoom(targetRoom);
       var data = targetSheet.getDataRange().getValues();
 
-      for (var r = 1; r < data.length; r++) {
-        var colA = String(data[r][0] || "").trim(); // Cột A
-        var colB = String(data[r][1] || "").trim(); // Cột B
-        
-        var matches = false;
-        [colA, colB].forEach(function(val) {
-          if (!val) return;
-          if (val.toLowerCase() === targetRoom.toLowerCase()) matches = true;
-          if (val.replace(/\D/g, "") && targetRoom.replace(/\D/g, "") && val.replace(/\D/g, "") === targetRoom.replace(/\D/g, "")) matches = true;
-          if (val.replace(/^(P\.|P\s*)/i, "").trim().toLowerCase() === targetRoom.replace(/^(P\.|P\s*)/i, "").trim().toLowerCase()) matches = true;
-        });
-
-        if (matches) {
-          var cellP = targetSheet.getRange(r + 1, 16); // Cột P (cột 16)
-          if (isPaid) {
-            // Xác nhận thu tiền: Tô highlight cột P tương ứng chuyển sang màu xanh lá
-            cellP.setBackground("#b6d7a8"); // Màu xanh lá Google Sheets tiêu chuẩn (Light green)
-          } else {
-            // Hủy thu tiền: Chuyển lại màu đỏ pastel chưa đóng
-            cellP.setBackground("#F8D7DA");
-          }
+      // BẮT BUỘC: Chỉ duyệt từ dòng 7 (index r = 6) đến dòng 50 (index r = 49)
+      // TUYỆT ĐỐI BỎ QUA dòng 1-6 (là các dòng tiêu đề bảng và ghi chú, không phải phòng)
+      for (var r = 6; r < Math.min(data.length, 50); r++) {
+        var colA = String(data[r][0] || "").trim(); // Cột A: Mã phòng
+        if (normRoom(colA) === cleanTarget) {
+          var rowNum = r + 1; // 1-indexed dòng trên Google Sheet
+          var cellP = targetSheet.getRange(rowNum, 16); // Cột P (cột 16)
+          cellP.setBackground(isPaid ? "#b6d7a8" : "#F8D7DA");
           SpreadsheetApp.flush();
           return createJsonResponse({
             success: true,
-            message: "Đã cập nhật highlight cột P phòng " + targetRoom + " sang " + (isPaid ? "màu xanh lá (#b6d7a8)" : "màu đỏ pastel (#F8D7DA)"),
-            row: r + 1,
+            message: "Đã cập nhật highlight cột P phòng " + targetRoom + " (dòng " + rowNum + ") sang " + (isPaid ? "màu xanh lá (#b6d7a8)" : "màu đỏ pastel (#F8D7DA)"),
+            row: rowNum,
             color: isPaid ? "#b6d7a8" : "#F8D7DA",
             status: isPaid ? "paid" : "unpaid"
           });
         }
       }
+
       return createJsonResponse({ success: false, error: "Không tìm thấy phòng " + targetRoom + " trong sheet " + targetSheet.getName() });
     }
 

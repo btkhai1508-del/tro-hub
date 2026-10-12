@@ -196,15 +196,20 @@ async function startServer() {
   // =========================================================================
   const GOOGLE_APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec";
 
-  function pushPaymentToGoogleSheet(room: string, status: 'paid' | 'unpaid', month: string = '10/2026') {
+  function pushPaymentToGoogleSheet(room: string, status: 'paid' | 'unpaid', month: string = '10/2026', row?: number) {
     try {
       const qParams = new URLSearchParams({
         action: 'update_payment',
         room: String(room),
         status,
-        month
+        month,
+        row: row ? String(row) : ''
       });
-      fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+      fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).then(r => r.json()).then(d => {
+        console.log(`[GoogleSheetSync] Payment update for room ${room} (row ${row || 'auto'}):`, d);
+      }).catch(err => {
+        console.warn(`[GoogleSheetSync] Network error pushing payment for room ${room}:`, err);
+      });
     } catch (e) {
       console.warn('[GoogleSheetSync] Error pushing payment to Google Sheet:', e);
     }
@@ -553,17 +558,18 @@ async function startServer() {
 
   app.post('/api/admin/payment-status', async (req, res) => {
     try {
-      const { roomNumber, status, month } = req.body || {};
+      const { roomNumber, status, month, row } = req.body || {};
+      const rowNum = row !== undefined && !isNaN(Number(row)) ? Number(row) : undefined;
       if (status === 'paid') {
-        setRoomColumnPStatus(roomNumber, 'GREEN', { month });
+        setRoomColumnPStatus(roomNumber, 'GREEN', { month, rowIndex: rowNum ? rowNum - 1 : undefined });
         setInvoicePaidByWebhook(roomNumber, `ADMIN-${Date.now()}`);
-        pushPaymentToGoogleSheet(roomNumber, 'paid', month);
+        pushPaymentToGoogleSheet(roomNumber, 'paid', month, rowNum);
       } else {
-        setRoomColumnPStatus(roomNumber, 'RED', { month });
+        setRoomColumnPStatus(roomNumber, 'RED', { month, rowIndex: rowNum ? rowNum - 1 : undefined });
         setInvoiceUnpaid(roomNumber);
-        pushPaymentToGoogleSheet(roomNumber, 'unpaid', month);
+        pushPaymentToGoogleSheet(roomNumber, 'unpaid', month, rowNum);
       }
-      res.json({ success: true, message: `Đã cập nhật trạng thái phòng ${roomNumber}` });
+      res.json({ success: true, message: `Đã cập nhật trạng thái phòng ${roomNumber}`, roomNumber, status, row: rowNum });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }

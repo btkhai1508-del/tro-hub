@@ -1,1 +1,13 @@
-{}
+{
+  "G01": {
+    "roomNumber": "G01",
+    "rowIndex": 6,
+    "cellAddress": "P7",
+    "color": "RED",
+    "status": "UNPAID",
+    "label": "Chưa thanh toán",
+    "updatedAt": "2026-10-12T16:52:41.594Z",
+    "transactionId": "TXN-1791823952367",
+    "month": "10/2026"
+  }
+}
