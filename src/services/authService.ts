@@ -60,7 +60,7 @@ function sanitizeUser(rawUser: any, cleanPhone: string): AuthenticatedTenantUser
   return {
     roomNumber: String(rawUser.roomNumber || '').trim(),
     personType: rawUser.personType || 'person1',
-    name: String(rawUser.name || 'Cư dân EcoStay').trim(),
+    name: String(rawUser.name || 'Cư dân Nhà Trọ Phong Lan').trim(),
     citizenId: String(rawUser.cccd || rawUser.citizenId || '').trim(),
     phone: cleanPhone,
     licensePlate: String(rawUser.plateNumber || rawUser.licensePlate || '').trim(),
@@ -171,7 +171,7 @@ export const authService = {
             vehicleType: 'Xe máy',
             plateNumber: '',
             roomNumber: 'admin',
-            building: 'Hệ Thống EcoStay Hub',
+            building: 'Ban Quản Lý Nhà Trọ Phong Lan',
             floor: 'BQL',
             startDate: '01/01/2026',
             personType: 'tenant'
@@ -351,7 +351,7 @@ export const authService = {
       },
       room: {
         roomNumber: cleanRoom,
-        building: 'Tòa A',
+        building: cleanRoom.toUpperCase().includes('LVC') ? 'Lê Văn Chí' : 'Trung Kim',
         floor: cleanRoom.includes('G') ? 'Tầng trệt' : `Tầng ${cleanRoom.charAt(cleanRoom.length - 3) || '2'}`,
         startDate: '01/06/2026'
       },

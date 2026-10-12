@@ -23,11 +23,9 @@ import { useTheme } from '../context/ThemeContext';
 import { GlassIconProfile, GlassIconLocation, GlassIconHome, GlassIconMoon } from './GlassIcons';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
 import { cn } from '../lib/utils';
-import { followOA, openChat } from 'zmp-sdk/apis';
-import { isZaloMiniApp } from '../lib/platform';
 
 export function Profile() {
-  const { profile, openProfileEditModal, openContractModal, logoutUser, openTourGuide } = useApp();
+  const { profile, openProfileEditModal, openContractModal, logoutUser } = useApp();
   const { mode, isDark, setMode } = useTheme();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
@@ -290,87 +288,6 @@ export function Profile() {
             </button>
           </div>
         </div>
-
-        {/* Section 6: Tiện ích Zalo Official Account & Hỗ trợ */}
-        <div data-tutorial="profile-zalo-section" className="space-y-3.5 pt-2 border-t border-slate-100/90">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
-            <div className="w-5 h-5 rounded-md bg-[#0068FF] text-white flex items-center justify-center text-[10px] font-black">Z</div>
-            <span>Tiện ích Zalo & Hỗ trợ cư dân</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  followOA({
-                    id: "61954560911870422",
-                    success: () => alert('Đã gửi yêu cầu quan tâm Official Account EcoStay!'),
-                    fail: (err: any) => console.log('followOA:', err)
-                  });
-                } catch {
-                  window.open('https://zalo.me', '_blank');
-                }
-              }}
-              className="p-3.5 rounded-2xl bg-[#0068FF]/5 hover:bg-[#0068FF]/10 border border-[#0068FF]/20 text-slate-800 dark:text-slate-200 flex items-center gap-3 transition-all cursor-pointer text-left"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-[#0068FF] text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-                OA
-              </div>
-              <div>
-                <span className="text-xs sm:text-sm font-bold block text-[#0068FF] dark:text-[#3889ff]">Quan tâm Zalo OA</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Nhận thông báo hóa đơn & tin tức</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  openChat({
-                    type: 'oa',
-                    id: '61954560911870422',
-                    message: `Xin chào Quản lý, tôi là cư dân ${profile.name} ${profile.room?.roomNumber ? `phòng ${profile.room.roomNumber}` : ''}, cần hỗ trợ.`
-                  });
-                } catch {
-                  window.location.href = 'tel:0909888999';
-                }
-              }}
-              className="p-3.5 rounded-2xl bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/20 text-slate-800 dark:text-slate-200 flex items-center gap-3 transition-all cursor-pointer text-left"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
-                💬
-              </div>
-              <div>
-                <span className="text-xs sm:text-sm font-bold block text-emerald-600 dark:text-emerald-400">Nhắn tin cho Quản lý</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Hỗ trợ phản ánh sự cố phòng</span>
-              </div>
-            </button>
-          </div>
-
-          {/* Tour Guide Replay button */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => openTourGuide()}
-              className="w-full p-3.5 rounded-2xl bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/20 text-slate-800 dark:text-slate-200 flex items-center justify-between transition-all cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
-                  ✨
-                </div>
-                <div>
-                  <span className="text-xs sm:text-sm font-bold block text-indigo-600 dark:text-indigo-400">Xem lại Tour hướng dẫn</span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Khám phá lại các tính năng chính của Trọ-Hub</span>
-                </div>
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
-                Bắt đầu
-              </span>
-            </button>
-          </div>
-        </div>
-
       </div>
 
       {/* Password Update Modal */}

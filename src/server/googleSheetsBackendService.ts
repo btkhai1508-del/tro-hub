@@ -1353,7 +1353,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
       : (userRow ? String(userRow[6] || '').trim() : '');
 
     matchedProfile = {
-      name: (personData && personData.name) ? personData.name : (userRow ? String(userRow[0] || '').trim() : 'Cư dân EcoStay'),
+      name: (personData && personData.name) ? personData.name : (userRow ? String(userRow[0] || '').trim() : 'Cư dân Nhà Trọ Phong Lan'),
       phone: (personData && personData.phone) ? personData.phone : targetPhone,
       cccd: (personData && personData.citizenId) ? personData.citizenId : (userRow ? String(userRow[2] || '').trim() : ''),
       plateNumber: effectivePlate,

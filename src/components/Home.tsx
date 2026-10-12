@@ -6,7 +6,8 @@ import {
   CheckCircle2, 
   ChevronRight,
   Clock,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
@@ -26,7 +27,8 @@ export function Home() {
     openInvoiceDetailModal, 
     openNotificationModal,
     openContractModal,
-    notifications 
+    notifications,
+    paymentGateStatus
   } = useApp();
 
   const currentInvoice = invoices[0];
@@ -135,8 +137,17 @@ export function Home() {
                     onClick={() => handleGoToPayment(currentInvoice?.id)}
                     className="primary-button py-2.5 px-5 text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer font-bold"
                   >
-                    <CreditCard size={16} />
-                    <span>Thanh toán ngay</span>
+                    {paymentGateStatus === 'STOP' ? (
+                      <>
+                        <Lock size={15} className="text-amber-300" />
+                        <span>Thanh toán (Cổng đóng)</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={16} />
+                        <span>Thanh toán ngay</span>
+                      </>
+                    )}
                   </button>
                   <button
                     type="button"

@@ -10,7 +10,8 @@ import {
   Sparkles, 
   Bike,
   ReceiptText,
-  QrCode
+  QrCode,
+  Lock
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useApp } from '../context/AppContext';
@@ -38,7 +39,7 @@ const getCategoryIcon = (type: string) => {
 
 export function InvoiceDetailModal() {
   const navigate = useNavigate();
-  const { viewingInvoice, closeInvoiceDetailModal, profile } = useApp();
+  const { viewingInvoice, closeInvoiceDetailModal, profile, paymentGateStatus } = useApp();
 
   if (!viewingInvoice) return null;
 
@@ -56,11 +57,11 @@ export function InvoiceDetailModal() {
     // Header
     doc.setFontSize(18);
     doc.setTextColor(15, 23, 42);
-    doc.text('ECOSTAY RESIDENCE', 105, 22, { align: 'center' });
+    doc.text('NHA TRO PHONG LAN', 105, 22, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text('Toa A - EcoStay Central | Hotline: 0909 888 999', 105, 28, { align: 'center' });
+    doc.text(`${profile.room?.building || 'Trung Kim'} | Hotline BQL: 0902 371 800`, 105, 28, { align: 'center' });
     
     // Divider line
     doc.setDrawColor(226, 232, 240);
@@ -120,9 +121,9 @@ export function InvoiceDetailModal() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text('Cam on quy cu dan da su dung dich vu cua EcoStay Residence.', 105, 275, { align: 'center' });
+    doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
     
-    doc.save(`HoaDon_EcoStay_${viewingInvoice.month.replace('/', '_')}.pdf`);
+    doc.save(`HoaDon_PhongLan_${viewingInvoice.month.replace('/', '_')}.pdf`);
   };
 
   const handlePayNow = () => {
@@ -244,10 +245,19 @@ export function InvoiceDetailModal() {
               type="button"
               onClick={handlePayNow}
               className="flex-1 sm:flex-initial primary-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 shadow-sm font-bold cursor-pointer active:scale-95 transition-all"
-              title="Quét mã VietQR thanh toán"
+              title={paymentGateStatus === 'STOP' ? 'Cổng thanh toán đang tạm đóng' : 'Quét mã VietQR thanh toán'}
             >
-              <QrCode size={14} />
-              <span className="truncate">Thanh toán ngay</span>
+              {paymentGateStatus === 'STOP' ? (
+                <>
+                  <Lock size={14} className="text-amber-300" />
+                  <span className="truncate">Thanh toán (Cổng đóng)</span>
+                </>
+              ) : (
+                <>
+                  <QrCode size={14} />
+                  <span className="truncate">Thanh toán ngay</span>
+                </>
+              )}
             </button>
           ) : (
             <button

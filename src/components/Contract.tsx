@@ -172,7 +172,7 @@ export function Contract() {
                   Hôm nay, ngày <span className="font-bold underline">01</span> tháng <span className="font-bold underline">06</span> năm 20<span className="font-bold underline">26</span>
                 </p>
                 <p>
-                  Tại căn nhà số: <span className="font-bold">Tòa nhà EcoStay Residence</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh
+                  Tại căn nhà số: <span className="font-bold">Nhà Trọ Phong Lan</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh
                 </p>
               </div>
 
@@ -194,7 +194,7 @@ export function Contract() {
                   Nơi đăng ký thường trú: ...................... Đường ..................., Khu phố ............., Phường ...................., Tỉnh (TP): .........................................................................
                 </p>
                 <p>
-                  Là chủ sở hữu căn nhà tại địa chỉ số: <span className="font-bold">Tòa nhà EcoStay</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, Phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh.
+                  Là chủ sở hữu căn nhà tại địa chỉ số: <span className="font-bold">Nhà Trọ Phong Lan</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, Phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh.
                 </p>
               </div>
 
@@ -241,7 +241,7 @@ export function Contract() {
                   Sau khi thỏa thuận, hai bên thống nhất như sau:
                 </p>
                 <p>
-                  Bên A đồng ý cho bên B được thuê/mượn/ở nhờ nhà, phòng trọ số <span className="font-bold underline">{cleanRoom}</span> tại căn nhà số nhà <span className="font-bold">Tòa nhà EcoStay Residence</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, Phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh
+                  Bên A đồng ý cho bên B được thuê/mượn/ở nhờ nhà, phòng trọ số <span className="font-bold underline">{cleanRoom}</span> tại căn nhà số nhà <span className="font-bold">Nhà Trọ Phong Lan</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, Phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh
                 </p>
                 <p>
                   Thời hạn thuê (mượn, ở nhờ nhà): <span className="font-bold">30 tháng</span> kể từ ngày ký họp đồng
@@ -406,7 +406,7 @@ export function Contract() {
               <div className="space-y-1 text-[13.5px]">
                 <p>10. Nội dung đề nghị<sup>(2)</sup>:</p>
                 <p className="border-b border-dotted border-black pl-4 font-semibold text-justify">
-                  Đăng ký tạm trú cho công dân tại địa chỉ: Phòng trọ số {cleanRoom}, Tòa nhà EcoStay Residence, Đường Lê Văn Chí, Khu phố 3, Phường Linh Chiểu, TP. Thủ Đức, TP. Hồ Chí Minh.
+                  Đăng ký tạm trú cho công dân tại địa chỉ: Phòng trọ số {cleanRoom}, Nhà Trọ Phong Lan, Đường Lê Văn Chí, Khu phố 3, Phường Linh Chiểu, TP. Thủ Đức, TP. Hồ Chí Minh.
                 </p>
                 <div className="border-b border-dotted border-black w-full h-4" />
               </div>

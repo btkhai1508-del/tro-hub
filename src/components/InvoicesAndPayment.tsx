@@ -6,7 +6,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Clock,
-  Printer
+  Printer,
+  Lock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
@@ -15,7 +16,7 @@ import { PaymentHistoryExportModal } from './PaymentHistoryExportModal';
 
 export function InvoicesAndPayment() {
   const navigate = useNavigate();
-  const { invoices, openInvoiceDetailModal } = useApp();
+  const { invoices, openInvoiceDetailModal, paymentGateStatus } = useApp();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const formatCurrency = (amount: number) => {
@@ -98,8 +99,17 @@ export function InvoicesAndPayment() {
             onClick={(e) => handlePay(unpaidInvoices[0].id, e)}
             className="primary-button py-2.5 px-6 text-sm flex items-center gap-2 self-start sm:self-center font-bold cursor-pointer"
           >
-            <CreditCard size={16} />
-            <span>Thanh toán ngay</span>
+            {paymentGateStatus === 'STOP' ? (
+              <>
+                <Lock size={16} className="text-amber-300" />
+                <span>Thanh toán (Cổng đóng)</span>
+              </>
+            ) : (
+              <>
+                <CreditCard size={16} />
+                <span>Thanh toán ngay</span>
+              </>
+            )}
           </button>
         </div>
       )}
@@ -167,8 +177,17 @@ export function InvoicesAndPayment() {
                       onClick={(e) => handlePay(invoice.id, e)}
                       className="primary-button text-xs py-2 px-4 flex items-center gap-1.5 cursor-pointer font-bold"
                     >
-                      <CreditCard size={14} />
-                      <span>Thanh toán</span>
+                      {paymentGateStatus === 'STOP' ? (
+                        <>
+                          <Lock size={13} className="text-amber-300" />
+                          <span>Tạm đóng</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={14} />
+                          <span>Thanh toán</span>
+                        </>
+                      )}
                     </button>
                   ) : (
                     <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-medium">

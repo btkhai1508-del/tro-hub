@@ -70,7 +70,7 @@ export function NotificationModal() {
                 {activeNotification.title}
               </h3>
               <div className="flex items-center gap-2 mt-1 text-xs text-slate-400 font-num">
-                <span>{activeNotification.sender || 'Ban Quản Lý EcoStay'}</span>
+                <span>{activeNotification.sender || 'Ban Quản Lý Nhà Trọ Phong Lan'}</span>
                 <span>•</span>
                 <span>{activeNotification.time}</span>
               </div>

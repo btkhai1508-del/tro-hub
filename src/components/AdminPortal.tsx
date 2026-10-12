@@ -187,7 +187,7 @@ export function AdminPortal() {
     setNotifType(type);
     if (type === 'thanh_toan') {
       setNotifTitle(`Thông báo thanh toán tiền phòng tháng ${selectedMonth}`);
-      setNotifContent(`Ban Quản Lý kính gửi thông báo thu phí tiền phòng tháng ${selectedMonth}. Quý cư dân vui lòng truy cập ứng dụng EcoStay để kiểm tra hóa đơn chi tiết và hoàn tất thanh toán trước ngày đến hạn bằng mã VietQR tự động. Xin chân thành cảm ơn!`);
+      setNotifContent(`Ban Quản Lý kính gửi thông báo thu phí tiền phòng tháng ${selectedMonth}. Quý cư dân vui lòng truy cập ứng dụng Nhà Trọ Phong Lan để kiểm tra hóa đơn chi tiết và hoàn tất thanh toán trước ngày đến hạn bằng mã VietQR tự động. Xin chân thành cảm ơn!`);
     } else if (type === 'nhac_nho') {
       setNotifTitle('Nhắc nhở cư dân về an ninh và nếp sống trọ');
       setNotifContent('Ban Quản Lý xin nhắc nhở toàn thể cư dân lưu ý khóa cổng cẩn thận sau 23h, để xe đúng nơi quy định và giữ gìn vệ sinh chung khu vực hành lang.');
@@ -226,7 +226,7 @@ export function AdminPortal() {
       time: notifScheduleMode === 'scheduled' ? `Hẹn lúc: ${notifScheduledDate || 'theo lịch'}` : 'Vừa xong',
       type: notifType === 'thanh_toan' ? 'invoice' as const : notifType === 'nhac_nho' ? 'alert' as const : 'info' as const,
       unread: true,
-      sender: `BQL EcoStay (${targetDesc})`
+      sender: `BQL Phong Lan (${targetDesc})`
     };
 
     try {
@@ -932,7 +932,7 @@ export function AdminPortal() {
               <div className="flex justify-center mb-6 w-full">
                 <div 
                   className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/15 cursor-pointer hover:scale-105 transition-transform"
-                  title="EcoStay - Quản lý chủ trọ"
+                  title="Nhà Trọ Phong Lan - Quản lý chủ trọ"
                 >
                   <Building2 size={24} className="text-white" />
                 </div>
@@ -944,7 +944,7 @@ export function AdminPortal() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">EcoStay</span>
+                    <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white truncate">Phong Lan</span>
                     <span className="px-1.5 py-0.2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md font-num border border-blue-100 uppercase">
                       Admin
                     </span>

@@ -28,7 +28,7 @@ async function ensurePermissions(): Promise<void> {
 
   const result: any = await authorize({ scopes: needed as any });
   if (result && result['scope.userPhonenumber'] === false) {
-    throw new Error('Bạn cần cho phép EcoStay truy cập số điện thoại Zalo để xác định phòng của bạn.');
+    throw new Error('Bạn cần cho phép Nhà Trọ Phong Lan truy cập số điện thoại Zalo để xác định phòng của bạn.');
   }
 }
 

@@ -41,7 +41,7 @@ export function Utilities() {
             <div>
               <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-semibold block tracking-wider">Phòng của tôi</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num">
-                {profile.room.roomNumber} ({profile.room.building || 'EcoStay'})
+                {profile.room.roomNumber} ({profile.room.building || 'Trung Kim'})
               </span>
             </div>
           </div>

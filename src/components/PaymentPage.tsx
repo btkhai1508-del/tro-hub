@@ -5,14 +5,14 @@ import { jsPDF } from 'jspdf';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { saveQrToDevice } from '../lib/qrHelper';
-import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown } from 'lucide-react';
+import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from 'lucide-react';
 
 export function PaymentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const invoiceIdParam = searchParams.get('invoiceId');
 
-  const { invoices, setInvoices, profile } = useApp();
+  const { invoices, setInvoices, profile, paymentGateStatus } = useApp();
 
   // Active targeted invoice
   const selectedInvoice = (invoiceIdParam 
@@ -113,11 +113,11 @@ export function PaymentPage() {
     // Header
     doc.setFontSize(18);
     doc.setTextColor(15, 23, 42);
-    doc.text('ECOSTAY RESIDENCE', 105, 22, { align: 'center' });
+    doc.text('NHA TRO PHONG LAN', 105, 22, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text('Toa A - EcoStay Central | Hotline: 0909 888 999', 105, 28, { align: 'center' });
+    doc.text(`${profile.room?.building || 'Trung Kim'} | Hotline BQL: 0902 371 800`, 105, 28, { align: 'center' });
     
     // Divider
     doc.setDrawColor(226, 232, 240);
@@ -172,9 +172,9 @@ export function PaymentPage() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text('Cam on quy cu dan da su dung dich vu cua EcoStay Residence.', 105, 275, { align: 'center' });
+    doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
     
-    doc.save(`HoaDon_EcoStay_${targetInvoice.month.replace('/', '_')}.pdf`);
+    doc.save(`HoaDon_PhongLan_${targetInvoice.month.replace('/', '_')}.pdf`);
   };
 
   const recipientName = 'Bùi Trung Khải';
@@ -193,7 +193,7 @@ export function PaymentPage() {
     if (isSavingQR) return;
     setIsSavingQR(true);
     try {
-      await saveQrToDevice(qrUrl, `VietQR_EcoStay_${transferContent}.png`);
+      await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);
     } finally {
       setIsSavingQR(false);
     }
@@ -350,6 +350,85 @@ export function PaymentPage() {
                 </button>
               </div>
 
+            </main>
+          </motion.div>
+        ) : paymentGateStatus === 'STOP' ? (
+          /* =========================================================================
+             PAYMENT GATE CLOSED SCREEN (When Admin turns off payment gate)
+             ========================================================================= */
+          <motion.div
+            key="gate-closed-mode"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="w-full flex justify-center py-6"
+          >
+            <main className="w-full max-w-[540px] bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center text-center transition-colors">
+              <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4 shadow-xs">
+                <Lock size={32} strokeWidth={2.2} />
+              </div>
+
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full mb-2">
+                Cổng thanh toán tạm khóa
+              </span>
+
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Cổng thanh toán đang tạm đóng
+              </h1>
+
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
+                Ban Quản Lý đang tạm dừng nhận thanh toán trực tuyến qua mã VietQR cho kỳ Tháng {targetInvoice.month}. Quý cư dân vui lòng không chuyển khoản trong thời gian này.
+              </p>
+
+              {/* Manager Contact Box */}
+              <div className="w-full bg-slate-50 dark:bg-[#162032] rounded-2xl p-4 border border-slate-100 dark:border-slate-800 text-left space-y-3 mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Ban Quản Lý:</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Bùi Trung Khải</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Hotline hỗ trợ:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy('0902371800', 'gate-bql-phone')}
+                    className="text-xs font-bold font-num text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 cursor-pointer"
+                    title="Bấm để sao chép số điện thoại"
+                  >
+                    <span>0902 371 800</span>
+                    {copiedKey === 'gate-bql-phone' ? (
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">Đã chép</span>
+                    ) : (
+                      <Copy size={13} className="text-slate-400" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Tòa nhà:</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {profile.room?.building || 'Trung Kim'} - Phòng {profile.room?.roomNumber}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="w-full flex flex-col sm:flex-row gap-2.5">
+                <a
+                  href="https://zalo.me/0902371800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-3 px-4 rounded-xl bg-[#0068FF] hover:bg-[#0055d4] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Nhắn tin Zalo với Quản lý</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => navigate('/invoices')}
+                  className="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all cursor-pointer"
+                >
+                  Quay lại Hóa đơn
+                </button>
+              </div>
             </main>
           </motion.div>
         ) : (

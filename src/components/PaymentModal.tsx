@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown } from 'lucide-react';
+import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from 'lucide-react';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { saveQrToDevice } from '../lib/qrHelper';
 
 export function PaymentModal() {
-  const { isPaymentModalOpen, closePaymentModal, activeInvoice, processPayment, profile } = useApp();
+  const { isPaymentModalOpen, closePaymentModal, activeInvoice, processPayment, profile, paymentGateStatus } = useApp();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [lastTxnCode, setLastTxnCode] = useState('');
@@ -159,84 +159,145 @@ export function PaymentModal() {
                 </div>
               </div>
 
-              {/* QR Payment Details */}
-              <div className="space-y-3 animate-in fade-in duration-200">
-                <div className="bg-slate-50/80 dark:bg-[#162032] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-                  
-                  {/* QR Code Container */}
-                  <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 shrink-0 text-center flex flex-col items-center">
-                    {qrUrl ? (
-                      <img
-                        src={qrUrl}
-                        alt="Mã VietQR MB Bank"
-                        className="w-32 h-32 rounded-lg object-contain mx-auto"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">
-                        Đang tạo mã QR...
-                      </div>
-                    )}
-                    <span className="text-[10px] text-emerald-600 font-bold block mt-1">Mã VietQR MB Bank</span>
-                    <div className="mt-2 flex flex-col gap-1 w-full">
+              {/* Payment Gate Closed Warning OR QR Payment Details */}
+              {paymentGateStatus === 'STOP' ? (
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 text-center space-y-3.5 animate-in fade-in duration-200">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-xs">
+                    <Lock size={24} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-200/60 dark:bg-amber-900/60 px-2 py-0.5 rounded-full">
+                      Cổng thanh toán tạm khóa
+                    </span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1.5">
+                      Cổng thanh toán đang tạm đóng
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                      Ban Quản Lý đang tạm khóa cổng thanh toán QR cho kỳ Tháng {activeInvoice.month}. Quý cư dân vui lòng không quét mã chuyển khoản trong thời gian này.
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-amber-200/60 dark:border-amber-900/40 text-left space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Ban Quản Lý:</span>
+                      <span className="font-bold text-slate-900 dark:text-white">Bùi Trung Khải</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">SĐT hỗ trợ:</span>
                       <button
                         type="button"
-                        onClick={() => saveQrToDevice(qrUrl, `VietQR_${transferContent}.png`)}
-                        className="py-1.5 px-2 rounded-lg bg-black hover:bg-neutral-900 text-white text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                        onClick={() => handleCopy('0902371800', 'gate-modal-phone')}
+                        className="font-bold font-num text-slate-900 dark:text-white hover:text-indigo-600 flex items-center gap-1 cursor-pointer"
+                        title="Sao chép SĐT"
                       >
-                        <ImageDown size={12} />
-                        <span>Lưu ảnh QR</span>
+                        <span>0902 371 800</span>
+                        {copiedField === 'gate-modal-phone' ? (
+                          <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 py-0.2 rounded">Đã chép</span>
+                        ) : (
+                          <Copy size={12} className="text-slate-400" />
+                        )}
                       </button>
                     </div>
                   </div>
 
-                  {/* Bank Transfer Specs */}
-                  <div className="flex-1 w-full space-y-2 text-xs">
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Ngân hàng thụ hưởng:</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 text-[11px]">{bankName}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
-                      <div>
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Số tài khoản</span>
-                        <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{bankAccount}</span>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => handleCopy(bankAccount, 'account')}
-                        className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
-                      >
-                        {copiedField === 'account' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                        <span>{copiedField === 'account' ? 'Đã chép' : 'Sao chép'}</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
-                      <div>
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Nội dung CK</span>
-                        <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{transferContent}</span>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => handleCopy(transferContent, 'content')}
-                        className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
-                      >
-                        {copiedField === 'content' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                        <span>{copiedField === 'content' ? 'Đã chép' : 'Sao chép'}</span>
-                      </button>
-                    </div>
+                  <div className="flex gap-2 pt-1">
+                    <a
+                      href="https://zalo.me/0902371800"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-2.5 rounded-xl bg-[#0068FF] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
+                    >
+                      Nhắn tin Zalo với Quản lý
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 cursor-pointer"
+                    >
+                      Đóng
+                    </button>
                   </div>
                 </div>
+              ) : (
+                /* QR Payment Details */
+                <div className="space-y-3 animate-in fade-in duration-200">
+                  <div className="bg-slate-50/80 dark:bg-[#162032] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                    
+                    {/* QR Code Container */}
+                    <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 shrink-0 text-center flex flex-col items-center">
+                      {qrUrl ? (
+                        <img
+                          src={qrUrl}
+                          alt="Mã VietQR MB Bank"
+                          className="w-32 h-32 rounded-lg object-contain mx-auto"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">
+                          Đang tạo mã QR...
+                        </div>
+                      )}
+                      <span className="text-[10px] text-emerald-600 font-bold block mt-1">Mã VietQR MB Bank</span>
+                      <div className="mt-2 flex flex-col gap-1 w-full">
+                        <button
+                          type="button"
+                          onClick={() => saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`)}
+                          className="py-1.5 px-2 rounded-lg bg-black hover:bg-neutral-900 text-white text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                        >
+                          <ImageDown size={12} />
+                          <span>Lưu ảnh QR</span>
+                        </button>
+                      </div>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  className="w-full primary-button py-3.5 text-sm flex items-center justify-center gap-2 shadow-sm font-bold cursor-pointer"
-                >
-                  <ShieldCheck size={17} />
-                  <span>Xác nhận đã chuyển khoản thành công</span>
-                </button>
-              </div>
+                    {/* Bank Transfer Specs */}
+                    <div className="flex-1 w-full space-y-2 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">Ngân hàng thụ hưởng:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 text-[11px]">{bankName}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Số tài khoản</span>
+                          <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{bankAccount}</span>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => handleCopy(bankAccount, 'account')}
+                          className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
+                        >
+                          {copiedField === 'account' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          <span>{copiedField === 'account' ? 'Đã chép' : 'Sao chép'}</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Nội dung CK</span>
+                          <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{transferContent}</span>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => handleCopy(transferContent, 'content')}
+                          className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
+                        >
+                          {copiedField === 'content' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          <span>{copiedField === 'content' ? 'Đã chép' : 'Sao chép'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirm}
+                    className="w-full primary-button py-3.5 text-sm flex items-center justify-center gap-2 shadow-sm font-bold cursor-pointer"
+                  >
+                    <ShieldCheck size={17} />
+                    <span>Xác nhận đã chuyển khoản thành công</span>
+                  </button>
+                </div>
+              )}
 
               {/* Exit Link */}
               <div className="text-center pt-1">

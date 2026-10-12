@@ -75,7 +75,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       
       const roomStr = profile.room?.roomNumber ? `_P${profile.room.roomNumber}` : '';
-      pdf.save(`Lich_Su_Thanh_Toan_EcoStay${roomStr}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}.pdf`);
+      pdf.save(`Lich_Su_Thanh_Toan_PhongLan${roomStr}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}.pdf`);
     } catch (error) {
       console.error('Lỗi khi xuất file PDF:', error);
       // Fallback to print
@@ -187,7 +187,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
                   Sao kê điện tử
                 </span>
                 <p className="text-slate-400 font-mono text-[10px]">Ngày xuất: {exportDateStr}</p>
-                <p className="text-slate-500 font-medium">Hotline BQL: 0909 888 999</p>
+                <p className="text-slate-500 font-medium">Hotline BQL: 0902 371 800</p>
               </div>
             </div>
 
@@ -315,7 +315,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
             {/* Verification Note & Signatures */}
             <div className="pt-4 border-t border-dashed border-slate-300">
               <p className="text-[10px] text-slate-500 italic text-justify leading-relaxed">
-                * Ghi chú: Dữ liệu sao kê được trích xuất tự động từ hệ thống quản lý EcoStay. Mọi thắc mắc về chỉ số điện nước hoặc các khoản khấu trừ, quý cư dân vui lòng liên hệ trực tiếp Ban Quản Lý trong vòng 03 ngày kể từ ngày phát hành hóa đơn.
+                * Ghi chú: Dữ liệu sao kê được trích xuất tự động từ hệ thống quản lý Nhà Trọ Phong Lan. Mọi thắc mắc về chỉ số điện nước hoặc các khoản khấu trừ, quý cư dân vui lòng liên hệ trực tiếp Ban Quản Lý trong vòng 03 ngày kể từ ngày phát hành hóa đơn.
               </p>
 
               <div className="grid grid-cols-2 gap-4 text-center text-xs mt-6 pt-2">
@@ -329,7 +329,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
                   <p className="font-bold text-slate-900">ĐẠI DIỆN BAN QUẢN LÝ</p>
                   <p className="text-[10px] text-slate-400 italic">(Ký, đóng dấu xác nhận)</p>
                   <div className="h-16" />
-                  <p className="font-bold text-slate-900">EcoStay Residence</p>
+                  <p className="font-bold text-slate-900">Bùi Trung Khải</p>
                 </div>
               </div>
             </div>

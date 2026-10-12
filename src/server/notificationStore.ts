@@ -139,7 +139,7 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
         type,
         target,
         customRooms,
-        sender: target === 'ALL' ? 'Ban Quản Lý EcoStay' : `Ban Quản Lý (${rawRoom})`,
+        sender: target === 'ALL' ? 'Ban Quản Lý Nhà Trọ Phong Lan' : `Ban Quản Lý (${rawRoom})`,
         unread: true
       });
     }

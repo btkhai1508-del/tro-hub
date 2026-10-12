@@ -726,7 +726,7 @@ async function startServer() {
         target: target || 'ALL',
         customRooms: Array.isArray(customRooms) ? customRooms : [],
         scheduledAt: scheduledAt || null,
-        sender: sender || 'Ban Quản Lý EcoStay'
+        sender: sender || 'Ban Quản Lý Nhà Trọ Phong Lan'
       });
       console.log(`[API /api/admin/notifications] Created: "${newNotif.title}" for target: ${newNotif.target}`);
       res.json({ success: true, notification: newNotif });

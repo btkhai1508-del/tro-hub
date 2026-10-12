@@ -100,7 +100,7 @@ export function GoogleSheetModal() {
 var SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('🏢 EcoStay - LVC')
+  SpreadsheetApp.getUi().createMenu('🏢 Nhà Trọ Phong Lan')
     .addItem('➡️ 1. Tự Động Chuyển Cư Dân (Q-AB) Sang Tab THÔNG TIN CÁ NHÂN', 'chuyenCuDanSangTabCaNhan')
     .addSeparator()
     .addItem('🔄 2. Tự Động Quét Tab Logs & Đổi Màu Cột P (Xanh lá)', 'tuDongDongBoTuLogs')
@@ -749,7 +749,7 @@ function markRowPending() {
                   <strong>Hướng dẫn 3 bước:</strong>
                   <br />1. Trong Google Sheets, vào menu <strong>Tiện ích mở rộng (Extensions) $\rightarrow$ Apps Script</strong>.
                   <br />2. Xóa code cũ, dán đoạn mã bên dưới và bấm nút <strong>Lưu (Save)</strong>.
-                  <br />3. Tải lại (F5) Google Sheets, bạn sẽ thấy xuất hiện thêm menu <strong>🏢 EcoStay Cư Dân</strong> ngay bên cạnh nút Help để chuyển dữ liệu trực tiếp bất cứ lúc nào!
+                  <br />3. Tải lại (F5) Google Sheets, bạn sẽ thấy xuất hiện thêm menu <strong>🏢 Nhà Trọ Phong Lan</strong> ngay bên cạnh nút Help để chuyển dữ liệu trực tiếp bất cứ lúc nào!
                 </p>
 
                 <div className="relative group">

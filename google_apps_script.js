@@ -1,5 +1,5 @@
 /**
- * GOOGLE APPS SCRIPT CHO ECOSTAY TRO-HUB
+ * GOOGLE APPS SCRIPT CHO NHÀ TRỌ PHONG LAN (TRO-HUB)
  * Tự động đồng bộ 2 chiều:
  * 1. Ô Q2: Đóng/Mở cổng thanh toán (START / STOP)
  * 2. Tab "Notifications": Lưu thông báo từ Admin (Cột A: Date, B: Phòng, C: Loại, D: Nội dung)

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
@@ -12,6 +12,8 @@ import {
   ChevronRight,
   LogOut,
   LayoutGrid,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
@@ -27,6 +29,17 @@ const defaultNavItems = [
 export function Sidebar() {
   const { profile, invoices, openProfileEditModal, isSidebarCollapsed, toggleSidebar, logoutUser } = useApp();
   const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
+  const [hasCopiedPhone, setHasCopiedPhone] = useState(false);
+
+  const handleCopyPhone = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    navigator.clipboard.writeText('0902371800');
+    setHasCopiedPhone(true);
+    setTimeout(() => setHasCopiedPhone(false), 2000);
+  };
 
   const navItems = defaultNavItems;
 
@@ -65,7 +78,7 @@ export function Sidebar() {
             <div className="flex justify-center mb-7 w-full">
               <div 
                 className="w-12 h-12 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-slate-900/15 cursor-pointer hover:scale-105 transition-transform"
-                title={`EcoStay - Phòng ${profile.room.roomNumber}`}
+                title={`Nhà Trọ Phong Lan - Phòng ${profile.room.roomNumber}`}
               >
                 <Building2 size={24} className="text-white" />
               </div>
@@ -78,7 +91,7 @@ export function Sidebar() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">EcoStay</span>
+                  <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white truncate">Phong Lan</span>
                   {profile.room.roomNumber ? (
                     <span className="px-1.5 py-0.2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-md font-num border border-emerald-100 dark:border-emerald-800/40">
                       {profile.room.roomNumber}
@@ -86,7 +99,7 @@ export function Sidebar() {
                   ) : null}
                 </div>
                 <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium truncate">
-                  {profile.room.building || 'Cư dân hệ thống'}
+                  {profile.room.building || 'Trung Kim'}
                 </p>
               </div>
             </div>
@@ -178,30 +191,67 @@ export function Sidebar() {
 
         {/* Bottom Section: Hotline & Resident Profile */}
         <div className="w-full space-y-3 pt-3 border-t border-slate-900/5 dark:border-white/10">
-          {/* Hotline Quick Card */}
+          {/* Hotline & BQL Contact Card */}
           {isSidebarCollapsed ? (
-            <div className="flex justify-center w-full">
-              <a 
-                href="tel:0909888999"
-                title="Hotline BQL: 0909 888 999"
-                className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors shadow-2xs"
+            <div 
+              data-tutorial="sidebar-bql-contact" 
+              className="flex flex-col items-center gap-1.5 w-full"
+            >
+              <button 
+                type="button"
+                onClick={handleCopyPhone}
+                title="Sao chép SĐT BQL Bùi Trung Khải (0902 371 800)"
+                className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors shadow-2xs relative cursor-pointer"
               >
-                <PhoneCall size={18} />
+                {hasCopiedPhone ? <Check size={16} className="text-emerald-600" /> : <PhoneCall size={18} />}
+              </button>
+              <a
+                href="https://zalo.me/0902371800"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Nhắn tin Zalo với Bùi Trung Khải"
+                className="w-8 h-8 rounded-xl bg-[#0068FF] hover:bg-[#0055d4] active:scale-90 text-white flex items-center justify-center text-[10px] font-black shadow-xs transition-transform cursor-pointer"
+              >
+                Z
               </a>
             </div>
           ) : (
-            <div className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div 
+              data-tutorial="sidebar-bql-contact"
+              className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-800/40">
                   <PhoneCall size={15} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] text-slate-400 font-medium">BQL: Hoàng Nam</p>
-                  <a href="tel:0909888999" className="text-xs font-bold font-num text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    0909 888 999
-                  </a>
+                  <p className="text-[10px] text-slate-400 font-medium truncate">BQL: Bùi Trung Khải</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyPhone}
+                    title="Bấm để sao chép số điện thoại"
+                    className="text-xs font-bold font-num text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>0902 371 800</span>
+                    {hasCopiedPhone ? (
+                      <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">Đã chép</span>
+                    ) : (
+                      <Copy size={11} className="text-slate-400 hover:text-indigo-500 shrink-0" />
+                    )}
+                  </button>
                 </div>
               </div>
+
+              {/* Nút chuyển sang Zalo của Bùi Trung Khải */}
+              <a
+                href="https://zalo.me/0902371800"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Nhắn tin Zalo với Bùi Trung Khải (0902 371 800)"
+                className="h-7 px-2 rounded-xl bg-[#0068FF] hover:bg-[#0055d4] active:scale-95 text-white flex items-center gap-1 text-[10px] font-bold shadow-xs transition-all shrink-0 cursor-pointer"
+              >
+                <span>Zalo</span>
+              </a>
             </div>
           )}
 

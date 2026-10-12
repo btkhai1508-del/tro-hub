@@ -251,7 +251,7 @@ export async function getSpreadsheetDetails(
   const data = await res.json();
   const sheets = (data.sheets || []).map((s: any) => s.properties?.title || '').filter(Boolean);
   return {
-    title: data.properties?.title || 'Bảng tính EcoStay',
+    title: data.properties?.title || 'Bảng tính Nhà Trọ Phong Lan',
     sheets
   };
 }
@@ -313,7 +313,7 @@ export async function fetchResidentProfileFromSheet(
   const password = String(row[12] || '').trim();
 
   return {
-    name: name || 'Cư dân EcoStay',
+    name: name || 'Cư dân Nhà Trọ Phong Lan',
     phone: phone || '',
     email,
     cccd,
@@ -323,7 +323,7 @@ export async function fetchResidentProfileFromSheet(
     vehicle: {
       type: vehicleType,
       plateNumber,
-      parkingSlot: '',
+      parkingSlot: 'Bãi giữ xe máy',
       registeredDate: ''
     },
     emergencyContact: {
@@ -333,7 +333,7 @@ export async function fetchResidentProfileFromSheet(
     },
     room: {
       roomNumber: roomNumber ? (roomNumber.startsWith('P.') ? roomNumber : `P. ${roomNumber}`) : '',
-      building: '',
+      building: (roomNumber && roomNumber.toUpperCase().includes('LVC')) ? 'Lê Văn Chí' : 'Trung Kim',
       floor: '',
       startDate: ''
     },

@@ -7,7 +7,7 @@ import { isZaloMiniApp } from './platform';
 
 export async function saveQrToDevice(
   qrUrl: string,
-  fileName: string = 'VietQR_EcoStay.png'
+  fileName: string = 'VietQR_PhongLan.png'
 ): Promise<{ success: boolean; message: string }> {
   if (!qrUrl) {
     return { success: false, message: 'Không tìm thấy đường dẫn mã QR' };
@@ -61,7 +61,7 @@ export async function saveQrToDevice(
  */
 export async function shareViaZalo(
   qrUrl: string,
-  description: string = 'Mã VietQR thanh toán tiền phòng EcoStay'
+  description: string = 'Mã VietQR thanh toán tiền phòng Nhà Trọ Phong Lan'
 ): Promise<{ success: boolean; message: string }> {
   if (!qrUrl) {
     return { success: false, message: 'Không tìm thấy hình ảnh để gửi' };
@@ -98,7 +98,7 @@ export async function shareViaZalo(
   if (typeof navigator !== 'undefined' && navigator.share) {
     try {
       await navigator.share({
-        title: 'Mã QR EcoStay',
+        title: 'Mã QR Nhà Trọ Phong Lan',
         text: description,
         url: qrUrl,
       });

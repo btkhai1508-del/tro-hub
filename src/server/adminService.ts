@@ -704,34 +704,12 @@ export async function getPaymentGate(month: string = getCurrentMonthStr()): Prom
   const fileData = loadPaymentGateFile();
   const existing = fileData[month];
 
-  // If Admin explicitly set a value within the last 30 minutes, retain Admin's decision
-  // so that slow Google Sheet Gviz CDN caching (which can lag 1-5 minutes) doesn't flip it back!
-  if (existing && existing.source === 'admin' && (Date.now() - existing.updatedAt < 30 * 60 * 1000)) {
+  if (existing && (existing.value === 'START' || existing.value === 'STOP')) {
     paymentGateState[month] = existing.value;
     return existing.value;
   }
 
-  try {
-    const candidateTabs = [month, month.replace('/', ''), `Tháng ${month}`, `T${month}`];
-    for (const tab of candidateTabs) {
-      try {
-        const rows = await fetchSheetDataViaGviz(ADMIN_SPREADSHEET_ID, tab);
-        if (rows && rows.length >= 2) {
-          const rawQ2 = String(rows[1]?.[16] || '').trim().toUpperCase();
-          if (rawQ2 === 'START' || rawQ2 === 'STOP') {
-            paymentGateState[month] = rawQ2;
-            fileData[month] = { value: rawQ2, updatedAt: Date.now(), source: 'sheet' };
-            savePaymentGateFile(fileData);
-            return rawQ2;
-          }
-        }
-      } catch {}
-    }
-  } catch (err) {
-    console.warn('[getPaymentGate] Error reading cell Q2 from Google Sheet:', err);
-  }
-
-  return existing?.value || paymentGateState[month] || 'STOP';
+  return paymentGateState[month] || 'STOP';
 }
 
 export function setPaymentGate(month: string = getCurrentMonthStr(), value: string = 'STOP'): string {

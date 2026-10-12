@@ -134,7 +134,7 @@ export function ContractModal() {
 
                 <div className="space-y-1">
                   <p>Hôm nay, ngày <span className="font-bold underline">01</span> tháng <span className="font-bold underline">06</span> năm 20<span className="font-bold underline">26</span></p>
-                  <p>Tại căn nhà số: <span className="font-bold">Tòa nhà EcoStay Residence</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh</p>
+                  <p>Tại căn nhà số: <span className="font-bold">Nhà Trọ Phong Lan</span> Đường <span className="font-bold">Lê Văn Chí</span>, Khu phố <span className="font-bold">3</span>, phường <span className="font-bold">Linh Chiểu</span>, TP. Hồ Chí Minh</p>
                 </div>
 
                 <div className="space-y-1 pt-1">
@@ -142,7 +142,7 @@ export function ContractModal() {
                   <p>1. Ông/bà: <span className="font-bold">BÙI TRUNG KHẢI</span>, Sinh năm: <span className="font-bold">1990</span>, Số CCCD: <span className="font-bold">079090001800</span></p>
                   <p>Nơi đăng ký thường trú: Số 123 Đường Kha Vạn Cân, Khu phố 2, Phường Linh Chiểu, Tỉnh (TP): TP. Hồ Chí Minh</p>
                   <p>2. Ông/bà: ......................................., Sinh năm: ............., Số CCCD: ................................</p>
-                  <p>Là chủ sở hữu căn nhà tại địa chỉ số: Tòa nhà EcoStay Đường Lê Văn Chí, Khu phố 3, Phường Linh Chiểu, TP. Hồ Chí Minh.</p>
+                  <p>Là chủ sở hữu căn nhà tại địa chỉ số: Nhà Trọ Phong Lan Đường Lê Văn Chí, Khu phố 3, Phường Linh Chiểu, TP. Hồ Chí Minh.</p>
                 </div>
 
                 <div className="space-y-1 pt-1">
@@ -154,7 +154,7 @@ export function ContractModal() {
 
                 <div className="space-y-1.5 pt-1 text-justify">
                   <p className="font-bold text-center">Sau khi thỏa thuận, hai bên thống nhất như sau:</p>
-                  <p>Bên A đồng ý cho bên B được thuê/mượn/ở nhờ nhà, phòng trọ số <span className="font-bold underline">{cleanRoom}</span> tại căn nhà số nhà Tòa nhà EcoStay Residence Đường Lê Văn Chí, Khu phố 3, Phường Linh Chiểu, TP. Hồ Chí Minh</p>
+                  <p>Bên A đồng ý cho bên B được thuê/mượn/ở nhờ nhà, phòng trọ số <span className="font-bold underline">{cleanRoom}</span> tại căn nhà số nhà Nhà Trọ Phong Lan Đường Lê Văn Chí, Khu phố 3, Phường Linh Chiểu, TP. Hồ Chí Minh</p>
                   <p>Thời hạn thuê (mượn, ở nhờ nhà): <span className="font-bold">30 tháng</span> kể từ ngày ký họp đồng</p>
                   <p>Bên B chỉ được quyền ở và đăng ký tạm trú vào địa chỉ nhà bên A, bên B không được tranh chấp nhà, yêu cầu gì về tài sản của bên A.</p>
                   <p>Hợp đồng này được lập thành 02 bản có giá trị như nhau mỗi bên giữ 01 bản./.</p>
@@ -220,7 +220,7 @@ export function ContractModal() {
                     </div>
                   </div>
 
-                  <p className="pt-0.5">10. Nội dung đề nghị: <span className="font-semibold">Đăng ký tạm trú tại Phòng {cleanRoom}, Tòa nhà EcoStay Residence, Đường Lê Văn Chí, Phường Linh Chiểu, TP. Thủ Đức, TP. Hồ Chí Minh.</span></p>
+                  <p className="pt-0.5">10. Nội dung đề nghị: <span className="font-semibold">Đăng ký tạm trú tại Phòng {cleanRoom}, Nhà Trọ Phong Lan, Đường Lê Văn Chí, Phường Linh Chiểu, TP. Thủ Đức, TP. Hồ Chí Minh.</span></p>
                 </div>
 
                 <div className="pt-4 grid grid-cols-2 gap-4 text-center text-[11px]">

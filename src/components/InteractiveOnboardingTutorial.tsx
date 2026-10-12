@@ -83,13 +83,13 @@ const TOUR_STEPS: StepItem[] = [
     text: 'Quản lý thông tin cá nhân CCCD, số điện thoại và danh sách xe máy đã đăng ký gửi xe.'
   },
   {
-    id: 'step-profile-zalo',
-    path: '/profile',
-    selector: '[data-tutorial="profile-zalo-section"]',
-    fallbackSelector: '[data-tutorial="profile-id-card"]',
-    badge: '9/10 • Zalo OA',
-    title: 'Nhắn tin Zalo với Ban Quản Lý',
-    text: 'Nhấn vào đây để liên hệ phản ánh sự cố phòng hoặc nhận thông báo trực tiếp qua Zalo.'
+    id: 'step-bql-contact',
+    path: '/',
+    selector: '[data-tutorial="sidebar-bql-contact"]',
+    fallbackSelector: 'main',
+    badge: '9/10 • Liên hệ BQL',
+    title: 'Liên hệ BQL & Zalo Bùi Trung Khải',
+    text: 'Nhấn vào số điện thoại 0902 371 800 để sao chép nhanh, hoặc bấm nút Zalo để nhắn tin trực tiếp với BQL Bùi Trung Khải.'
   },
   {
     id: 'step-finish',

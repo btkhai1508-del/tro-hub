@@ -156,7 +156,7 @@ export function LoginPage() {
             <Building2 size={32} className="text-white" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            EcoStay Residence
+            Nhà Trọ Phong Lan
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
             Cổng dịch vụ cư dân thông minh
@@ -472,11 +472,11 @@ export function LoginPage() {
 
               <div className="pt-2 space-y-2">
                 <a
-                  href="tel:0909888999"
+                  href="tel:0902371800"
                   className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <PhoneCall size={14} />
-                  <span>Liên hệ Chủ trọ duyệt nhanh (0909 888 999)</span>
+                  <span>Liên hệ BQL Bùi Trung Khải duyệt nhanh (0902 371 800)</span>
                 </a>
 
                 <button
@@ -505,7 +505,7 @@ export function LoginPage() {
               </div>
 
               <p className="text-xs text-slate-500 leading-relaxed">
-                Nhập số điện thoại đã đăng ký với ban quản lý EcoStay. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.
+                Nhập số điện thoại đã đăng ký với Ban Quản Lý Nhà Trọ Phong Lan. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.
               </p>
 
               <div>
@@ -548,9 +548,9 @@ export function LoginPage() {
 
         {/* Footer Support Info */}
         <div className="text-center mt-6 text-xs text-slate-400">
-          Cần hỗ trợ nhận phòng hoặc xác thực tài khoản? Hotline Chủ trọ:{' '}
-          <a href="tel:0909888999" className="text-slate-700 font-bold hover:underline">
-            0909 888 999
+          Cần hỗ trợ nhận phòng hoặc xác thực tài khoản? Hotline BQL (Bùi Trung Khải):{' '}
+          <a href="tel:0902371800" className="text-slate-700 font-bold hover:underline">
+            0902 371 800
           </a>
         </div>
 

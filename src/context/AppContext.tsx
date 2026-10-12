@@ -45,6 +45,16 @@ export function getTransferContent(roomNumber: string = '203', month: string = '
   return isLVC ? `LVC${cleanRoom}-T${m}-${y}` : `${cleanRoom}-T${m}-${y}`;
 }
 
+/**
+ * Building name mapping:
+ * - Room containing 'LVC' -> 'Lê Văn Chí'
+ * - Any other room -> 'Trung Kim'
+ */
+export function getBuildingName(roomNumber?: string): string {
+  if (!roomNumber) return 'Trung Kim';
+  return roomNumber.toUpperCase().includes('LVC') ? 'Lê Văn Chí' : 'Trung Kim';
+}
+
 export interface NotificationItem {
   id: string;
   title: string;
@@ -57,9 +67,9 @@ export interface NotificationItem {
 }
 
 export interface VehicleInfo {
-  type: string;           // "Xe máy (Honda Air Blade 150)"
+  type: string;           // "Xe máy"
   plateNumber: string;    // "59-X1 888.88"
-  parkingSlot: string;    // "Vị trí B1-24 (Tầng hầm Tòa A)"
+  parkingSlot: string;    // "Bãi giữ xe máy"
   registeredDate: string; // "01/06/2026"
 }
 
@@ -97,7 +107,9 @@ interface AppContextType {
   notifications: NotificationItem[];
   unreadNotiCount: number;
   
-  // Payment Modal
+  // Payment Modal & Gate
+  paymentGateStatus: 'START' | 'STOP';
+  fetchPaymentGateStatus: (month?: string) => Promise<'START' | 'STOP'>;
   isPaymentModalOpen: boolean;
   activeInvoice: Invoice | null;
   openPaymentModal: (invoiceId?: string) => void;
@@ -201,7 +213,7 @@ const initialEmptyProfile: UserProfile = {
   },
   room: {
     roomNumber: '',
-    building: '',
+    building: 'Trung Kim',
     floor: '',
     startDate: ''
   }
@@ -473,28 +485,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [profile.room?.roomNumber, sheetConfig.spreadsheetId, sheetConfig.monthlyTab]);
 
+  // Live Payment Gate State from server (Admin controls this gate directly)
+  const [paymentGateStatus, setPaymentGateStatus] = useState<'START' | 'STOP'>('STOP');
+
+  const fetchPaymentGateStatus = useCallback(async (targetMonth?: string): Promise<'START' | 'STOP'> => {
+    try {
+      const month = targetMonth || sheetConfig.monthlyTab || getCurrentMonthStr();
+      const res = await apiFetch(`/api/payment/gate?month=${encodeURIComponent(month)}&t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && data.value) {
+          const val = data.value === 'START' ? 'START' : 'STOP';
+          setPaymentGateStatus(val);
+          return val;
+        }
+      }
+    } catch (err) {
+      console.warn('[AppContext] fetchPaymentGateStatus error:', err);
+    }
+    return 'STOP';
+  }, [sheetConfig.monthlyTab]);
+
   // Real-time Background Auto-Sync Loop (Every 5 seconds & on tab visibility)
   useEffect(() => {
-    // Initial fetch on mount: fetch tenant data & live payment status
+    // Initial fetch on mount: fetch tenant data & live payment status & payment gate
     refreshTenantDataFromSheet(true);
     fetchPaymentStatus();
+    fetchPaymentGateStatus();
 
     // Continuous polling every 5 seconds for real-time sheet reflection
     const interval = setInterval(() => {
       refreshTenantDataFromSheet(true);
       fetchPaymentStatus();
+      fetchPaymentGateStatus();
     }, 5000);
 
     // Window focus / visibility change listeners
     const handleFocus = () => {
       refreshTenantDataFromSheet(true);
       fetchPaymentStatus();
+      fetchPaymentGateStatus();
     };
     window.addEventListener('focus', handleFocus);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         refreshTenantDataFromSheet(true);
         fetchPaymentStatus();
+        fetchPaymentGateStatus();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -504,7 +541,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [refreshTenantDataFromSheet, fetchPaymentStatus]);
+  }, [refreshTenantDataFromSheet, fetchPaymentStatus, fetchPaymentGateStatus]);
 
   const openGoogleSheetModal = () => setIsGoogleSheetModalOpen(true);
   const closeGoogleSheetModal = () => setIsGoogleSheetModalOpen(false);
@@ -872,7 +909,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       time: 'Vừa xong',
       type: 'success',
       unread: true,
-      sender: 'Hệ Thống EcoStay'
+      sender: 'Ban Quản Lý Nhà Trọ Phong Lan'
     };
     setNotifications(prev => [newNotif, ...prev]);
   };
@@ -970,6 +1007,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         profile,
         notifications,
         unreadNotiCount,
+        paymentGateStatus,
+        fetchPaymentGateStatus,
         isPaymentModalOpen,
         activeInvoice,
         openPaymentModal,
