@@ -40,6 +40,7 @@ import { cn } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { GlassIconMoon } from './GlassIcons';
+import { ModernLineGraph } from './ModernLineGraph';
 import { 
   IconHome3D, 
   IconWallet3D, 
@@ -422,11 +423,7 @@ export function AdminPortal() {
       tienNuoc: prev?.tienNuoc ? prev.tienNuoc : totalTienNuoc,
       soNguoi: prev?.soNguoi ? prev.soNguoi : totalPeople,
       soXe: prev?.soXe ? prev.soXe : totalVehicles,
-      usageTrend: (prev?.usageTrend && prev.usageTrend.length > 0) ? prev.usageTrend : [
-        { month: '08/2026', dien: Math.round(totalDien * 0.92), nuoc: Math.round(totalNuoc * 0.95) },
-        { month: '09/2026', dien: Math.round(totalDien * 0.97), nuoc: Math.round(totalNuoc * 0.98) },
-        { month: '10/2026', dien: totalDien, nuoc: totalNuoc }
-      ]
+      usageTrend: prev?.usageTrend
     }));
   };
 
@@ -1327,98 +1324,17 @@ export function AdminPortal() {
               </div>
 
               {/* =========================================================================
-                  LINE GRAPH (BIỂU ĐỒ ĐIỆN NƯỚC THEO YÊU CẦU CỦA USER)
+                  LINE GRAPH (BIỂU ĐỒ ĐIỆN NƯỚC: 6 THÁNG GẦN NHẤT THIẾT KẾ CHUẨN HIỆN ĐẠI)
                  ========================================================================= */}
-              <div className="md:col-span-12 soft-card p-6 sm:p-8 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                      <TrendingUp size={22} />
-                    </div>
-                    <div>
-                      <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Biểu đồ tiêu thụ Điện & Nước (Line Graph)</h3>
-                      <p className="text-xs text-slate-400">Diễn biến chỉ số qua các chu kỳ tháng</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-5 text-xs font-bold">
-                    <span className="flex items-center gap-2 text-amber-600">
-                      <span className="inline-block w-4 h-1 rounded-full bg-amber-500" />
-                      <span>Điện (kW)</span>
-                    </span>
-                    <span className="flex items-center gap-2 text-blue-600">
-                      <span className="inline-block w-4 h-1 rounded-full bg-blue-600" />
-                      <span>Nước (m³)</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* SVG Line Graph Implementation */}
-                {(() => {
-                  const list = dashboardData?.usageTrend || [];
-                  if (list.length === 0) {
-                    return <div className="h-56 flex items-center justify-center text-sm text-slate-500">Chưa có dữ liệu điện nước trong các tab Google Sheets.</div>;
-                  }
-                  const width = 740, height = 240, pad = 36, leftPad = 60;
-                  const maxVal = Math.max(1, ...list.map((x: any) => Math.max(Number(x.dien || 0), Number(x.nuoc || 0) * 10)));
-                  const x = (i: number) => leftPad + (width - leftPad - pad) * (i / Math.max(1, list.length - 1));
-                  const y = (v: number) => height - pad - ((Number(v || 0) / maxVal) * (height - pad * 2));
-                  const pointsDien = list.map((item: any, i: number) => `${x(i).toFixed(1)},${y(item.dien).toFixed(1)}`).join(' ');
-                  const pointsNuoc = list.map((item: any, i: number) => `${x(i).toFixed(1)},${y(item.nuoc * 10).toFixed(1)}`).join(' ');
-
-                  return (
-                    <div className="w-full h-64 bg-slate-50/70 dark:bg-slate-900/60 rounded-2xl p-2 flex items-center justify-center">
-                      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
-                        {/* Grid Lines */}
-                        {[0, 0.25, 0.5, 0.75, 1].map((t, idx) => {
-                          const yy = pad + (height - pad * 2) * t;
-                          return (
-                            <line
-                              key={idx}
-                              x1={leftPad}
-                              y1={yy}
-                              x2={width - pad}
-                              y2={yy}
-                              stroke="#e2e8f0"
-                              strokeDasharray="4,4"
-                              strokeWidth="1"
-                            />
-                          );
-                        })}
-                        {/* Axis */}
-                        <line x1={leftPad} y1={height - pad} x2={width - pad} y2={height - pad} stroke="#cbd5e1" strokeWidth="1.5" />
-
-                        {/* Polylines for Line Graph */}
-                        <polyline points={pointsDien} fill="none" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={pointsNuoc} fill="none" stroke="#2563eb" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-
-                        {/* Labels and Dots */}
-                        {list.map((item: any, i: number) => {
-                          const cx = x(i);
-                          const dy = y(item.dien);
-                          const wy = y(item.nuoc * 10);
-                          return (
-                            <g key={i}>
-                              <text x={cx} y={height - 10} textAnchor="middle" fontSize="11" fill="#64748b" fontWeight="700">
-                                {item.month}
-                              </text>
-                              {/* Dien Dot */}
-                              <circle cx={cx} cy={dy} r="5" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
-                              <text x={cx} y={dy - 9} textAnchor="middle" fontSize="11" fontWeight="800" fill="#d97706">
-                                {fmt(item.dien)}
-                              </text>
-                              {/* Nuoc Dot */}
-                              <circle cx={cx} cy={wy} r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
-                              <text x={cx} y={wy - 9} textAnchor="middle" fontSize="11" fontWeight="800" fill="#1d4ed8">
-                                {item.nuoc} m³
-                              </text>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    </div>
-                  );
-                })()}
+              <div className="md:col-span-12 soft-card p-5 sm:p-7 space-y-4">
+                <ModernLineGraph
+                  data={dashboardData?.usageTrend || []}
+                  selectedMonth={selectedMonth}
+                  onSelectMonth={(m) => {
+                    playSound('click');
+                    setSelectedMonth(m);
+                  }}
+                />
               </div>
 
             </div>
