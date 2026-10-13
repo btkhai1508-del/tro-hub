@@ -1,5 +1,4 @@
 import AdmZip from 'adm-zip';
-import { setRoomColumnPStatus, getRoomColumnPStatus } from './columnPStatusStore.js';
 /**
  * Normalizes tab or month string to MM/YYYY format
  * E.g. "102026" -> "10/2026", "10, 2026" -> "10/2026", "10-2026" -> "10/2026"
@@ -351,16 +350,7 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId, targetMonth) {
         let finalSheetColor = mapped.normalizedColor;
         let finalTxnId = undefined;
         let finalPaidAt = undefined;
-        const cachedStatus = getRoomColumnPStatus(cleanRoomKey);
-        if (cachedStatus && cachedStatus.color === 'GREEN') {
-            finalPaymentStatus = 'paid';
-            finalPaymentMethod = 'bank_transfer';
-            finalSheetColor = '#CEEAD5';
-            finalLabel = 'Đã thanh toán';
-            finalTxnId = cachedStatus.transactionId;
-            finalPaidAt = cachedStatus.paidAt;
-        }
-        else if (finalPaymentStatus !== 'paid') {
+        if (finalPaymentStatus !== 'paid') {
             // Cross-check real-time transfers in tab "Logs"
             // If Column P is not yet green on sheet but money was received in Logs:
             const transfer = checkRoomTransferInLogs(logsRows, roomA, formattedMonth);
@@ -371,14 +361,6 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId, targetMonth) {
                 finalLabel = 'Đã thanh toán';
                 finalTxnId = transfer.txnCode;
                 finalPaidAt = transfer.date;
-                // Persist to store so server components stay consistent
-                setRoomColumnPStatus(cleanRoomKey, 'GREEN', {
-                    rowIndex: rInt - 1,
-                    amount: transfer.amount || pAmount,
-                    transactionId: transfer.txnCode,
-                    paidAt: transfer.date,
-                    month: formattedMonth
-                });
             }
         }
         const result = {

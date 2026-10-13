@@ -75,7 +75,7 @@ export function Utilities() {
               Hóa đơn & Tiền phòng
             </h3>
             <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 leading-snug">
-              {unpaidCount > 0 ? `${unpaidCount} hóa đơn cần đóng` : 'Đã thanh toán'}
+              {invoices.length === 0 ? 'Đang cập nhật' : (unpaidCount > 0 ? `${unpaidCount} hóa đơn cần đóng` : 'Đã thanh toán')}
             </p>
           </div>
         </button>

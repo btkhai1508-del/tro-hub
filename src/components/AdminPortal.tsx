@@ -279,7 +279,6 @@ export function AdminPortal() {
   // Payment Gate state
   const [paymentGate, setPaymentGate] = useState<'START' | 'STOP'>('STOP');
   const lastGateToggleTimeRef = useRef<number>(0);
-  const recentPaymentTogglesRef = useRef<Map<string, { status: 'paid' | 'unpaid'; time: number }>>(new Map());
 
   // Data States
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -570,23 +569,9 @@ export function AdminPortal() {
       .then(d => {
         setIsLoading(false);
         if (d.success && d.rooms?.length) {
-          const now = Date.now();
-          const merged = d.rooms.map((r: any) => {
-            const cleanId = canonicalRoomId(r.room);
-            const override = recentPaymentTogglesRef.current.get(cleanId);
-            if (override && now - override.time < 20000) {
-              const status = override.status;
-              const statusText = status === 'paid' ? 'Đã đóng' : 'Chưa đóng';
-              const statusHTML = status === 'paid'
-                ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
-                : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>';
-              return { ...r, status, paymentStatus: status, statusText, statusHTML };
-            }
-            return r;
-          });
-          setRoomsList(merged);
-          setBillingList(merged);
-          updateDashboardStats(merged, month);
+          setRoomsList(d.rooms);
+          setBillingList(d.rooms);
+          updateDashboardStats(d.rooms, month);
         }
       })
       .catch(() => {
@@ -822,7 +807,6 @@ export function AdminPortal() {
   const updateRoomPaymentStatus = async (roomNumber: string, status: 'paid' | 'unpaid', row?: number) => {
     playSound('click');
     const cleanId = canonicalRoomId(roomNumber);
-    recentPaymentTogglesRef.current.set(cleanId, { status, time: Date.now() });
 
     const statusText = status === 'paid' ? 'Đã đóng' : 'Chưa đóng';
     const statusHTML = status === 'paid'

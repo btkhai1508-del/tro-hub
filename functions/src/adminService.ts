@@ -367,14 +367,7 @@ export async function getRoomListByMonth(month: string = '10/2026') {
           const tenantName = c.Q?.value || c.U?.value || c.Y?.value || '';
           const phone = c.S?.value || c.W?.value || c.AA?.value || '';
           const fillHex = c.P?.fillHex || '#F8D7DA';
-          let mapped = mapColorToPaymentStatus(fillHex);
-
-          // Overlay stored status from admin / webhook to prevent export lag from wiping status
-          const stored = getRoomColumnPStatus(roomName);
-          if (stored && (!stored.month || stored.month === month)) {
-            if (stored.color === 'GREEN') mapped = { ...mapped, paymentStatus: 'paid', label: 'Đã thanh toán', normalizedColor: 'GREEN' };
-            else if (stored.color === 'RED') mapped = { ...mapped, paymentStatus: 'unpaid', label: 'Chưa thanh toán', normalizedColor: 'RED' };
-          }
+          const mapped = mapColorToPaymentStatus(fillHex);
           
           let statusClass = 'unpaid';
           let statusText = 'Chưa đóng';
@@ -451,13 +444,7 @@ export async function getRoomDataByMonth(month: string, room: string) {
     const c = targetRow.cells;
     const rowNum = targetRow.rowNumber;
     const fillHex = c.P?.fillHex || '#F8D7DA';
-    let mapped = mapColorToPaymentStatus(fillHex);
-
-    const stored = getRoomColumnPStatus(canonicalRoom(room));
-    if (stored && (!stored.month || stored.month === month)) {
-      if (stored.color === 'GREEN') mapped = { ...mapped, paymentStatus: 'paid', label: 'Đã thanh toán', normalizedColor: 'GREEN' };
-      else if (stored.color === 'RED') mapped = { ...mapped, paymentStatus: 'unpaid', label: 'Chưa thanh toán', normalizedColor: 'RED' };
-    }
+    const mapped = mapColorToPaymentStatus(fillHex);
 
     let statusHTML = '<span style="color:#dc2626">Chưa thanh toán</span>';
     if (mapped.paymentStatus === 'paid') {
@@ -523,13 +510,7 @@ export async function getMonthlyBilling(month: string = '10/2026') {
         const room = c.A?.value || '';
         if (room) {
           const fillHex = c.P?.fillHex || '#F8D7DA';
-          let mapped = mapColorToPaymentStatus(fillHex);
-
-          const stored = getRoomColumnPStatus(canonicalRoom(room));
-          if (stored && (!stored.month || stored.month === month)) {
-            if (stored.color === 'GREEN') mapped = { ...mapped, paymentStatus: 'paid', label: 'Đã thanh toán', normalizedColor: 'GREEN' };
-            else if (stored.color === 'RED') mapped = { ...mapped, paymentStatus: 'unpaid', label: 'Chưa thanh toán', normalizedColor: 'RED' };
-          }
+          const mapped = mapColorToPaymentStatus(fillHex);
 
           const tenantName = c.Q?.value || c.U?.value || c.Y?.value || `Phòng ${room}`;
           const tenantPhone = c.S?.value || c.W?.value || c.AA?.value || '';

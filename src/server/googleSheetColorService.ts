@@ -424,15 +424,7 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
     let finalTxnId: string | undefined = undefined;
     let finalPaidAt: string | undefined = undefined;
 
-    const cachedStatus = getRoomColumnPStatus(cleanRoomKey);
-    if (cachedStatus && cachedStatus.color === 'GREEN') {
-      finalPaymentStatus = 'paid';
-      finalPaymentMethod = 'bank_transfer';
-      finalSheetColor = '#CEEAD5';
-      finalLabel = 'Đã thanh toán';
-      finalTxnId = cachedStatus.transactionId;
-      finalPaidAt = cachedStatus.paidAt;
-    } else if (finalPaymentStatus !== 'paid') {
+    if (finalPaymentStatus !== 'paid') {
       // Cross-check real-time transfers in tab "Logs"
       // If Column P is not yet green on sheet but money was received in Logs:
       const transfer = checkRoomTransferInLogs(logsRows, roomA, formattedMonth);
@@ -443,15 +435,6 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
         finalLabel = 'Đã thanh toán';
         finalTxnId = transfer.txnCode;
         finalPaidAt = transfer.date;
-
-        // Persist to store so server components stay consistent
-        setRoomColumnPStatus(cleanRoomKey, 'GREEN', {
-          rowIndex: rInt - 1,
-          amount: transfer.amount || pAmount,
-          transactionId: transfer.txnCode,
-          paidAt: transfer.date,
-          month: formattedMonth
-        });
       }
     }
 
