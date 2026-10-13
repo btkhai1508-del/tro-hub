@@ -7,6 +7,21 @@
  * 4. Cập nhật chỉ số điện/nước
  */
 
+var DEFAULT_SPREADSHEET_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
+
+/**
+ * HÀM KIỂM TRA & CẤP QUYỀN TRUY CẬP (Bấm nút 'Chạy' / 'Run' trên thanh công cụ Apps Script để cấp quyền)
+ */
+function testPermission() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    ss = SpreadsheetApp.openById(DEFAULT_SPREADSHEET_ID);
+  }
+  Logger.log("✅ Kết nối thành công tới Sheet: " + ss.getName() + " (ID: " + ss.getId() + ")");
+  var sheet = ss.getActiveSheet();
+  Logger.log("Tab hiện tại: " + sheet.getName());
+}
+
 function doGet(e) {
   return handleRequest(e);
 }
@@ -39,6 +54,14 @@ function handleRequest(e) {
 
     var action = params.action || "";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      try {
+        ss = SpreadsheetApp.openById(params.sheetId || DEFAULT_SPREADSHEET_ID);
+      } catch (err) {}
+    }
+    if (!ss) {
+      return createJsonResponse({ success: false, error: "Không thể mở Google Spreadsheet. Vui lòng kiểm tra ID bảng tính." });
+    }
 
     // ----------------------------------------------------
     // ACTION 1: CẬP NHẬT Ô Q2 (CỔNG THANH TOÁN START / STOP)
