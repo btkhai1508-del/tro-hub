@@ -1,6 +1,36 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import AdmZip from 'adm-zip';
 import { GoogleGenAI } from '@google/genai';
+import { getRoomColumnPStatus } from './columnPStatusStore.js';
 import { mapColorToPaymentStatus } from './googleSheetColorService.js';
+import { GOOGLE_APPS_SCRIPT_WEBAPP_URL } from './notificationStore.js';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PAYMENT_GATE_STORE_PATH = path.resolve(__dirname, 'paymentGateStore.json');
+function loadPaymentGateFile() {
+    try {
+        if (fs.existsSync(PAYMENT_GATE_STORE_PATH)) {
+            const raw = fs.readFileSync(PAYMENT_GATE_STORE_PATH, 'utf-8');
+            return JSON.parse(raw);
+        }
+    }
+    catch { }
+    return {};
+}
+function savePaymentGateFile(data) {
+    try {
+        fs.writeFileSync(PAYMENT_GATE_STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    }
+    catch { }
+}
+export function getCurrentMonthStr() {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const y = d.getFullYear();
+    return `${m}/${y}`;
+}
 export const ADMIN_SPREADSHEET_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
 export const SHEET_LVC_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
 export const SHEET_TK_ID = "1HYeiU4GWL0xIEtOUn_Fif5zcxKpFTqrei1WwwfUNUTU";
@@ -110,8 +140,10 @@ export async function getMonthList(spreadsheetId = ADMIN_SPREADSHEET_ID) {
                 months.push(name);
             }
         });
-        if (months.length === 0)
-            return [];
+        const curMonth = getCurrentMonthStr();
+        if (!months.includes(curMonth)) {
+            months.push(curMonth);
+        }
         const unique = Array.from(new Set(months));
         unique.sort((a, b) => {
             const p1 = a.split('/'), p2 = b.split('/');
@@ -120,7 +152,7 @@ export async function getMonthList(spreadsheetId = ADMIN_SPREADSHEET_ID) {
         return unique;
     }
     catch (e) {
-        return [];
+        return [getCurrentMonthStr()];
     }
 }
 /**
@@ -304,7 +336,15 @@ export async function getRoomListByMonth(month = '10/2026') {
                     const tenantName = c.Q?.value || c.U?.value || c.Y?.value || '';
                     const phone = c.S?.value || c.W?.value || c.AA?.value || '';
                     const fillHex = c.P?.fillHex || '#F8D7DA';
-                    const mapped = mapColorToPaymentStatus(fillHex);
+                    let mapped = mapColorToPaymentStatus(fillHex);
+                    // Overlay stored status from admin / webhook to prevent export lag from wiping status
+                    const stored = getRoomColumnPStatus(roomName);
+                    if (stored && (!stored.month || stored.month === month)) {
+                        if (stored.color === 'GREEN')
+                            mapped = { ...mapped, paymentStatus: 'paid', label: 'Đã thanh toán', normalizedColor: 'GREEN' };
+                        else if (stored.color === 'RED')
+                            mapped = { ...mapped, paymentStatus: 'unpaid', label: 'Chưa thanh toán', normalizedColor: 'RED' };
+                    }
                     let statusClass = 'unpaid';
                     let statusText = 'Chưa đóng';
                     if (mapped.paymentStatus === 'paid') {
@@ -377,7 +417,14 @@ export async function getRoomDataByMonth(month, room) {
         const c = targetRow.cells;
         const rowNum = targetRow.rowNumber;
         const fillHex = c.P?.fillHex || '#F8D7DA';
-        const mapped = mapColorToPaymentStatus(fillHex);
+        let mapped = mapColorToPaymentStatus(fillHex);
+        const stored = getRoomColumnPStatus(canonicalRoom(room));
+        if (stored && (!stored.month || stored.month === month)) {
+            if (stored.color === 'GREEN')
+                mapped = { ...mapped, paymentStatus: 'paid', label: 'Đã thanh toán', normalizedColor: 'GREEN' };
+            else if (stored.color === 'RED')
+                mapped = { ...mapped, paymentStatus: 'unpaid', label: 'Chưa thanh toán', normalizedColor: 'RED' };
+        }
         let statusHTML = '<span style="color:#dc2626">Chưa thanh toán</span>';
         if (mapped.paymentStatus === 'paid') {
             statusHTML = '<span style="color:#16a34a">Đã thanh toán</span>';
@@ -441,7 +488,14 @@ export async function getMonthlyBilling(month = '10/2026') {
                 const room = c.A?.value || '';
                 if (room) {
                     const fillHex = c.P?.fillHex || '#F8D7DA';
-                    const mapped = mapColorToPaymentStatus(fillHex);
+                    let mapped = mapColorToPaymentStatus(fillHex);
+                    const stored = getRoomColumnPStatus(canonicalRoom(room));
+                    if (stored && (!stored.month || stored.month === month)) {
+                        if (stored.color === 'GREEN')
+                            mapped = { ...mapped, paymentStatus: 'paid', label: 'Đã thanh toán', normalizedColor: 'GREEN' };
+                        else if (stored.color === 'RED')
+                            mapped = { ...mapped, paymentStatus: 'unpaid', label: 'Chưa thanh toán', normalizedColor: 'RED' };
+                    }
                     const tenantName = c.Q?.value || c.U?.value || c.Y?.value || `Phòng ${room}`;
                     const tenantPhone = c.S?.value || c.W?.value || c.AA?.value || '';
                     list.push({
@@ -493,20 +547,42 @@ export async function getMonthlyBilling(month = '10/2026') {
     }
 }
 /**
+ * Validate Vietnamese License Plate
+ * Rejects pure counts (1, 1.0, 2.0), phone numbers, CCCD, and pure text names without digits (Tuyền, Phạm Huyền Trâm...)
+ */
+export function isValidLicensePlate(val) {
+    if (!val)
+        return false;
+    const str = String(val).trim();
+    // Filter out headcount or vehicle count (0, 1, 1.0, 2, 2.0, 3, 3.0...)
+    if (/^\d+(\.0+)?$/.test(str))
+        return false;
+    // Must contain digits
+    if (!/\d/.test(str))
+        return false;
+    // Filter out phone numbers and CCCD numbers (pure digits length >= 9)
+    const cleanDigits = str.replace(/\D/g, '');
+    if (/^\d{9,12}$/.test(str.replace(/\s+/g, '')))
+        return false;
+    // Must contain at least 4 alphanumeric characters (e.g. 59X1, 78C1, 1234)
+    const clean = str.replace(/[\s.-]/g, '');
+    if (clean.length < 4 || clean.length > 12)
+        return false;
+    return true;
+}
+/**
  * Search License Plates across all rooms
  */
 export async function searchLicensePlates(month = '10/2026', query = '') {
-    const q = String(query || '').replace(/\s+/g, '').toLowerCase();
-    if (!q)
-        return [];
+    const q = String(query || '').replace(/[\s.-]/g, '').toLowerCase();
     try {
         const zip = await fetchSheetXlsx();
         const roomsList = zip ? (await parseSheetXmlRows(zip, month)).rows : [];
         const results = [];
         const slots = [
-            { idx: 1, nameCol: 'Q', plateCol: 'T', phoneCol: 'S' },
-            { idx: 2, nameCol: 'U', plateCol: 'X', phoneCol: 'W' },
-            { idx: 3, nameCol: 'Y', plateCol: 'AB', phoneCol: 'AA' }
+            { idx: 1, nameCol: 'Q', cccdCol: 'R', phoneCol: 'S', plateCol: 'T' },
+            { idx: 2, nameCol: 'U', cccdCol: 'V', phoneCol: 'W', plateCol: 'X' },
+            { idx: 3, nameCol: 'Y', cccdCol: 'Z', phoneCol: 'AA', plateCol: 'AB' }
         ];
         roomsList.forEach(r => {
             if (r.rowNumber >= 7 && r.rowNumber <= 50) {
@@ -515,11 +591,24 @@ export async function searchLicensePlates(month = '10/2026', query = '') {
                 if (!room)
                     return;
                 slots.forEach(slot => {
-                    const plateRaw = c[slot.plateCol]?.value || '';
-                    const cleanPlate = String(plateRaw).replace(/\s+/g, '');
-                    const name = c[slot.nameCol]?.value || '';
-                    const phone = c[slot.phoneCol]?.value || '';
-                    if (cleanPlate && cleanPlate.toLowerCase().includes(q)) {
+                    let plateRaw = c[slot.plateCol]?.value || '';
+                    let name = c[slot.nameCol]?.value || c.Q?.value || '';
+                    let phone = c[slot.phoneCol]?.value || c.S?.value || '';
+                    // If plate column is invalid (e.g. empty or pure text name like "Phạm Huyền Trâm"), check if plate was placed in phone/cccd column
+                    if (!isValidLicensePlate(plateRaw)) {
+                        if (isValidLicensePlate(c[slot.phoneCol]?.value)) {
+                            plateRaw = c[slot.phoneCol]?.value;
+                            phone = c.S?.value || '';
+                        }
+                        else if (isValidLicensePlate(c[slot.cccdCol]?.value)) {
+                            plateRaw = c[slot.cccdCol]?.value;
+                        }
+                        else {
+                            return;
+                        }
+                    }
+                    const cleanPlate = String(plateRaw).replace(/[\s.-]/g, '').toLowerCase();
+                    if (!q || cleanPlate.includes(q)) {
                         results.push({
                             room: canonicalRoom(room),
                             personIndex: slot.idx,
@@ -611,28 +700,120 @@ export function saveDeclarationData(month, houseKey, rows, sigDate) {
 }
 /**
  * Payment Gate (Cổng thanh toán Q2)
+ * Reads cell Q2 directly from the Google Sheet tab for that month.
+ * Row 1 (Excel row 2), Column Q (index 16).
  */
-export function getPaymentGate(month = '10/2026') {
+export async function getPaymentGate(month = getCurrentMonthStr()) {
+    const fileData = loadPaymentGateFile();
+    const existing = fileData[month];
+    if (existing && (existing.value === 'START' || existing.value === 'STOP')) {
+        paymentGateState[month] = existing.value;
+        return existing.value;
+    }
     return paymentGateState[month] || 'STOP';
 }
-export function setPaymentGate(month = '10/2026', value = 'STOP') {
-    paymentGateState[month] = value === 'START' ? 'START' : 'STOP';
-    return paymentGateState[month];
+export function setPaymentGate(month = getCurrentMonthStr(), value = 'STOP') {
+    const normVal = String(value).toUpperCase() === 'START' ? 'START' : 'STOP';
+    paymentGateState[month] = normVal;
+    const fileData = loadPaymentGateFile();
+    fileData[month] = {
+        value: normVal,
+        updatedAt: Date.now(),
+        source: 'admin'
+    };
+    savePaymentGateFile(fileData);
+    // 2-Way Direct Sync to Google Sheet Cell Q2 via Google Apps Script Web App
+    try {
+        const qParams = new URLSearchParams({
+            action: 'update_q2',
+            month,
+            value: normVal,
+            status: normVal,
+            cell: 'Q2'
+        });
+        fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => { });
+        fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: 'update_q2',
+                month,
+                value: normVal,
+                status: normVal,
+                cell: 'Q2'
+            })
+        }).catch(() => { });
+    }
+    catch (e) {
+        console.warn('[setPaymentGate] Error pushing Q2 to Google Sheet:', e);
+    }
+    return normVal;
 }
 /**
- * Cost Configuration
+ * Cost Configuration:
+ * Đồng bộ trực tiếp với dòng 5 trên Google Sheet:
+ * - Cột H5: Đơn giá tiền điện
+ * - Cột I5: Đơn giá tiền nước
+ * - Cột K5: Tiền rác
+ * - Cột L5: Tiền internet
+ * - Cột M5: Tiền xe
  */
-export function getConfig(month = '10/2026') {
+export async function getConfig(month = '10/2026') {
+    try {
+        const zip = await fetchSheetXlsx();
+        if (zip) {
+            const { rows } = await parseSheetXmlRows(zip, month);
+            const r5 = rows.find(r => r.rowNumber === 5);
+            if (r5 && r5.cells) {
+                const c = r5.cells;
+                // H5: Điện, I5: Nước, K5: Rác, L5: Net, M5: Xe
+                const dien = c.H?.num || c.G?.num || 0;
+                const nuoc = c.I?.num || 0;
+                const rac = c.K?.num || c.J?.num || 0;
+                const net = c.L?.num || 0;
+                const xe = c.M?.num || 0;
+                if (dien || nuoc || rac || net || xe) {
+                    const config = {
+                        dien: dien || unitConfigState[month]?.dien || 3500,
+                        nuoc: nuoc || unitConfigState[month]?.nuoc || 20000,
+                        rac: rac || unitConfigState[month]?.rac || 30000,
+                        net: net || unitConfigState[month]?.net || 40000,
+                        xe: xe || unitConfigState[month]?.xe || 50000
+                    };
+                    unitConfigState[month] = config;
+                    return config;
+                }
+            }
+        }
+    }
+    catch (e) { }
     return unitConfigState[month] || { dien: 3500, nuoc: 20000, rac: 30000, net: 40000, xe: 50000 };
 }
-export function saveConfig(month, data) {
-    unitConfigState[month] = {
+export async function saveConfig(month, data) {
+    const config = {
         dien: Number(data.dien) || 3500,
         nuoc: Number(data.nuoc) || 20000,
         rac: Number(data.rac) || 30000,
         net: Number(data.net) || 40000,
         xe: Number(data.xe) || 50000
     };
+    unitConfigState[month] = config;
+    // Đẩy cập nhật trực tiếp vào Google Sheet các ô H5, I5, K5, L5, M5 qua Apps Script
+    try {
+        const qParams = new URLSearchParams({
+            action: 'update_config',
+            month,
+            dien: String(config.dien),
+            nuoc: String(config.nuoc),
+            rac: String(config.rac),
+            net: String(config.net),
+            xe: String(config.xe)
+        });
+        fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => { });
+    }
+    catch (e) {
+        console.warn('[saveConfig] Error pushing config to Google Sheet:', e);
+    }
     return { success: true, config: unitConfigState[month] };
 }
 /**

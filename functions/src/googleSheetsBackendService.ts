@@ -147,6 +147,12 @@ export function setInvoicePaidByWebhook(
   };
 }
 
+export function setInvoiceUnpaid(roomOrCode: string) {
+  const cleanKey = roomOrCode.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  delete invoiceStatusOverrides[cleanKey];
+  setRoomColumnPStatus(cleanKey, 'RED');
+}
+
 /**
  * Robust CSV parser for Google Sheet export text
  */
@@ -1353,7 +1359,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
       : (userRow ? String(userRow[6] || '').trim() : '');
 
     matchedProfile = {
-      name: (personData && personData.name) ? personData.name : (userRow ? String(userRow[0] || '').trim() : 'Cư dân EcoStay'),
+      name: (personData && personData.name) ? personData.name : (userRow ? String(userRow[0] || '').trim() : 'Cư dân Nhà Trọ Phong Lan'),
       phone: (personData && personData.phone) ? personData.phone : targetPhone,
       cccd: (personData && personData.citizenId) ? personData.citizenId : (userRow ? String(userRow[2] || '').trim() : ''),
       plateNumber: effectivePlate,

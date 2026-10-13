@@ -3,7 +3,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const STORE_PATH = path.resolve(__dirname, 'columnPStatusStore.json');
+function getStorePath() {
+    const defaultPath = path.resolve(__dirname, 'columnPStatusStore.json');
+    try {
+        const dir = path.dirname(defaultPath);
+        if (fs.existsSync(dir)) {
+            fs.accessSync(dir, fs.constants.W_OK);
+            return defaultPath;
+        }
+    }
+    catch { }
+    return '/tmp/columnPStatusStore.json';
+}
+const STORE_PATH = getStorePath();
 // In-memory cache of room statuses
 let statusCache = {};
 // Clear all cache data
@@ -13,24 +25,32 @@ export function clearColumnPStatusStore() {
 }
 // Load persisted status from file
 export function loadColumnPStatusStore() {
-    try {
-        if (fs.existsSync(STORE_PATH)) {
-            const data = fs.readFileSync(STORE_PATH, 'utf-8');
-            statusCache = JSON.parse(data);
+    const candidates = [STORE_PATH, path.resolve(__dirname, 'columnPStatusStore.json'), '/tmp/columnPStatusStore.json'];
+    for (const p of candidates) {
+        try {
+            if (fs.existsSync(p)) {
+                const data = fs.readFileSync(p, 'utf-8');
+                const parsed = JSON.parse(data);
+                if (parsed && typeof parsed === 'object') {
+                    statusCache = { ...statusCache, ...parsed };
+                }
+            }
         }
-    }
-    catch (err) {
-        console.warn('[columnPStatusStore] Error reading store file:', err);
+        catch { }
     }
     return statusCache;
 }
 // Save status to file
 export function saveColumnPStatusStore() {
-    try {
-        fs.writeFileSync(STORE_PATH, JSON.stringify(statusCache, null, 2), 'utf-8');
-    }
-    catch (err) {
-        console.warn('[columnPStatusStore] Error writing store file:', err);
+    const candidates = [STORE_PATH, '/tmp/columnPStatusStore.json'];
+    for (const p of candidates) {
+        try {
+            fs.writeFileSync(p, JSON.stringify(statusCache, null, 2), 'utf-8');
+            break;
+        }
+        catch (err) {
+            console.warn('[columnPStatusStore] Error writing to candidate path ' + p + ':', err);
+        }
     }
 }
 // Initialize on module load

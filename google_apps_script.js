@@ -263,3 +263,37 @@ function createJsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ----------------------------------------------------
+// MENU TIỆN ÍCH TRÊN GOOGLE SHEETS
+// ----------------------------------------------------
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('🏢 Nhà Trọ Phong Lan')
+    .addItem('✅ 1. Đánh dấu ĐÃ THANH TOÁN (Màu xanh lá Cột P)', 'markRowPaid')
+    .addItem('⏳ 2. Đánh dấu CHƯA THANH TOÁN (Màu đỏ Cột P)', 'markRowUnpaid')
+    .addToUi();
+}
+
+function markRowPaid() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var row = sheet.getActiveCell().getRow();
+  if (row < 7 || row > 50) {
+    SpreadsheetApp.getUi().alert('Vui lòng chọn hàng từ dòng 7 đến dòng 50 (danh sách phòng)!');
+    return;
+  }
+  sheet.getRange(row, 16).setBackground('#d4edda');
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('✅ Đã đổi Cột P dòng ' + row + ' sang màu xanh lá (Đã thanh toán)!');
+}
+
+function markRowUnpaid() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var row = sheet.getActiveCell().getRow();
+  if (row < 7 || row > 50) {
+    SpreadsheetApp.getUi().alert('Vui lòng chọn hàng từ dòng 7 đến dòng 50 (danh sách phòng)!');
+    return;
+  }
+  sheet.getRange(row, 16).setBackground('#F8D7DA');
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('⏳ Đã đổi Cột P dòng ' + row + ' sang màu đỏ pastel (Chưa thanh toán)!');
+}

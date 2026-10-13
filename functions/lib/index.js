@@ -299,10 +299,46 @@ app.get('/api/admin/room-detail', async (req, res) => {
         res.status(500).json({ success: false, error: e.message });
     }
 });
+const GOOGLE_APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec";
+function pushPaymentToGoogleSheet(room, status, month = '10/2026', row) {
+    try {
+        const qParams = new URLSearchParams({
+            action: 'update_payment',
+            room: String(room),
+            status,
+            month,
+            row: row ? String(row) : ''
+        });
+        fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).then(r => r.json()).then(d => {
+            console.log(`[GoogleSheetSync] Payment update for room ${room} (row ${row || 'auto'}):`, d);
+        }).catch(err => {
+            console.warn(`[GoogleSheetSync] Network error pushing payment for room ${room}:`, err);
+        });
+    }
+    catch (e) {
+        console.warn('[GoogleSheetSync] Error pushing payment to Google Sheet:', e);
+    }
+}
 app.post('/api/admin/room-detail', async (req, res) => {
     try {
-        const body = req.body || {};
-        res.json({ success: true, message: 'Đã lưu thông tin phòng thành công', data: body });
+        const { room, month = '10/2026', dienCu, dienMoi, nuocCu, nuocMoi, status } = req.body || {};
+        if (room) {
+            try {
+                const qParams = new URLSearchParams({
+                    action: 'update_meters',
+                    room: String(room),
+                    month,
+                    dienCu: dienCu !== undefined && !isNaN(dienCu) ? String(dienCu) : '',
+                    dienMoi: dienMoi !== undefined && !isNaN(dienMoi) ? String(dienMoi) : '',
+                    nuocCu: nuocCu !== undefined && !isNaN(nuocCu) ? String(nuocCu) : '',
+                    nuocMoi: nuocMoi !== undefined && !isNaN(nuocMoi) ? String(nuocMoi) : '',
+                    status: status || ''
+                });
+                fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => { });
+            }
+            catch { }
+        }
+        res.json({ success: true, message: 'Đã lưu thông tin phòng và đồng bộ Google Sheet thành công', data: req.body });
     }
     catch (e) {
         res.status(500).json({ success: false, error: e.message });
@@ -310,8 +346,17 @@ app.post('/api/admin/room-detail', async (req, res) => {
 });
 app.post('/api/admin/payment-status', async (req, res) => {
     try {
-        const { roomNumber, status } = req.body || {};
-        setRoomColumnPStatus(roomNumber, status === 'paid' ? 'GREEN' : 'RED');
+        const { roomNumber, status, month, row } = req.body || {};
+        const rowNum = row !== undefined && !isNaN(Number(row)) ? Number(row) : undefined;
+        if (status === 'paid') {
+            setRoomColumnPStatus(roomNumber, 'GREEN', { month, rowIndex: rowNum ? rowNum - 1 : undefined });
+            setInvoicePaidByWebhook(roomNumber, `ADMIN-${Date.now()}`);
+            pushPaymentToGoogleSheet(roomNumber, 'paid', month, rowNum);
+        }
+        else {
+            setRoomColumnPStatus(roomNumber, 'RED', { month, rowIndex: rowNum ? rowNum - 1 : undefined });
+            pushPaymentToGoogleSheet(roomNumber, 'unpaid', month, rowNum);
+        }
         try {
             await firestoreDb.collection('rooms').doc(roomNumber).set({
                 paymentStatus: status,
@@ -321,7 +366,7 @@ app.post('/api/admin/payment-status', async (req, res) => {
             }, { merge: true });
         }
         catch { }
-        res.json({ success: true, roomNumber, status });
+        res.json({ success: true, message: `Đã cập nhật trạng thái phòng ${roomNumber}`, roomNumber, status, row: rowNum });
     }
     catch (e) {
         res.status(500).json({ success: false, error: e.message });
@@ -409,15 +454,25 @@ app.post('/api/admin/payment-gate', (req, res) => {
     const updated = setPaymentGate(month, value);
     res.json({ success: true, month, value: updated });
 });
-app.get('/api/admin/config', (req, res) => {
-    const month = req.query.month || '10/2026';
-    const config = getAdminConfig(month);
-    res.json({ success: true, config });
+app.get('/api/admin/config', async (req, res) => {
+    try {
+        const month = req.query.month || '10/2026';
+        const config = await getAdminConfig(month);
+        res.json({ success: true, config });
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
-app.post('/api/admin/config', (req, res) => {
-    const { month = '10/2026', config = {} } = req.body || {};
-    const result = saveAdminConfig(month, config);
-    res.json(result);
+app.post('/api/admin/config', async (req, res) => {
+    try {
+        const { month = '10/2026', config = {} } = req.body || {};
+        const result = await saveAdminConfig(month, config);
+        res.json(result);
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 app.post('/api/admin/legal/chat', async (req, res) => {
     try {
