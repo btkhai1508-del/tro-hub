@@ -1601,7 +1601,6 @@ export function AdminPortal() {
                 <IconProfile3D size={40} className="shrink-0 drop-shadow-xs" />
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-base">Thông tin người cư trú Phòng {selectedRoomId}</h4>
-                  <p className="text-xs text-slate-400">Tối đa 3 người cư trú trên hợp đồng</p>
                 </div>
               </div>
               {[1, 2, 3].map(slot => (
@@ -1780,37 +1779,16 @@ export function AdminPortal() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
-                    <span className={cn(
-                      "text-lg font-black font-num px-2.5 py-1 rounded-xl transition-all inline-block",
-                      currentRoomData.paymentStatus === 'paid'
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/30"
-                        : "text-slate-900 dark:text-white"
-                    )}>
-                      {fmt(currentRoomData.tongTien)} đ
-                    </span>
-                  </div>
-
-                  {/* Toggle Highlight Cột P trực tiếp */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = currentRoomData.paymentStatus === 'paid' ? 'unpaid' : 'paid';
-                      updateRoomPaymentStatus(selectedRoomId, next, currentRoomData.row);
-                    }}
-                    title="Bấm để đổi màu highlight Cột P trên Google Sheet"
-                    className={cn(
-                      "px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0",
-                      currentRoomData.paymentStatus === 'paid'
-                        ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20"
-                        : "bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
-                    )}
-                  >
-                    <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", currentRoomData.paymentStatus === 'paid' ? "bg-white animate-pulse" : "bg-rose-500")} />
-                    <span>{currentRoomData.paymentStatus === 'paid' ? 'Cột P: Đã đóng (#d4edda)' : 'Cột P: Chưa đóng (#F8D7DA)'}</span>
-                  </button>
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
+                  <span className={cn(
+                    "text-lg font-black font-num px-2.5 py-1 rounded-xl transition-all inline-block",
+                    currentRoomData.paymentStatus === 'paid'
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/30"
+                      : "text-slate-900 dark:text-white"
+                  )}>
+                    {fmt(currentRoomData.tongTien)} đ
+                  </span>
                 </div>
               </div>
 
@@ -1934,56 +1912,61 @@ export function AdminPortal() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Action save button */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <p className="text-xs text-slate-400">
-                  Tổng hợp: Tiền phòng + Điện ({fmt(currentRoomData.tienDien)} đ) + Nước ({fmt(currentRoomData.tienNuoc)} đ) + Dịch vụ = <strong className="text-slate-900 dark:text-white font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{fmt(currentRoomData.tongTien)} đ</strong>
-                </p>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    playSound('click');
-                    try {
-                      setIsLoading(true);
-                      const res = await apiFetch('/api/admin/room-detail', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          month: selectedMonth,
-                          room: selectedRoomId,
-                          data: currentRoomData,
-                          dienCu: currentRoomData.dienCu,
-                          dienMoi: currentRoomData.dienMoi,
-                          nuocCu: currentRoomData.nuocCu,
-                          nuocMoi: currentRoomData.nuocMoi,
-                          status: currentRoomData.status || currentRoomData.paymentStatus || 'unpaid',
-                          row: currentRoomData.row
-                        })
-                      });
-                      // Cập nhật và kích hoạt highlight Cột P trên Google Sheet
-                      pushUpdateToGoogleSheet({
-                        action: 'update_payment',
-                        room: selectedRoomId,
-                        status: currentRoomData.paymentStatus === 'paid' ? 'paid' : 'unpaid',
+            {/* Card Tổng cộng */}
+            <div className="soft-card p-5 sm:p-6 flex items-center justify-between">
+              <span className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200">Tổng cộng:</span>
+              <span className="text-2xl sm:text-3xl font-black font-num text-blue-600 dark:text-blue-400">
+                {fmt(currentRoomData.tongTien)} đ
+              </span>
+            </div>
+
+            {/* Nút lưu cập nhật */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={async () => {
+                  playSound('click');
+                  try {
+                    setIsLoading(true);
+                    const res = await apiFetch('/api/admin/room-detail', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
                         month: selectedMonth,
+                        room: selectedRoomId,
+                        data: currentRoomData,
+                        dienCu: currentRoomData.dienCu,
+                        dienMoi: currentRoomData.dienMoi,
+                        nuocCu: currentRoomData.nuocCu,
+                        nuocMoi: currentRoomData.nuocMoi,
+                        status: currentRoomData.status || currentRoomData.paymentStatus || 'unpaid',
                         row: currentRoomData.row
-                      });
-                      setIsLoading(false);
-                      if (res.ok) {
-                        playSound('success');
-                        alert('✅ Đã lưu cập nhật thông tin phòng và đồng bộ Cột P thành công!');
-                      }
-                    } catch (e) {
-                      setIsLoading(false);
+                      })
+                    });
+                    // Cập nhật và kích hoạt highlight Cột P trên Google Sheet
+                    pushUpdateToGoogleSheet({
+                      action: 'update_payment',
+                      room: selectedRoomId,
+                      status: currentRoomData.paymentStatus === 'paid' ? 'paid' : 'unpaid',
+                      month: selectedMonth,
+                      row: currentRoomData.row
+                    });
+                    setIsLoading(false);
+                    if (res.ok) {
+                      playSound('success');
+                      alert('✅ Đã lưu cập nhật thông tin phòng và đồng bộ Cột P thành công!');
                     }
-                  }}
-                  className="primary-button py-2.5 px-6 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md"
-                >
-                  <Save size={16} />
-                  <span>Lưu cập nhật phòng & chỉ số</span>
-                </button>
-              </div>
+                  } catch (e) {
+                    setIsLoading(false);
+                  }
+                }}
+                className="primary-button py-3 px-8 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md w-full sm:w-auto"
+              >
+                <Save size={18} />
+                <span>Lưu cập nhật phòng & chỉ số</span>
+              </button>
             </div>
           </div>
         )}
