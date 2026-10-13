@@ -332,6 +332,7 @@ export function AdminPortal() {
 
   // Format currency
   const fmt = (n: number) => Number(n || 0).toLocaleString('vi-VN');
+  const parseCurrency = (s: any) => parseInt(String(s || '').replace(/[^\d]/g, ''), 10) || 0;
 
   // Format room number cleanly (bỏ số 0 đằng trước cho phòng 3 chữ số: 0101 -> 101, 0201 -> 201)
   const formatRoomNumber = (r: string) => {
@@ -1565,7 +1566,7 @@ export function AdminPortal() {
 
         {/* Room Detail Editor */}
         {activeMenu === 'roomDetail' && currentRoomData && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-in fade-in duration-300 pb-36 sm:pb-32">
             <div className="soft-card p-4 flex items-center justify-between">
               <button
                 onClick={() => {
@@ -1770,7 +1771,7 @@ export function AdminPortal() {
 
             {/* Comprehensive Service Fees & Cost Breakdown */}
             <div className="soft-card p-6 sm:p-8 space-y-5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <IconWallet3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
@@ -1778,120 +1779,166 @@ export function AdminPortal() {
                     <p className="text-xs text-slate-400">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
-                  <span className={cn(
-                    "text-lg font-black font-num px-2.5 py-1 rounded-xl transition-all inline-block",
-                    currentRoomData.paymentStatus === 'paid'
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/30"
-                      : "text-slate-900 dark:text-white"
-                  )}>
-                    {fmt(currentRoomData.tongTien)} đ
-                  </span>
+                
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
+                    <span className={cn(
+                      "text-lg font-black font-num px-2.5 py-1 rounded-xl transition-all inline-block",
+                      currentRoomData.paymentStatus === 'paid'
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/30"
+                        : "text-slate-900 dark:text-white"
+                    )}>
+                      {fmt(currentRoomData.tongTien)} đ
+                    </span>
+                  </div>
+
+                  {/* Toggle Highlight Cột P trực tiếp */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = currentRoomData.paymentStatus === 'paid' ? 'unpaid' : 'paid';
+                      updateRoomPaymentStatus(selectedRoomId, next, currentRoomData.row);
+                    }}
+                    title="Bấm để đổi màu highlight Cột P trên Google Sheet"
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0",
+                      currentRoomData.paymentStatus === 'paid'
+                        ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20"
+                        : "bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
+                    )}
+                  >
+                    <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", currentRoomData.paymentStatus === 'paid' ? "bg-white animate-pulse" : "bg-rose-500")} />
+                    <span>{currentRoomData.paymentStatus === 'paid' ? 'Cột P: Đã đóng (#d4edda)' : 'Cột P: Chưa đóng (#F8D7DA)'}</span>
+                  </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền phòng (Cột J)</label>
-                  <input
-                    type="number"
-                    value={currentRoomData.tienPhong || ''}
-                    onChange={e => {
-                      const tienPhong = Number(e.target.value) || 0;
-                      setCurrentRoomData({
-                        ...currentRoomData,
-                        tienPhong,
-                        tongTien: tienPhong + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
-                      });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={currentRoomData.tienPhong ? fmt(currentRoomData.tienPhong) : ''}
+                      placeholder="0"
+                      onChange={e => {
+                        const tienPhong = parseCurrency(e.target.value);
+                        setCurrentRoomData({
+                          ...currentRoomData,
+                          tienPhong,
+                          tongTien: tienPhong + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
+                        });
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền rác (Cột K)</label>
-                  <input
-                    type="number"
-                    value={currentRoomData.tienRac || ''}
-                    onChange={e => {
-                      const tienRac = Number(e.target.value) || 0;
-                      setCurrentRoomData({
-                        ...currentRoomData,
-                        tienRac,
-                        tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + tienRac + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
-                      });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={currentRoomData.tienRac ? fmt(currentRoomData.tienRac) : ''}
+                      placeholder="0"
+                      onChange={e => {
+                        const tienRac = parseCurrency(e.target.value);
+                        setCurrentRoomData({
+                          ...currentRoomData,
+                          tienRac,
+                          tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + tienRac + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
+                        });
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
-                  <input
-                    type="number"
-                    value={currentRoomData.tienNet || ''}
-                    onChange={e => {
-                      const tienNet = Number(e.target.value) || 0;
-                      setCurrentRoomData({
-                        ...currentRoomData,
-                        tienNet,
-                        tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + tienNet + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
-                      });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={currentRoomData.tienNet ? fmt(currentRoomData.tienNet) : ''}
+                      placeholder="0"
+                      onChange={e => {
+                        const tienNet = parseCurrency(e.target.value);
+                        setCurrentRoomData({
+                          ...currentRoomData,
+                          tienNet,
+                          tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + tienNet + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
+                        });
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
-                  <input
-                    type="number"
-                    value={currentRoomData.tienXe || ''}
-                    onChange={e => {
-                      const tienXe = Number(e.target.value) || 0;
-                      setCurrentRoomData({
-                        ...currentRoomData,
-                        tienXe,
-                        tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + tienXe + (currentRoomData.tienKhac || 0)
-                      });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={currentRoomData.tienXe ? fmt(currentRoomData.tienXe) : ''}
+                      placeholder="0"
+                      onChange={e => {
+                        const tienXe = parseCurrency(e.target.value);
+                        setCurrentRoomData({
+                          ...currentRoomData,
+                          tienXe,
+                          tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + tienXe + (currentRoomData.tienKhac || 0)
+                        });
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Chi phí khác / Phát sinh (Cột N)</label>
-                  <input
-                    type="number"
-                    value={currentRoomData.tienKhac || 0}
-                    onChange={e => {
-                      const tienKhac = Number(e.target.value) || 0;
-                      setCurrentRoomData({
-                        ...currentRoomData,
-                        tienKhac,
-                        tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + tienKhac
-                      });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={currentRoomData.tienKhac ? fmt(currentRoomData.tienKhac) : ''}
+                      placeholder="0"
+                      onChange={e => {
+                        const tienKhac = parseCurrency(e.target.value);
+                        setCurrentRoomData({
+                          ...currentRoomData,
+                          tienKhac,
+                          tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + tienKhac
+                        });
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
-                  <input
-                    type="number"
-                    value={currentRoomData.tienCoc || 0}
-                    onChange={e => setCurrentRoomData({ ...currentRoomData, tienCoc: Number(e.target.value) || 0 })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={currentRoomData.tienCoc ? fmt(currentRoomData.tienCoc) : ''}
+                      placeholder="0"
+                      onChange={e => setCurrentRoomData({ ...currentRoomData, tienCoc: parseCurrency(e.target.value) })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
               </div>
 
               {/* Action save button */}
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <p className="text-xs text-slate-400">
-                  Tổng hợp: Tiền phòng + Điện ({fmt(currentRoomData.tienDien)} đ) + Nước ({fmt(currentRoomData.tienNuoc)} đ) + Dịch vụ = <strong className="text-slate-900 dark:text-white font-mono font-bold">{fmt(currentRoomData.tongTien)} đ</strong>
+                  Tổng hợp: Tiền phòng + Điện ({fmt(currentRoomData.tienDien)} đ) + Nước ({fmt(currentRoomData.tienNuoc)} đ) + Dịch vụ = <strong className="text-slate-900 dark:text-white font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">{fmt(currentRoomData.tongTien)} đ</strong>
                 </p>
                 <button
                   type="button"
@@ -1905,13 +1952,27 @@ export function AdminPortal() {
                         body: JSON.stringify({
                           month: selectedMonth,
                           room: selectedRoomId,
-                          data: currentRoomData
+                          data: currentRoomData,
+                          dienCu: currentRoomData.dienCu,
+                          dienMoi: currentRoomData.dienMoi,
+                          nuocCu: currentRoomData.nuocCu,
+                          nuocMoi: currentRoomData.nuocMoi,
+                          status: currentRoomData.status || currentRoomData.paymentStatus || 'unpaid',
+                          row: currentRoomData.row
                         })
+                      });
+                      // Cập nhật và kích hoạt highlight Cột P trên Google Sheet
+                      pushUpdateToGoogleSheet({
+                        action: 'update_payment',
+                        room: selectedRoomId,
+                        status: currentRoomData.paymentStatus === 'paid' ? 'paid' : 'unpaid',
+                        month: selectedMonth,
+                        row: currentRoomData.row
                       });
                       setIsLoading(false);
                       if (res.ok) {
                         playSound('success');
-                        alert('✅ Đã lưu cập nhật thông tin phòng thành công!');
+                        alert('✅ Đã lưu cập nhật thông tin phòng và đồng bộ Cột P thành công!');
                       }
                     } catch (e) {
                       setIsLoading(false);
@@ -2401,7 +2462,7 @@ export function AdminPortal() {
             7. CONFIG TAB (CÀI ĐẶT ĐƠN GIÁ)
            ========================================================================= */}
         {activeMenu === 'config' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-in fade-in duration-300 pb-36 sm:pb-32">
             {/* Top Navigation Bar: Back Button */}
             <div className="soft-card p-4 flex items-center justify-between">
               <button
@@ -2433,52 +2494,72 @@ export function AdminPortal() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Điện (1 kW)</label>
-                  <input
-                    type="number"
-                    value={unitConfig.dien}
-                    onChange={e => setUnitConfig({ ...unitConfig, dien: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={unitConfig.dien ? fmt(unitConfig.dien) : ''}
+                      placeholder="0"
+                      onChange={e => setUnitConfig({ ...unitConfig, dien: parseCurrency(e.target.value) })}
+                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Nước (1 m³)</label>
-                  <input
-                    type="number"
-                    value={unitConfig.nuoc}
-                    onChange={e => setUnitConfig({ ...unitConfig, nuoc: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={unitConfig.nuoc ? fmt(unitConfig.nuoc) : ''}
+                      placeholder="0"
+                      onChange={e => setUnitConfig({ ...unitConfig, nuoc: parseCurrency(e.target.value) })}
+                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Tiền Rác</label>
-                  <input
-                    type="number"
-                    value={unitConfig.rac}
-                    onChange={e => setUnitConfig({ ...unitConfig, rac: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={unitConfig.rac ? fmt(unitConfig.rac) : ''}
+                      placeholder="0"
+                      onChange={e => setUnitConfig({ ...unitConfig, rac: parseCurrency(e.target.value) })}
+                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Internet / người</label>
-                  <input
-                    type="number"
-                    value={unitConfig.net}
-                    onChange={e => setUnitConfig({ ...unitConfig, net: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={unitConfig.net ? fmt(unitConfig.net) : ''}
+                      placeholder="0"
+                      onChange={e => setUnitConfig({ ...unitConfig, net: parseCurrency(e.target.value) })}
+                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase">Xe máy / chiếc</label>
-                  <input
-                    type="number"
-                    value={unitConfig.xe}
-                    onChange={e => setUnitConfig({ ...unitConfig, xe: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={unitConfig.xe ? fmt(unitConfig.xe) : ''}
+                      placeholder="0"
+                      onChange={e => setUnitConfig({ ...unitConfig, xe: parseCurrency(e.target.value) })}
+                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                  </div>
                 </div>
               </div>
 
