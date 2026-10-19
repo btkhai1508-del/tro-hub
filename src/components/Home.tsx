@@ -50,7 +50,7 @@ export function Home() {
       {/* Welcome Header */}
       <div data-tutorial="resident-welcome" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="type-label text-slate-400">Không gian cư dân</span>
+          <span className="type-label text-slate-500 dark:text-slate-400">Không gian cư dân</span>
           <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">
             Xin chào, {profile.name}!
           </h1>
@@ -64,7 +64,7 @@ export function Home() {
           <div className="soft-card px-4 py-2 flex items-center gap-3.5">
             <GlassIconHome size={38} className="shrink-0" />
             <div>
-              <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase tracking-wider block font-semibold">Phòng của tôi</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">Phòng của tôi</span>
               <span className="type-h4 font-num text-slate-900 dark:text-slate-100 font-bold">{profile.room.roomNumber}</span>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function Home() {
               </div>
 
               <div className="text-left sm:text-right">
-                <span className="text-[10px] text-slate-400 dark:text-slate-400 block uppercase font-medium">Hạn thanh toán</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Hạn thanh toán</span>
                 <span className="type-button font-num text-slate-900 dark:text-slate-100 block mt-0.5 font-bold">
                   {currentInvoice?.dueDate}
                 </span>
@@ -113,7 +113,7 @@ export function Home() {
 
             {/* Middle row: Big Amount */}
             <div>
-              <p className="type-label text-slate-400 dark:text-slate-400 mb-1">
+              <p className="type-label text-slate-500 dark:text-slate-400 mb-1">
                 {isUnpaid ? 'Số tiền cần thanh toán' : 'Tổng số tiền đã thanh toán'}
               </p>
               <div className={cn(
@@ -145,7 +145,7 @@ export function Home() {
                     ) : (
                       <>
                         <CreditCard size={16} />
-                        <span>Thanh toán ngay</span>
+                        <span>Thanh toán qua VietQR</span>
                       </>
                     )}
                   </button>
@@ -154,7 +154,7 @@ export function Home() {
                     onClick={() => openInvoiceDetailModal(currentInvoice)}
                     className="soft-button py-2.5 px-4 text-xs sm:text-sm flex items-center gap-1.5 text-slate-700 dark:text-slate-200 cursor-pointer"
                   >
-                    <span>Xem chi tiết hóa đơn</span>
+                    <span>Xem chi phí tháng này</span>
                     <ArrowRight size={14} />
                   </button>
                 </>
@@ -165,7 +165,7 @@ export function Home() {
                   className="soft-button py-2.5 px-4 text-xs sm:text-sm flex items-center gap-2 cursor-pointer text-slate-800 dark:text-slate-200"
                 >
                   <GlassIconInvoice size={20} />
-                  <span>Xem chi tiết hóa đơn & biên lai</span>
+                  <span>Xem chi phí & biên lai</span>
                   <ArrowRight size={14} />
                 </button>
               )}
@@ -187,7 +187,7 @@ export function Home() {
                 <GlassIconLocation size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
                 <div>
                   <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-bold">Thẻ xe đăng ký</h3>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-400">{profile.vehicle.parkingSlot}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{profile.vehicle.parkingSlot}</p>
                 </div>
               </div>
               <ChevronRight size={15} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
@@ -196,7 +196,7 @@ export function Home() {
             <div className="neu-inset p-3 rounded-xl flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{profile.vehicle.type}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-400 mt-0.5">Vị trí đỗ: Hầm B1</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Vị trí đỗ: Hầm B1</p>
               </div>
               <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 shadow-2xs">
                 {profile.vehicle.plateNumber}
@@ -214,14 +214,14 @@ export function Home() {
                 <GlassIconSecurity size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
                 <div>
                   <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-bold">Hợp đồng thuê</h3>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-400 font-num">#HD-2025-102</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-num">#HD-2025-102</p>
                 </div>
               </div>
               <span className="badge-paid text-[10px] py-0.5">Hiệu lực</span>
             </div>
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
-              <span className="text-slate-400 dark:text-slate-400">Thời hạn:</span>
+              <span className="text-slate-500 dark:text-slate-400">Thời hạn:</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 font-num">01/06/2026 - 01/06/2027</span>
             </div>
           </div>
@@ -235,7 +235,7 @@ export function Home() {
               <GlassIconChat size={36} className="shrink-0" />
               <div>
                 <h3 className="type-h4 text-slate-900 dark:text-slate-100 font-bold">Thông báo mới nhất</h3>
-                <span className="type-caption text-slate-400 dark:text-slate-400">
+                <span className="type-caption text-slate-500 dark:text-slate-400">
                   Bấm vào thông báo để xem nội dung chi tiết
                 </span>
               </div>
@@ -267,7 +267,7 @@ export function Home() {
                     )}>
                       {item.title}
                     </p>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-400 font-num shrink-0">{item.time}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-num shrink-0">{item.time}</span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed">
                     {item.desc}

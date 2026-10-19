@@ -66,7 +66,7 @@ export function LoginPage() {
           navigate(target, { replace: true });
         }, 400);
       } else {
-        setErrorMsg(res.error || 'Số điện thoại hoặc mật khẩu không chính xác');
+        setErrorMsg(res.error || 'Sai số điện thoại hoặc mật khẩu. Thử lại hoặc liên hệ chủ trọ để reset.');
       }
     } catch (err: any) {
       setIsLoading(false);
@@ -238,7 +238,7 @@ export function LoginPage() {
               {/* Divider */}
               <div className="relative flex items-center justify-center pt-1 pb-1">
                 <div className="border-t border-slate-200/80 dark:border-slate-800 w-full" />
-                <span className="bg-white dark:bg-[#111827] px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">hoặc số điện thoại</span>
+                <span className="bg-white dark:bg-[#111827] px-3 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">hoặc số điện thoại</span>
                 <div className="border-t border-slate-200/80 dark:border-slate-800 w-full" />
               </div>
 
@@ -291,10 +291,11 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                    className="absolute right-1 w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
                     title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
@@ -425,7 +426,7 @@ export function LoginPage() {
                 disabled={isLoading}
                 className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer mt-3"
               >
-                <span>{isLoading ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu đăng ký cho Chủ trọ'}</span>
+                <span>{isLoading ? 'Đang gửi yêu cầu...' : 'Đăng ký – Chờ chủ trọ duyệt'}</span>
                 {!isLoading && <ArrowRight size={16} />}
               </button>
             </form>
@@ -547,7 +548,7 @@ export function LoginPage() {
         </div>
 
         {/* Footer Support Info */}
-        <div className="text-center mt-6 text-xs text-slate-400">
+        <div className="text-center mt-6 text-xs text-slate-500 dark:text-slate-400">
           Cần hỗ trợ nhận phòng hoặc xác thực tài khoản? Hotline BQL (Bùi Trung Khải):{' '}
           <a href="tel:0902371800" className="text-slate-700 font-bold hover:underline">
             0902 371 800

@@ -50,7 +50,7 @@ export function Contract() {
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
               ✓ Đang hiệu lực (01/06/2026 — 01/12/2028)
             </span>
-            <span className="text-xs text-slate-400 font-mono">Mã: {contractCode}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">Mã: {contractCode}</span>
           </div>
           <h1 className="text-xl sm:text-2xl text-slate-900 dark:text-white mt-1.5 font-bold">
             Văn bản Pháp lý & Hợp đồng
@@ -67,10 +67,11 @@ export function Contract() {
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.max(75, prev - 10))}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer transition-colors"
               title="Thu nhỏ"
+              aria-label="Thu nhỏ"
             >
-              <ZoomOut size={15} />
+              <ZoomOut size={16} />
             </button>
             <span className="text-[11px] font-mono px-2 font-semibold text-slate-700 dark:text-slate-300">
               {zoomLevel}%
@@ -78,10 +79,11 @@ export function Contract() {
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.min(125, prev + 10))}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer transition-colors"
               title="Phóng to"
+              aria-label="Phóng to"
             >
-              <ZoomIn size={15} />
+              <ZoomIn size={16} />
             </button>
           </div>
 

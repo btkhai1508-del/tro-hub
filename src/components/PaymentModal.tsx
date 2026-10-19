@@ -65,8 +65,8 @@ export function PaymentModal() {
           <button 
             type="button"
             onClick={handleClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
-            aria-label="Đóng cửa sổ thanh toán"
+            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+            aria-label="Đóng"
           >
             <X size={18} className="stroke-[2.5]" />
           </button>

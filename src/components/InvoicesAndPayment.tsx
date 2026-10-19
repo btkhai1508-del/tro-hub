@@ -62,7 +62,7 @@ export function InvoicesAndPayment() {
       {/* Header */}
       <div data-tutorial="invoices-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="type-label text-slate-400 dark:text-slate-400">Tài chính & Thu phí</span>
+          <span className="type-label text-slate-500 dark:text-slate-400">Tài chính & Thu phí</span>
           <h1 className="type-h1 text-slate-900 dark:text-slate-100 mt-1 font-bold">Lịch sử hóa đơn</h1>
           <p className="type-body text-slate-500 dark:text-slate-400 mt-1">
             Theo dõi các khoản phí hàng tháng, trạng thái thanh toán và biên lai điện tử.
@@ -76,7 +76,7 @@ export function InvoicesAndPayment() {
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Printer size={15} />
-            <span>Xuất lịch sử PDF</span>
+            <span>Tải sao kê (PDF)</span>
           </button>
         </div>
       </div>
@@ -107,7 +107,7 @@ export function InvoicesAndPayment() {
             ) : (
               <>
                 <CreditCard size={16} />
-                <span>Thanh toán ngay</span>
+                <span>Thanh toán qua VietQR</span>
               </>
             )}
           </button>
@@ -154,7 +154,7 @@ export function InvoicesAndPayment() {
                       </h3>
                       {renderStatusBadge(invoice.status)}
                     </div>
-                    <p className="text-xs text-slate-400 dark:text-slate-400 font-num mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-num mt-0.5">
                       Hạn nộp: {invoice.dueDate} • Mã HĐ: {invoice.id}
                     </p>
                   </div>
@@ -166,7 +166,7 @@ export function InvoicesAndPayment() {
                     <span className="type-h3 font-num text-slate-900 dark:text-slate-100 font-bold block">
                       {formatCurrency(invoice.total)} <span className="text-xs font-normal text-slate-400 dark:text-slate-500">₫</span>
                     </span>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-400 block">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
                       {invoice.details.length} khoản mục phí
                     </span>
                   </div>
@@ -190,8 +190,8 @@ export function InvoicesAndPayment() {
                       )}
                     </button>
                   ) : (
-                    <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-medium">
-                      <span>Chi tiết</span>
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-medium">
+                      <span>Xem chi tiết</span>
                       <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   )}

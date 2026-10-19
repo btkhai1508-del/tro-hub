@@ -227,7 +227,7 @@ export function ProfileEditModal() {
           <button 
             type="button"
             onClick={closeProfileEditModal}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -302,10 +302,11 @@ export function ProfileEditModal() {
               <button
                 type="button"
                 onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shadow-md hover:bg-slate-800 dark:hover:bg-indigo-500 transition-colors cursor-pointer"
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shadow-md hover:bg-slate-800 dark:hover:bg-indigo-500 transition-colors cursor-pointer"
                 title="Thay đổi ảnh đại diện"
+                aria-label="Thay đổi ảnh đại diện"
               >
-                <Camera size={13} />
+                <Camera size={14} />
               </button>
             </div>
 

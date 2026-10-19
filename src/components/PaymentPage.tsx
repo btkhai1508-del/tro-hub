@@ -213,6 +213,9 @@ export function PaymentPage() {
     setIsSavingQR(true);
     try {
       await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);
+    } catch (err) {
+      console.error('Failed to save QR code:', err);
+      alert('⚠️ Không thể lưu mã QR về thiết bị. Vui lòng chụp màn hình để thanh toán.');
     } finally {
       setIsSavingQR(false);
     }
@@ -264,11 +267,11 @@ export function PaymentPage() {
 
               <div className="w-full bg-slate-50 dark:bg-[#162032] rounded-xl p-4 border border-slate-100 dark:border-slate-800 text-left space-y-2 text-xs mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Kỳ hóa đơn:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Kỳ hóa đơn:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">Tháng {targetInvoice.month}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Số tiền:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Số tiền:</span>
                   <span className="font-bold text-slate-900 dark:text-white font-num">{formatCurrency(targetInvoice.total)} ₫</span>
                 </div>
               </div>
@@ -489,22 +492,44 @@ export function PaymentPage() {
                     </p>
                   </div>
 
+                  {/* Payment Step Guide */}
+                  <div className="flex items-center justify-center gap-2 mb-4 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">1</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">Mở app Ngân hàng</span>
+                    </div>
+                    <span className="text-slate-300 dark:text-slate-600">→</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">2</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">Quét mã QR</span>
+                    </div>
+                    <span className="text-slate-300 dark:text-slate-600">→</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">3</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">Xác nhận CK</span>
+                    </div>
+                  </div>
+
                   {/* Sharp Straight Square Pure QR Container */}
-                  <div className="w-[300px] h-[300px] bg-transparent flex items-center justify-center p-1">
+                  <div className="bg-white p-3 rounded-xl inline-block">
                     {qrUrl ? (
                       <img 
                         src={qrUrl} 
                         alt="VietQR Matrix"
-                        className="w-[285px] h-[285px] object-contain rounded-none select-none mix-blend-multiply dark:invert dark:mix-blend-screen"
+                        className="w-[285px] h-[285px] object-contain rounded-none select-none"
                       />
                     ) : (
-                      <div className="w-[285px] h-[285px] flex items-center justify-center text-xs text-slate-400">
+                      <div className="w-[285px] h-[285px] flex items-center justify-center text-xs text-slate-500 dark:text-slate-400">
                         Đang tạo mã QR...
                       </div>
                     )}
                   </div>
 
-                  <div className="w-full max-w-[285px] flex flex-col gap-2">
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
+                    Mở ứng dụng ngân hàng bất kỳ → Chọn "Quét QR" → Quét mã này để thanh toán tự động
+                  </p>
+
+                  <div className="w-full max-w-[285px] flex flex-col gap-2 mt-3">
                     <button
                       type="button"
                       onClick={handleSaveQR}
@@ -512,7 +537,7 @@ export function PaymentPage() {
                       className="w-full py-2.5 px-3 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
                     >
                       <ImageDown size={15} />
-                      <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
+                      <span>{isSavingQR ? 'Đang lưu ảnh...' : '📥 Lưu mã QR về máy'}</span>
                     </button>
                   </div>
                 </div>
@@ -606,21 +631,43 @@ export function PaymentPage() {
 
               {/* Mobile Straight Pure QR Code Section */}
               <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
-                <div className="w-[260px] h-[260px] bg-transparent flex items-center justify-center p-1">
+                {/* Payment Step Guide */}
+                <div className="flex items-center justify-center gap-2 mb-4 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">1</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">Mở app Ngân hàng</span>
+                  </div>
+                  <span className="text-slate-300 dark:text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">2</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">Quét mã QR</span>
+                  </div>
+                  <span className="text-slate-300 dark:text-slate-600">→</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">3</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">Xác nhận CK</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl inline-block">
                   {qrUrl ? (
                     <img 
                       src={qrUrl} 
                       alt="VietQR Matrix"
-                      className="w-[246px] h-[246px] object-contain rounded-none select-none mix-blend-multiply dark:invert dark:mix-blend-screen"
+                      className="w-[246px] h-[246px] object-contain rounded-none select-none"
                     />
                   ) : (
-                    <div className="w-[246px] h-[246px] flex items-center justify-center text-xs text-slate-400">
+                    <div className="w-[246px] h-[246px] flex items-center justify-center text-xs text-slate-500 dark:text-slate-400">
                       Đang tạo mã QR...
                     </div>
                   )}
                 </div>
 
-                <div className="w-full max-w-[260px] flex flex-col gap-2 mt-1 mb-2">
+                <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
+                  Mở ứng dụng ngân hàng bất kỳ → Chọn "Quét QR" → Quét mã này để thanh toán tự động
+                </p>
+
+                <div className="w-full max-w-[260px] flex flex-col gap-2 mt-2 mb-2">
                   <button
                     type="button"
                     onClick={handleSaveQR}
@@ -628,7 +675,7 @@ export function PaymentPage() {
                     className="w-full py-2 px-2.5 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                   >
                     <ImageDown size={14} />
-                    <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
+                    <span>{isSavingQR ? 'Đang lưu...' : '📥 Lưu mã QR về máy'}</span>
                   </button>
                 </div>
               </section>

@@ -134,9 +134,10 @@ export function TopHeader() {
                 <button
                   type="button"
                   onClick={() => setIsNotificationPanelOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                  aria-label="Đóng"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
             </div>
@@ -144,7 +145,7 @@ export function TopHeader() {
             {/* Notification List */}
             <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
               {notifications.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-sm">
+                <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
                   Không có thông báo nào.
                 </div>
               ) : (
@@ -185,7 +186,7 @@ export function TopHeader() {
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
                           {notif.desc}
                         </p>
-                        <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                        <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500 dark:text-slate-400">
                           <span className="font-num">{notif.time}</span>
                           <span className="text-indigo-600 dark:text-indigo-400 font-medium">Bấm xem chi tiết →</span>
                         </div>

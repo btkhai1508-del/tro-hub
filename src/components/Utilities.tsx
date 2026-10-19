@@ -25,7 +25,7 @@ export function Utilities() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="type-label text-slate-400">Dịch vụ & Tiện ích</span>
+          <span className="type-label text-slate-500 dark:text-slate-400">Dịch vụ & Tiện ích</span>
           <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">
             Tiện ích
           </h1>
@@ -39,7 +39,7 @@ export function Utilities() {
           <div className="soft-card px-4 py-2 flex items-center gap-3.5">
             <GlassIconHome size={38} className="shrink-0" />
             <div>
-              <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-semibold block tracking-wider">Phòng của tôi</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block tracking-wider">Phòng của tôi</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num">
                 {profile.room.roomNumber} ({profile.room.building || 'Trung Kim'})
               </span>

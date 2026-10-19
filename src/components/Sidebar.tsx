@@ -98,7 +98,7 @@ export function Sidebar() {
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium truncate">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
                   {profile.room.building || 'Trung Kim'}
                 </p>
               </div>
@@ -201,7 +201,8 @@ export function Sidebar() {
                 type="button"
                 onClick={handleCopyPhone}
                 title="Sao chép SĐT BQL Bùi Trung Khải (0902 371 800)"
-                className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors shadow-2xs relative cursor-pointer"
+                aria-label="Sao chép số điện thoại Ban Quản Lý (0902 371 800)"
+                className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors shadow-2xs relative cursor-pointer"
               >
                 {hasCopiedPhone ? <Check size={16} className="text-emerald-600" /> : <PhoneCall size={18} />}
               </button>
@@ -225,7 +226,7 @@ export function Sidebar() {
                   <PhoneCall size={15} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] text-slate-400 font-medium truncate">BQL: Bùi Trung Khải</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">BQL: Bùi Trung Khải</p>
                   <button
                     type="button"
                     onClick={handleCopyPhone}
@@ -272,10 +273,11 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={logoutUser}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                 title="Đăng xuất"
+                aria-label="Đăng xuất"
               >
-                <LogOut size={14} />
+                <LogOut size={16} />
               </button>
             </div>
           ) : (
@@ -291,7 +293,7 @@ export function Sidebar() {
                 />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{profile.name}</p>
-                  <p className="text-[10px] text-slate-400 font-num truncate">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-num truncate">
                     {profile.room.roomNumber ? (profile.room.roomNumber.startsWith('P.') ? profile.room.roomNumber : `P. ${profile.room.roomNumber}`) : profile.phone}
                   </p>
                 </div>
@@ -301,16 +303,18 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={openProfileEditModal}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
                   title="Cài đặt thông tin"
+                  aria-label="Cài đặt thông tin"
                 >
                   <SlidersHorizontal size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={logoutUser}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                   title="Đăng xuất"
+                  aria-label="Đăng xuất"
                 >
                   <LogOut size={14} />
                 </button>

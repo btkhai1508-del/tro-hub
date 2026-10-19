@@ -70,18 +70,19 @@ export function ContractModal() {
             <button
               type="button"
               onClick={handleOpenFull}
-              className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
               title="Mở toàn màn hình"
+              aria-label="Mở toàn màn hình"
             >
               <ExternalLink size={18} />
             </button>
             <button 
               type="button"
               onClick={closeContractModal}
-              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Đóng"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
         </div>

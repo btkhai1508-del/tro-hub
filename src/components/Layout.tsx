@@ -10,6 +10,7 @@ import { ContractModal } from './ContractModal';
 import { ProfileEditModal } from './ProfileEditModal';
 import { GoogleSheetModal } from './GoogleSheetModal';
 import { InteractiveOnboardingTutorial } from './InteractiveOnboardingTutorial';
+import { OfflineBanner } from './OfflineBanner';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 
@@ -25,6 +26,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row relative">
+      <OfflineBanner />
       <Background />
       
       {/* Desktop Fixed Side Navigation (Floating Capsule with Neumorphism & Glass) */}

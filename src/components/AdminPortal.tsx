@@ -66,6 +66,7 @@ import {
   IconWater3D,
   IconPencil3D
 } from './Icons3D';
+import { OfflineBanner } from './OfflineBanner';
 
 // Procedural Web Audio Sound Manager
 const playSound = (type: 'click' | 'hover' | 'success') => {
@@ -111,7 +112,9 @@ const playSound = (type: 'click' | 'hover' | 'success') => {
         o.stop(now + idx * 0.05 + 0.2);
       });
     }
-  } catch (e) {}
+  } catch (e) {
+    console.debug('Audio play failed:', e);
+  }
 };
 
 /**
@@ -256,7 +259,14 @@ export function AdminPortal() {
         customRooms: selectedCustomRooms,
         scheduledAt: notifScheduleMode === 'scheduled' ? notifScheduledDate : null
       })
-    }).catch(() => {});
+    }).then(res => {
+      if (!res.ok) {
+        console.error('Failed to sync notification to server, status:', res.status);
+      }
+    }).catch((err) => {
+      console.error('Failed to sync notification to server:', err);
+      alert('⚠️ Không thể đồng bộ thông báo lên máy chủ. Vui lòng kiểm tra kết nối mạng.');
+    });
 
     setTimeout(() => {
       setIsSendingNotif(false);
@@ -402,7 +412,8 @@ export function AdminPortal() {
           setMonths(combined);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('Failed to load months from Google Sheet, falling back to default tabs:', err);
         // Fallback: Preserves all 8 default monthly tabs from Google Sheet
         setMonths(DEFAULT_MONTH_TABS);
       });
@@ -471,7 +482,9 @@ export function AdminPortal() {
         if (Date.now() - lastGateToggleTimeRef.current < 20000) return;
         if (data.success && data.value) setPaymentGate(data.value);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to load payment gate status:', err);
+      });
   };
 
   const togglePaymentGate = async () => {
@@ -489,11 +502,15 @@ export function AdminPortal() {
       const data = await res.json();
       if (data && data.success && data.value) {
         setPaymentGate(data.value);
+        playSound('success');
+      } else {
+        console.error('Payment gate toggle failed:', data);
+        alert('⚠️ Chưa cập nhật được cổng thanh toán. Vui lòng thử lại.');
       }
     } catch (e) {
-      console.warn('Payment gate toggle error:', e);
+      console.error('Payment gate toggle error:', e);
+      alert('⚠️ Lỗi kết nối khi cập nhật cổng thanh toán. Vui lòng thử lại.');
     }
-    playSound('success');
   };
 
   const loadTabContent = async (menuKey: string, month: string) => {
@@ -514,7 +531,10 @@ export function AdminPortal() {
             }));
           }
         })
-        .catch(() => setIsLoading(false));
+        .catch((err) => {
+          console.error('Failed to load dashboard data:', err);
+          setIsLoading(false);
+        });
       fetchRooms(month);
     } else if (menuKey === 'rooms') {
       fetchRooms(month);
@@ -528,7 +548,9 @@ export function AdminPortal() {
         .then(d => {
           if (d.success && d.billing?.length) setBillingList(d.billing);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error('Failed to load billing list:', err);
+        });
     } else if (menuKey === 'plates') {
       fetchPlates(month, plateQuery);
     } else if (menuKey === 'declaration') {
@@ -543,7 +565,9 @@ export function AdminPortal() {
         .then(d => {
           if (d.success && d.config) setUnitConfig(d.config);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error('Failed to load unit config:', err);
+        });
     } else if (menuKey === 'contract') {
       apiFetch(`/api/admin/contract/history?month=${month}&houseKey=${contractHouse}`)
         .then(res => {
@@ -554,7 +578,9 @@ export function AdminPortal() {
         .then(d => {
           if (d.success) setContractHistory(d.history || []);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error('Failed to load contract history:', err);
+        });
     }
   };
 
@@ -574,7 +600,8 @@ export function AdminPortal() {
           updateDashboardStats(d.rooms, month);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Failed to fetch rooms list:', err);
         setIsLoading(false);
       });
   };
@@ -613,7 +640,10 @@ export function AdminPortal() {
           setCurrentRoomData((prev: any) => ({ ...prev, ...d.data }));
         }
       })
-      .catch(() => setIsLoading(false));
+      .catch((err) => {
+        console.error('Failed to fetch room detail:', err);
+        setIsLoading(false);
+      });
   };
 
   const isValidLicensePlate = (val: any): boolean => {
@@ -661,7 +691,8 @@ export function AdminPortal() {
         if (d.success && d.results?.length) setPlateResults(d.results);
         else setPlateResults(searchFromRooms(roomsList));
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('Plates API error, falling back to local room data:', err);
         setPlateResults(searchFromRooms(roomsList));
       });
   };
@@ -703,7 +734,8 @@ export function AdminPortal() {
           fallbackDeclarationData();
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('Declaration API error, falling back to local room data:', err);
         fallbackDeclarationData();
       });
   };
@@ -726,11 +758,13 @@ export function AdminPortal() {
         playSound('success');
         setSaveDeclarationSuccess(true);
         setTimeout(() => setSaveDeclarationSuccess(false), 3000);
+      } else {
+        console.error('Failed to save declaration:', data);
+        alert('⚠️ Chưa thể lưu danh sách khai báo tạm trú.');
       }
     } catch (e) {
-      playSound('success');
-      setSaveDeclarationSuccess(true);
-      setTimeout(() => setSaveDeclarationSuccess(false), 3000);
+      console.error('Error saving declaration:', e);
+      alert('⚠️ Lỗi kết nối khi lưu danh sách khai báo tạm trú. Vui lòng thử lại!');
     }
   };
 
@@ -750,11 +784,13 @@ export function AdminPortal() {
         playSound('success');
         setConfigSaveMsg('✅ Đã lưu cấu hình đơn giá thành công!');
         setTimeout(() => setConfigSaveMsg(''), 3000);
+      } else {
+        console.error('Failed to save unit config:', data);
+        alert('⚠️ Chưa thể lưu cấu hình đơn giá. Vui lòng thử lại!');
       }
     } catch (e) {
-      playSound('success');
-      setConfigSaveMsg('✅ Đã lưu cấu hình đơn giá vào hệ thống!');
-      setTimeout(() => setConfigSaveMsg(''), 3000);
+      console.error('Error saving config:', e);
+      alert('⚠️ Lỗi kết nối khi lưu cấu hình đơn giá. Vui lòng thử lại!');
     }
   };
 
@@ -798,6 +834,7 @@ export function AdminPortal() {
       fetchRooms(selectedMonth);
       setBatchMeters({});
     } catch (err: any) {
+      console.error('Batch meter save error:', err);
       alert('Lỗi lưu chỉ số: ' + (err.message || 'Vui lòng thử lại'));
     } finally {
       setIsSavingBatchMeters(false);
@@ -858,7 +895,10 @@ export function AdminPortal() {
         month: selectedMonth,
         row: rowNum
       })
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Payment status update failed:', err);
+      alert('⚠️ Chưa cập nhật được trạng thái thanh toán. Vui lòng kiểm tra kết nối mạng và thử lại.');
+    });
 
     // 3. Two-way sync: Push directly into Google Sheet
     pushUpdateToGoogleSheet({
@@ -868,6 +908,9 @@ export function AdminPortal() {
       month: selectedMonth,
       row: rowNum
     });
+
+    // 4. Re-fetch from Google Sheet to verify update
+    setTimeout(() => fetchRooms(selectedMonth), 3000);
 
     playSound('success');
   };
@@ -920,6 +963,7 @@ export function AdminPortal() {
 
   return (
     <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased select-none">
+      <OfflineBanner />
       
       {/* =========================================================================
           DESKTOP FLOATING SIDEBAR (Matching resident page aesthetic)
@@ -1112,6 +1156,7 @@ export function AdminPortal() {
                       "w-11 h-6 rounded-full transition-colors relative cursor-pointer",
                       paymentGate === 'START' ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
                     )}
+                    aria-label={paymentGate === 'START' ? "Đóng cổng thanh toán" : "Mở cổng thanh toán"}
                   >
                     <div
                       className={cn(
@@ -1941,9 +1986,14 @@ export function AdminPortal() {
                     if (res.ok) {
                       playSound('success');
                       alert('✅ Đã lưu cập nhật thông tin phòng và đồng bộ Cột P thành công!');
+                    } else {
+                      console.error('Failed to update room details, status:', res.status);
+                      alert('⚠️ Chưa thể lưu cập nhật phòng. Vui lòng thử lại!');
                     }
                   } catch (e) {
+                    console.error('Error updating room details:', e);
                     setIsLoading(false);
+                    alert('⚠️ Lỗi kết nối khi cập nhật thông tin phòng. Vui lòng kiểm tra kết nối mạng!');
                   }
                 }}
                 className="primary-button py-3 px-8 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md w-full sm:w-auto"

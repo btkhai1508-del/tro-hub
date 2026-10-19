@@ -31,7 +31,7 @@ export function Profile() {
 
   const renderValue = (val?: string) => {
     if (!val || !val.trim()) {
-      return <span className="text-slate-400 font-normal italic text-xs">(Chưa cập nhật)</span>;
+      return <span className="text-slate-500 font-normal italic text-xs">(Chưa cập nhật)</span>;
     }
     return val;
   };
@@ -41,7 +41,7 @@ export function Profile() {
       
       {/* Header */}
       <div>
-        <span className="type-label text-slate-400">Tài khoản & Cá nhân</span>
+        <span className="type-label text-slate-500 dark:text-slate-400">Tài khoản & Cá nhân</span>
         <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">Hồ sơ cư dân</h1>
         <p className="type-body text-slate-500 dark:text-slate-400 mt-1">
           Thông tin hợp đồng, thông tin định danh và phương tiện đã đăng ký với ban quản lý.
@@ -71,7 +71,7 @@ export function Profile() {
                 <span className="badge-paid text-[10px] py-0.5">Cư dân chính</span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-num mt-0.5">
-                {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : <span className="italic text-slate-400">Chưa xếp phòng</span>}
+                {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : <span className="italic text-slate-500 dark:text-slate-400">Chưa xếp phòng</span>}
               </p>
             </div>
           </div>
@@ -117,32 +117,32 @@ export function Profile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{profile.name}</span>
             </div>
 
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">{profile.phone}</span>
             </div>
 
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Email liên hệ:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Email liên hệ:</span>
               <span className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block truncate">{renderValue(profile.email)}</span>
             </div>
 
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số CCCD / Hộ chiếu:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số CCCD / Hộ chiếu:</span>
               <span className="font-bold font-num text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.cccd)}</span>
             </div>
 
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày sinh:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày sinh:</span>
               <span className="font-bold font-num text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.dob)}</span>
             </div>
 
             <div className="sm:col-span-2 lg:col-span-1">
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Địa chỉ thường trú:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Địa chỉ thường trú:</span>
               <span className="font-medium text-slate-900 dark:text-slate-100 text-xs sm:text-sm mt-1 block leading-relaxed">{renderValue(profile.address)}</span>
             </div>
           </div>
@@ -157,14 +157,14 @@ export function Profile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Biển số xe:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Biển số xe:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block font-num">
                 {renderValue(profile.vehicle.plateNumber)}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Loại phương tiện:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Loại phương tiện:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.vehicle.type)}</span>
             </div>
           </div>
@@ -179,14 +179,14 @@ export function Profile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Phòng:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Phòng:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">
                 {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : renderValue('')}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày bắt đầu thuê:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày bắt đầu thuê:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">{renderValue(profile.room.startDate)}</span>
             </div>
           </div>
@@ -203,17 +203,17 @@ export function Profile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.name)}</span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Mối quan hệ:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Mối quan hệ:</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.relationship)}</span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại khẩn:</span>
+              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại khẩn:</span>
               <span className="font-bold font-num text-rose-600 dark:text-rose-400 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.phone)}</span>
             </div>
           </div>

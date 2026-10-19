@@ -147,8 +147,10 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Đóng"
             >
               <X size={18} />
             </button>
