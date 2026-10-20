@@ -1147,7 +1147,7 @@ export function AdminPortal() {
                       <select
                         value={selectedMonth}
                         onChange={e => setSelectedMonth(e.target.value)}
-                        className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer p-0"
+                        className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer p-0 appearance-none pr-3"
                       >
                         {months.map(m => (
                           <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -1193,13 +1193,13 @@ export function AdminPortal() {
                   </button>
                 </div>
 
-                {/* 3. Cổng thanh toán Q2 - 3D Glassmorphism Card */}
+                {/* 3. Cổng thanh toán - 3D Glassmorphism Card */}
                 <div className="soft-surface p-3 rounded-2xl relative overflow-hidden flex items-center justify-between">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                   <div>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider">Cổng thanh toán Q2</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider">Cổng thanh toán</p>
                     <p className={cn("text-xs font-black uppercase font-num mt-0.5", paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
-                      {paymentGate === 'START' ? 'ĐANG BẬT (START)' : 'ĐANG TẮT (STOP)'}
+                      {paymentGate === 'START' ? 'Mở' : 'Tắt'}
                     </p>
                   </div>
                   <AppleSwitch
@@ -1207,22 +1207,23 @@ export function AdminPortal() {
                     onChange={togglePaymentGate}
                     color="emerald"
                     size="md"
-                    ariaLabel="Bật tắt Cổng thanh toán Q2"
+                    ariaLabel="Bật tắt Cổng thanh toán"
                   />
                 </div>
 
-                {/* 4. Single Logout Button - 3D Glassmorphism Rose Card */}
+                {/* 4. Single Logout Button - Neumorphic Glass Theme */}
                 <button
                   type="button"
                   onClick={() => {
+                    playSound('click');
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/15 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/20 dark:border-rose-500/30 shadow-[0_4px_16px_rgba(244,63,94,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.06)] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] relative overflow-hidden group"
+                  className="soft-surface w-full h-10 px-3 rounded-2xl relative overflow-hidden flex items-center justify-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/5 dark:hover:bg-rose-500/10 transition-all cursor-pointer active:scale-[0.98] group"
                   title="Đăng xuất khỏi hệ thống quản lý"
                 >
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-rose-300/60 dark:via-rose-400/20 to-transparent" />
-                  <LogOut size={15} className="group-hover:translate-x-0.5 transition-transform" />
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
+                  <LogOut size={15} className="text-slate-400 dark:text-slate-400 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
                   <span>Đăng xuất Admin</span>
                 </button>
               </div>
