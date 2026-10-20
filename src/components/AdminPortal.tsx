@@ -32,7 +32,12 @@ import {
   Moon,
   Send,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  WashingMachine,
+  Flame,
+  Play,
+  RotateCcw,
+  CalendarClock
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -60,7 +65,9 @@ import {
   IconSettings3D,
   IconLogout3D,
   IconAlert3D,
-  IconClock3D
+  IconClock3D,
+  IconLaundry3D,
+  IconDryer3D
 } from './Icons3D';
 import { AppleSwitch } from './AppleControls';
 import { soundFx } from '../lib/soundFx';
@@ -137,7 +144,7 @@ export function AdminPortal() {
 
   // Active Menu
   const [activeMenu, setActiveMenu] = useState<
-    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification'
+    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry'
   >('dashboard');
 
   // Notification Creation state
@@ -285,6 +292,113 @@ export function AdminPortal() {
     xe: 50000
   });
   const [configSaveMsg, setConfigSaveMsg] = useState('');
+
+  // Laundry Admin State
+  const [laundryMachines, setLaundryMachines] = useState<any[]>([]);
+  const [laundryStats, setLaundryStats] = useState<any>({ todayRevenue: 0, totalRevenue: 0, todaySessions: 0, totalSessions: 0 });
+  const [laundryBookings, setLaundryBookings] = useState<any[]>([]);
+  const [laundryLoading, setLaundryLoading] = useState(false);
+  const [laundryActionMsg, setLaundryActionMsg] = useState('');
+
+  const fetchAdminLaundry = async () => {
+    try {
+      setLaundryLoading(true);
+      const res = await apiFetch('/api/laundry/status');
+      if (res.ok) {
+        const d = await res.json();
+        if (d.success) {
+          setLaundryMachines(d.machines || []);
+          setLaundryStats(d.stats || {});
+          setLaundryBookings(d.bookings || []);
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching laundry admin:', e);
+    } finally {
+      setLaundryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeMenu === 'laundry') {
+      fetchAdminLaundry();
+      const t = setInterval(fetchAdminLaundry, 4000);
+      return () => clearInterval(t);
+    }
+  }, [activeMenu]);
+
+  const handleAdminForceStart = async (machineId: string) => {
+    playSound('click');
+    try {
+      const res = await apiFetch('/api/laundry/admin/force-start', {
+        method: 'POST',
+        body: JSON.stringify({ machineId })
+      });
+      const d = await res.json();
+      playSound('success');
+      setLaundryActionMsg(d.message || 'Đã kích hoạt máy');
+      fetchAdminLaundry();
+      setTimeout(() => setLaundryActionMsg(''), 3000);
+    } catch (e: any) {
+      playSound('alert');
+      setLaundryActionMsg(e.message || 'Lỗi kích hoạt máy');
+    }
+  };
+
+  const handleAdminReset = async (machineId: string) => {
+    playSound('click');
+    try {
+      const res = await apiFetch('/api/laundry/admin/reset', {
+        method: 'POST',
+        body: JSON.stringify({ machineId })
+      });
+      const d = await res.json();
+      playSound('success');
+      setLaundryActionMsg(d.message || 'Đã reset máy');
+      fetchAdminLaundry();
+      setTimeout(() => setLaundryActionMsg(''), 3000);
+    } catch (e: any) {
+      playSound('alert');
+      setLaundryActionMsg(e.message || 'Lỗi reset máy');
+    }
+  };
+
+  const handleAdminTogglePlug = async (machineId: string) => {
+    playSound('click');
+    try {
+      const res = await apiFetch('/api/laundry/admin/toggle-plug', {
+        method: 'POST',
+        body: JSON.stringify({ machineId })
+      });
+      const d = await res.json();
+      playSound('success');
+      setLaundryActionMsg(d.message || 'Đã đổi trạng thái ổ điện');
+      fetchAdminLaundry();
+      setTimeout(() => setLaundryActionMsg(''), 3000);
+    } catch (e: any) {
+      playSound('alert');
+      setLaundryActionMsg(e.message || 'Lỗi điều khiển ổ điện');
+    }
+  };
+
+  const handleAdminUpdatePrice = async (machineId: string, newPrice: number) => {
+    try {
+      const res = await apiFetch('/api/laundry/admin/config', {
+        method: 'POST',
+        body: JSON.stringify({ machineId, price: newPrice })
+      });
+      const d = await res.json();
+      if (d.success) {
+        playSound('success');
+        setLaundryActionMsg(`Đã cập nhật giá máy ${machineId}: ${newPrice.toLocaleString('vi-VN')}₫`);
+        fetchAdminLaundry();
+        setTimeout(() => setLaundryActionMsg(''), 3000);
+      }
+    } catch (e: any) {
+      playSound('alert');
+      setLaundryActionMsg(e.message || 'Lỗi cập nhật giá');
+    }
+  };
 
   // Batch Meters State
   const [batchMeters, setBatchMeters] = useState<Record<string, { dienCu?: number; dienMoi?: number; nuocCu?: number; nuocMoi?: number }>>({});
@@ -958,7 +1072,7 @@ export function AdminPortal() {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.key || 
                   (item.key === 'rooms' && activeMenu === 'roomDetail') || 
-                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification'].includes(activeMenu));
+                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
                 return (
                   <button
                     key={item.key}
@@ -1275,7 +1389,8 @@ export function AdminPortal() {
               { key: 'plates', label: 'Tra biển số', icon: IconSearchPlate3D },
               { key: 'contract', label: 'Hợp đồng & CT01', icon: IconContract3D },
               { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
-              { key: 'config', label: 'Cài đặt phí', icon: IconSettings3D }
+              { key: 'config', label: 'Cài đặt phí', icon: IconSettings3D },
+              { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D }
             ].map(item => {
               const Icon = item.icon;
               return (
@@ -3191,6 +3306,240 @@ export function AdminPortal() {
           </div>
         )}
 
+        {/* =========================================================================
+            10. LAUNDRY ADMIN TAB (QUẢN LÝ HỆ THỐNG GIẶT SẤY 24/7)
+           ========================================================================= */}
+        {activeMenu === 'laundry' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Top Navigation Bar: Back Button & Title */}
+            <div className="soft-card p-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setActiveMenu('utilities');
+                }}
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+              >
+                <ArrowLeft size={16} />
+                <span>Quay lại Tiện ích</span>
+              </button>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>LaundryFlow Server Engine Active</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={fetchAdminLaundry}
+                  disabled={laundryLoading}
+                  className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw size={14} className={cn(laundryLoading && "animate-spin text-sky-600")} />
+                  <span className="hidden sm:inline">Cập nhật</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Action Flash Message */}
+            {laundryActionMsg && (
+              <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 size={16} />
+                <span>{laundryActionMsg}</span>
+              </div>
+            )}
+
+            {/* Overview Metric Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              <div className="soft-card p-4 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Doanh thu hôm nay</span>
+                <span className="text-xl font-bold font-num text-emerald-600 dark:text-emerald-400">
+                  {(laundryStats.todayRevenue || 0).toLocaleString('vi-VN')} ₫
+                </span>
+              </div>
+              <div className="soft-card p-4 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Tổng doanh thu</span>
+                <span className="text-xl font-bold font-num text-slate-900 dark:text-white">
+                  {(laundryStats.totalRevenue || 0).toLocaleString('vi-VN')} ₫
+                </span>
+              </div>
+              <div className="soft-card p-4 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Phiên giặt hôm nay</span>
+                <span className="text-xl font-bold font-num text-sky-600 dark:text-sky-400">
+                  {laundryStats.todaySessions || 0} lượt
+                </span>
+              </div>
+              <div className="soft-card p-4 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Lịch cọc đang giữ</span>
+                <span className="text-xl font-bold font-num text-amber-600 dark:text-amber-400">
+                  {laundryStats.activeBookings || 0} slot
+                </span>
+              </div>
+            </div>
+
+            {/* Machine Management Grid */}
+            <div className="space-y-3">
+              <h3 className="type-h3 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <WashingMachine size={20} className="text-sky-600" />
+                <span>Điều Khiển Máy Giặt & Máy Sấy Trực Tuyến</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                {laundryMachines.map(m => {
+                  const isWasher = m.type === 'WASHER';
+                  const remainingSec = m.status === 'RUNNING' && m.expectedEndTime 
+                    ? Math.max(0, Math.floor((new Date(m.expectedEndTime).getTime() - Date.now()) / 1000))
+                    : 0;
+                  const minsLeft = Math.ceil(remainingSec / 60);
+
+                  return (
+                    <div 
+                      key={m.machineId}
+                      className="soft-card p-5 space-y-4 border border-slate-200/80 dark:border-slate-800"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {isWasher ? <IconLaundry3D size={42} /> : <IconDryer3D size={42} />}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                {m.machineId}
+                              </span>
+                              <span className="text-xs font-semibold text-slate-400">
+                                {isWasher ? 'Máy giặt' : 'Máy sấy'} • {m.cycleMinutes}p
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                              {m.name}
+                            </h4>
+                          </div>
+                        </div>
+
+                        {/* Status Badge */}
+                        {m.status === 'RUNNING' ? (
+                          <span className="badge-unpaid text-xs py-1 px-2.5">
+                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span>Đang chạy ({minsLeft}p)</span>
+                          </span>
+                        ) : (
+                          <span className="badge-paid text-xs py-1 px-2.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>Sẵn sàng</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Power Switch & Price Bar */}
+                      <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Ổ điện thông minh:</span>
+                          <span className={cn(
+                            "font-bold text-[11px] px-2 py-0.5 rounded uppercase font-num",
+                            m.plugState === 'ON'
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                              : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                          )}>
+                            {m.plugState || 'OFF'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAdminTogglePlug(m.machineId)}
+                          className="soft-button px-3 py-1 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Power size={13} className={m.plugState === 'ON' ? "text-emerald-600" : "text-slate-400"} />
+                          <span>Đổi nguồn</span>
+                        </button>
+                      </div>
+
+                      {/* Admin Actions */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400">Giá:</span>
+                          <input
+                            type="number"
+                            defaultValue={m.price}
+                            onBlur={e => {
+                              const val = Number(e.target.value);
+                              if (val && val !== m.price) handleAdminUpdatePrice(m.machineId, val);
+                            }}
+                            className="w-20 px-2 py-1 rounded-lg text-xs font-bold font-num bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none"
+                          />
+                          <span className="text-xs font-bold text-slate-500">₫</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAdminForceStart(m.machineId)}
+                            className="primary-button px-3 py-1.5 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                            title="Kích hoạt chạy ngay cho khách"
+                          >
+                            <Play size={12} />
+                            <span>Bật ngay</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAdminReset(m.machineId)}
+                            className="soft-button px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center gap-1 cursor-pointer"
+                            title="Reset về Sẵn Sàng & tắt điện"
+                          >
+                            <RotateCcw size={12} />
+                            <span>Reset</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recent Bookings in Admin */}
+            <div className="soft-card p-5 space-y-3">
+              <h4 className="type-h4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CalendarClock size={18} className="text-sky-600" />
+                <span>Lịch Đặt Chỗ Gần Đây Của Cư Dân</span>
+              </h4>
+
+              {laundryBookings.length === 0 ? (
+                <p className="text-xs text-slate-400">Chưa có lịch đặt chỗ nào.</p>
+              ) : (
+                <div className="space-y-2">
+                  {laundryBookings.slice(0, 8).map((b: any) => (
+                    <div key={b.bookingId} className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300">
+                            {b.machineId}
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {b.tenantName} {b.roomNumber ? `(P.${b.roomNumber})` : ''}
+                          </span>
+                          <span className="text-slate-400">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
+                        </div>
+                      </div>
+
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                        b.depositStatus === 'PAID'
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                      )}>
+                        {b.depositStatus === 'PAID' ? 'Đã Thanh Toán Cọc' : 'Chờ Cọc'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
       </main>
 
       {/* =========================================================================
@@ -3204,7 +3553,7 @@ export function AdminPortal() {
           { key: 'utilities', icon: LayoutGrid, label: 'Tiện ích' }
         ].map(m => {
           const Icon = m.icon;
-          const isActive = activeMenu === m.key || (m.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification'].includes(activeMenu));
+          const isActive = activeMenu === m.key || (m.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
           return (
             <button
               key={m.key}

@@ -1,0 +1,111 @@
+{
+  "machines": [
+    {
+      "machineId": "MG01",
+      "name": "Máy Giặt 01 (Cửa trước)",
+      "type": "WASHER",
+      "status": "AVAILABLE",
+      "price": 15000,
+      "cycleMinutes": 45,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MG02",
+      "name": "Máy Giặt 02 (Cửa trước)",
+      "type": "WASHER",
+      "status": "AVAILABLE",
+      "price": 15000,
+      "cycleMinutes": 45,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MG03",
+      "name": "Máy Giặt 03 (Cửa trước)",
+      "type": "WASHER",
+      "status": "AVAILABLE",
+      "price": 15000,
+      "cycleMinutes": 45,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MG04",
+      "name": "Máy Giặt 04 (Cửa trước)",
+      "type": "WASHER",
+      "status": "AVAILABLE",
+      "price": 15000,
+      "cycleMinutes": 45,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MS01",
+      "name": "Máy Sấy 01 (Thông hơi)",
+      "type": "DRYER",
+      "status": "AVAILABLE",
+      "price": 20000,
+      "cycleMinutes": 60,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MS02",
+      "name": "Máy Sấy 02 (Thông hơi)",
+      "type": "DRYER",
+      "status": "AVAILABLE",
+      "price": 20000,
+      "cycleMinutes": 60,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MS03",
+      "name": "Máy Sấy 03 (Thông hơi)",
+      "type": "DRYER",
+      "status": "AVAILABLE",
+      "price": 20000,
+      "cycleMinutes": 60,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    },
+    {
+      "machineId": "MS04",
+      "name": "Máy Sấy 04 (Thông hơi)",
+      "type": "DRYER",
+      "status": "AVAILABLE",
+      "price": 20000,
+      "cycleMinutes": 60,
+      "expectedEndTime": "",
+      "currentSessionId": "",
+      "plugState": "OFF",
+      "plugOnUrl": "",
+      "plugOffUrl": ""
+    }
+  ],
+  "sessions": [],
+  "bookings": [],
+  "transactions": []
+}

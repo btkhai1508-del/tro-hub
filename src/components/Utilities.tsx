@@ -7,7 +7,8 @@ import {
   IconContract3D,
   IconProfile3D,
   IconGuide3D,
-  IconKey3D
+  IconKey3D,
+  IconLaundry3D
 } from './Icons3D';
 import { KeyRound, Compass, X, ChevronRight, ShieldCheck, HelpCircle } from 'lucide-react';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
@@ -51,6 +52,13 @@ export function Utilities() {
       desc: `${profile.name || 'Cư dân'} · P.${profile.room?.roomNumber || '203'}`,
       Icon: IconProfile3D,
       action: () => openProfileEditModal()
+    },
+    {
+      id: 'laundry',
+      title: 'Giặt Sấy Tự Động 24/7',
+      desc: 'Máy giặt & sấy tự phục vụ quét mã QR',
+      Icon: IconLaundry3D,
+      action: () => navigate('/laundry')
     },
     {
       id: 'account_guide',

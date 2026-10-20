@@ -17,7 +17,8 @@ import {
   IconSecurity3D, 
   IconVehicle3D, 
   IconContract3D,
-  IconNotification3D 
+  IconNotification3D,
+  IconLaundry3D
 } from './Icons3D';
 
 export function Home() {
@@ -231,6 +232,37 @@ export function Home() {
             </div>
           </div>
 
+        </div>
+
+        {/* LaundryFlow 24/7 Service Banner */}
+        <div 
+          onClick={() => navigate('/laundry')}
+          className="md:col-span-12 soft-card p-4 sm:p-5 flex items-center justify-between cursor-pointer group hover:border-sky-300 dark:hover:border-sky-700 transition-all"
+        >
+          <div className="flex items-center gap-3.5">
+            <IconLaundry3D size={42} className="shrink-0 group-hover:scale-105 transition-transform" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 font-num">
+                  TIỆN ÍCH CƯ DÂN
+                </span>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Hoạt động 24/7</span>
+                </span>
+              </div>
+              <h3 className="type-h4 font-bold text-slate-900 dark:text-white mt-0.5">
+                Giặt Sấy Tự Động Thông Minh
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Theo dõi máy trống, đếm ngược thời gian thực và đặt lịch giữ chỗ tiện lợi
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-slate-400 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+            <span className="text-xs font-semibold hidden sm:inline">Khám phá</span>
+            <ChevronRight size={18} className="stroke-[2.5]" />
+          </div>
         </div>
 
         {/* Bottom Section: Recent Notifications with 3D Notification Bell */}

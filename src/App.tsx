@@ -9,6 +9,7 @@ import { InvoicesAndPayment } from './components/InvoicesAndPayment';
 import { Contract } from './components/Contract';
 import { Profile } from './components/Profile';
 import { PaymentPage } from './components/PaymentPage';
+import { LaundryPage } from './components/LaundryPage';
 import { LoginPage } from './components/LoginPage';
 import { AdminPortal } from './components/AdminPortal';
 import { Icons3DDefs } from './components/Icons3D';
@@ -96,6 +97,9 @@ function AppRoutes() {
         
         {/* Dedicated QR Payment Window */}
         <Route path="payment" element={<PaymentPage />} />
+
+        {/* Giặt Sấy Tự Động 24/7 (LaundryFlow) */}
+        <Route path="laundry" element={<LaundryPage />} />
         
         {/* Notifications redirect to Home */}
         <Route path="notifications" element={<Navigate to="/" replace />} />

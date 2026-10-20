@@ -34,6 +34,7 @@ import {
   getNotificationsForResident,
   loadNotificationsStore
 } from './src/server/notificationStore.js';
+import { LaundryService, startLaundryWorker } from './src/server/laundryService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -255,6 +256,40 @@ async function startServer() {
 
       // Extract Room number or Invoice code from transfer content (e.g. "G02T102026", "203-T10", "LVC203", "P203")
       const searchString = `${content} ${description}`.toUpperCase();
+
+      // 1. Check if this is a Laundry transaction (MG01..MG09, MS01..MS09)
+      const laundryMachineMatch = searchString.match(/\b(MG[0-9]{1,2}|MS[0-9]{1,2})\b/);
+      const isBookingDeposit = /\b(COC|DAT|DATCOC|GIUCHO|BK)\b/.test(searchString);
+
+      if (laundryMachineMatch) {
+        const machineId = laundryMachineMatch[1];
+        if (isBookingDeposit) {
+          const bookingResult = await LaundryService.confirmBookingDeposit({
+            machineId,
+            amount: transferAmount,
+            content,
+            referenceCode: referenceCode || `SEPAY-${id || Date.now()}`,
+            gateway,
+            accountNumber,
+            transactionDate
+          });
+          console.log(`[SePAY Webhook] Processed laundry booking deposit for ${machineId}:`, bookingResult);
+          return res.json({ success: true, type: 'LAUNDRY_BOOKING', result: bookingResult });
+        } else {
+          const startResult = await LaundryService.processDirectPayment({
+            machineId,
+            amount: transferAmount,
+            content,
+            referenceCode: referenceCode || `SEPAY-${id || Date.now()}`,
+            gateway,
+            accountNumber,
+            transactionDate
+          });
+          console.log(`[SePAY Webhook] Processed laundry direct payment for ${machineId}:`, startResult);
+          return res.json({ success: true, type: 'LAUNDRY_START', result: startResult });
+        }
+      }
+
       let matchedRoom = '';
 
       // Check pattern like "G02", "LVC203", "203-T10", "P203", "INV-102026", "309"
@@ -478,6 +513,96 @@ async function startServer() {
       message: `Đã giả lập SePAY thanh toán thành công cho phòng ${room} với số tiền ${amount.toLocaleString('vi-VN')}₫`,
       transactionId: txnCode
     });
+  });
+
+  // =========================================================================
+  // LAUNDRY SERVICE API ENDPOINTS (LaundryFlow 24/7)
+  // =========================================================================
+  app.get('/api/laundry/status', (_req, res) => {
+    try {
+      const machines = LaundryService.getAllMachines();
+      const stats = LaundryService.getStats();
+      const bookings = LaundryService.getBookings();
+      res.json({ success: true, machines, stats, bookings });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/laundry/booking', requireAuth, async (req: AuthedRequest, res) => {
+    try {
+      const { machineId, bookingTime, bookingDate, tenantName: inputName } = req.body || {};
+      const roomNumber = req.tenant?.room || '';
+      const tenantPhone = req.tenant?.phone || '';
+      const tenantName = inputName || req.tenant?.phone || 'Cư dân';
+      const result = LaundryService.createBooking({
+        machineId,
+        roomNumber,
+        tenantName,
+        tenantPhone,
+        bookingTime,
+        bookingDate
+      });
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // Test simulation endpoint for Laundry payment
+  app.post('/api/laundry/test-payment', (req, res) => {
+    try {
+      const { machineId = 'MG01', amount = 15000 } = req.body || {};
+      const result = LaundryService.processDirectPayment({
+        machineId,
+        amount: Number(amount),
+        content: `Test payment ${machineId}`,
+        referenceCode: `TEST-LAUNDRY-${Date.now()}`
+      });
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/laundry/admin/force-start', requireAdmin, (req, res) => {
+    try {
+      const { machineId, cycleMinutes } = req.body || {};
+      const result = LaundryService.manualForceStart(machineId, cycleMinutes);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/laundry/admin/reset', requireAdmin, (req, res) => {
+    try {
+      const { machineId } = req.body || {};
+      const result = LaundryService.manualReset(machineId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/laundry/admin/toggle-plug', requireAdmin, (req, res) => {
+    try {
+      const { machineId } = req.body || {};
+      const result = LaundryService.togglePlug(machineId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/laundry/admin/config', requireAdmin, (req, res) => {
+    try {
+      const { machineId, ...updates } = req.body || {};
+      const result = LaundryService.updateConfig(machineId, updates);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
   });
 
   // =========================================================================
@@ -799,6 +924,9 @@ async function startServer() {
       res.sendFile(path.resolve(distPath, 'index.html'));
     });
   }
+
+  // Start laundry background worker (auto turn-off machines when cycle completes)
+  startLaundryWorker();
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[EcoStay Server] Running at http://0.0.0.0:${PORT} in ${isProduction ? 'production' : 'development'} mode`);

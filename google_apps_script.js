@@ -274,6 +274,72 @@ function handleRequest(e) {
       });
     }
 
+    // ----------------------------------------------------
+    // ACTION 5: LAUNDRY - GHI NHẬN PHIÊN GIẶT (SESSIONS)
+    // ----------------------------------------------------
+    if (action === "laundry_add_session") {
+      var sessSheet = ss.getSheetByName("Laundry_Sessions");
+      if (!sessSheet) {
+        sessSheet = ss.insertSheet("Laundry_Sessions");
+        sessSheet.appendRow(["Session ID", "Mã máy", "Phòng", "Khách hàng", "SĐT", "Bắt đầu", "Kết thúc dự kiến", "Số tiền", "Mã GD", "Trạng thái"]);
+        sessSheet.getRange(1, 1, 1, 10).setBackground("#1E293B").setFontColor("#FFFFFF").setFontWeight("bold");
+        sessSheet.setFrozenRows(1);
+      }
+      sessSheet.appendRow([
+        params.sessionId || "",
+        params.machineId || "",
+        params.room || "",
+        params.name || "",
+        params.phone || "",
+        params.startTime || "",
+        params.expectedEndTime || "",
+        Number(params.amount) || 0,
+        params.transactionId || "",
+        params.status || "IN_PROGRESS"
+      ]);
+      SpreadsheetApp.flush();
+      return createJsonResponse({ success: true, message: "Đã ghi phiên giặt sấy vào tab Laundry_Sessions" });
+    }
+
+    // ----------------------------------------------------
+    // ACTION 6: LAUNDRY - ĐỒNG BỘ TRẠNG THÁI MÁY (MACHINES)
+    // ----------------------------------------------------
+    if (action === "laundry_sync_machine") {
+      var machSheet = ss.getSheetByName("Machines");
+      if (!machSheet) {
+        machSheet = ss.insertSheet("Machines");
+        machSheet.appendRow(["machine_id", "name", "type", "status", "price", "cycle_minutes", "expected_end_time", "plug_state"]);
+        machSheet.getRange(1, 1, 1, 8).setBackground("#1E293B").setFontColor("#FFFFFF").setFontWeight("bold");
+        machSheet.setFrozenRows(1);
+      }
+      var machData = machSheet.getDataRange().getValues();
+      var machineId = String(params.machineId || "").trim().toUpperCase();
+      var foundRow = -1;
+      for (var mi = 1; mi < machData.length; mi++) {
+        if (String(machData[mi][0]).toUpperCase().trim() === machineId) {
+          foundRow = mi + 1;
+          break;
+        }
+      }
+      var rowValues = [
+        machineId,
+        params.name || "",
+        params.type || "",
+        params.status || "AVAILABLE",
+        Number(params.price) || 5000,
+        Number(params.cycleMinutes) || 45,
+        params.expectedEndTime || "",
+        params.plugState || "OFF"
+      ];
+      if (foundRow > 0) {
+        machSheet.getRange(foundRow, 1, 1, 8).setValues([rowValues]);
+      } else {
+        machSheet.appendRow(rowValues);
+      }
+      SpreadsheetApp.flush();
+      return createJsonResponse({ success: true, message: "Đã đồng bộ trạng thái máy " + machineId });
+    }
+
     return createJsonResponse({ success: true, message: "EcoStay Apps Script Web App is active" });
   } catch (error) {
     return createJsonResponse({ success: false, error: error.toString() });

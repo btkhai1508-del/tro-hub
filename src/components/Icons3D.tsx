@@ -826,6 +826,69 @@ export function IconHeart3D({ size = 48, className = '', style }: Icon3DProps) {
 }
 
 // =========================================================================
+// LAUNDRY ICON (Figma 3D Glassmorphic Washing Machine - Sky Blue Drum)
+// =========================================================================
+export function IconLaundry3D({ size = 48, className = '', style }: Icon3DProps) {
+  return (
+    <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
+      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(14,165,233,0.22)]">
+        <defs>
+          <linearGradient id="fg_laundry_body" x1="52" y1="42" x2="132" y2="142" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#e0f2fe" />
+            <stop offset="1" stopColor="#bae6fd" />
+          </linearGradient>
+          <linearGradient id="fg_laundry_drum" x1="72" y1="82" x2="112" y2="132" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#38bdf8" />
+            <stop offset="1" stopColor="#0284c7" />
+          </linearGradient>
+        </defs>
+        <rect x="46" y="38" width="92" height="110" rx="16" fill="url(#fg_laundry_body)" stroke="#0ea5e9" strokeWidth="2.5" />
+        <rect x="54" y="44" width="76" height="18" rx="6" fill="#f0f9ff" stroke="#bae6fd" strokeWidth="1.5" />
+        <circle cx="66" cy="53" r="3.5" fill="#94a3b8" />
+        <circle cx="78" cy="53" r="3.5" fill="#94a3b8" />
+        <circle cx="114" cy="53" r="4" fill="#0ea5e9" />
+        <circle cx="92" cy="107" r="32" fill="url(#fg_laundry_drum)" stroke="#0284c7" strokeWidth="2" />
+        <circle cx="92" cy="107" r="22" fill="#e0f2fe" fillOpacity="0.5" stroke="white" strokeWidth="1.5" />
+        <path d="M82 100 Q87 95 92 100 Q97 105 102 100" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+        <path d="M78 110 Q86 104 94 110 Q102 116 110 110" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.5" />
+      </svg>
+    </div>
+  );
+}
+
+// =========================================================================
+// DRYER ICON (Figma 3D Glassmorphic Dryer - Warm Orange/Amber Drum)
+// =========================================================================
+export function IconDryer3D({ size = 48, className = '', style }: Icon3DProps) {
+  return (
+    <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
+      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(234,88,12,0.22)]">
+        <defs>
+          <linearGradient id="fg_dryer_body" x1="52" y1="42" x2="132" y2="142" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#fff7ed" />
+            <stop offset="1" stopColor="#fed7aa" />
+          </linearGradient>
+          <linearGradient id="fg_dryer_drum" x1="72" y1="82" x2="112" y2="132" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#fb923c" />
+            <stop offset="1" stopColor="#ea580c" />
+          </linearGradient>
+        </defs>
+        <rect x="46" y="38" width="92" height="110" rx="16" fill="url(#fg_dryer_body)" stroke="#ea580c" strokeWidth="2.5" />
+        <rect x="54" y="44" width="76" height="18" rx="6" fill="#fffbeb" stroke="#fed7aa" strokeWidth="1.5" />
+        <circle cx="66" cy="53" r="3.5" fill="#94a3b8" />
+        <circle cx="78" cy="53" r="3.5" fill="#94a3b8" />
+        <circle cx="114" cy="53" r="4" fill="#ea580c" />
+        <circle cx="92" cy="107" r="32" fill="url(#fg_dryer_drum)" stroke="#c2410c" strokeWidth="2" />
+        <circle cx="92" cy="107" r="22" fill="#fff7ed" fillOpacity="0.4" stroke="white" strokeWidth="1.5" />
+        <path d="M84 100 C88 93 96 93 100 100" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.9" />
+        <path d="M80 108 C86 100 98 100 104 108" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
+        <path d="M86 116 C90 110 94 110 98 116" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.4" />
+      </svg>
+    </div>
+  );
+}
+
+// =========================================================================
 // SEMANTIC ALIAS EXPORTS FOR FULL BACKWARD COMPATIBILITY
 // =========================================================================
 export const IconFigmaHome = IconHome3D;
