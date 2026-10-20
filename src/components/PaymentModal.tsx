@@ -164,7 +164,7 @@ export function PaymentModal() {
                   <img 
                     src="/lock.svg" 
                     alt="Cổng thanh toán đang tạm đóng" 
-                    className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1 shrink-0 drop-shadow-md select-none pointer-events-none" 
+                    className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-2 shrink-0 drop-shadow-[0_8px_20px_rgba(239,68,68,0.2)] select-none pointer-events-none" 
                   />
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">

@@ -400,7 +400,7 @@ export function PaymentPage() {
               <img 
                 src="/lock.svg" 
                 alt="Cổng thanh toán đang tạm đóng" 
-                className="w-20 h-20 sm:w-24 sm:h-24 mb-3 shrink-0 drop-shadow-md select-none pointer-events-none" 
+                className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 drop-shadow-[0_10px_25px_rgba(239,68,68,0.22)] select-none pointer-events-none" 
               />
 
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
