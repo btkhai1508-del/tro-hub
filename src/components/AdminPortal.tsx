@@ -3627,18 +3627,26 @@ export function AdminPortal() {
           );
         })}
 
-        {/* Center Power Switch Button */}
-        <button
+        {/* Cổng thanh toán AppleSwitch (Đồng bộ với Sidebar) */}
+        <div 
           onClick={togglePaymentGate}
-          className={cn(
-            "w-11 h-11 rounded-2xl flex flex-col items-center justify-center text-white shadow-md cursor-pointer",
-            paymentGate === 'START' ? "bg-emerald-500" : "bg-rose-500"
-          )}
-          title={`Cổng thanh toán: ${paymentGate}`}
+          className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all cursor-pointer select-none"
+          title={`Cổng thanh toán: ${paymentGate === 'START' ? 'Mở' : 'Tắt'}`}
         >
-          <Power size={17} />
-          <span className="text-[8px] font-bold uppercase leading-none mt-0.5">{paymentGate}</span>
-        </button>
+          <AppleSwitch
+            checked={paymentGate === 'START'}
+            onChange={togglePaymentGate}
+            color="emerald"
+            size="sm"
+            ariaLabel="Bật tắt Cổng thanh toán"
+          />
+          <span className={cn(
+            "text-[9px] font-bold uppercase font-num mt-1 leading-none tracking-tight",
+            paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+          )}>
+            {paymentGate === 'START' ? 'Mở' : 'Tắt'}
+          </span>
+        </div>
       </nav>
 
     </div>
