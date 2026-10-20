@@ -148,6 +148,13 @@ export function AdminPortal() {
     'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry'
   >('dashboard');
 
+  // Portal Toast Alert (replacing window.alert for iframe compatibility)
+  const [portalToast, setPortalToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showPortalToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setPortalToast({ message, type });
+    setTimeout(() => setPortalToast(null), 4000);
+  };
+
   // Notification Creation state
   const [notifTarget, setNotifTarget] = useState<'ALL' | 'LVC' | 'TRUNG_KIM' | 'CUSTOM'>('ALL');
   const [selectedCustomRooms, setSelectedCustomRooms] = useState<string[]>([]);
@@ -176,15 +183,15 @@ export function AdminPortal() {
   const handleSendNotification = () => {
     playSound('click');
     if (!notifTitle.trim()) {
-      alert('Vui lòng nhập tiêu đề thông báo');
+      showPortalToast('Vui lòng nhập tiêu đề thông báo', 'error');
       return;
     }
     if (!notifContent.trim()) {
-      alert('Vui lòng nhập nội dung thông báo');
+      showPortalToast('Vui lòng nhập nội dung thông báo', 'error');
       return;
     }
     if (notifTarget === 'CUSTOM' && selectedCustomRooms.length === 0) {
-      alert('Vui lòng chọn ít nhất một phòng cần gửi thông báo');
+      showPortalToast('Vui lòng chọn ít nhất một phòng cần gửi thông báo', 'error');
       return;
     }
 
@@ -871,7 +878,7 @@ export function AdminPortal() {
     playSound('click');
     const entries = Object.entries(batchMeters);
     if (entries.length === 0) {
-      alert('Chưa có chỉ số nào được chỉnh sửa.');
+      showPortalToast('Chưa có chỉ số nào được chỉnh sửa.', 'info');
       return;
     }
     setIsSavingBatchMeters(true);
@@ -893,11 +900,11 @@ export function AdminPortal() {
         });
       }
       playSound('success');
-      alert('✅ Đã lưu và đồng bộ chỉ số điện nước lên Google Sheets thành công!');
+      showPortalToast('Đã lưu và đồng bộ chỉ số điện nước lên Google Sheets thành công!', 'success');
       fetchRooms(selectedMonth);
       setBatchMeters({});
     } catch (err: any) {
-      alert('Lỗi lưu chỉ số: ' + (err.message || 'Vui lòng thử lại'));
+      showPortalToast('Lỗi lưu chỉ số: ' + (err.message || 'Vui lòng thử lại'), 'error');
     } finally {
       setIsSavingBatchMeters(false);
     }
@@ -1021,6 +1028,20 @@ export function AdminPortal() {
     <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased select-none">
       <OfflineBanner />
       
+      {portalToast && (
+        <div 
+          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl shadow-xl backdrop-blur-md border flex items-center gap-2.5 text-sm font-semibold transition-all"
+          style={{
+            backgroundColor: portalToast.type === 'error' ? 'rgba(239, 68, 68, 0.95)' : portalToast.type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(30, 41, 59, 0.95)',
+            color: '#fff',
+            borderColor: 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          {portalToast.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span>{portalToast.message}</span>
+        </div>
+      )}
+
       {/* =========================================================================
           DESKTOP FLOATING SIDEBAR (Matching resident page aesthetic)
          ========================================================================= */}
@@ -2025,7 +2046,7 @@ export function AdminPortal() {
                     setIsLoading(false);
                     if (res.ok) {
                       playSound('success');
-                      alert('✅ Đã lưu cập nhật thông tin phòng và đồng bộ Cột P thành công!');
+                      showPortalToast('Đã lưu cập nhật thông tin phòng và đồng bộ Cột P thành công!', 'success');
                     }
                   } catch (e) {
                     setIsLoading(false);

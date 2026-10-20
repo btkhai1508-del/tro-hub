@@ -111,11 +111,9 @@ export async function shareViaZalo(
   // 3. Fallback: Copy link and inform user
   try {
     await navigator.clipboard.writeText(qrUrl);
-    alert('Đã sao chép link ảnh mã QR! Bạn có thể dán vào khung chat Zalo để gửi.');
-    return { success: true, message: 'Đã sao chép link ảnh QR!' };
+    return { success: true, message: 'Đã sao chép link ảnh mã QR! Bạn có thể dán vào khung chat Zalo để gửi.' };
   } catch {
-    window.open(qrUrl, '_blank');
-    return { success: true, message: 'Đang mở ảnh QR!' };
+    return { success: false, message: 'Không thể sao chép link ảnh QR.' };
   }
 }
 
@@ -157,8 +155,7 @@ export async function shareContractViaZalo(
   // 3. Clipboard fallback
   try {
     await navigator.clipboard.writeText(`${docTitle}\n\n${docText}`);
-    alert('Đã sao chép toàn bộ nội dung văn bản! Bạn có thể dán vào Zalo để gửi.');
-    return { success: true, message: 'Đã sao chép nội dung văn bản!' };
+    return { success: true, message: 'Đã sao chép toàn bộ nội dung văn bản! Bạn có thể dán vào Zalo để gửi.' };
   } catch {
     return { success: false, message: 'Không thể sao chép văn bản' };
   }

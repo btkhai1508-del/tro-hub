@@ -631,25 +631,21 @@ export const IconDeclaration3D = IconContract3D;
 export const IconHandbook3D = IconContract3D;
 
 // =========================================================================
-// 24. VEHICLE ICON (Figma 3D Glassmorphic Vehicle - Royal Blue & Cyan)
+// 24. VEHICLE ICON (Figma 3D Glassmorphic Motorcycle - Transparent Background)
 // =========================================================================
 export function IconVehicle3D({ size = 48, className = '', style }: Icon3DProps) {
   return (
-    <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(2,132,199,0.22)]">
-        <defs>
-          <linearGradient id="fg_veh_bg" x1="36" y1="56" x2="156" y2="134" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#38BDF8" />
-            <stop offset="100%" stopColor="#0284C7" />
-          </linearGradient>
-        </defs>
-        <path d="M46 96L62 66C66 60 72 56 78 56H114C120 56 126 60 130 66L146 96C152 97 156 102 156 108V126C156 130 152 134 148 134H142V124C142 116 136 110 128 110C120 110 114 116 114 124V134H78V124C78 116 72 110 64 110C56 110 50 116 50 124V134H44C40 134 36 130 36 126V108C36 102 40 97 46 96Z" fill="url(#fg_veh_bg)" />
-        <path d="M66 70L54 94H138L126 70C124 66 120 64 116 64H76C72 64 68 66 66 70Z" fill="#BAE6FD" fillOpacity="0.8" stroke="white" strokeWidth="1.2" />
-        <circle cx="64" cy="124" r="10" fill="#0F172A" />
-        <circle cx="64" cy="124" r="5" fill="white" />
-        <circle cx="128" cy="124" r="10" fill="#0F172A" />
-        <circle cx="128" cy="124" r="5" fill="white" />
-      </svg>
+    <div 
+      className={`inline-flex items-center justify-center shrink-0 bg-transparent select-none ${className}`} 
+      style={{ width: size, height: size, ...style }}
+    >
+      <img
+        src="/assets/aistudio/motorcycle_b74bc921.svg"
+        alt="Biển số xe"
+        width={size}
+        height={size}
+        className="w-full h-full object-contain pointer-events-none select-none bg-transparent drop-shadow-[0_4px_12px_rgba(239,86,65,0.28)]"
+      />
     </div>
   );
 }
@@ -826,63 +822,88 @@ export function IconHeart3D({ size = 48, className = '', style }: Icon3DProps) {
 }
 
 // =========================================================================
-// LAUNDRY ICON (Figma 3D Glassmorphic Washing Machine - Sky Blue Drum)
+// LAUNDRY ICON (Simplified Modern 3D Glassmorphic Washing Machine)
 // =========================================================================
 export function IconLaundry3D({ size = 48, className = '', style }: Icon3DProps) {
   return (
     <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(14,165,233,0.22)]">
+      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_16px_rgba(2,132,199,0.24)]">
         <defs>
-          <linearGradient id="fg_laundry_body" x1="52" y1="42" x2="132" y2="142" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#e0f2fe" />
-            <stop offset="1" stopColor="#bae6fd" />
+          <linearGradient id="fg_laundry_simp_body" x1="42" y1="36" x2="142" y2="148" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#38BDF8" />
+            <stop offset="1" stopColor="#0284C7" />
           </linearGradient>
-          <linearGradient id="fg_laundry_drum" x1="72" y1="82" x2="112" y2="132" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#38bdf8" />
-            <stop offset="1" stopColor="#0284c7" />
+          <linearGradient id="fg_laundry_simp_drum" x1="68" y1="78" x2="116" y2="132" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#0284C7" />
+            <stop offset="1" stopColor="#075985" />
           </linearGradient>
         </defs>
-        <rect x="46" y="38" width="92" height="110" rx="16" fill="url(#fg_laundry_body)" stroke="#0ea5e9" strokeWidth="2.5" />
-        <rect x="54" y="44" width="76" height="18" rx="6" fill="#f0f9ff" stroke="#bae6fd" strokeWidth="1.5" />
-        <circle cx="66" cy="53" r="3.5" fill="#94a3b8" />
-        <circle cx="78" cy="53" r="3.5" fill="#94a3b8" />
-        <circle cx="114" cy="53" r="4" fill="#0ea5e9" />
-        <circle cx="92" cy="107" r="32" fill="url(#fg_laundry_drum)" stroke="#0284c7" strokeWidth="2" />
-        <circle cx="92" cy="107" r="22" fill="#e0f2fe" fillOpacity="0.5" stroke="white" strokeWidth="1.5" />
-        <path d="M82 100 Q87 95 92 100 Q97 105 102 100" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
-        <path d="M78 110 Q86 104 94 110 Q102 116 110 110" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.5" />
+
+        {/* 1. Main Rounded Body */}
+        <rect x="42" y="36" width="100" height="112" rx="26" fill="url(#fg_laundry_simp_body)" />
+
+        {/* 2. Frosted Glass Front Face */}
+        <rect x="46" y="40" width="92" height="104" rx="22" fill="#BAE6FD" fillOpacity="0.75" stroke="white" strokeWidth="2" />
+
+        {/* 3. Minimalist Top Control Panel */}
+        <rect x="58" y="52" width="34" height="6" rx="3" fill="white" fillOpacity="0.95" />
+        <circle cx="118" cy="55" r="5" fill="#0284C7" stroke="white" strokeWidth="1.5" />
+        <circle cx="120" cy="53.5" r="1.2" fill="white" />
+
+        {/* 4. Large Circular Glass Door */}
+        <circle cx="92" cy="103" r="32" fill="white" fillOpacity="0.95" />
+        <circle cx="92" cy="103" r="26" fill="url(#fg_laundry_simp_drum)" />
+
+        {/* 5. Minimalist Water Swirl */}
+        <path d="M75 107C81 97 89 97 95 105C101 113 107 111 111 105" stroke="#38BDF8" strokeWidth="4" strokeLinecap="round" fill="none" />
+        <circle cx="95" cy="94" r="2.5" fill="white" fillOpacity="0.85" />
+
+        {/* 6. Curved Glass Highlight */}
+        <path d="M78 91C84 83 98 83 106 91" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.85" />
       </svg>
     </div>
   );
 }
 
 // =========================================================================
-// DRYER ICON (Figma 3D Glassmorphic Dryer - Warm Orange/Amber Drum)
+// DRYER ICON (Simplified Modern 3D Glassmorphic Clothes Dryer)
 // =========================================================================
 export function IconDryer3D({ size = 48, className = '', style }: Icon3DProps) {
   return (
     <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(234,88,12,0.22)]">
+      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_16px_rgba(234,88,12,0.24)]">
         <defs>
-          <linearGradient id="fg_dryer_body" x1="52" y1="42" x2="132" y2="142" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#fff7ed" />
-            <stop offset="1" stopColor="#fed7aa" />
+          <linearGradient id="fg_dryer_simp_body" x1="42" y1="36" x2="142" y2="148" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FB923C" />
+            <stop offset="1" stopColor="#EA580C" />
           </linearGradient>
-          <linearGradient id="fg_dryer_drum" x1="72" y1="82" x2="112" y2="132" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#fb923c" />
-            <stop offset="1" stopColor="#ea580c" />
+          <linearGradient id="fg_dryer_simp_drum" x1="68" y1="78" x2="116" y2="132" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#EA580C" />
+            <stop offset="1" stopColor="#9A3412" />
           </linearGradient>
         </defs>
-        <rect x="46" y="38" width="92" height="110" rx="16" fill="url(#fg_dryer_body)" stroke="#ea580c" strokeWidth="2.5" />
-        <rect x="54" y="44" width="76" height="18" rx="6" fill="#fffbeb" stroke="#fed7aa" strokeWidth="1.5" />
-        <circle cx="66" cy="53" r="3.5" fill="#94a3b8" />
-        <circle cx="78" cy="53" r="3.5" fill="#94a3b8" />
-        <circle cx="114" cy="53" r="4" fill="#ea580c" />
-        <circle cx="92" cy="107" r="32" fill="url(#fg_dryer_drum)" stroke="#c2410c" strokeWidth="2" />
-        <circle cx="92" cy="107" r="22" fill="#fff7ed" fillOpacity="0.4" stroke="white" strokeWidth="1.5" />
-        <path d="M84 100 C88 93 96 93 100 100" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.9" />
-        <path d="M80 108 C86 100 98 100 104 108" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
-        <path d="M86 116 C90 110 94 110 98 116" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.4" />
+
+        {/* 1. Main Rounded Body */}
+        <rect x="42" y="36" width="100" height="112" rx="26" fill="url(#fg_dryer_simp_body)" />
+
+        {/* 2. Frosted Glass Front Face */}
+        <rect x="46" y="40" width="92" height="104" rx="22" fill="#FED7AA" fillOpacity="0.75" stroke="white" strokeWidth="2" />
+
+        {/* 3. Minimalist Top Control Panel */}
+        <rect x="58" y="52" width="34" height="6" rx="3" fill="white" fillOpacity="0.95" />
+        <circle cx="118" cy="55" r="5" fill="#EA580C" stroke="white" strokeWidth="1.5" />
+        <circle cx="120" cy="53.5" r="1.2" fill="white" />
+
+        {/* 4. Large Circular Glass Door */}
+        <circle cx="92" cy="103" r="32" fill="white" fillOpacity="0.95" />
+        <circle cx="92" cy="103" r="26" fill="url(#fg_dryer_simp_drum)" />
+
+        {/* 5. Minimalist Heat Wave */}
+        <path d="M75 107C81 97 89 97 95 105C101 113 107 111 111 105" stroke="#FDE047" strokeWidth="4" strokeLinecap="round" fill="none" />
+        <circle cx="95" cy="94" r="2.5" fill="#FEF08A" fillOpacity="0.85" />
+
+        {/* 6. Curved Glass Highlight */}
+        <path d="M78 91C84 83 98 83 106 91" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.85" />
       </svg>
     </div>
   );

@@ -31,13 +31,35 @@ export interface ServerNotificationItem {
 let notificationsCache: ServerNotificationItem[] = [];
 
 /**
+ * Check if a notification is related to laundry/washing machine
+ * User request: "Thông báo nó cứ tự động lên vậy (thông báo về máy giặt á) đừng để nó lên nữa"
+ */
+export function isLaundryNotification(item: { title?: string; desc?: string; sender?: string }): boolean {
+  const combined = `${item.title || ''} ${item.desc || ''} ${item.sender || ''}`.toLowerCase();
+  return (
+    combined.includes('giặt') ||
+    combined.includes('sấy') ||
+    combined.includes('laundry') ||
+    combined.includes('chu kỳ') ||
+    combined.includes('mg01') ||
+    combined.includes('mg02') ||
+    combined.includes('mg03') ||
+    combined.includes('mg04') ||
+    combined.includes('ms01') ||
+    combined.includes('ms02') ||
+    /\b(mg\d{1,2}|ms\d{1,2})\b/i.test(combined)
+  );
+}
+
+/**
  * Load local fallback cache
  */
 export function loadNotificationsStore(): ServerNotificationItem[] {
   try {
     if (fs.existsSync(STORE_PATH)) {
       const data = fs.readFileSync(STORE_PATH, 'utf-8');
-      notificationsCache = JSON.parse(data);
+      const parsed = JSON.parse(data);
+      notificationsCache = Array.isArray(parsed) ? parsed.filter(n => !isLaundryNotification(n)) : [];
     } else {
       notificationsCache = [];
       saveNotificationsStore();
@@ -118,6 +140,11 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
         }
       }
 
+      // User requested: do NOT show washing machine notifications anymore ("đừng để nó lên nữa")
+      if (isLaundryNotification({ title, desc: rawContent })) {
+        continue;
+      }
+
       // Map notification type
       let type: 'invoice' | 'alert' | 'success' | 'info' = 'info';
       if (rawType.includes('thanh toán') || rawType.includes('tiền') || rawType.includes('invoice')) {
@@ -147,8 +174,12 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
           .filter(Boolean);
       }
 
+      // Generate deterministic unique ID based on row index and stable content
+      const contentHash = (rawDate + '_' + rawRoom + '_' + rawContent).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+      const stableId = `sheet-notif-${i}-${contentHash}`;
+
       items.push({
-        id: `sheet-notif-${i}-${Date.now()}`,
+        id: stableId,
         title: title || 'Thông báo từ Ban Quản Lý',
         desc: desc || rawContent,
         time: rawDate || 'Gần đây',
@@ -162,7 +193,18 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
     }
 
     // Newest notifications first
-    return items.reverse();
+    const reversed = items.reverse();
+
+    // Deduplicate repeated identical notifications from Google Sheet
+    const seenMap = new Map<string, ServerNotificationItem>();
+    for (const item of reversed) {
+      const dedupKey = `${item.title.trim()}__${item.desc.trim()}__${item.target}`;
+      if (!seenMap.has(dedupKey)) {
+        seenMap.set(dedupKey, item);
+      }
+    }
+
+    return Array.from(seenMap.values());
   } catch (err) {
     console.warn('[notificationStore] Error fetching Notifications tab from Google Sheet:', err);
     return [];
@@ -173,16 +215,25 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
  * Add a notification and sync directly to Google Sheet tab "Notifications"
  */
 export function addNotification(item: Omit<ServerNotificationItem, 'createdAt'> & { createdAt?: string }): ServerNotificationItem {
+  // Prevent any laundry notifications from being added or synced to Google Sheet
+  if (isLaundryNotification(item)) {
+    console.log('[notificationStore] 🚫 Suppressed laundry notification per user preference:', item.title);
+    return {
+      ...item,
+      createdAt: new Date().toISOString()
+    };
+  }
+
   const notif: ServerNotificationItem = {
     ...item,
     createdAt: item.createdAt || new Date().toISOString()
   };
 
   // 1. Add to local cache immediately
-  notificationsCache = [notif, ...notificationsCache];
+  notificationsCache = [notif, ...notificationsCache.filter(n => n.id !== notif.id)];
   saveNotificationsStore();
 
-  // 2. Push directly to Google Sheet tab "Notifications" via Google Apps Script Web App
+  // 2. Push directly to Google Sheet tab "Notifications" via Google Apps Script Web App (Single POST request to prevent duplicate rows)
   try {
     const roomStr = item.target === 'ALL' 
       ? 'Tất cả' 
@@ -201,19 +252,6 @@ export function addNotification(item: Omit<ServerNotificationItem, 'createdAt'> 
     const fullContent = item.title ? `[${item.title}] ${item.desc}` : item.desc;
     const dateStr = item.time && item.time !== 'Vừa xong' ? item.time : new Date().toLocaleString('vi-VN');
 
-    const qParams = new URLSearchParams({
-      action: 'add_notification',
-      date: dateStr,
-      room: roomStr,
-      type: typeStr,
-      content: fullContent
-    });
-
-    fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch((e) => {
-      console.warn('[notificationStore] Apps Script fetch error:', e);
-    });
-
-    // Also try POST
     fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
@@ -224,7 +262,9 @@ export function addNotification(item: Omit<ServerNotificationItem, 'createdAt'> 
         type: typeStr,
         content: fullContent
       })
-    }).catch(() => {});
+    }).catch((e) => {
+      console.warn('[notificationStore] Apps Script push error:', e);
+    });
   } catch (e) {
     console.warn('[notificationStore] Error pushing notification to Google Sheet:', e);
   }
@@ -241,9 +281,10 @@ export async function getNotificationsForResident(roomNumber?: string, building?
   const sheetNotifs = await fetchNotificationsFromGoogleSheet();
   const localList = loadNotificationsStore();
 
-  // Merge unique items by content/desc
-  const combined = [...sheetNotifs];
+  // Merge unique items by content/desc, strictly excluding any laundry notifications
+  const combined = sheetNotifs.filter(n => !isLaundryNotification(n));
   for (const loc of localList) {
+    if (isLaundryNotification(loc)) continue;
     const isDup = combined.some(s => s.desc === loc.desc || (s.title === loc.title && s.desc === loc.desc));
     if (!isDup) combined.push(loc);
   }
@@ -252,13 +293,18 @@ export async function getNotificationsForResident(roomNumber?: string, building?
   const room = (roomNumber || '').trim().toUpperCase();
   const bld = (building || '').trim().toUpperCase();
 
-  // If no room specified (admin or public without room), return all
+  // If no room specified (admin view), return all deduplicated non-laundry items
   if (!room) {
-    return combined;
+    return combined.filter(n => !isLaundryNotification(n));
   }
 
   // Filter so ONLY matching rooms can read their notifications
   return combined.filter(item => {
+    // Strictly block laundry notifications
+    if (isLaundryNotification(item)) {
+      return false;
+    }
+
     // If scheduled, only show if scheduled time has arrived
     if (item.scheduledAt) {
       const schedTime = new Date(item.scheduledAt).getTime();
@@ -267,7 +313,7 @@ export async function getNotificationsForResident(roomNumber?: string, building?
       }
     }
 
-    // 1. ALL residents can read broadcast notifications
+    // 1. ALL residents can read general BQL broadcast notifications
     if (item.target === 'ALL') {
       return true;
     }

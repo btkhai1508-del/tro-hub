@@ -1,31 +1,38 @@
-import React, { useState, useEffect, useCallback, useTransition, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
+  ChevronLeft,
   WashingMachine, 
-  Flame, 
   Timer, 
   Clock, 
   Copy, 
   Check, 
-  ChevronRight, 
   CalendarClock, 
   BookOpen, 
   RefreshCw, 
   Zap, 
   Power, 
-  X,
-  AlertCircle,
-  HelpCircle,
-  ShieldCheck,
-  CheckCircle2,
-  Sparkles
+  AlertCircle, 
+  CheckCircle2, 
+  Sparkles, 
+  PhoneCall, 
+  Info,
+  ImageDown,
+  Home
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { soundFx } from '../lib/soundFx';
-import { IconLaundry3D, IconDryer3D, IconWallet3D, IconClock3D } from './Icons3D';
+import { saveQrToDevice } from '../lib/qrHelper';
+import { 
+  IconLaundry3D, 
+  IconDryer3D, 
+  IconHome3D, 
+  IconClock3D
+} from './Icons3D';
 
 interface Machine {
   machineId: string;
@@ -59,33 +66,42 @@ export function LaundryPage() {
   const { profile } = useApp();
 
   const [machines, setMachines] = useState<Machine[]>([
-    { machineId: 'MG01', name: 'Máy Giặt 01 (Cửa trước)', type: 'WASHER', status: 'AVAILABLE', price: 15000, cycleMinutes: 45, expectedEndTime: '', plugState: 'OFF' },
-    { machineId: 'MG02', name: 'Máy Giặt 02 (Cửa trước)', type: 'WASHER', status: 'AVAILABLE', price: 15000, cycleMinutes: 45, expectedEndTime: '', plugState: 'OFF' },
-    { machineId: 'MS01', name: 'Máy Sấy 01 (Thông hơi)', type: 'DRYER', status: 'AVAILABLE', price: 20000, cycleMinutes: 60, expectedEndTime: '', plugState: 'OFF' },
-    { machineId: 'MS02', name: 'Máy Sấy 02 (Thông hơi)', type: 'DRYER', status: 'AVAILABLE', price: 20000, cycleMinutes: 60, expectedEndTime: '', plugState: 'OFF' },
+    { machineId: 'MG01', name: 'Máy Giặt 01 (Cửa trước 9kg)', type: 'WASHER', status: 'AVAILABLE', price: 15000, cycleMinutes: 45, expectedEndTime: '', plugState: 'OFF' },
+    { machineId: 'MG02', name: 'Máy Giặt 02 (Cửa trước 9kg)', type: 'WASHER', status: 'AVAILABLE', price: 15000, cycleMinutes: 45, expectedEndTime: '', plugState: 'OFF' },
+    { machineId: 'MS01', name: 'Máy Sấy 01 (Thông hơi 8kg)', type: 'DRYER', status: 'AVAILABLE', price: 20000, cycleMinutes: 60, expectedEndTime: '', plugState: 'OFF' },
+    { machineId: 'MS02', name: 'Máy Sấy 02 (Thông hơi 8kg)', type: 'DRYER', status: 'AVAILABLE', price: 20000, cycleMinutes: 60, expectedEndTime: '', plugState: 'OFF' },
   ]);
 
+  // View state: 'list' | 'activate' | 'success' | 'timer'
+  const [viewMode, setViewMode] = useState<'list' | 'activate' | 'success' | 'timer'>('list');
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
+
   const [activeTab, setActiveTab] = useState<'machines' | 'booking' | 'rules'>('machines');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'WASHER' | 'DRYER'>('ALL');
-  const [activeModal, setActiveModal] = useState<'none' | 'payment' | 'timer'>('none');
   const [isLoading, setIsLoading] = useState(false);
-  const [hasCopiedMemo, setHasCopiedMemo] = useState(false);
-  const [stats, setStats] = useState({ todayRevenue: 0, totalRevenue: 0, todaySessions: 0, totalSessions: 0 });
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isSavingQR, setIsSavingQR] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
   // Booking form state
   const [bookingMachineId, setBookingMachineId] = useState('MG01');
   const [bookingTime, setBookingTime] = useState('08:00');
-  const [bookingDate, setBookingDate] = useState(new Date().toLocaleDateString('vi-VN'));
-  const [bookingMsg, setBookingMsg] = useState('');
+  const [bookingDate, setBookingDate] = useState(() => {
+    const d = new Date();
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  });
+  const [bookingMsg, setBookingMsg] = useState<{ text: string; isError?: boolean } | null>(null);
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
   // Keep latest refs to avoid stale closure in polling
   const selectedMachineRef = useRef<Machine | null>(null);
   selectedMachineRef.current = selectedMachine;
-  const activeModalRef = useRef<'none' | 'payment' | 'timer'>('none');
-  activeModalRef.current = activeModal;
+  const viewModeRef = useRef<'list' | 'activate' | 'success' | 'timer'>('list');
+  viewModeRef.current = viewMode;
+
+  const recipientName = 'Bùi Trung Khải';
+  const bankName = 'MB Bank (Ngân hàng Quân Đội)';
+  const accountNumber = '0902371800';
 
   // Fetch live laundry status from backend Express server
   const fetchLaundryData = useCallback(async () => {
@@ -98,22 +114,20 @@ export function LaundryPage() {
           if (Array.isArray(data.machines)) {
             setMachines(data.machines);
             const curSelected = selectedMachineRef.current;
-            const curModal = activeModalRef.current;
+            const curMode = viewModeRef.current;
             
-            // If viewing a machine in modal, keep it updated
             if (curSelected) {
               const updated = data.machines.find((m: Machine) => m.machineId === curSelected.machineId);
               if (updated) {
-                // If payment modal is open and machine just started running -> auto transition to timer view!
-                if (curModal === 'payment' && updated.status === 'RUNNING') {
+                // If in QR activation mode and machine starts running -> trigger success transition!
+                if (curMode === 'activate' && updated.status === 'RUNNING') {
                   soundFx.success();
-                  setActiveModal('timer');
+                  setViewMode('success');
                 }
                 setSelectedMachine(updated);
               }
             }
           }
-          if (data.stats) setStats(data.stats);
           if (Array.isArray(data.bookings)) setBookings(data.bookings);
         }
       }
@@ -130,8 +144,8 @@ export function LaundryPage() {
     return () => clearInterval(interval);
   }, [fetchLaundryData]);
 
-  // Local seconds ticker for smooth countdown animation
-  const [ticker, setTicker] = useState(0);
+  // Local seconds ticker for countdown animation
+  const [, setTicker] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setTicker(prev => prev + 1), 1000);
     return () => clearInterval(t);
@@ -143,8 +157,12 @@ export function LaundryPage() {
     return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
   };
 
+  const formatCurrency = (val: number) => {
+    return (val || 0).toLocaleString('vi-VN');
+  };
+
   const formatMoney = (amount: number) => {
-    return (amount || 0).toLocaleString('vi-VN') + ' đ';
+    return formatCurrency(amount) + ' đ';
   };
 
   const formatSeconds = (sec: number) => {
@@ -153,14 +171,21 @@ export function LaundryPage() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  const handleCopy = (text: string, key: string) => {
+    soundFx.click();
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
   const handleOpenMachine = (m: Machine) => {
-    soundFx.modalOpen();
     setSelectedMachine(m);
     if (m.status === 'RUNNING') {
-      setActiveModal('timer');
+      soundFx.modalOpen();
+      setViewMode('timer');
     } else {
-      setActiveModal('payment');
-      // Record payment intent with backend so it can link resident profile to the transaction
+      soundFx.click();
+      setViewMode('activate');
       apiFetch('/api/laundry/intent', {
         method: 'POST',
         body: JSON.stringify({ machineId: m.machineId })
@@ -168,23 +193,26 @@ export function LaundryPage() {
     }
   };
 
-  const handleCloseModal = () => {
-    soundFx.modalClose();
-    setActiveModal('none');
-  };
+  // Build clean VietQR URL matching PaymentPage (straight QR without cluttered templates)
+  const qrUrl = selectedMachine 
+    ? `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${selectedMachine.price}&addInfo=${encodeURIComponent(selectedMachine.machineId)}&accountName=${encodeURIComponent(recipientName)}`
+    : '';
 
-  const handleCopyMemo = (memo: string) => {
-    soundFx.click();
-    navigator.clipboard.writeText(memo);
-    setHasCopiedMemo(true);
-    setTimeout(() => setHasCopiedMemo(false), 2000);
+  const handleSaveQR = async () => {
+    if (isSavingQR || !qrUrl || !selectedMachine) return;
+    setIsSavingQR(true);
+    try {
+      await saveQrToDevice(qrUrl, `VietQR_GiatSay_${selectedMachine.machineId}.png`);
+    } finally {
+      setIsSavingQR(false);
+    }
   };
 
   const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     soundFx.click();
     setIsSubmittingBooking(true);
-    setBookingMsg('');
+    setBookingMsg(null);
     try {
       const res = await apiFetch('/api/laundry/booking', {
         method: 'POST',
@@ -198,21 +226,20 @@ export function LaundryPage() {
       const data = await res.json();
       if (data.success) {
         soundFx.success();
-        setBookingMsg(data.message || 'Đặt chỗ thành công!');
+        setBookingMsg({ text: data.message || 'Đặt chỗ thành công!' });
         fetchLaundryData();
       } else {
         soundFx.alert();
-        setBookingMsg(data.message || 'Không thể tạo đặt chỗ');
+        setBookingMsg({ text: data.message || 'Không thể tạo đặt chỗ', isError: true });
       }
-    } catch (err: any) {
+    } catch {
       soundFx.alert();
-      setBookingMsg('Lỗi kết nối máy chủ');
+      setBookingMsg({ text: 'Lỗi kết nối máy chủ', isError: true });
     } finally {
       setIsSubmittingBooking(false);
     }
   };
 
-  // Filtered machines
   const filteredMachines = machines.filter(m => {
     if (activeFilter === 'ALL') return true;
     return m.type === activeFilter;
@@ -220,738 +247,1094 @@ export function LaundryPage() {
 
   const availableCount = machines.filter(m => m.status === 'AVAILABLE').length;
   const runningCount = machines.filter(m => m.status === 'RUNNING').length;
+  const washerCount = machines.filter(m => m.type === 'WASHER').length;
+  const dryerCount = machines.filter(m => m.type === 'DRYER').length;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-16">
+    <div className="w-full flex flex-col items-center select-none pb-16">
       
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.click();
-              navigate(-1);
-            }}
-            className="soft-button p-2.5 cursor-pointer text-slate-700 dark:text-slate-200 hover:text-slate-900"
-            title="Quay lại"
+      <AnimatePresence mode="wait">
+        
+        {/* =========================================================================
+            SCREEN 1: ACTIVATION SUCCESS (Exact match to PaymentPage success mode)
+           ========================================================================= */}
+        {viewMode === 'success' && selectedMachine ? (
+          <motion.div
+            key="laundry-success-view"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="w-full flex justify-center py-4"
           >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="type-label text-slate-400">Dịch vụ tiện ích 24/7</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>TỰ ĐỘNG</span>
-              </span>
-            </div>
-            <h1 className="type-h1 text-slate-900 dark:text-white font-bold mt-0.5">
-              Giặt Sấy Thông Minh
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              soundFx.click();
-              fetchLaundryData();
-            }}
-            disabled={isLoading}
-            className="soft-button px-3.5 py-2 flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 dark:text-slate-300"
-          >
-            <RefreshCw size={14} className={cn(isLoading && "animate-spin text-sky-600")} />
-            <span>Làm mới</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Main Tab Navigation */}
-      <div className="flex gap-2 p-1.5 soft-card rounded-2xl w-fit overflow-x-auto max-w-full">
-        {[
-          { key: 'machines', label: 'Trạng thái máy', icon: WashingMachine },
-          { key: 'booking', label: 'Đặt lịch trước', icon: CalendarClock },
-          { key: 'rules', label: 'Nội quy & Hướng dẫn', icon: BookOpen }
-        ].map(t => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => {
-                soundFx.tab();
-                setActiveTab(t.key as any);
-              }}
-              className={cn(
-                "px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
-                isActive
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              )}
-            >
-              <Icon size={16} />
-              <span>{t.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* =========================================================================
-          TAB 1: MACHINES LIST VIEW
-         ========================================================================= */}
-      {activeTab === 'machines' && (
-        <div className="space-y-6">
-          
-          {/* Quick Metrics Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            <div className="soft-card p-4 flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <CheckCircle2 size={22} />
+            <main className="w-full max-w-[500px] bg-white dark:bg-[#101726] rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
+              
+              {/* Success Badge Icon */}
+              <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
+                <Check size={40} strokeWidth={3.5} />
               </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Sẵn sàng</span>
-                <span className="text-xl font-bold font-num text-slate-900 dark:text-white">{availableCount} máy</span>
-              </div>
-            </div>
 
-            <div className="soft-card p-4 flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                <Clock size={22} className={runningCount > 0 ? "animate-spin" : ""} />
+              {/* Title */}
+              <div className="text-center mb-6">
+                <h1 className="text-[28px] sm:text-[32px] leading-tight font-bold text-slate-900 dark:text-white tracking-tight">
+                  Kích Hoạt Thành Công!
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Máy đã được đóng nguồn điện tự động và bắt đầu chu kỳ hoạt động.
+                </p>
               </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Đang chạy</span>
-                <span className="text-xl font-bold font-num text-rose-600 dark:text-rose-400">{runningCount} máy</span>
-              </div>
-            </div>
 
-            <div className="soft-card p-4 flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                <WashingMachine size={22} />
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Máy giặt</span>
-                <span className="text-xl font-bold font-num text-slate-900 dark:text-white">
-                  {machines.filter(m => m.type === 'WASHER').length} máy
+              {/* Amount Display Centerpiece */}
+              <div className="w-full py-4 px-6 flex flex-col items-center justify-center mb-6 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="text-xs uppercase tracking-wider text-gray-500 dark:text-slate-400 font-semibold mb-1.5">
+                  SỐ TIỀN ĐÃ THANH TOÁN
                 </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-[36px] sm:text-[42px] leading-none font-bold tracking-tight font-num text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(selectedMachine.price)}
+                  </span>
+                  <span className="text-sm uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400">
+                    VNĐ
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="soft-card p-4 flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <Flame size={22} />
+              {/* Transaction Details Table */}
+              <div className="w-full divide-y divide-gray-100 dark:divide-slate-800 mb-6 text-[14px]">
+                <div className="py-3 flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Thiết bị</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{selectedMachine.name}</span>
+                </div>
+                <div className="py-3 flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Mã thiết bị</span>
+                  <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400">{selectedMachine.machineId}</span>
+                </div>
+                <div className="py-3 flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Cư dân kích hoạt</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{profile.name} (P.{profile.room?.roomNumber})</span>
+                </div>
+                <div className="py-3 flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Thời gian chu kỳ</span>
+                  <span className="font-semibold text-slate-900 dark:text-white font-num">{selectedMachine.cycleMinutes} phút</span>
+                </div>
+                <div className="py-3 flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-slate-400">Trạng thái</span>
+                  <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 size={16} />
+                    <span>Đã cấp điện nguồn</span>
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Máy sấy</span>
-                <span className="text-xl font-bold font-num text-slate-900 dark:text-white">
-                  {machines.filter(m => m.type === 'DRYER').length} máy
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Machine Filter Buttons */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {[
-                { key: 'ALL', label: 'Tất cả' },
-                { key: 'WASHER', label: 'Máy giặt' },
-                { key: 'DRYER', label: 'Máy sấy' }
-              ].map(f => (
-                <button
-                  key={f.key}
+              {/* Action Buttons */}
+              <div className="w-full flex flex-col sm:flex-row items-center gap-3">
+                <button 
                   type="button"
                   onClick={() => {
                     soundFx.click();
-                    setActiveFilter(f.key as any);
+                    setViewMode('timer');
                   }}
-                  className={cn(
-                    "px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all",
-                    activeFilter === f.key
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                      : "soft-button text-slate-600 dark:text-slate-400"
-                  )}
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black font-semibold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
                 >
-                  {f.label}
+                  <Timer size={18} />
+                  <span>Xem đồng hồ đếm ngược</span>
                 </button>
-              ))}
-            </div>
 
-            <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-              Chạm vào máy để quét QR thanh toán hoặc xem thời gian
-            </span>
-          </div>
-
-          {/* Machines Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-5">
-            {filteredMachines.map(m => {
-              const isWasher = m.type === 'WASHER';
-              const remaining = getRemainingSeconds(m);
-              const isRunning = m.status === 'RUNNING' || remaining > 0;
-              const minsLeft = Math.max(1, Math.ceil(remaining / 60));
-
-              return (
-                <div
-                  key={m.machineId}
-                  onClick={() => handleOpenMachine(m)}
-                  className={cn(
-                    "soft-card p-5 cursor-pointer relative overflow-hidden group transition-all flex flex-col justify-between gap-4 border",
-                    isRunning
-                      ? "border-rose-200/80 dark:border-rose-900/40 bg-gradient-to-br from-rose-50/30 to-transparent dark:from-rose-950/10"
-                      : isWasher
-                      ? "border-sky-200/80 dark:border-sky-900/40 bg-gradient-to-br from-sky-50/40 to-transparent dark:from-sky-950/15"
-                      : "border-amber-200/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/15"
-                  )}
+                <button 
+                  type="button"
+                  onClick={() => {
+                    soundFx.click();
+                    setViewMode('list');
+                  }}
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-gray-200 dark:border-slate-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
                 >
-                  {/* Top row */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3.5">
-                      <div className="shrink-0 group-hover:scale-105 transition-transform relative">
-                        {isWasher ? <IconLaundry3D size={48} /> : <IconDryer3D size={48} />}
-                        {isRunning && (
-                          <span className={cn(
-                            "absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full shadow-sm ring-2 ring-white dark:ring-slate-900",
-                            isWasher ? "bg-sky-500" : "bg-amber-500"
-                          )}>
-                            <RefreshCw size={10} className="animate-spin text-white" />
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className={cn(
-                            "px-2 py-0.5 rounded text-[10px] font-bold font-num uppercase tracking-wider",
-                            isWasher
-                              ? "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                          )}>
-                            {m.machineId}
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {isWasher ? 'Cửa trước 9kg' : 'Thông hơi 8kg'}
-                          </span>
-                        </div>
-                        <h3 className="type-h3 font-bold text-slate-900 dark:text-white mt-1">
-                          {m.name}
-                        </h3>
-                      </div>
-                    </div>
+                  <Home size={18} />
+                  <span>Danh sách máy</span>
+                </button>
+              </div>
 
-                    {/* Status Badge */}
-                    {isRunning ? (
-                      <span className="badge-unpaid text-xs py-1 px-3">
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-                        <span>Đang chạy ({minsLeft}p)</span>
-                      </span>
+            </main>
+          </motion.div>
+
+        /* =========================================================================
+            SCREEN 2: QR PAYMENT ACTIVATION (Exact match to PaymentPage.tsx layout)
+           ========================================================================= */
+        ) : viewMode === 'activate' && selectedMachine ? (
+          <motion.div
+            key="laundry-qr-view"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="w-full flex justify-center py-2"
+          >
+            {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
+            <main className="hidden lg:block w-full max-w-5xl bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 p-8 lg:p-10 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.5)] transition-colors">
+              
+              {/* Top Bar: Back button to return to machine list */}
+              <div className="mb-4 flex items-center justify-between">
+                <button 
+                  type="button"
+                  aria-label="Quay lại" 
+                  onClick={() => {
+                    soundFx.click();
+                    setViewMode('list');
+                  }}
+                  className="w-10 h-10 flex items-center justify-center text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-slate-800 active:scale-95 rounded-full transition-all duration-150 cursor-pointer -ml-2"
+                >
+                  <ChevronLeft size={26} strokeWidth={2.2} />
+                </button>
+
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                  <span>Phòng {profile.room?.roomNumber}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{selectedMachine.name}</span>
+                </div>
+              </div>
+
+              {/* 2-Column Grid Layout */}
+              <div className="grid grid-cols-12 gap-8 items-center pt-1">
+                {/* Left Column: Title, Subtitles, Straight Square Pure QR Code */}
+                <div className="col-span-6 flex flex-col items-center text-center">
+                  <div className="mb-3">
+                    <h1 className="text-[28px] font-bold tracking-tight text-black dark:text-white leading-tight">
+                      QR Kích hoạt {selectedMachine.type === 'WASHER' ? 'máy giặt' : 'máy sấy'}
+                    </h1>
+                    <p className="text-[14px] text-neutral-500 dark:text-slate-400 font-normal mt-1 leading-relaxed">
+                      Quét mã để kích hoạt tự động · Máy {selectedMachine.machineId}
+                    </p>
+                  </div>
+
+                  {/* Sharp Straight Square Pure QR Container */}
+                  <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block">
+                    {qrUrl ? (
+                      <img 
+                        src={qrUrl} 
+                        alt="VietQR Matrix"
+                        className="w-[280px] h-[280px] object-contain rounded-none select-none"
+                      />
                     ) : (
-                      <span className="badge-paid text-xs py-1 px-3">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>Sẵn sàng</span>
-                      </span>
+                      <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-slate-500">
+                        Đang tạo mã QR...
+                      </div>
                     )}
                   </div>
 
-                  {/* Bottom row */}
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Đơn giá</span>
-                      <span className={cn(
-                        "text-lg font-bold font-num",
-                        isWasher ? "text-sky-600 dark:text-sky-400" : "text-amber-600 dark:text-amber-400"
-                      )}>
-                        {formatMoney(m.price)}
-                      </span>
+                  <div className="w-full max-w-[285px] flex flex-col gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveQR}
+                      disabled={isSavingQR}
+                      className="w-full py-2.5 px-3 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                    >
+                      <ImageDown size={15} />
+                      <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right Column: Transaction Details, Total Amount */}
+                <div className="col-span-6 flex flex-col justify-center pl-6 border-l border-[#ebebed] dark:border-slate-800 space-y-4">
+                  <div>
+                    <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
+                      Chi tiết giao dịch
+                    </h2>
+                    <div className="bg-[#f8f9fa] dark:bg-[#162032] rounded-2xl p-4 sm:p-5 border border-[#ededf0] dark:border-slate-750 space-y-3">
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-neutral-500 dark:text-slate-400 font-normal">Thiết bị</span>
+                        <span className="font-bold text-black dark:text-white">
+                          {selectedMachine.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-neutral-500 dark:text-slate-400 font-normal">Người nhận</span>
+                        <span 
+                          onClick={() => handleCopy(recipientName, 'd-recipient')}
+                          className="font-bold text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
+                        >
+                          {recipientName}
+                          {copiedKey === 'd-recipient' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-neutral-500 dark:text-slate-400 font-normal">Ngân hàng</span>
+                        <span 
+                          onClick={() => handleCopy(bankName, 'd-bank')}
+                          className="font-medium text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
+                        >
+                          {bankName}
+                          {copiedKey === 'd-bank' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-neutral-500 dark:text-slate-400 font-normal">Số tài khoản</span>
+                        <span 
+                          onClick={() => handleCopy(accountNumber, 'd-acc')}
+                          className="font-bold text-black dark:text-white tracking-wider font-mono cursor-pointer hover:underline flex items-center gap-1"
+                        >
+                          {accountNumber}
+                          {copiedKey === 'd-acc' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-neutral-500 dark:text-slate-400 font-normal">Nội dung CK</span>
+                        <span 
+                          onClick={() => handleCopy(selectedMachine.machineId, 'd-content')}
+                          className="font-bold text-indigo-600 dark:text-indigo-400 font-mono text-xs cursor-pointer hover:underline flex items-center gap-1"
+                          title="Bắt buộc giữ nguyên mã máy"
+                        >
+                          {selectedMachine.machineId}
+                          {copiedKey === 'd-content' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[14px]">
+                        <span className="text-neutral-500 dark:text-slate-400 font-normal">Thời lượng chu kỳ</span>
+                        <span className="font-semibold text-black dark:text-white font-num">
+                          {selectedMachine.cycleMinutes} phút / lần
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subtle Divider */}
+                  <hr className="border-t border-[#ebebed] dark:border-slate-800 w-full" />
+
+                  {/* Total Amount */}
+                  <div className="flex items-baseline justify-between py-1">
+                    <span className="text-[15px] font-medium text-neutral-500 dark:text-slate-400">Tổng tiền</span>
+                    <span className="text-[32px] font-bold text-black dark:text-white tracking-tight leading-none font-num">
+                      {formatCurrency(selectedMachine.price)} ₫
+                    </span>
+                  </div>
+
+                  {/* Live sync notice box */}
+                  <div className="p-3 bg-sky-50 dark:bg-sky-950/30 rounded-xl text-center text-xs text-sky-700 dark:text-sky-300 font-medium flex items-center justify-center gap-2 border border-sky-100 dark:border-sky-900/40">
+                    <RefreshCw size={13} className="animate-spin shrink-0" />
+                    <span>Hệ thống tự động kích hoạt sau khi nhận được tiền (3–5 giây)...</span>
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            {/* 2. MOBILE VIEW (under lg): Compact, Straight Pure QR Code */}
+            <div className="lg:hidden w-full max-w-[390px] bg-white dark:bg-[#101726] rounded-[26px] border border-gray-200/80 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between px-4 pt-3.5 pb-4 relative transition-colors">
+              {/* Mobile Top Navigation */}
+              <header className="w-full flex items-center justify-between mb-1.5">
+                <button 
+                  type="button"
+                  aria-label="Quay lại" 
+                  onClick={() => {
+                    soundFx.click();
+                    setViewMode('list');
+                  }}
+                  className="w-8 h-8 flex items-center justify-center text-black dark:text-white active:opacity-60 transition-opacity cursor-pointer"
+                >
+                  <ChevronLeft size={22} strokeWidth={2.2} />
+                </button>
+                
+                <div className="text-center">
+                  <h1 className="text-[17px] font-bold text-black dark:text-white leading-tight">
+                    QR Kích hoạt ({selectedMachine.machineId})
+                  </h1>
+                </div>
+
+                <div className="w-8" />
+              </header>
+
+              {/* Mobile Straight Pure QR Code Section */}
+              <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
+                <div className="bg-white p-3 rounded-2xl shadow-sm inline-block">
+                  {qrUrl ? (
+                    <img 
+                      src={qrUrl} 
+                      alt="VietQR Matrix"
+                      className="w-[240px] h-[240px] object-contain rounded-none select-none"
+                    />
+                  ) : (
+                    <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-slate-500">
+                      Đang tạo mã QR...
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-full max-w-[260px] flex flex-col gap-2 mt-1 mb-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveQR}
+                    disabled={isSavingQR}
+                    className="w-full py-2 px-2.5 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  >
+                    <ImageDown size={14} />
+                    <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* Mobile Payment Details */}
+              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-1.5 my-1 text-xs">
+                <div className="bg-[#f8f9fa] dark:bg-[#162032] rounded-xl p-2.5 border border-[#ededf0] dark:border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500 dark:text-slate-400">Thiết bị</span>
+                    <span className="font-bold text-black dark:text-white truncate max-w-[200px]">
+                      {selectedMachine.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500 dark:text-slate-400">Người nhận</span>
+                    <span 
+                      onClick={() => handleCopy(recipientName, 'm-rec')}
+                      className="font-bold text-black dark:text-white tracking-tight cursor-pointer"
+                    >
+                      {recipientName}
+                      {copiedKey === 'm-rec' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500 dark:text-slate-400">Ngân hàng</span>
+                    <span 
+                      onClick={() => handleCopy(bankName, 'm-bank')}
+                      className="font-medium text-black dark:text-white truncate max-w-[200px] text-right cursor-pointer"
+                    >
+                      {bankName}
+                      {copiedKey === 'm-bank' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500 dark:text-slate-400">Số TK</span>
+                    <span 
+                      onClick={() => handleCopy(accountNumber, 'm-acc')}
+                      className="font-bold text-black dark:text-white font-mono cursor-pointer"
+                    >
+                      {accountNumber}
+                      {copiedKey === 'm-acc' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500 dark:text-slate-400">Nội dung CK</span>
+                    <span 
+                      onClick={() => handleCopy(selectedMachine.machineId, 'm-content')}
+                      className="font-bold text-indigo-600 dark:text-indigo-400 font-mono text-[11px] cursor-pointer"
+                    >
+                      {selectedMachine.machineId}
+                      {copiedKey === 'm-content' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Total Line */}
+                <div className="flex items-center justify-between px-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-[13px] font-medium text-neutral-500 dark:text-slate-400">Tổng tiền</span>
+                  <span className="text-[20px] font-bold text-black dark:text-white tracking-tight font-num">
+                    {formatCurrency(selectedMachine.price)} ₫
+                  </span>
+                </div>
+              </section>
+
+              {/* Status footer */}
+              <div className="mt-1 p-2 bg-sky-50 dark:bg-sky-950/30 rounded-xl text-center text-[11px] text-sky-700 dark:text-sky-300 font-medium flex items-center justify-center gap-1.5">
+                <RefreshCw size={12} className="animate-spin shrink-0" />
+                <span>Hệ thống tự động kích hoạt sau khi nhận được tiền...</span>
+              </div>
+            </div>
+          </motion.div>
+
+        /* =========================================================================
+            SCREEN 3: LIVE CIRCULAR COUNTDOWN TIMER
+           ========================================================================= */
+        ) : viewMode === 'timer' && selectedMachine ? (
+          <motion.div
+            key="laundry-timer-view"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="w-full flex justify-center py-4"
+          >
+            <main className="w-full max-w-[500px] bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
+              
+              {/* Header with back button */}
+              <div className="w-full flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.click();
+                    setViewMode('list');
+                  }}
+                  className="w-10 h-10 flex items-center justify-center text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-slate-800 active:scale-95 rounded-full transition-all cursor-pointer -ml-2"
+                  title="Quay lại danh sách"
+                >
+                  <ChevronLeft size={24} strokeWidth={2.2} />
+                </button>
+
+                <div className="text-center">
+                  <h3 className="type-h3 font-bold text-slate-900 dark:text-white leading-tight">
+                    {selectedMachine.name}
+                  </h3>
+                  <span className="text-xs text-slate-400">Đang hoạt động · Mã {selectedMachine.machineId}</span>
+                </div>
+
+                <div className="w-10" />
+              </div>
+
+              {/* Circular Apple Clock */}
+              {(() => {
+                const rem = getRemainingSeconds(selectedMachine);
+                const totalSec = (selectedMachine.cycleMinutes || 45) * 60;
+                const ratio = Math.min(1, Math.max(0, rem / totalSec));
+                const circ = 2 * Math.PI * 45;
+                const strokeOffset = circ * (1 - ratio);
+                const isWasher = selectedMachine.type === 'WASHER';
+                const isRunning = rem > 0;
+
+                const completionTime = selectedMachine.expectedEndTime
+                  ? new Date(selectedMachine.expectedEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                  : '--:--';
+
+                return (
+                  <div className="w-full flex flex-col items-center justify-center space-y-6 py-4">
+                    <div className="relative w-64 h-64 flex items-center justify-center select-none">
+                      
+                      {/* Outer Rim */}
+                      <div className="absolute inset-0 rounded-full bg-slate-100 dark:bg-slate-900/60 shadow-[inset_0_4px_10px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.08)] border border-slate-200/70 dark:border-slate-800" />
+
+                      {/* SVG Progress Ring */}
+                      <svg className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] -rotate-90 z-10 pointer-events-none" viewBox="0 0 100 100">
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          className="text-slate-200/70 dark:text-slate-800/80"
+                          strokeWidth="4"
+                          stroke="currentColor"
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          strokeWidth="5"
+                          strokeDasharray={circ}
+                          strokeDashoffset={strokeOffset}
+                          strokeLinecap="round"
+                          stroke={isWasher ? '#0284c7' : '#ea580c'}
+                          fill="transparent"
+                          className="transition-all duration-1000 ease-linear"
+                          style={{
+                            filter: isWasher
+                              ? 'drop-shadow(0 0 8px rgba(2, 132, 199, 0.45))'
+                              : 'drop-shadow(0 0 8px rgba(234, 88, 12, 0.45))'
+                          }}
+                        />
+                      </svg>
+
+                      {/* Center Display */}
+                      <div className="relative z-20 flex flex-col items-center justify-center text-center p-4">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                          Thời gian còn lại
+                        </span>
+
+                        <span className="text-4xl sm:text-5xl font-black font-num tracking-tight text-slate-900 dark:text-white block leading-none my-1">
+                          {formatSeconds(rem)}
+                        </span>
+
+                        {isRunning ? (
+                          <div className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mt-2",
+                            isWasher
+                              ? "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60"
+                              : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60"
+                          )}>
+                            <span className={cn(
+                              "w-2 h-2 rounded-full animate-ping",
+                              isWasher ? "bg-sky-500" : "bg-amber-500"
+                            )} />
+                            <span>{isWasher ? "Đang giặt đồ" : "Đang sấy đồ"}</span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 mt-2">
+                            <CheckCircle2 size={12} />
+                            <span>Đã hoàn tất chu kỳ</span>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Chu kỳ</span>
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-num">
-                        {m.cycleMinutes} phút / lần
-                      </span>
+                    {/* Summary Info Cards */}
+                    <div className="w-full p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-around text-xs font-semibold">
+                      <div className="text-center">
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                          Dự kiến hoàn thành
+                        </span>
+                        <span className="font-bold font-num text-slate-900 dark:text-white text-base">
+                          {completionTime}
+                        </span>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700/60" />
+                      <div className="text-center">
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                          Trạng thái ổ điện
+                        </span>
+                        <span className={cn(
+                          "font-bold text-xs flex items-center justify-center gap-1",
+                          selectedMachine.plugState === 'ON' || isRunning
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-slate-400 dark:text-slate-500"
+                        )}>
+                          <Power size={13} />
+                          {selectedMachine.plugState === 'ON' || isRunning ? 'BẬT NGUỒN' : 'TẮT NGUỒN'}
+                        </span>
+                      </div>
                     </div>
 
                     <button
                       type="button"
-                      className={cn(
-                        "px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm",
-                        isRunning
-                          ? "soft-button text-rose-600 dark:text-rose-400"
-                          : "primary-button"
-                      )}
+                      onClick={() => {
+                        soundFx.click();
+                        setViewMode('list');
+                      }}
+                      className="w-full soft-button py-3 text-xs font-semibold cursor-pointer"
                     >
-                      {isRunning ? (
-                        <>
-                          <Timer size={14} />
-                          <span>Xem giờ</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap size={14} />
-                          <span>Bắt đầu</span>
-                        </>
-                      )}
+                      Quay lại danh sách máy
                     </button>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                );
+              })()}
 
-      {/* =========================================================================
-          TAB 2: BOOKING VIEW
-         ========================================================================= */}
-      {activeTab === 'booking' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-            
-            {/* Form */}
-            <div className="md:col-span-6 soft-card p-6 space-y-4">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <CalendarClock size={24} className="text-sky-600" />
+            </main>
+          </motion.div>
+
+        /* =========================================================================
+            SCREEN 4: MAIN LAUNDRY DASHBOARD (When viewMode === 'list')
+           ========================================================================= */
+        ) : (
+          <motion.div
+            key="laundry-list-view"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="w-full space-y-6"
+          >
+            {/* Top Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.click();
+                    navigate(-1);
+                  }}
+                  className="soft-button p-2.5 cursor-pointer text-slate-700 dark:text-slate-200 hover:text-slate-900 shrink-0 mt-1 sm:mt-0"
+                  title="Quay lại"
+                >
+                  <ArrowLeft size={18} />
+                </button>
                 <div>
-                  <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Đặt trước slot giặt sấy</h3>
-                  <p className="text-xs text-slate-400">Giữ chỗ trước để không phải đợi khi đến giờ giặt</p>
+                  <div className="flex items-center gap-2">
+                    <span className="type-label text-slate-400">Dịch vụ & Tiện ích cư dân</span>
+                    <span className="text-slate-300 dark:text-slate-700">·</span>
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Tự phục vụ 24/7</span>
+                    </span>
+                  </div>
+                  <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">
+                    Giặt Sấy Tự Động
+                  </h1>
+                  <p className="type-body text-slate-500 dark:text-slate-400 mt-0.5">
+                    Hệ thống máy giặt sấy thông minh kích hoạt tức thì qua mã VietQR.
+                  </p>
                 </div>
               </div>
 
-              {bookingMsg && (
-                <div className={cn(
-                  "p-3 rounded-xl text-xs font-semibold flex items-center gap-2",
-                  bookingMsg.includes('thành công')
-                    ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200"
-                    : "bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200"
-                )}>
-                  {bookingMsg.includes('thành công') ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                  <span>{bookingMsg}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleCreateBooking} className="space-y-3.5">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1">
-                    1. Chọn máy muốn đặt trước:
-                  </label>
-                  <select
-                    value={bookingMachineId}
-                    onChange={e => setBookingMachineId(e.target.value)}
-                    className="w-full soft-input p-3 rounded-xl text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500"
-                  >
-                    {machines.map(m => (
-                      <option key={m.machineId} value={m.machineId}>
-                        {m.name} ({m.machineId}) - {formatMoney(m.price)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+              {/* Quick Room badge */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="soft-card px-4 py-2 flex items-center gap-3.5 border border-white/80 dark:border-white/10">
+                  <IconHome3D size={38} className="shrink-0" />
                   <div>
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1">
-                      2. Giờ hẹn giặt:
-                    </label>
-                    <input
-                      type="time"
-                      value={bookingTime}
-                      onChange={e => setBookingTime(e.target.value)}
-                      required
-                      className="w-full soft-input p-2.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1">
-                      3. Ngày hẹn:
-                    </label>
-                    <input
-                      type="text"
-                      value={bookingDate}
-                      onChange={e => setBookingDate(e.target.value)}
-                      placeholder="DD/MM/YYYY"
-                      className="w-full soft-input p-2.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500"
-                    />
+                    <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-semibold block tracking-wider">Phòng của tôi</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 font-num">
+                      {profile.room.roomNumber} ({profile.room.building || 'Trung Kim'})
+                    </span>
                   </div>
                 </div>
-
-                {/* Auto tenant info */}
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Cư dân:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{profile?.name || 'Cư dân'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Phòng:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white font-num">{profile?.room?.roomNumber || '203'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Số tiền cọc:</span>
-                    <span className="font-bold text-sky-600 dark:text-sky-400 font-num">5.000 đ</span>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmittingBooking}
-                  className="w-full primary-button py-3 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {isSubmittingBooking ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                  <span>Xác nhận đặt giữ chỗ</span>
-                </button>
-              </form>
+              </div>
             </div>
 
-            {/* Bookings List */}
-            <div className="md:col-span-6 space-y-3">
-              <h4 className="type-h4 font-bold text-slate-900 dark:text-white">
-                Các lượt đặt chỗ gần đây
-              </h4>
-
-              {bookings.length === 0 ? (
-                <div className="soft-card p-6 text-center text-xs text-slate-400">
-                  Chưa có lượt đặt trước nào trong hệ thống.
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40">
+                  <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {bookings.map(b => (
-                    <div key={b.bookingId} className="soft-card p-3.5 flex items-center justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                            {b.machineId}
-                          </span>
-                          <span className="text-xs font-bold text-slate-900 dark:text-white font-num">
-                            Hẹn lúc {b.bookingTime} ({b.bookingDate})
-                          </span>
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                    Máy sẵn sàng
+                  </span>
+                  <span className="text-xl sm:text-2xl font-bold font-num text-slate-900 dark:text-white block mt-0.5">
+                    {availableCount} <span className="text-sm font-normal text-slate-500">máy</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 border border-sky-100 dark:border-sky-800/40">
+                  <IconClock3D size={34} />
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                    Đang hoạt động
+                  </span>
+                  <span className="text-xl sm:text-2xl font-bold font-num text-sky-600 dark:text-sky-400 block mt-0.5">
+                    {runningCount} <span className="text-sm font-normal text-slate-500">máy</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="w-12 h-12 rounded-2xl bg-sky-50/70 dark:bg-sky-950/30 flex items-center justify-center shrink-0 border border-sky-100/60 dark:border-sky-800/30">
+                  <IconLaundry3D size={36} />
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                    Máy giặt cửa trước
+                  </span>
+                  <span className="text-xl sm:text-2xl font-bold font-num text-slate-900 dark:text-white block mt-0.5">
+                    {washerCount} <span className="text-sm font-normal text-slate-500">máy</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 flex items-center justify-center shrink-0 border border-amber-100/60 dark:border-amber-800/30">
+                  <IconDryer3D size={36} />
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                    Máy sấy thông hơi
+                  </span>
+                  <span className="text-xl sm:text-2xl font-bold font-num text-slate-900 dark:text-white block mt-0.5">
+                    {dryerCount} <span className="text-sm font-normal text-slate-500">máy</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Apple Segmented Tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/80 rounded-2xl backdrop-blur-md w-fit">
+                {[
+                  { key: 'machines', label: 'Danh sách máy giặt & sấy', icon: WashingMachine },
+                  { key: 'booking', label: 'Đặt lịch trước', icon: CalendarClock },
+                  { key: 'rules', label: 'Quy định & Bảng giá', icon: BookOpen }
+                ].map(t => {
+                  const Icon = t.icon;
+                  const isActive = activeTab === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => {
+                        soundFx.tab();
+                        setActiveTab(t.key as any);
+                      }}
+                      className={cn(
+                        "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
+                        isActive
+                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                      )}
+                    >
+                      <Icon size={15} />
+                      <span>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.click();
+                  fetchLaundryData();
+                }}
+                disabled={isLoading}
+                className="soft-button px-3.5 py-2 flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 dark:text-slate-300 self-end sm:self-auto"
+                title="Cập nhật trạng thái"
+              >
+                <RefreshCw size={13} className={cn(isLoading && "animate-spin text-sky-600")} />
+                <span>Làm mới trạng thái</span>
+              </button>
+            </div>
+
+            {/* Tab 1: Machine Grid */}
+            {activeTab === 'machines' && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {[
+                      { key: 'ALL', label: 'Tất cả máy' },
+                      { key: 'WASHER', label: 'Máy giặt' },
+                      { key: 'DRYER', label: 'Máy sấy' }
+                    ].map(f => (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => {
+                          soundFx.click();
+                          setActiveFilter(f.key as any);
+                        }}
+                        className={cn(
+                          "px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all",
+                          activeFilter === f.key
+                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                            : "soft-button text-slate-600 dark:text-slate-400"
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
+                    <Info size={14} />
+                    <span>Chạm vào thẻ máy để mở màn hình quét mã VietQR</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                  {filteredMachines.map(m => {
+                    const isWasher = m.type === 'WASHER';
+                    const remaining = getRemainingSeconds(m);
+                    const isRunning = m.status === 'RUNNING' || remaining > 0;
+                    const minsLeft = Math.max(1, Math.ceil(remaining / 60));
+
+                    return (
+                      <div
+                        key={m.machineId}
+                        onClick={() => handleOpenMachine(m)}
+                        className={cn(
+                          "soft-surface group relative flex flex-col justify-between p-6 sm:p-7 rounded-[28px] hover:-translate-y-1 active:translate-y-0 transition-all duration-300 cursor-pointer overflow-hidden border",
+                          isRunning 
+                            ? "border-sky-300/80 dark:border-sky-800/60 shadow-md ring-2 ring-sky-100 dark:ring-sky-950/40"
+                            : "border-white/80 dark:border-white/10"
+                        )}
+                      >
+                        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
+
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            {/* Simplified 3D Icon */}
+                            <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
+                              {isWasher ? <IconLaundry3D size={56} /> : <IconDryer3D size={56} />}
+                              
+                              {isRunning && (
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-900">
+                                  <RefreshCw size={11} className="animate-spin" />
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-2 text-xs text-slate-400">
+                                <span className="font-bold font-num text-slate-900 dark:text-slate-100">
+                                  {m.machineId}
+                                </span>
+                                <span aria-hidden="true">·</span>
+                                <span>{isWasher ? 'Cửa trước 9kg' : 'Thông hơi 8kg'}</span>
+                                <span aria-hidden="true">·</span>
+                                <span>Tầng trệt</span>
+                              </div>
+
+                              <h3 className="type-h3 text-slate-900 dark:text-white font-bold mt-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                {m.name}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <div>
+                            {isRunning ? (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                                <span className="font-num">Còn {minsLeft} phút</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span>Sẵn sàng</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          Cư dân: <b>{b.tenantName}</b> {b.roomNumber ? `(P.${b.roomNumber})` : ''}
+
+                        {isRunning && (
+                          <div className="my-4 p-3.5 rounded-2xl bg-sky-50/70 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/40 space-y-2">
+                            <div className="flex justify-between text-xs font-semibold">
+                              <span className="text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
+                                <Clock size={13} />
+                                <span>Đang thực hiện chu kỳ</span>
+                              </span>
+                              <span className="font-num text-sky-800 dark:text-sky-200 font-bold">
+                                {formatSeconds(remaining)}
+                              </span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-sky-200/60 dark:bg-sky-900/60 overflow-hidden">
+                              <div 
+                                className="h-full bg-sky-600 rounded-full transition-all duration-1000 ease-linear"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, (1 - remaining / ((m.cycleMinutes || 45) * 60)) * 100))}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-4 pt-4 border-t border-slate-900/5 dark:border-white/10 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-slate-400 uppercase font-semibold block tracking-wider">
+                              Giá cước
+                            </span>
+                            <div className="flex items-baseline gap-1 mt-0.5">
+                              <span className="text-xl font-bold font-num text-slate-900 dark:text-slate-100">
+                                {formatMoney(m.price)}
+                              </span>
+                              <span className="text-xs text-slate-400">/ {m.cycleMinutes}p</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className={cn(
+                                "py-2 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all",
+                                isRunning
+                                  ? "soft-button text-sky-600 dark:text-sky-400"
+                                  : "primary-button shadow-xs"
+                              )}
+                            >
+                              {isRunning ? (
+                                <>
+                                  <Timer size={14} />
+                                  <span>Xem đồng hồ</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Zap size={14} />
+                                  <span>Quét VietQR</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Booking Reservation */}
+            {activeTab === 'booking' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[28px] border border-white/80 dark:border-white/10 space-y-5">
+                    <div className="flex items-center gap-3 pb-3 border-b border-slate-900/5 dark:border-white/10">
+                      <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                        <CalendarClock size={22} />
+                      </div>
+                      <div>
+                        <h3 className="type-h3 font-bold text-slate-900 dark:text-white">
+                          Đặt lịch giặt sấy trước
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Chủ động chọn khung giờ thuận tiện mà không lo hết máy trống.
                         </p>
                       </div>
+                    </div>
 
-                      <span className={cn(
-                        "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                        b.depositStatus === 'PAID'
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200"
-                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200"
+                    {bookingMsg && (
+                      <div className={cn(
+                        "p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2.5 animate-in fade-in",
+                        bookingMsg.isError
+                          ? "bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                          : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                       )}>
-                        {b.depositStatus === 'PAID' ? 'Đã Cọc' : 'Chờ Cọc'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                        {bookingMsg.isError ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}
+                        <span>{bookingMsg.text}</span>
+                      </div>
+                    )}
 
-          </div>
-        </div>
-      )}
+                    <form onSubmit={handleCreateBooking} className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                          1. Chọn máy giặt / sấy:
+                        </label>
+                        <select
+                          value={bookingMachineId}
+                          onChange={e => setBookingMachineId(e.target.value)}
+                          className="w-full p-3 rounded-xl text-xs font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                        >
+                          {machines.map(m => (
+                            <option key={m.machineId} value={m.machineId}>
+                              {m.name} ({m.machineId}) · {formatMoney(m.price)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-      {/* =========================================================================
-          TAB 3: RULES & GUIDES VIEW
-         ========================================================================= */}
-      {activeTab === 'rules' && (
-        <div className="space-y-4 max-w-3xl">
-          
-          <div className="soft-card p-5 space-y-3">
-            <h4 className="type-h4 font-bold text-sky-600 dark:text-sky-400 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-sky-100 text-sky-800 text-xs flex items-center justify-center font-bold">1</span>
-              <span>Thời gian hoạt động & Thanh toán</span>
-            </h4>
-            <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-2 pl-2">
-              <li>• Máy hoạt động 24/7 phục vụ toàn thể cư dân.</li>
-              <li>• Thanh toán hoàn toàn tự động bằng cách quét mã <b>VietQR</b> hoặc chuyển khoản ngân hàng.</li>
-              <li>• <b>Bắt buộc:</b> Giữ nguyên nội dung chuyển khoản là mã máy (VD: <b>MG01</b>, <b>MS01</b>) để hệ thống tự động kích hoạt cấp điện trong vòng 3–5 giây.</li>
-            </ul>
-          </div>
-
-          <div className="soft-card p-5 space-y-3">
-            <h4 className="type-h4 font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 text-xs flex items-center justify-center font-bold">2</span>
-              <span>Quy định sử dụng máy</span>
-            </h4>
-            <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-2 pl-2">
-              <li>• Không giặt quá tải: Máy giặt tối đa 9kg đồ khô, máy sấy tối đa 8kg.</li>
-              <li>• <b>Nghiêm cấm:</b> Giặt giày dép đế cứng, thảm chùi chân dính bùn đất, quần áo dính hóa chất dễ cháy.</li>
-              <li>• Lấy quần áo ra khỏi máy trong vòng <b>15–30 phút</b> sau khi hoàn thành để nhường chỗ cho người tiếp theo.</li>
-            </ul>
-          </div>
-
-          <div className="soft-card p-5 space-y-3">
-            <h4 className="type-h4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-800 text-xs flex items-center justify-center font-bold">3</span>
-              <span>Hỗ trợ sự cố khẩn cấp</span>
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Nếu đã chuyển khoản thành công nhưng máy không chạy, quý cư dân vui lòng liên hệ ngay Zalo Quản Lý:
-            </p>
-            <a
-              href="https://zalo.me/0902371800"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold text-xs hover:underline"
-            >
-              <span>Hotline / Zalo: 0902371800</span>
-            </a>
-          </div>
-
-        </div>
-      )}
-
-      {/* =========================================================================
-          MODAL: PAYMENT (VietQR Quick Modal)
-         ========================================================================= */}
-      {activeModal === 'payment' && selectedMachine && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md soft-surface p-6 rounded-3xl space-y-5 relative overflow-hidden shadow-2xl">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                {selectedMachine.type === 'WASHER' ? <IconLaundry3D size={32} /> : <IconDryer3D size={32} />}
-                <div>
-                  <h3 className="type-h3 font-bold text-slate-900 dark:text-white">
-                    {selectedMachine.name}
-                  </h3>
-                  <span className="text-xs text-slate-400">Mã máy: <b>{selectedMachine.machineId}</b></span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="soft-button p-2 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* QR Code Container */}
-            <div className="text-center space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping"></span>
-                <span>Quét mã VietQR để kích hoạt máy</span>
-              </div>
-
-              <div className="bg-white p-3 rounded-2xl mx-auto max-w-[240px] shadow-sm border border-slate-100">
-                <img
-                  src={`https://img.vietqr.io/image/MB-0902371800-compact2.png?amount=${selectedMachine.price}&addInfo=${encodeURIComponent(selectedMachine.machineId)}&accountName=BUI%20TRUNG%20KHAI`}
-                  alt="VietQR"
-                  className="w-full h-auto rounded-lg"
-                />
-              </div>
-            </div>
-
-            {/* Transfer Memo Box */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl flex items-center justify-between border border-slate-200/60 dark:border-slate-700/60">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                  Nội dung chuyển khoản (Bắt buộc)
-                </span>
-                <span className="text-lg font-black font-num text-sky-600 dark:text-sky-400">
-                  {selectedMachine.machineId}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleCopyMemo(selectedMachine.machineId)}
-                className="soft-button px-3 py-2 flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-              >
-                {hasCopiedMemo ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                <span>{hasCopiedMemo ? 'Đã copy' : 'Sao chép'}</span>
-              </button>
-            </div>
-
-            {/* Price & Bank Details */}
-            <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pt-2">
-              <div className="flex justify-between">
-                <span>Số tiền thanh toán:</span>
-                <span className="font-bold text-slate-900 dark:text-white font-num text-base text-sky-600">
-                  {formatMoney(selectedMachine.price)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Ngân hàng thụ hưởng:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">MBBank</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Số tài khoản:</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">0902371800</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Chủ tài khoản:</span>
-                <span className="font-semibold text-slate-900 dark:text-white">BUI TRUNG KHAI</span>
-              </div>
-            </div>
-
-            {/* Waiting Notice */}
-            <div className="p-3 bg-sky-50 dark:bg-sky-950/30 rounded-xl text-center text-xs text-sky-700 dark:text-sky-300 font-medium flex items-center justify-center gap-2">
-              <RefreshCw size={14} className="animate-spin shrink-0" />
-              <span>Đang chờ nhận tiền... Hệ thống sẽ tự kích hoạt sau 3–5 giây</span>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          MODAL: LIVE COUNTDOWN TIMER
-         ========================================================================= */}
-      {activeModal === 'timer' && selectedMachine && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md soft-surface p-6 rounded-3xl space-y-6 relative overflow-hidden shadow-2xl">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                {selectedMachine.type === 'WASHER' ? <IconLaundry3D size={32} /> : <IconDryer3D size={32} />}
-                <div>
-                  <h3 className="type-h3 font-bold text-slate-900 dark:text-white">
-                    {selectedMachine.name}
-                  </h3>
-                  <span className="text-xs text-slate-400">Đang hoạt động • {selectedMachine.machineId}</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="soft-button p-2 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Clean Apple Neumorphic Circular Countdown Timer */}
-            {(() => {
-              const rem = getRemainingSeconds(selectedMachine);
-              const totalSec = (selectedMachine.cycleMinutes || 45) * 60;
-              const ratio = Math.min(1, Math.max(0, rem / totalSec));
-              const circ = 2 * Math.PI * 45; // radius 45
-              const strokeOffset = circ * (1 - ratio);
-              const isWasher = selectedMachine.type === 'WASHER';
-              const isRunning = rem > 0;
-
-              const completionTime = selectedMachine.expectedEndTime
-                ? new Date(selectedMachine.expectedEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                : '--:--';
-
-              return (
-                <div className="flex flex-col items-center justify-center space-y-6 py-2">
-                  {/* Neumorphic Circular Dial */}
-                  <div className="relative w-60 h-60 sm:w-64 sm:h-64 flex items-center justify-center select-none">
-                    
-                    {/* Outer Neumorphic Glow / Shadow Rim */}
-                    <div className="absolute inset-0 rounded-full bg-slate-100 dark:bg-slate-900/60 shadow-[inset_0_4px_10px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.08)] border border-slate-200/70 dark:border-slate-800" />
-
-                    {/* SVG Circular Progress Ring */}
-                    <svg className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] -rotate-90 z-10 pointer-events-none" viewBox="0 0 100 100">
-                      {/* Track */}
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        className="text-slate-200/70 dark:text-slate-800/80"
-                        strokeWidth="4"
-                        stroke="currentColor"
-                        fill="transparent"
-                      />
-                      {/* Animated Progress Stroke */}
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        strokeWidth="5"
-                        strokeDasharray={circ}
-                        strokeDashoffset={strokeOffset}
-                        strokeLinecap="round"
-                        stroke={isWasher ? '#0284c7' : '#ea580c'}
-                        fill="transparent"
-                        className="transition-all duration-1000 ease-linear"
-                        style={{
-                          filter: isWasher
-                            ? 'drop-shadow(0 0 8px rgba(2, 132, 199, 0.45))'
-                            : 'drop-shadow(0 0 8px rgba(234, 88, 12, 0.45))'
-                        }}
-                      />
-                    </svg>
-
-                    {/* Inner Center Display */}
-                    <div className="relative z-20 flex flex-col items-center justify-center text-center p-4">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                        Thời gian còn lại
-                      </span>
-
-                      {/* Monospace Countdown Digits */}
-                      <span className="text-4xl sm:text-5xl font-black font-num tracking-tight text-slate-900 dark:text-white block leading-none my-1">
-                        {formatSeconds(rem)}
-                      </span>
-
-                      {/* Status Badge */}
-                      {isRunning ? (
-                        <div className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mt-2",
-                          isWasher
-                            ? "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60"
-                            : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60"
-                        )}>
-                          <span className={cn(
-                            "w-2 h-2 rounded-full animate-ping",
-                            isWasher ? "bg-sky-500" : "bg-amber-500"
-                          )} />
-                          <span>{isWasher ? "Đang giặt đồ" : "Đang sấy đồ"}</span>
+                      <div className="grid grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                            2. Giờ giặt:
+                          </label>
+                          <input
+                            type="time"
+                            value={bookingTime}
+                            onChange={e => setBookingTime(e.target.value)}
+                            required
+                            className="w-full p-2.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500"
+                          />
                         </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 mt-2">
-                          <CheckCircle2 size={12} />
-                          <span>Đã hoàn thành</span>
-                        </div>
-                      )}
-                    </div>
 
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                            3. Ngày giặt:
+                          </label>
+                          <input
+                            type="text"
+                            value={bookingDate}
+                            onChange={e => setBookingDate(e.target.value)}
+                            placeholder="DD/MM/YYYY"
+                            className="w-full p-2.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl space-y-2 text-xs border border-slate-100 dark:border-slate-800">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Cư dân đăng ký:</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{profile.name}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Phòng ở:</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-num">{profile.room.roomNumber}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Phí giữ chỗ ưu tiên:</span>
+                          <span className="font-bold font-num text-sky-600 dark:text-sky-400">5.000 đ</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingBooking}
+                        className="w-full primary-button py-3 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        {isSubmittingBooking ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                        <span>Xác nhận đặt giữ chỗ ưu tiên</span>
+                      </button>
+                    </form>
                   </div>
 
-                  {/* Summary Info Cards */}
-                  <div className="w-full p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-around text-xs font-semibold">
-                    <div className="text-center">
-                      <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
-                        Dự kiến xong lúc
-                      </span>
-                      <span className="font-bold font-num text-slate-900 dark:text-white text-base">
-                        {completionTime}
-                      </span>
-                    </div>
-                    <div className="w-px h-8 bg-slate-200 dark:bg-slate-700/60" />
-                    <div className="text-center">
-                      <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
-                        Trạng thái ổ điện
-                      </span>
-                      <span className={cn(
-                        "font-bold text-xs flex items-center justify-center gap-1",
-                        selectedMachine.plugState === 'ON' || isRunning
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-slate-400 dark:text-slate-500"
-                      )}>
-                        <Power size={13} />
-                        {selectedMachine.plugState === 'ON' || isRunning ? 'BẬT NGUỒN' : 'TẮT NGUỒN'}
-                      </span>
-                    </div>
+                  <div className="lg:col-span-6 space-y-3.5">
+                    <h4 className="type-h4 font-bold text-slate-900 dark:text-white">
+                      Lịch hẹn đặt máy gần đây
+                    </h4>
+
+                    {bookings.length === 0 ? (
+                      <div className="soft-card p-8 text-center text-xs text-slate-400">
+                        Chưa có lượt đặt trước nào trong ngày hôm nay.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookings.map(b => (
+                          <div key={b.bookingId} className="soft-card p-4 flex items-center justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold font-num text-xs px-2 py-0.5 rounded bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                                  {b.machineId}
+                                </span>
+                                <span className="text-xs font-bold text-slate-900 dark:text-white font-num">
+                                  Hẹn lúc {b.bookingTime} ({b.bookingDate})
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-1">
+                                Cư dân: <b>{b.tenantName}</b> {b.roomNumber ? `(P.${b.roomNumber})` : ''}
+                              </p>
+                            </div>
+
+                            <span className={cn(
+                              "text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase",
+                              b.depositStatus === 'PAID'
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200"
+                                : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200"
+                            )}>
+                              {b.depositStatus === 'PAID' ? 'Đã Cọc' : 'Chờ Cọc'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })()}
+              </div>
+            )}
 
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              className="w-full soft-button py-2.5 text-xs font-semibold cursor-pointer"
-            >
-              Thu nhỏ đồng hồ
-            </button>
+            {/* Tab 3: Rules & Pricing */}
+            {activeTab === 'rules' && (
+              <div className="space-y-4 max-w-3xl animate-in fade-in duration-200">
+                <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
+                  <h4 className="type-h3 font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 text-xs flex items-center justify-center font-bold">1</span>
+                    <span>Thời gian hoạt động & Kích hoạt qua VietQR</span>
+                  </h4>
+                  <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-2.5 pl-3">
+                    <li>• Máy hoạt động liên tục 24/7 tại khu vực giặt sấy tầng trệt.</li>
+                    <li>• Thanh toán hoàn toàn tự động bằng cách mở bất kỳ ứng dụng ngân hàng nào và quét mã <b>VietQR</b>.</li>
+                    <li>• <b>Quan trọng:</b> Giữ nguyên mã nội dung chuyển khoản (VD: <b>MG01</b>, <b>MS01</b>) để hệ thống tự động nhận diện và đóng điện nguồn trong vòng 3–5 giây.</li>
+                  </ul>
+                </div>
 
-          </div>
-        </div>
-      )}
+                <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
+                  <h4 className="type-h3 font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs flex items-center justify-center font-bold">2</span>
+                    <span>Quy định nếp sống văn minh</span>
+                  </h4>
+                  <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-2.5 pl-3">
+                    <li>• Không giặt quá tải trọng: Máy giặt tối đa 9kg đồ khô, máy sấy tối đa 8kg.</li>
+                    <li>• <b>Nghiêm cấm:</b> Giặt giày dép đế kim loại nặng, thảm chùi chân dính bùn đất cát hoặc vật liệu dính hóa chất dễ cháy.</li>
+                    <li>• Vui lòng lấy quần áo ra khỏi máy trong vòng <b>15–30 phút</b> sau khi máy báo xong để nhường lượt cho cư dân kế tiếp.</li>
+                  </ul>
+                </div>
+
+                <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
+                  <h4 className="type-h3 font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200 text-xs flex items-center justify-center font-bold">3</span>
+                    <span>Hỗ trợ sự cố & Hotline kỹ thuật</span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Trường hợp chuyển khoản thành công nhưng máy chưa vào điện hoặc gặp sự cố kỹ thuật, quý cư dân liên hệ ngay Ban Quản Lý:
+                  </p>
+                  <div className="pt-2">
+                    <a
+                      href="https://zalo.me/0902371800"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-bold text-xs hover:underline"
+                    >
+                      <PhoneCall size={15} />
+                      <span>Hotline / Zalo: 0902371800 (Bùi Trung Khải)</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+      </AnimatePresence>
 
     </div>
   );

@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { addNotification } from './notificationStore.js';
 import { fetchSheetDataViaGviz, DEFAULT_SPREADSHEET_ID } from './googleSheetsBackendService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -267,16 +266,7 @@ export const LaundryService = {
 
     saveStore();
 
-    // Notify resident/app
-    addNotification({
-      id: `notif-laundry-start-${Date.now()}`,
-      title: `⚡ Máy ${machine.name} (${machine.machineId}) đã được kích hoạt!`,
-      desc: `Thời gian chạy: ${cycleMin} phút. Dự kiến hoàn tất lúc ${expectedEnd.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`,
-      time: 'Vừa xong',
-      type: 'success',
-      target: 'ALL',
-      sender: 'LaundryFlow 24/7'
-    });
+
 
     // Background sync to Google Sheets
     pushToGoogleSheetAsync({
@@ -369,15 +359,7 @@ export const LaundryService = {
 
     saveStore();
 
-    addNotification({
-      id: `notif-booking-confirmed-${Date.now()}`,
-      title: `📅 Xác nhận đặt cọc giữ chỗ máy ${cleanId} thành công!`,
-      desc: `Số tiền cọc: ${amount.toLocaleString('vi-VN')}₫ qua GD ${referenceCode}.`,
-      time: 'Vừa xong',
-      type: 'success',
-      target: 'ALL',
-      sender: 'LaundryFlow 24/7'
-    });
+
 
     // Sync booking deposit confirmation to Google Sheet tab Laundry_Bookings
     pushToGoogleSheetAsync({
@@ -843,25 +825,17 @@ export function startLaundryWorker(): NodeJS.Timeout {
             }
 
             // Complete session
+            let completedSession: LaundrySession | undefined;
             if (machine.currentSessionId) {
-              const sess = storeData.sessions.find(s => s.sessionId === machine.currentSessionId);
-              if (sess) {
-                sess.status = 'COMPLETED';
-                sess.actualEndTime = new Date().toISOString();
+              completedSession = storeData.sessions.find(s => s.sessionId === machine.currentSessionId);
+              if (completedSession) {
+                completedSession.status = 'COMPLETED';
+                completedSession.actualEndTime = new Date().toISOString();
               }
               machine.currentSessionId = '';
             }
 
-            // Add notification to resident portal
-            addNotification({
-              id: `notif-laundry-done-${Date.now()}`,
-              title: `✅ Chu kỳ ${machine.type === 'DRYER' ? 'sấy' : 'giặt'} tại ${machine.machineId} đã xong!`,
-              desc: `${machine.name} đã hoàn tất. Quý cư dân vui lòng lấy quần áo ra khỏi máy để nhường chỗ cho người tiếp theo.`,
-              time: 'Vừa xong',
-              type: 'info',
-              target: 'ALL',
-              sender: 'LaundryFlow 24/7'
-            });
+
 
             // Google Sheets sync
             pushToGoogleSheetAsync({

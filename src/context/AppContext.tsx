@@ -913,8 +913,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
 
+  const isLaundryNotification = (n: { title?: string; desc?: string }): boolean => {
+    const text = `${n.title || ''} ${n.desc || ''}`.toLowerCase();
+    return (
+      text.includes('giặt') || 
+      text.includes('sấy') || 
+      text.includes('laundry') || 
+      text.includes('chu kỳ') || 
+      text.includes('mg01') ||
+      text.includes('mg02') ||
+      text.includes('mg03') ||
+      text.includes('mg04') ||
+      text.includes('ms01') ||
+      text.includes('ms02') ||
+      /\b(mg\d{1,2}|ms\d{1,2})\b/i.test(text)
+    );
+  };
+
   const addNotification = useCallback((item: NotificationItem) => {
-    setNotifications(prev => [item, ...prev.filter(n => n.id !== item.id)]);
+    if (isLaundryNotification(item)) return;
+    setNotifications(prev => [item, ...prev.filter(n => n.id !== item.id && !isLaundryNotification(n))]);
   }, []);
 
   const refreshNotifications = useCallback(async () => {
@@ -925,15 +943,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success && Array.isArray(data.notifications)) {
         setNotifications(prev => {
-          const serverNotifs: NotificationItem[] = data.notifications;
+          // Strictly exclude any washing machine notifications per user request ("đừng để nó lên nữa")
+          const serverNotifs: NotificationItem[] = (data.notifications as NotificationItem[]).filter((n: NotificationItem) => !isLaundryNotification(n));
           const serverIds = new Set(serverNotifs.map(n => n.id));
-          const localOnly = prev.filter(n => !serverIds.has(n.id));
+          const cleanPrev = prev.filter(n => !isLaundryNotification(n));
+          const localOnly = cleanPrev.filter(n => !serverIds.has(n.id) && n.type === 'invoice');
           
           const mergedServer = serverNotifs.map(sn => {
-            const localMatch = prev.find(p => p.id === sn.id);
+            const localMatch = cleanPrev.find(p => p.id === sn.id || (p.title === sn.title && p.desc === sn.desc));
             return {
               ...sn,
-              unread: localMatch !== undefined ? localMatch.unread : true
+              unread: localMatch !== undefined ? localMatch.unread : (sn.unread ?? false)
             };
           });
 
