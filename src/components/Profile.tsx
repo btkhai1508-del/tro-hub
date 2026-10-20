@@ -15,18 +15,27 @@ import {
   Sun,
   Moon,
   Palette,
-  KeyRound
+  KeyRound,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { IconProfile3D, IconVehicle3D, IconHome3D, IconClock3D, IconSettings3D } from './Icons3D';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
+import { soundFx, HOVER_SOUND_PRESETS, HoverSoundType } from '../lib/soundFx';
 import { cn } from '../lib/utils';
 
 export function Profile() {
   const { profile, openProfileEditModal, openContractModal, logoutUser } = useApp();
   const { mode, isDark, setMode } = useTheme();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [hoverSound, setHoverSound] = useState<HoverSoundType>(() => soundFx.getHoverType());
+
+  const handleSelectHoverSound = (type: HoverSoundType) => {
+    setHoverSound(type);
+    soundFx.setHoverType(type);
+  };
 
   const renderValue = (val?: string) => {
     if (!val || !val.trim()) {
@@ -281,6 +290,59 @@ export function Profile() {
               </div>
               <span className="text-sm font-bold block">Tự động</span>
             </button>
+          </div>
+        </div>
+
+        {/* Section 6: Âm thanh toggle di chuột */}
+        <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
+              <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
+                <Volume2 size={16} />
+              </div>
+              <span>Âm thanh toggle di chuột (Hover Sound)</span>
+            </div>
+            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              Click để nghe thử & lưu ngay vào máy
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.values(HOVER_SOUND_PRESETS).map((preset) => {
+              const isSelected = hoverSound === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleSelectHoverSound(preset.id)}
+                  className={cn(
+                    "p-3.5 rounded-2xl border flex flex-col text-left transition-all cursor-pointer relative",
+                    isSelected
+                      ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-950 dark:text-indigo-200 shadow-sm ring-2 ring-indigo-500/30"
+                      : "bg-white/60 dark:bg-slate-800/60 border-white/90 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800"
+                  )}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="text-sm font-bold flex items-center gap-1.5">
+                      {preset.id === 'none' ? (
+                        <VolumeX size={15} className="text-slate-400 shrink-0" />
+                      ) : (
+                        <Volume2 size={15} className={cn("shrink-0", isSelected ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400")} />
+                      )}
+                      <span>{preset.label}</span>
+                    </span>
+                    {isSelected && (
+                      <span className="text-[10px] uppercase font-black tracking-wide px-1.5 py-0.5 rounded-md bg-indigo-600 text-white shrink-0">
+                        Đang chọn
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                    {preset.desc}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
