@@ -99,20 +99,19 @@ class SoundFxEngine {
   private ctx: AudioContext | null = null;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
   private isEnabled: boolean = true;
-  private hoverType: HoverSoundType = 'toggle1';
+  private hoverType: HoverSoundType = 'none';
   private isPreloading: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sfx_enabled');
       this.isEnabled = saved !== null ? saved === 'true' : true;
-
-      const savedHover = localStorage.getItem('sfx_hover_type') as HoverSoundType;
-      if (savedHover && HOVER_SOUND_PRESETS[savedHover]) {
-        this.hoverType = savedHover;
-      }
+      this.hoverType = 'none';
+      try {
+        localStorage.setItem('sfx_hover_type', 'none');
+      } catch {}
       
-      // Auto unlock/preload audio on first user touch/click/cursor movement
+      // Auto unlock/preload audio on first user touch/click
       const unlockAudio = () => {
         this.preloadAll();
         const ctx = this.getContext();
@@ -122,45 +121,6 @@ class SoundFxEngine {
       };
       window.addEventListener('pointerdown', unlockAudio, { passive: true });
       window.addEventListener('keydown', unlockAudio, { passive: true });
-      window.addEventListener('pointerenter', unlockAudio, { once: true, passive: true });
-
-      // Global interactive hover feedback on clickable elements (desktop mouse cursor only)
-      let lastHoverTime = 0;
-      let lastHoverEl: Element | null = null;
-
-      document.addEventListener('pointerover', (e) => {
-        // Ignore touchscreen touches so mobile interactions stay clean and silent
-        if (e.pointerType === 'touch') return;
-        if (!this.isEnabled) return;
-        if (this.hoverType === 'none') return;
-
-        const target = e.target as Element | null;
-        if (!target || typeof target.closest !== 'function') return;
-
-        let clickable: Element | null = target.closest(
-          'button, a, [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"], select, .cursor-pointer, [onclick]'
-        );
-        if (!clickable && target instanceof HTMLElement) {
-          try {
-            if (window.getComputedStyle(target).cursor === 'pointer') {
-              clickable = target;
-            }
-          } catch {}
-        }
-        if (!clickable) {
-          lastHoverEl = null;
-          return;
-        }
-
-        if (clickable === lastHoverEl) return;
-
-        const now = performance.now();
-        if (now - lastHoverTime < 65) return;
-
-        lastHoverTime = now;
-        lastHoverEl = clickable;
-        this.hover();
-      }, { passive: true });
     }
   }
 
@@ -399,14 +359,10 @@ class SoundFxEngine {
   }
 
   /**
-   * Hover sound: dynamically plays the active hover sound preset
+   * Hover sound: disabled completely per user request
    */
-  public hover(customVolume?: number) {
-    if (this.hoverType === 'none') return;
-    const preset = HOVER_SOUND_PRESETS[this.hoverType] || HOVER_SOUND_PRESETS.toggle1;
-    if (!preset.url) return;
-    const vol = customVolume !== undefined ? customVolume : preset.volume;
-    this.playUrl(preset.url, vol);
+  public hover(_customVolume?: number) {
+    // Disabled (bỏ âm thanh hover)
   }
 
   /**

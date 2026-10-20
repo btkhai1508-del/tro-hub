@@ -76,7 +76,7 @@ import { OfflineBanner } from './OfflineBanner';
 // Unified UI Sound Manager with Low-Latency Acoustic Feedback
 const playSound = (type: 'click' | 'hover' | 'success' | 'tab' | 'alert') => {
   if (type === 'click') soundFx.click();
-  else if (type === 'hover') soundFx.hover();
+  else if (type === 'hover') { /* hover sound disabled per user preference */ }
   else if (type === 'success') soundFx.success();
   else if (type === 'tab') soundFx.tab();
   else if (type === 'alert') soundFx.alert();
@@ -1080,7 +1080,6 @@ export function AdminPortal() {
                       playSound('click');
                       setActiveMenu(item.key as any);
                     }}
-                    onMouseEnter={() => playSound('hover')}
                     className={cn(
                       "group relative transition-all duration-200 select-none cursor-pointer",
                       isSidebarCollapsed 
