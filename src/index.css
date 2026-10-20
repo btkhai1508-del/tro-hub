@@ -485,4 +485,46 @@
   }
 }
 
+/* =========================================================================
+   LAUNDRY MACHINE DRUM ANIMATIONS (Apple Glassmorphism Rotating Porthole)
+   ========================================================================= */
+@keyframes laundrySpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes laundryReverseSpin {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes laundryWaterWave {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-5px) scaleY(1.08); }
+}
+
+@keyframes laundryShake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-1px, 1.2px); }
+  40% { transform: translate(1.2px, -1px); }
+  60% { transform: translate(-0.8px, -0.8px); }
+  80% { transform: translate(0.8px, 0.8px); }
+}
+
+.animate-laundry-spin {
+  animation: laundrySpin 2.4s linear infinite;
+}
+
+.animate-laundry-spin-fast {
+  animation: laundrySpin 1.6s linear infinite;
+}
+
+.animate-laundry-water {
+  animation: laundryWaterWave 2s ease-in-out infinite;
+}
+
+.animate-laundry-shake {
+  animation: laundryShake 0.9s ease-in-out infinite;
+}
+
 

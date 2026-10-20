@@ -408,8 +408,16 @@ export function LaundryPage() {
                   {/* Top row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3.5">
-                      <div className="shrink-0 group-hover:scale-105 transition-transform">
+                      <div className="shrink-0 group-hover:scale-105 transition-transform relative">
                         {isWasher ? <IconLaundry3D size={48} /> : <IconDryer3D size={48} />}
+                        {isRunning && (
+                          <span className={cn(
+                            "absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full shadow-sm ring-2 ring-white dark:ring-slate-900",
+                            isWasher ? "bg-sky-500" : "bg-amber-500"
+                          )}>
+                            <RefreshCw size={10} className="animate-spin text-white" />
+                          </span>
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -814,14 +822,15 @@ export function LaundryPage() {
               </button>
             </div>
 
-            {/* Circular Timer Display */}
+            {/* Animated Washing Machine / Dryer Porthole Drum Timer */}
             {(() => {
               const rem = getRemainingSeconds(selectedMachine);
               const totalSec = (selectedMachine.cycleMinutes || 45) * 60;
               const ratio = Math.min(1, Math.max(0, rem / totalSec));
-              const circ = 2 * Math.PI * 46; // radius 46
+              const circ = 2 * Math.PI * 47; // radius 47
               const strokeOffset = circ * (1 - ratio);
               const isWasher = selectedMachine.type === 'WASHER';
+              const isRunning = rem > 0;
 
               const completionTime = selectedMachine.expectedEndTime
                 ? new Date(selectedMachine.expectedEndTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
@@ -829,39 +838,140 @@ export function LaundryPage() {
 
               return (
                 <div className="flex flex-col items-center justify-center space-y-5">
-                  <div className="relative w-56 h-56 flex items-center justify-center">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  {/* Outer Frame with machine shake vibration when actively running */}
+                  <div className={cn(
+                    "relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center select-none transition-transform",
+                    isRunning && "animate-laundry-shake"
+                  )}>
+                    
+                    {/* SVG Circular Progress Ring */}
+                    <svg className="absolute inset-0 w-full h-full -rotate-90 z-20 pointer-events-none" viewBox="0 0 100 100">
                       <circle
                         cx="50"
                         cy="50"
-                        r="46"
-                        className="text-slate-200 dark:text-slate-800"
-                        strokeWidth="6"
+                        r="47"
+                        className="text-slate-200/60 dark:text-slate-800/60"
+                        strokeWidth="3.5"
                         stroke="currentColor"
                         fill="transparent"
                       />
                       <circle
                         cx="50"
                         cy="50"
-                        r="46"
-                        strokeWidth="6"
+                        r="47"
+                        strokeWidth="4"
                         strokeDasharray={circ}
                         strokeDashoffset={strokeOffset}
                         strokeLinecap="round"
-                        stroke={isWasher ? '#0284c7' : '#ea580c'}
+                        stroke={isWasher ? '#0ea5e9' : '#f97316'}
                         fill="transparent"
                         className="transition-all duration-1000 ease-linear"
+                        style={{
+                          filter: isWasher
+                            ? 'drop-shadow(0 0 6px rgba(14, 165, 233, 0.6))'
+                            : 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.6))'
+                        }}
                       />
                     </svg>
 
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                      <span className="text-3xl font-black font-num text-slate-900 dark:text-white tracking-tight">
-                        {formatSeconds(rem)}
-                      </span>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 mt-1">
-                        Thời gian còn lại
-                      </span>
+                    {/* Machine Door Outer Metallic Bezel */}
+                    <div className="absolute inset-3 rounded-full bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 p-2.5 shadow-[0_12px_30px_rgba(0,0,0,0.25),inset_0_2px_4px_rgba(255,255,255,0.8)] border border-white/60 dark:border-slate-600/60 flex items-center justify-center">
+                      
+                      {/* Door Latch Detail */}
+                      <div className="absolute right-1 w-2.5 h-8 rounded-r-md bg-slate-400 dark:bg-slate-600 border border-slate-500/50 shadow-sm" />
+
+                      {/* Inner Glass Porthole Window */}
+                      <div className="relative w-full h-full rounded-full overflow-hidden bg-slate-950 shadow-[inset_0_10px_25px_rgba(0,0,0,0.9)] flex items-center justify-center">
+                        
+                        {/* 1. ROTATING STAINLESS STEEL DRUM */}
+                        <div className={cn(
+                          "absolute inset-0 rounded-full overflow-hidden bg-[radial-gradient(circle_at_center,_#334155_0%,_#1e293b_60%,_#090d16_100%)]",
+                          isRunning && (isWasher ? "animate-laundry-spin" : "animate-laundry-spin-fast")
+                        )}>
+                          
+                          {/* Stainless steel drum perforations (concentric dashed lines) */}
+                          <div className="absolute inset-2 rounded-full border-2 border-dashed border-slate-500/30 opacity-70" />
+                          <div className="absolute inset-7 rounded-full border border-dotted border-slate-400/25 opacity-60" />
+
+                          {/* 3 Internal Drum Baffles / Fins (3 gờ inox đảo đồ góc 120 độ) */}
+                          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-3.5 h-12 bg-gradient-to-b from-slate-300 to-slate-600 rounded-b-md opacity-80 shadow-md" />
+                          <div className="absolute bottom-6 left-5 w-3.5 h-12 bg-gradient-to-b from-slate-300 to-slate-600 rounded-b-md opacity-80 shadow-md rotate-[120deg]" />
+                          <div className="absolute bottom-6 right-5 w-3.5 h-12 bg-gradient-to-b from-slate-300 to-slate-600 rounded-b-md opacity-80 shadow-md -rotate-[120deg]" />
+
+                          {/* Tumbling Clothes Inside Drum (Quần áo xoay đảo nhịp nhàng) */}
+                          {/* Clothes 1: Coral Red T-shirt */}
+                          <div className="absolute top-7 left-9 w-11 h-7 rounded-2xl bg-gradient-to-br from-rose-400 to-rose-600 shadow-md rotate-12 opacity-95 flex items-center justify-center">
+                            <span className="w-5 h-1 bg-rose-200/50 rounded-full" />
+                          </div>
+
+                          {/* Clothes 2: Sky Blue Denim */}
+                          <div className="absolute bottom-8 right-8 w-12 h-8 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 shadow-md -rotate-45 opacity-90" />
+
+                          {/* Clothes 3: Warm Amber Towel */}
+                          <div className="absolute top-12 right-7 w-9 h-9 rounded-lg bg-gradient-to-br from-amber-300 to-amber-500 shadow-md rotate-35 opacity-90" />
+
+                          {/* Clothes 4: Crisp White Shirt */}
+                          <div className="absolute bottom-7 left-10 w-10 h-7 rounded-xl bg-gradient-to-br from-white to-slate-200 shadow-md -rotate-15 opacity-95" />
+
+                          {/* Clothes 5: Indigo Fabric */}
+                          <div className="absolute top-1/2 right-12 w-7 h-5 rounded-md bg-indigo-500 shadow-sm rotate-90 opacity-80" />
+                        </div>
+
+                        {/* 2. WASHER WATER & FOAM or DRYER HEAT SHIMMER */}
+                        {isWasher ? (
+                          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sky-500/40 via-blue-500/20 to-transparent rounded-b-full pointer-events-none animate-laundry-water">
+                            {/* Animated Bubbles / Suds */}
+                            {isRunning && (
+                              <>
+                                <span className="absolute bottom-8 left-12 w-2.5 h-2.5 rounded-full bg-white/70 animate-ping" />
+                                <span className="absolute bottom-5 right-14 w-3.5 h-3.5 rounded-full bg-white/60 animate-pulse" />
+                                <span className="absolute bottom-11 right-20 w-2 h-2 rounded-full bg-white/80 animate-ping" style={{ animationDelay: '0.6s' }} />
+                                <span className="absolute bottom-4 left-20 w-2 h-2 rounded-full bg-white/70 animate-pulse" style={{ animationDelay: '1.2s' }} />
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          /* Dryer Warm Air Vortex & Glow */
+                          <div className="absolute inset-0 bg-gradient-to-t from-amber-500/35 via-orange-500/15 to-transparent rounded-full pointer-events-none animate-pulse">
+                            {isRunning && (
+                              <div className="absolute inset-x-6 bottom-4 h-10 rounded-full bg-orange-400/20 blur-md animate-pulse" />
+                            )}
+                          </div>
+                        )}
+
+                        {/* 3. CONVEX OPTICAL GLASS CURVE REFLECTION */}
+                        <div className="absolute top-1 inset-x-5 h-24 rounded-t-full bg-gradient-to-b from-white/30 via-white/10 to-transparent pointer-events-none blur-[0.5px]" />
+                        <div className="absolute bottom-2 inset-x-14 h-5 rounded-b-full bg-gradient-to-t from-white/15 to-transparent pointer-events-none" />
+
+                        {/* 4. CENTER FLOATING DIGITAL HUD DISPLAY */}
+                        <div className="relative z-30 pointer-events-none flex flex-col items-center justify-center text-center">
+                          <div className="backdrop-blur-md bg-slate-950/70 dark:bg-black/75 border border-white/20 rounded-2xl px-5 py-3 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
+                            <span className="text-3xl sm:text-4xl font-black font-num text-white tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] block leading-none">
+                              {formatSeconds(rem)}
+                            </span>
+                            
+                            {isRunning ? (
+                              <div className="flex items-center justify-center gap-1.5 text-[10px] uppercase font-bold tracking-wider mt-1.5">
+                                <span className={cn(
+                                  "w-2 h-2 rounded-full animate-ping",
+                                  isWasher ? "bg-sky-400" : "bg-amber-400"
+                                )} />
+                                <span className={isWasher ? "text-sky-300" : "text-amber-300"}>
+                                  {isWasher ? "Đang giặt đảo" : "Đang sấy nhiệt"}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center gap-1 text-[10px] uppercase font-bold text-emerald-400 tracking-wider mt-1.5">
+                                <CheckCircle2 size={12} />
+                                <span>Đã hoàn thành</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
+
                   </div>
 
                   <div className="w-full p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl flex items-center justify-around text-xs font-semibold">
