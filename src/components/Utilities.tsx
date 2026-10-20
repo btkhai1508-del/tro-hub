@@ -104,9 +104,9 @@ export function Utilities() {
               {/* Subtle 3D Glass top sheen reflection */}
               <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
 
-              {/* 3D Icon Container */}
-              <div className="mt-1 p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                <Icon size={52} className="shrink-0 drop-shadow-sm" />
+              {/* 3D Icon - Direct without background box */}
+              <div className="mt-2 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Icon size={58} className="shrink-0 drop-shadow-md" />
               </div>
 
               {/* Text Content */}

@@ -23,19 +23,21 @@ type SfxName =
   | 'modalClose' 
   | 'notification' 
   | 'tick' 
+  | 'hover'
   | 'alert';
 
 const SFX_FILES: Record<SfxName, string> = {
-  switchOn: '/sfx/switch-on.ogg?v=2',
-  switchOff: '/sfx/switch-off.ogg?v=2',
-  click: '/sfx/click.ogg',
-  tab: '/sfx/tab.ogg',
-  success: '/sfx/success.ogg?v=2',
-  modalOpen: '/sfx/modal-open.ogg',
-  modalClose: '/sfx/modal-close.ogg',
-  notification: '/sfx/notification.ogg',
-  tick: '/sfx/tick.ogg',
-  alert: '/sfx/alert.ogg',
+  switchOn: '/sfx/switch-on.ogg?v=3',
+  switchOff: '/sfx/switch-off.ogg?v=3',
+  click: '/sfx/click.ogg?v=3',
+  tab: '/sfx/tab.ogg?v=3',
+  success: '/sfx/success.ogg?v=3',
+  modalOpen: '/sfx/modal-open.ogg?v=3',
+  modalClose: '/sfx/modal-close.ogg?v=3',
+  notification: '/sfx/notification.ogg?v=3',
+  tick: '/sfx/tick.ogg?v=3',
+  hover: '/sfx/hover.ogg?v=3',
+  alert: '/sfx/alert.ogg?v=3',
 };
 
 class SoundFxEngine {
@@ -49,14 +51,45 @@ class SoundFxEngine {
       const saved = localStorage.getItem('sfx_enabled');
       this.isEnabled = saved !== null ? saved === 'true' : true;
       
-      // Auto preload on first user touch/click
+      // Auto preload on first user touch/click/cursor movement
       const preloadOnFirstInteraction = () => {
         this.preloadAll();
         window.removeEventListener('pointerdown', preloadOnFirstInteraction);
         window.removeEventListener('keydown', preloadOnFirstInteraction);
+        window.removeEventListener('pointermove', preloadOnFirstInteraction);
       };
       window.addEventListener('pointerdown', preloadOnFirstInteraction, { once: true });
       window.addEventListener('keydown', preloadOnFirstInteraction, { once: true });
+      window.addEventListener('pointermove', preloadOnFirstInteraction, { once: true });
+
+      // Global interactive hover feedback on clickable elements (desktop mouse cursor only, volume ~40%)
+      let lastHoverTime = 0;
+      let lastHoverEl: Element | null = null;
+
+      document.addEventListener('pointerover', (e) => {
+        if (e.pointerType && e.pointerType !== 'mouse') return;
+        if (!this.isEnabled) return;
+
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+
+        const clickable = target.closest(
+          'button, a, [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"], select, .cursor-pointer'
+        );
+        if (!clickable) {
+          lastHoverEl = null;
+          return;
+        }
+
+        if (clickable === lastHoverEl) return;
+
+        const now = performance.now();
+        if (now - lastHoverTime < 70) return;
+
+        lastHoverTime = now;
+        lastHoverEl = clickable;
+        this.hover(0.4);
+      }, { passive: true });
     }
   }
 
@@ -97,12 +130,14 @@ class SoundFxEngine {
     });
   }
 
-  private async playOgg(name: SfxName, fallbackSynth?: () => void) {
+  private async playOgg(name: SfxName, fallbackSynth?: () => void, customVolume?: number) {
     if (!this.isEnabled) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
     const url = SFX_FILES[name];
+    const defaultVol = (name === 'tick' || name === 'hover') ? 0.4 : 0.6;
+    const vol = customVolume !== undefined ? customVolume : defaultVol;
 
     // Check if buffer is already cached
     const cached = this.audioBuffers.get(url);
@@ -111,7 +146,7 @@ class SoundFxEngine {
         const source = ctx.createBufferSource();
         source.buffer = cached;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.6, ctx.currentTime);
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
         source.connect(gain);
         gain.connect(ctx.destination);
         source.start(0);
@@ -122,7 +157,7 @@ class SoundFxEngine {
     // Try HTMLAudioElement as fast direct path
     try {
       const audio = new Audio(url);
-      audio.volume = 0.6;
+      audio.volume = vol;
       audio.play().catch(() => {
         if (fallbackSynth) fallbackSynth();
       });
@@ -264,10 +299,17 @@ class SoundFxEngine {
   }
 
   /**
-   * Tick OGG sound: micro-tap for copy
+   * Hover OGG sound: gentle Kenney UI micro-tick when hovering clickable elements (~40% volume)
    */
-  public tick() {
-    this.playOgg('tick');
+  public hover(volume = 0.4) {
+    this.playOgg('hover', undefined, volume);
+  }
+
+  /**
+   * Tick OGG sound: micro-tap for copy or lightweight actions (~40% volume)
+   */
+  public tick(volume = 0.4) {
+    this.playOgg('tick', undefined, volume);
   }
 
   /**

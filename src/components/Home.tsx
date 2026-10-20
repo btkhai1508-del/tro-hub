@@ -188,9 +188,7 @@ export function Home() {
             {/* Header: Title & Navigate hint */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <div className="shrink-0 p-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-xs">
-                  <IconVehicle3D size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
-                </div>
+                <IconVehicle3D size={42} className="shrink-0 group-hover:scale-105 transition-transform" />
                 <div>
                   <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors font-bold">
                     Biển số xe
@@ -218,9 +216,7 @@ export function Home() {
 
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <div className="shrink-0 p-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-xs">
-                  <IconContract3D size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
-                </div>
+                <IconContract3D size={42} className="shrink-0 group-hover:scale-105 transition-transform" />
                 <div>
                   <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white transition-colors font-bold">Hợp đồng thuê</h3>
                   <p className="text-[11px] text-slate-400 dark:text-slate-400 font-num">#HD-2025-102</p>

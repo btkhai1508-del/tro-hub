@@ -68,7 +68,7 @@ import { OfflineBanner } from './OfflineBanner';
 // Unified UI Sound Manager with Low-Latency Acoustic Feedback
 const playSound = (type: 'click' | 'hover' | 'success' | 'tab' | 'alert') => {
   if (type === 'click') soundFx.click();
-  else if (type === 'hover') soundFx.tick();
+  else if (type === 'hover') soundFx.hover();
   else if (type === 'success') soundFx.success();
   else if (type === 'tab') soundFx.tab();
   else if (type === 'alert') soundFx.alert();

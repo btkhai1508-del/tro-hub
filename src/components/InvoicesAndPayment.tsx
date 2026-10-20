@@ -88,9 +88,7 @@ export function InvoicesAndPayment() {
 
           {/* Left Column: 3D Wallet Icon & Payment Details */}
           <div className="flex items-center gap-4 sm:gap-5 min-w-0">
-            <div className="shrink-0 p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-center">
-              <IconWallet3D size={48} className="shrink-0 drop-shadow-sm" />
-            </div>
+            <IconWallet3D size={52} className="shrink-0 drop-shadow-md" />
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
