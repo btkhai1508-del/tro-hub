@@ -160,15 +160,14 @@ export function PaymentModal() {
 
               {/* Payment Gate Closed Warning OR QR Payment Details */}
               {paymentGateStatus === 'STOP' ? (
-                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 text-center space-y-3.5 animate-in fade-in duration-200">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-xs">
-                    <Lock size={24} />
-                  </div>
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 text-center space-y-3 animate-in fade-in duration-200">
+                  <img 
+                    src="/lock.svg" 
+                    alt="Cổng thanh toán đang tạm đóng" 
+                    className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-1 shrink-0 drop-shadow-md select-none pointer-events-none" 
+                  />
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-200/60 dark:bg-amber-900/60 px-2 py-0.5 rounded-full">
-                      Cổng thanh toán tạm khóa
-                    </span>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1.5">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
                       Cổng thanh toán đang tạm đóng
                     </h3>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">

@@ -73,7 +73,6 @@ export function Profile() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{profile.name}</h2>
-                <span className="badge-paid text-[10px] py-0.5">Cư dân chính</span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-num mt-0.5">
                 {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : <span className="italic text-slate-400">Chưa xếp phòng</span>}

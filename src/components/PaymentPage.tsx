@@ -397,13 +397,11 @@ export function PaymentPage() {
             className="w-full flex justify-center py-6"
           >
             <main className="w-full max-w-[540px] bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center text-center transition-colors">
-              <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4 shadow-xs">
-                <Lock size={32} strokeWidth={2.2} />
-              </div>
-
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-full mb-2">
-                Cổng thanh toán tạm khóa
-              </span>
+              <img 
+                src="/lock.svg" 
+                alt="Cổng thanh toán đang tạm đóng" 
+                className="w-20 h-20 sm:w-24 sm:h-24 mb-3 shrink-0 drop-shadow-md select-none pointer-events-none" 
+              />
 
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
                 Cổng thanh toán đang tạm đóng

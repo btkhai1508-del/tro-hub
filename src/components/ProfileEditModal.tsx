@@ -236,40 +236,6 @@ export function ProfileEditModal() {
 
         {/* Scrollable Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-          
-          {/* Google Sheet Sync Status Bar */}
-          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#162032] border border-slate-200/80 dark:border-slate-750 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-              <FileSpreadsheet size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>
-                {hasGoogleToken ? (
-                  <strong className="text-emerald-600 dark:text-emerald-400">Đã kết nối Google Sheet</strong>
-                ) : (
-                  <span className="text-slate-500 dark:text-slate-400">Chưa liên kết Google Sheet để ghi trực tiếp</span>
-                )}
-              </span>
-            </div>
-
-            {!hasGoogleToken ? (
-              <button
-                type="button"
-                onClick={handleConnectGoogle}
-                disabled={isConnectingGoogle}
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
-              >
-                {isConnectingGoogle ? (
-                  <RefreshCw size={11} className="animate-spin" />
-                ) : (
-                  <LogIn size={11} />
-                )}
-                <span>Kết nối Google</span>
-              </button>
-            ) : (
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/60 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
-                Tự động ghi Sheet ✓
-              </span>
-            )}
-          </div>
 
           {/* Status Alert Message */}
           {syncStatus.type === 'success' && (
