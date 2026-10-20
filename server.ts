@@ -550,10 +550,10 @@ async function startServer() {
   });
 
   // Test simulation endpoint for Laundry payment
-  app.post('/api/laundry/test-payment', (req, res) => {
+  app.post('/api/laundry/test-payment', async (req, res) => {
     try {
       const { machineId = 'MG01', amount = 15000 } = req.body || {};
-      const result = LaundryService.processDirectPayment({
+      const result = await LaundryService.processDirectPayment({
         machineId,
         amount: Number(amount),
         content: `Test payment ${machineId}`,
