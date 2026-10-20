@@ -27,17 +27,17 @@ type SfxName =
   | 'alert';
 
 const SFX_FILES: Record<SfxName, string> = {
-  switchOn: '/sfx/switch-on.ogg?v=3',
-  switchOff: '/sfx/switch-off.ogg?v=3',
-  click: '/sfx/click.ogg?v=3',
-  tab: '/sfx/tab.ogg?v=3',
-  success: '/sfx/success.ogg?v=3',
-  modalOpen: '/sfx/modal-open.ogg?v=3',
-  modalClose: '/sfx/modal-close.ogg?v=3',
-  notification: '/sfx/notification.ogg?v=3',
-  tick: '/sfx/tick.ogg?v=3',
-  hover: '/sfx/hover.ogg?v=3',
-  alert: '/sfx/alert.ogg?v=3',
+  switchOn: '/sfx/switch-on.ogg?v=5',
+  switchOff: '/sfx/switch-off.ogg?v=5',
+  click: '/sfx/click.ogg?v=5',
+  tab: '/sfx/tab.ogg?v=5',
+  success: '/sfx/success.ogg?v=5',
+  modalOpen: '/sfx/modal-open.ogg?v=5',
+  modalClose: '/sfx/modal-close.ogg?v=5',
+  notification: '/sfx/notification.ogg?v=5',
+  tick: '/sfx/tick.ogg?v=5',
+  hover: '/sfx/hover.ogg?v=5',
+  alert: '/sfx/alert.ogg?v=5',
 };
 
 class SoundFxEngine {
@@ -51,31 +51,40 @@ class SoundFxEngine {
       const saved = localStorage.getItem('sfx_enabled');
       this.isEnabled = saved !== null ? saved === 'true' : true;
       
-      // Auto preload on first user touch/click/cursor movement
-      const preloadOnFirstInteraction = () => {
+      // Auto unlock/preload audio on first user touch/click/cursor movement
+      const unlockAudio = () => {
         this.preloadAll();
-        window.removeEventListener('pointerdown', preloadOnFirstInteraction);
-        window.removeEventListener('keydown', preloadOnFirstInteraction);
-        window.removeEventListener('pointermove', preloadOnFirstInteraction);
+        const ctx = this.getContext();
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
       };
-      window.addEventListener('pointerdown', preloadOnFirstInteraction, { once: true });
-      window.addEventListener('keydown', preloadOnFirstInteraction, { once: true });
-      window.addEventListener('pointermove', preloadOnFirstInteraction, { once: true });
+      window.addEventListener('pointerdown', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio, { passive: true });
+      window.addEventListener('pointerenter', unlockAudio, { once: true, passive: true });
 
       // Global interactive hover feedback on clickable elements (desktop mouse cursor only, volume ~40%)
       let lastHoverTime = 0;
       let lastHoverEl: Element | null = null;
 
       document.addEventListener('pointerover', (e) => {
-        if (e.pointerType && e.pointerType !== 'mouse') return;
+        // Ignore touchscreen touches so mobile interactions stay clean and silent
+        if (e.pointerType === 'touch') return;
         if (!this.isEnabled) return;
 
-        const target = e.target as HTMLElement | null;
-        if (!target) return;
+        const target = e.target as Element | null;
+        if (!target || typeof target.closest !== 'function') return;
 
-        const clickable = target.closest(
-          'button, a, [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"], select, .cursor-pointer'
+        let clickable: Element | null = target.closest(
+          'button, a, [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"], select, .cursor-pointer, [onclick]'
         );
+        if (!clickable && target instanceof HTMLElement) {
+          try {
+            if (window.getComputedStyle(target).cursor === 'pointer') {
+              clickable = target;
+            }
+          } catch {}
+        }
         if (!clickable) {
           lastHoverEl = null;
           return;
@@ -84,7 +93,7 @@ class SoundFxEngine {
         if (clickable === lastHoverEl) return;
 
         const now = performance.now();
-        if (now - lastHoverTime < 70) return;
+        if (now - lastHoverTime < 65) return;
 
         lastHoverTime = now;
         lastHoverEl = clickable;
@@ -234,47 +243,17 @@ class SoundFxEngine {
   }
 
   /**
-   * Click OGG sound: crisp UI button tap
+   * Click sound: muted (user requested sound only when hovering, not clicking: "chứ không phải click")
    */
   public click() {
-    this.playOgg('click', () => {
-      const ctx = this.getContext();
-      if (!ctx) return;
-      const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(520, t);
-      osc.frequency.exponentialRampToValueAtTime(380, t + 0.025);
-      gain.gain.setValueAtTime(0.09, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.025);
-    });
+    // Intentionally silent
   }
 
   /**
-   * Tab OGG sound: navigation switch tone
+   * Tab sound: muted
    */
   public tab() {
-    this.playOgg('tab', () => {
-      const ctx = this.getContext();
-      if (!ctx) return;
-      const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, t);
-      osc.frequency.exponentialRampToValueAtTime(587.33, t + 0.05);
-      gain.gain.setValueAtTime(0.08, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.05);
-    });
+    // Intentionally silent
   }
 
   /**
@@ -299,10 +278,25 @@ class SoundFxEngine {
   }
 
   /**
-   * Hover OGG sound: gentle Kenney UI micro-tick when hovering clickable elements (~40% volume)
+   * Hover sound: gentle Kenney UI select_001 blip when hovering clickable elements (~40% volume)
    */
   public hover(volume = 0.4) {
-    this.playOgg('hover', undefined, volume);
+    this.playOgg('hover', () => {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(650, t);
+      osc.frequency.exponentialRampToValueAtTime(850, t + 0.04);
+      gain.gain.setValueAtTime(0.05, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.04);
+    }, volume);
   }
 
   /**
