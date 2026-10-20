@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -81,6 +81,12 @@ export function LaundryPage() {
   const [bookingMsg, setBookingMsg] = useState('');
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
+  // Keep latest refs to avoid stale closure in polling
+  const selectedMachineRef = useRef<Machine | null>(null);
+  selectedMachineRef.current = selectedMachine;
+  const activeModalRef = useRef<'none' | 'payment' | 'timer'>('none');
+  activeModalRef.current = activeModal;
+
   // Fetch live laundry status from backend Express server
   const fetchLaundryData = useCallback(async () => {
     try {
@@ -91,12 +97,15 @@ export function LaundryPage() {
         if (data.success) {
           if (Array.isArray(data.machines)) {
             setMachines(data.machines);
+            const curSelected = selectedMachineRef.current;
+            const curModal = activeModalRef.current;
+            
             // If viewing a machine in modal, keep it updated
-            if (selectedMachine) {
-              const updated = data.machines.find((m: Machine) => m.machineId === selectedMachine.machineId);
+            if (curSelected) {
+              const updated = data.machines.find((m: Machine) => m.machineId === curSelected.machineId);
               if (updated) {
                 // If payment modal is open and machine just started running -> auto transition to timer view!
-                if (activeModal === 'payment' && updated.status === 'RUNNING') {
+                if (curModal === 'payment' && updated.status === 'RUNNING') {
                   soundFx.success();
                   setActiveModal('timer');
                 }
@@ -113,11 +122,11 @@ export function LaundryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMachine?.machineId, activeModal]);
+  }, []);
 
   useEffect(() => {
     fetchLaundryData();
-    const interval = setInterval(fetchLaundryData, 3500);
+    const interval = setInterval(fetchLaundryData, 2500);
     return () => clearInterval(interval);
   }, [fetchLaundryData]);
 
@@ -151,6 +160,11 @@ export function LaundryPage() {
       setActiveModal('timer');
     } else {
       setActiveModal('payment');
+      // Record payment intent with backend so it can link resident profile to the transaction
+      apiFetch('/api/laundry/intent', {
+        method: 'POST',
+        body: JSON.stringify({ machineId: m.machineId })
+      }).catch(() => {});
     }
   };
 

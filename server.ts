@@ -518,12 +518,45 @@ async function startServer() {
   // =========================================================================
   // LAUNDRY SERVICE API ENDPOINTS (LaundryFlow 24/7)
   // =========================================================================
-  app.get('/api/laundry/status', (_req, res) => {
+  let lastLaundryLogsScan = 0;
+  app.get('/api/laundry/status', async (_req, res) => {
     try {
+      const now = Date.now();
+      // Periodically scan Google Sheet Logs on status requests (throttled to once every 2.5s)
+      if (now - lastLaundryLogsScan >= 2500) {
+        lastLaundryLogsScan = now;
+        await LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
+      }
+
       const machines = LaundryService.getAllMachines();
       const stats = LaundryService.getStats();
       const bookings = LaundryService.getBookings();
       res.json({ success: true, machines, stats, bookings });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // Register payment intent for a machine (records current tenant's room & phone for audit log)
+  app.post('/api/laundry/intent', (req, res) => {
+    try {
+      const { machineId } = req.body || {};
+      if (!machineId) return res.status(400).json({ success: false, error: 'Thiếu machineId' });
+
+      let tenantInfo: { room?: string; phone?: string; name?: string } | undefined;
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const payload = verifyTenantToken(authHeader.slice(7));
+        if (payload) {
+          tenantInfo = {
+            room: payload.room,
+            phone: payload.phone
+          };
+        }
+      }
+
+      LaundryService.recordPaymentIntent(machineId, tenantInfo);
+      res.json({ success: true, message: `Đã ghi nhận ý định thanh toán cho máy ${machineId}` });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }

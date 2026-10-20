@@ -94,6 +94,16 @@ let storeData: LaundryStoreData = {
   transactions: []
 };
 
+interface PaymentIntent {
+  machineId: string;
+  roomNumber?: string;
+  tenantPhone?: string;
+  tenantName?: string;
+  timestamp: number;
+}
+
+let pendingIntents: PaymentIntent[] = [];
+
 function loadStore(): void {
   try {
     if (fs.existsSync(STORE_PATH)) {
@@ -200,14 +210,20 @@ export const LaundryService = {
       return { success: false, message: `Không tìm thấy máy ${cleanId} trong hệ thống` };
     }
 
-    if (amount < machine.price) {
+    if (amount < machine.price && amount < 5000) {
       return { success: false, message: `Số tiền chuyển (${amount.toLocaleString('vi-VN')}₫) thấp hơn giá chu kỳ (${machine.price.toLocaleString('vi-VN')}₫)` };
     }
 
     const sessionId = `SES_${Date.now()}_${Math.floor(Math.random() * 900 + 100)}`;
     const now = new Date();
     const cycleMin = machine.cycleMinutes || 45;
-    const expectedEnd = new Date(now.getTime() + cycleMin * 60000);
+    
+    let baseTime = now.getTime();
+    if (machine.status === 'RUNNING' && machine.expectedEndTime) {
+      const curEnd = new Date(machine.expectedEndTime).getTime();
+      if (curEnd > baseTime) baseTime = curEnd;
+    }
+    const expectedEnd = new Date(baseTime + cycleMin * 60000);
 
     // Turn ON smart plug
     machine.plugState = 'ON';
@@ -648,6 +664,141 @@ export const LaundryService = {
       console.warn(`[LaundryService] ⚠️ Không thể quét tab Machines từ Google Sheet:`, err.message);
       return { success: false, updatedCount: 0, message: err.message };
     }
+  },
+
+  /**
+   * Record tenant's intent to pay for a machine from frontend (ties room and phone to the transaction)
+   */
+  recordPaymentIntent(machineId: string, info?: { room?: string; phone?: string; name?: string }) {
+    const cleanId = machineId.trim().toUpperCase();
+    pendingIntents = pendingIntents.filter(p => p.machineId !== cleanId && (Date.now() - p.timestamp < 30 * 60 * 1000));
+    pendingIntents.push({
+      machineId: cleanId,
+      roomNumber: info?.room || '',
+      tenantPhone: info?.phone || '',
+      tenantName: info?.name || '',
+      timestamp: Date.now()
+    });
+    console.log(`[LaundryService] 📝 Đã ghi nhận ý định thanh toán cho máy ${cleanId} (Phòng: ${info?.room || 'N/A'}, Tên: ${info?.name || 'N/A'})`);
+  },
+
+  /**
+   * Scan Google Sheets "Logs" tab for new laundry bank payments (e.g. MBBank with content "MG01")
+   * Automatically activates the machine and turns on smart plug!
+   */
+  async scanGoogleSheetPaymentLogs(sheetId: string = DEFAULT_SPREADSHEET_ID): Promise<{ processed: number; newPayments: string[] }> {
+    try {
+      const candidateTabs = ['Logs', 'logs', 'LOGS'];
+      let rows: string[][] = [];
+      for (const tab of candidateTabs) {
+        try {
+          const r = await fetchSheetDataViaGviz(sheetId, tab);
+          if (r && r.length > 1) {
+            rows = r;
+            break;
+          }
+        } catch {}
+      }
+
+      if (rows.length <= 1) {
+        return { processed: 0, newPayments: [] };
+      }
+
+      const header = rows[0].map(h => String(h || '').trim().toLowerCase());
+      const contentIdx = header.findIndex(h => h.includes('nội dung') || h.includes('content') || h.includes('mô tả'));
+      const amountIdx = header.findIndex(h => h.includes('số tiền') || h.includes('tiền') || h.includes('amount'));
+      const typeIdx = header.findIndex(h => h.includes('loại') || h.includes('type'));
+      const txnCodeIdx = header.findIndex(h => h.includes('mã') || h.includes('tham chiếu') || h.includes('code') || h.includes('reference'));
+      const dateIdx = header.findIndex(h => h.includes('ngày') || h.includes('date') || h.includes('thời gian'));
+
+      const cIdx = contentIdx >= 0 ? contentIdx : 5;
+      const aIdx = amountIdx >= 0 ? amountIdx : 7;
+      const tIdx = typeIdx >= 0 ? typeIdx : 6;
+      const cdIdx = txnCodeIdx >= 0 ? txnCodeIdx : 8;
+      const dIdx = dateIdx >= 0 ? dateIdx : 1;
+
+      let processedCount = 0;
+      const newPayments: string[] = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const rawContent = String(row[cIdx] || '').trim();
+        if (!rawContent) continue;
+
+        // Check if content matches laundry machine pattern (e.g. MG01, MG1, MS02, ms2)
+        const match = rawContent.toUpperCase().match(/\b(MG|MS)\s*0*([1-9]|10)\b/);
+        if (!match) continue;
+
+        const machineTypePrefix = match[1];
+        const machineNum = match[2].padStart(2, '0');
+        const machineId = `${machineTypePrefix}${machineNum}`;
+
+        // Check incoming payment type (ignore "tiền ra")
+        const typeStr = String(row[tIdx] || '').trim().toLowerCase();
+        if (typeStr.includes('ra')) continue;
+
+        // Amount
+        const rawAmount = String(row[aIdx] || '').replace(/[^0-9]/g, '');
+        const amount = Number(rawAmount) || 0;
+        if (amount <= 0) continue;
+
+        // Transaction code / date
+        const txnDate = String(row[dIdx] || '').trim();
+        const rawTxnCode = String(row[cdIdx] || '').trim();
+        const txnCode = rawTxnCode || `SHEET-LOG-${txnDate.replace(/[^0-9]/g, '')}-${machineId}-${amount}`;
+
+        // Check if this transaction has already been processed
+        const alreadyDone = storeData.transactions.some(t => 
+          (t.referenceCode && t.referenceCode === txnCode) || 
+          (t.id && t.id === txnCode)
+        );
+        if (alreadyDone) continue;
+
+        // Check if it's booking deposit vs direct payment
+        const isBookingDeposit = /\b(COC|DAT|DATCOC|GIUCHO|BK)\b/i.test(rawContent);
+
+        // Find matched intent from active resident waiting on frontend
+        const matchedIntent = pendingIntents.find(p => p.machineId === machineId && (Date.now() - p.timestamp < 30 * 60 * 1000));
+        const roomNumber = matchedIntent?.roomNumber || '';
+        const tenantName = matchedIntent?.tenantName || '';
+        const tenantPhone = matchedIntent?.tenantPhone || '';
+
+        console.log(`[LaundryService] 🎯 Phát hiện giao dịch giặt sấy từ Google Sheet Logs: "${rawContent}" | Máy: ${machineId} | Số tiền: ${amount.toLocaleString('vi-VN')}₫ | Mã GD: ${txnCode}`);
+
+        if (isBookingDeposit) {
+          await this.confirmBookingDeposit({
+            machineId,
+            amount,
+            content: rawContent,
+            referenceCode: txnCode,
+            gateway: String(row[0] || 'MBBank'),
+            accountNumber: String(row[2] || ''),
+            transactionDate: txnDate
+          });
+        } else {
+          await this.processDirectPayment({
+            machineId,
+            amount,
+            content: rawContent,
+            referenceCode: txnCode,
+            gateway: String(row[0] || 'MBBank'),
+            accountNumber: String(row[2] || ''),
+            transactionDate: txnDate,
+            roomNumber,
+            tenantName,
+            tenantPhone
+          });
+        }
+
+        processedCount++;
+        newPayments.push(`${machineId} (${amount.toLocaleString('vi-VN')}₫)`);
+      }
+
+      return { processed: processedCount, newPayments };
+    } catch (err: any) {
+      console.warn('[LaundryService] Lỗi khi quét Logs từ Google Sheet:', err.message);
+      return { processed: 0, newPayments: [] };
+    }
   }
 };
 
@@ -660,10 +811,20 @@ export function startLaundryWorker(): NodeJS.Timeout {
 
   // Initial sync from Google Sheet Machines tab if available
   LaundryService.syncFromGoogleSheet().catch(() => {});
+  // Initial scan for bank payments in Google Sheet Logs tab
+  LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
 
-  return setInterval(() => {
+  let lastLogsScanTime = 0;
+
+  return setInterval(async () => {
     try {
       const now = Date.now();
+
+      // Scan Google Sheet Logs every 4 seconds for new bank transfers
+      if (now - lastLogsScanTime >= 4000) {
+        lastLogsScanTime = now;
+        LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
+      }
       let changed = false;
 
       for (const machine of storeData.machines) {
