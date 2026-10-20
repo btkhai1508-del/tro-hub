@@ -90,7 +90,7 @@ export function Utilities() {
         </div>
       </div>
 
-      {/* 3D Glassmorphism Utility Cards Grid (NO gray borders, floating 3D glow & glass sheen) */}
+      {/* 3D Glassmorphism Utility Cards Grid (matching Home payment card elements: soft-surface, 3D glow & glass sheen) */}
       <div data-tutorial="utilities-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {utilitiesList.map((item) => {
           const Icon = item.Icon;
@@ -99,13 +99,13 @@ export function Utilities() {
               key={item.id}
               type="button"
               onClick={item.action}
-              className="group relative flex flex-col items-center text-center justify-between p-6 sm:p-7 rounded-3xl backdrop-blur-xl bg-white/85 dark:bg-[#121926]/90 border border-white/80 dark:border-white/10 shadow-[0_12px_36px_rgba(15,23,42,0.06),_0_2px_8px_rgba(0,0,0,0.03),_inset_0_1px_1.5px_rgba(255,255,255,0.95)] dark:shadow-[0_14px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_rgba(255,255,255,0.1)] hover:shadow-[0_18px_48px_rgba(37,99,235,0.14)] dark:hover:shadow-[0_18px_48px_rgba(0,0,0,0.7)] hover:-translate-y-1.5 active:translate-y-0 transition-all duration-300 cursor-pointer min-h-[185px] overflow-hidden select-none"
+              className="soft-surface group relative flex flex-col items-center text-center justify-between p-6 sm:p-7 rounded-[28px] hover:-translate-y-1.5 active:translate-y-0 transition-all duration-300 cursor-pointer min-h-[185px] overflow-hidden select-none"
             >
               {/* Subtle 3D Glass top sheen reflection */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/15 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
 
               {/* 3D Icon Container */}
-              <div className="mt-1 p-2.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/60 dark:border-white/10 shadow-sm flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+              <div className="mt-1 p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
                 <Icon size={52} className="shrink-0 drop-shadow-sm" />
               </div>
 

@@ -177,10 +177,10 @@ export function Home() {
         {/* Right Info Widgets (4 columns) */}
         <div className="md:col-span-4 space-y-4 flex flex-col justify-between">
           
-          {/* Biển số xe Card (Chỉ giữ đúng biển số xe, bỏ chữ hầm, phương tiện) */}
+          {/* Biển số xe Card (3D Glassmorphism, Chỉ giữ đúng biển số xe) */}
           <NavLink 
             to="/profile"
-            className="soft-card p-5 flex-1 flex flex-col justify-between hover:scale-[1.01] transition-all group select-none relative overflow-hidden"
+            className="soft-surface p-5 flex-1 flex flex-col justify-between rounded-[24px] hover:scale-[1.01] transition-all group select-none relative overflow-hidden"
           >
             {/* Top Sheen */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
@@ -188,7 +188,7 @@ export function Home() {
             {/* Header: Title & Navigate hint */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <div className="shrink-0 p-1.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-100/50 dark:border-blue-900/30">
+                <div className="shrink-0 p-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-xs">
                   <IconVehicle3D size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
                 </div>
                 <div>
@@ -211,11 +211,16 @@ export function Home() {
           {/* Contract Status Mini card with 3D Contract Document Icon */}
           <div 
             onClick={openContractModal}
-            className="soft-card p-5 flex-1 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer group"
+            className="soft-surface p-5 flex-1 flex flex-col justify-between rounded-[24px] hover:scale-[1.01] transition-all cursor-pointer group relative overflow-hidden"
           >
+            {/* Top Sheen */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
+
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <IconContract3D size={42} className="shrink-0 group-hover:scale-105 transition-transform" />
+                <div className="shrink-0 p-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-xs">
+                  <IconContract3D size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
+                </div>
                 <div>
                   <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white transition-colors font-bold">Hợp đồng thuê</h3>
                   <p className="text-[11px] text-slate-400 dark:text-slate-400 font-num">#HD-2025-102</p>
@@ -224,7 +229,7 @@ export function Home() {
               <span className="badge-paid text-[10px] py-0.5">Hiệu lực</span>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex justify-between items-center text-xs">
               <span className="text-slate-400 dark:text-slate-400">Thời hạn:</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 font-num">01/06/2026 - 01/06/2027</span>
             </div>
@@ -233,7 +238,9 @@ export function Home() {
         </div>
 
         {/* Bottom Section: Recent Notifications with 3D Notification Bell */}
-        <div className="md:col-span-12 soft-card p-5 sm:p-6 space-y-3">
+        <div className="md:col-span-12 soft-surface p-5 sm:p-6 rounded-[28px] relative overflow-hidden space-y-3">
+          {/* Top Sheen */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3.5">
               <IconNotification3D size={38} className="shrink-0" />

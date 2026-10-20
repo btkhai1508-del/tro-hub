@@ -80,18 +80,21 @@ export function InvoicesAndPayment() {
         </div>
       </div>
 
-      {/* Summary Card for Pending Payment */}
+      {/* Summary Card for Pending Payment (3D Glassmorphism identical to Home payment card) */}
       {unpaidInvoices.length > 0 && (
-        <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121926] border border-slate-200/90 dark:border-slate-800 shadow-sm dark:shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex flex-col sm:flex-row sm:items-center justify-between gap-5 transition-all">
+        <div className="soft-surface relative overflow-hidden p-6 sm:p-7 rounded-[28px] flex flex-col sm:flex-row sm:items-center justify-between gap-5 transition-all">
+          {/* Subtle 3D Glass top sheen reflection */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
+
           {/* Left Column: 3D Wallet Icon & Payment Details */}
           <div className="flex items-center gap-4 sm:gap-5 min-w-0">
-            <div className="shrink-0 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-xs flex items-center justify-center">
+            <div className="shrink-0 p-2.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-center">
               <IconWallet3D size={48} className="shrink-0 drop-shadow-sm" />
             </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 font-num">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 dark:border-rose-500/30 font-num">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                   Cần thanh toán
                 </span>
@@ -111,7 +114,7 @@ export function InvoicesAndPayment() {
           </div>
 
           {/* Right Column: Payment CTA Button */}
-          <div className="shrink-0 self-stretch sm:self-center flex sm:flex-col justify-end pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+          <div className="shrink-0 self-stretch sm:self-center flex sm:flex-col justify-end pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/60">
             <button
               type="button"
               onClick={(e) => handlePay(unpaidInvoices[0].id, e)}

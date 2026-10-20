@@ -26,11 +26,11 @@ type SfxName =
   | 'alert';
 
 const SFX_FILES: Record<SfxName, string> = {
-  switchOn: '/sfx/switch-on.ogg',
-  switchOff: '/sfx/switch-off.ogg',
+  switchOn: '/sfx/switch-on.ogg?v=2',
+  switchOff: '/sfx/switch-off.ogg?v=2',
   click: '/sfx/click.ogg',
   tab: '/sfx/tab.ogg',
-  success: '/sfx/success.ogg',
+  success: '/sfx/success.ogg?v=2',
   modalOpen: '/sfx/modal-open.ogg',
   modalClose: '/sfx/modal-close.ogg',
   notification: '/sfx/notification.ogg',
