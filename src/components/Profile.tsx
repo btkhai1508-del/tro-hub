@@ -246,10 +246,7 @@ export function Profile() {
               <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
                 <Sun size={20} />
               </div>
-              <div>
-                <span className="text-sm font-bold block">Chế độ sáng</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Ban ngày / Nền sáng rõ</span>
-              </div>
+              <span className="text-sm font-bold block">Chế độ sáng</span>
             </button>
 
             {/* Chế độ tối */}
@@ -266,10 +263,7 @@ export function Profile() {
               <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
                 <Moon size={20} />
               </div>
-              <div>
-                <span className="text-sm font-bold block">Chế độ tối</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Dịu mắt / Đêm tối</span>
-              </div>
+              <span className="text-sm font-bold block">Chế độ tối</span>
             </button>
 
             {/* Tự động */}
@@ -286,10 +280,7 @@ export function Profile() {
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
                 <IconClock3D size={24} />
               </div>
-              <div>
-                <span className="text-sm font-bold block">Tự động</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">Theo thời gian thực</span>
-              </div>
+              <span className="text-sm font-bold block">Tự động</span>
             </button>
           </div>
         </div>

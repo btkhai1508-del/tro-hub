@@ -258,17 +258,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    // Clear old mock notification cache so only live Google Sheet notifications appear
+    // Reset notification cache per user request: only payment completion creates notifications
     try {
-      const saved = storage.getItem('ecostay_notifications');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0 && String(parsed[0]?.id || '').startsWith('notif-')) {
-          storage.removeItem('ecostay_notifications');
-          return [];
-        }
-        return Array.isArray(parsed) ? parsed : [];
-      }
+      storage.removeItem('ecostay_notifications');
     } catch {}
     return [];
   });

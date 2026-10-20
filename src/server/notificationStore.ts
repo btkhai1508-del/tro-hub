@@ -57,6 +57,11 @@ export function saveNotificationsStore(): void {
   }
 }
 
+export function resetNotificationsStore(): void {
+  notificationsCache = [];
+  saveNotificationsStore();
+}
+
 /**
  * Fetch live notifications directly from Google Sheet tab "Notifications"
  * Columns:
@@ -70,6 +75,18 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
   try {
     const rows = await fetchSheetDataViaGviz(sheetId, 'Notifications');
     if (!rows || rows.length <= 1) {
+      return [];
+    }
+
+    // Safety check: ensure this is actually a Notifications sheet, NOT fallback sheet (like THÔNG TIN CÁ NHÂN)
+    const headerStr = (rows[0] || []).map(c => String(c || '').toLowerCase()).join(' ');
+    const isRealNotifSheet = (
+      (headerStr.includes('loại') || headerStr.includes('tiêu đề') || headerStr.includes('nội dung') || headerStr.includes('thông báo')) &&
+      !headerStr.includes('họ và tên') &&
+      !headerStr.includes('cccd') &&
+      !headerStr.includes('biển soó xe')
+    );
+    if (!isRealNotifSheet) {
       return [];
     }
 

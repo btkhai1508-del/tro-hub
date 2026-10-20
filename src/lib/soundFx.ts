@@ -111,7 +111,7 @@ class SoundFxEngine {
         const source = ctx.createBufferSource();
         source.buffer = cached;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.7, ctx.currentTime);
+        gain.gain.setValueAtTime(0.6, ctx.currentTime);
         source.connect(gain);
         gain.connect(ctx.destination);
         source.start(0);
@@ -122,7 +122,7 @@ class SoundFxEngine {
     // Try HTMLAudioElement as fast direct path
     try {
       const audio = new Audio(url);
-      audio.volume = 0.7;
+      audio.volume = 0.6;
       audio.play().catch(() => {
         if (fallbackSynth) fallbackSynth();
       });
@@ -167,7 +167,7 @@ class SoundFxEngine {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(620, t);
       osc.frequency.exponentialRampToValueAtTime(880, t + 0.035);
-      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.setValueAtTime(0.12, t);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -189,7 +189,7 @@ class SoundFxEngine {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(520, t);
       osc.frequency.exponentialRampToValueAtTime(320, t + 0.035);
-      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.setValueAtTime(0.1, t);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -211,7 +211,7 @@ class SoundFxEngine {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(520, t);
       osc.frequency.exponentialRampToValueAtTime(380, t + 0.025);
-      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.setValueAtTime(0.09, t);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -233,7 +233,7 @@ class SoundFxEngine {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(440, t);
       osc.frequency.exponentialRampToValueAtTime(587.33, t + 0.05);
-      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.setValueAtTime(0.08, t);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
       osc.connect(gain);
       gain.connect(ctx.destination);

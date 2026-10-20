@@ -2,27 +2,21 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
-import {
-  IconHome3D,
-  IconMeter3D,
-  IconWallet3D,
-  IconCalendar3D,
-  IconProfile3D
-} from './Icons3D';
+import { Home, LayoutGrid, Receipt, FileText, User } from 'lucide-react';
 import { soundFx } from '../lib/soundFx';
 
 interface NavItemDef {
   name: string;
   path: string;
-  IconComponent: React.ComponentType<{ size?: number; className?: string }>;
+  IconComponent: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
 }
 
 const navItems: NavItemDef[] = [
-  { name: 'Trang chủ', path: '/', IconComponent: IconHome3D },
-  { name: 'Tiện ích', path: '/utilities', IconComponent: IconMeter3D },
-  { name: 'Hóa đơn', path: '/invoices', IconComponent: IconWallet3D },
-  { name: 'Hợp đồng', path: '/contract', IconComponent: IconCalendar3D },
-  { name: 'Cá nhân', path: '/profile', IconComponent: IconProfile3D },
+  { name: 'Trang chủ', path: '/', IconComponent: Home },
+  { name: 'Tiện ích', path: '/utilities', IconComponent: LayoutGrid },
+  { name: 'Hóa đơn & Thanh toán', path: '/invoices', IconComponent: Receipt },
+  { name: 'Hợp đồng', path: '/contract', IconComponent: FileText },
+  { name: 'Cá nhân', path: '/profile', IconComponent: User },
 ];
 
 export function BottomNav({ className }: { className?: string }) {
@@ -50,38 +44,40 @@ export function BottomNav({ className }: { className?: string }) {
             to={item.path}
             data-tutorial={tutorialAttr}
             onClick={() => soundFx.tab()}
-            className="relative flex flex-col items-center gap-0.5 py-1 px-2.5 touch-manipulation group min-w-[56px]"
+            className="relative flex flex-col items-center gap-1 py-1 px-2 touch-manipulation group min-w-[56px]"
           >
             {({ isActive }) => (
               <>
                 <div className="relative p-0.5 transition-all duration-200">
                   <div className={cn(
                     "transition-all duration-200 shrink-0 flex items-center justify-center",
-                    isActive ? "scale-110 -translate-y-0.5" : "opacity-75 group-hover:opacity-100 group-hover:scale-105"
+                    isActive 
+                      ? "text-slate-900 dark:text-white scale-110" 
+                      : "text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300"
                   )}>
-                    <Icon size={28} />
+                    <Icon size={20} strokeWidth={isActive ? 2.3 : 1.8} />
                   </div>
                   
                   {/* Badge on invoice item */}
                   {item.path === '/invoices' && unpaidCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center font-num shadow-sm ring-2 ring-white dark:ring-slate-900">
+                    <span className="absolute -top-1 -right-2 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center font-num shadow-sm ring-2 ring-white dark:ring-slate-900">
                       {unpaidCount}
                     </span>
                   )}
                 </div>
 
                 <span className={cn(
-                  "text-[10px] sm:text-[11px] font-medium transition-all duration-200 tracking-tight whitespace-nowrap",
+                  "text-[10px] font-medium transition-all duration-200 tracking-tight whitespace-nowrap text-center max-w-[70px] truncate",
                   isActive 
                     ? "text-slate-900 dark:text-white font-bold" 
-                    : "text-slate-500 dark:text-slate-400"
+                    : "text-slate-400 dark:text-slate-500"
                 )}>
-                  {item.name}
+                  {item.name === 'Hóa đơn & Thanh toán' ? 'Hóa đơn' : item.name}
                 </span>
 
-                {/* Subtle active pill indicator */}
+                {/* Active pill dot */}
                 {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900 dark:bg-white mt-0.5" />
+                  <span className="w-1 h-1 rounded-full bg-slate-900 dark:bg-white" />
                 )}
               </>
             )}
