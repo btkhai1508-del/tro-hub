@@ -70,9 +70,7 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss(), zaloMiniAppAutoConfigPlugin()],
     define: {
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        process.env.VITE_API_BASE_URL && process.env.VITE_API_BASE_URL !== 'https://tro-hub.web.app'
-          ? process.env.VITE_API_BASE_URL
-          : 'https://tro-hub.onrender.com'
+        process.env.VITE_API_BASE_URL || 'https://tro-hub.onrender.com'
       ),
     },
     resolve: {

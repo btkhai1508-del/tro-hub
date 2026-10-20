@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-if (!process.env.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL === 'https://tro-hub.web.app') {
+if (!process.env.VITE_API_BASE_URL) {
   process.env.VITE_API_BASE_URL = 'https://tro-hub.onrender.com';
 }
 import express from 'express';

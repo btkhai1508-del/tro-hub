@@ -1,8 +1,12 @@
 node_modules/
+node_modules
 build/
 dist/
+dist
 coverage/
 .DS_Store
 *.log
+.firebase/
+.firebase
 .env*
 !.env.example
