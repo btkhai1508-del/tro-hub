@@ -177,30 +177,52 @@ export function Home() {
         {/* Right Info Widgets (4 columns) */}
         <div className="md:col-span-4 space-y-4 flex flex-col justify-between">
           
-          {/* Vehicle mini card with 3D Vehicle Icon */}
+          {/* Redesigned Smart Parking Pass Layout */}
           <NavLink 
             to="/profile"
-            className="soft-card p-5 flex-1 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-all group"
+            className="soft-card p-4 sm:p-5 flex-1 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-all group select-none relative overflow-hidden"
           >
+            {/* Header: Title, RFID status & Navigate hint */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <IconVehicle3D size={42} className="shrink-0 group-hover:scale-105 transition-transform" />
+                <div className="shrink-0 p-1 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-100/50 dark:border-blue-900/30">
+                  <IconVehicle3D size={38} className="shrink-0 group-hover:scale-105 transition-transform" />
+                </div>
                 <div>
-                  <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white transition-colors font-bold">Thẻ xe đăng ký</h3>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-400">{profile.vehicle.parkingSlot}</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="type-h4 text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors font-bold">
+                      Thẻ xe cư dân
+                    </h3>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      RFID Active
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-400 mt-0.5">
+                    Hầm B1 · Vị trí đỗ cố định
+                  </p>
                 </div>
               </div>
-              <ChevronRight size={15} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              <ChevronRight size={16} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
             </div>
 
-            <div className="neu-inset p-3 rounded-xl flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{profile.vehicle.type}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-400 mt-0.5">Vị trí đỗ: Hầm B1</p>
+            {/* License Plate & Vehicle Specs Badge */}
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-50 via-slate-100/70 to-slate-50 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-inner">
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider block">
+                  Phương tiện
+                </span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {profile.vehicle.type || 'Xe máy'}
+                </span>
               </div>
-              <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 shadow-2xs">
-                {profile.vehicle.plateNumber}
-              </span>
+
+              {/* Realistic Vietnam License Plate */}
+              <div className="shrink-0 relative px-3 py-1 bg-white text-slate-900 rounded-lg border-2 border-slate-800 shadow-sm flex items-center justify-center">
+                <span className="font-mono text-xs sm:text-[13px] font-extrabold tracking-widest text-slate-950">
+                  {profile.vehicle.plateNumber || '86AK-09320'}
+                </span>
+              </div>
             </div>
           </NavLink>
 

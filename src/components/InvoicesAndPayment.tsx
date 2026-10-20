@@ -80,36 +80,59 @@ export function InvoicesAndPayment() {
         </div>
       </div>
 
-      {/* Summary Card if there are unpaid invoices */}
+      {/* 3D Glassmorphism Summary Card for Pending Payment */}
       {unpaidInvoices.length > 0 && (
-        <div className="p-5 sm:p-6 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/90 dark:border-rose-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="badge-unpaid text-xs">Cần thanh toán</span>
-            <div className="type-display font-num text-slate-900 dark:text-slate-100 mt-1 font-bold">
-              {formatCurrency(totalUnpaidAmount)} <span className="text-xl font-normal text-slate-400 dark:text-slate-500">₫</span>
+        <div className="relative overflow-hidden p-5 sm:p-6 rounded-3xl backdrop-blur-xl bg-gradient-to-br from-white/90 via-white/75 to-rose-50/50 dark:from-slate-900/90 dark:via-slate-850/80 dark:to-rose-950/30 border border-white/80 dark:border-white/10 shadow-[0_12px_36px_rgba(244,63,94,0.12),_0_2px_10px_rgba(0,0,0,0.04),_inset_0_1px_2px_rgba(255,255,255,0.9)] dark:shadow-[0_14px_40px_rgba(0,0,0,0.5),_inset_0_1px_2px_rgba(255,255,255,0.12)] flex flex-col sm:flex-row sm:items-center justify-between gap-5 transition-all">
+          {/* Subtle 3D Glass top sheen reflection */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/90 dark:via-white/25 to-transparent" />
+
+          {/* Left Column: 3D Wallet Icon & Payment Details */}
+          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+            <div className="shrink-0 p-1.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/60 dark:border-white/10 shadow-sm flex items-center justify-center">
+              <IconWallet3D size={52} className="shrink-0 drop-shadow-sm" />
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Bạn có {unpaidInvoices.length} hóa đơn chưa thanh toán. Vui lòng hoàn tất trước ngày đến hạn.
-            </p>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20 backdrop-blur-md font-num">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  Cần thanh toán
+                </span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Kỳ Tháng {unpaidInvoices[0]?.month || '10/2026'}
+                </span>
+              </div>
+
+              <div className="type-display font-num text-slate-900 dark:text-slate-100 font-bold tracking-tight">
+                {formatCurrency(totalUnpaidAmount)} <span className="text-xl font-normal text-slate-400 dark:text-slate-500">₫</span>
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                Bạn có {unpaidInvoices.length} hóa đơn chưa thanh toán · Vui lòng hoàn tất trước ngày đến hạn.
+              </p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={(e) => handlePay(unpaidInvoices[0].id, e)}
-            className="primary-button py-2.5 px-6 text-sm flex items-center gap-2 self-start sm:self-center font-bold cursor-pointer"
-          >
-            {paymentGateStatus === 'STOP' ? (
-              <>
-                <Lock size={16} className="text-amber-300" />
-                <span>Thanh toán (Cổng đóng)</span>
-              </>
-            ) : (
-              <>
-                <CreditCard size={16} />
-                <span>Thanh toán ngay</span>
-              </>
-            )}
-          </button>
+          {/* Right Column: Payment CTA Button */}
+          <div className="shrink-0 self-stretch sm:self-center flex sm:flex-col justify-end pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-200/50 dark:border-slate-800/60">
+            <button
+              type="button"
+              onClick={(e) => handlePay(unpaidInvoices[0].id, e)}
+              className="w-full sm:w-auto primary-button py-3 px-6 text-sm flex items-center justify-center gap-2.5 font-bold cursor-pointer shadow-lg shadow-slate-900/15 active:scale-[0.98] transition-all"
+            >
+              {paymentGateStatus === 'STOP' ? (
+                <>
+                  <Lock size={16} className="text-amber-300" />
+                  <span>Thanh toán (Cổng đóng)</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard size={16} />
+                  <span>Thanh toán ngay</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 

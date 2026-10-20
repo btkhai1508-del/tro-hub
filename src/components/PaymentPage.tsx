@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { saveQrToDevice } from '../lib/qrHelper';
+import { soundFx } from '../lib/soundFx';
 import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from 'lucide-react';
 
 export function PaymentPage() {
@@ -35,6 +36,18 @@ export function PaymentPage() {
 
   // Single-execution flag to prevent repeated looping
   const isCompletedRef = useRef(isAlreadyPaid || paymentMode === 'success');
+  const hasPlayedSuccessSound = useRef(false);
+
+  useEffect(() => {
+    if (paymentMode === 'success') {
+      if (!hasPlayedSuccessSound.current) {
+        hasPlayedSuccessSound.current = true;
+        soundFx.success();
+      }
+    } else {
+      hasPlayedSuccessSound.current = false;
+    }
+  }, [paymentMode]);
 
   useEffect(() => {
     if (targetInvoice.status === 'paid') {

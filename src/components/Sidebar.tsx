@@ -17,21 +17,21 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
-import {
-  IconHome3D,
-  IconMeter3D,
-  IconWallet3D,
-  IconCalendar3D,
-  IconProfile3D
-} from './Icons3D';
 import { soundFx } from '../lib/soundFx';
 
-const defaultNavItems = [
-  { name: 'Trang chủ', path: '/', icon: IconHome3D, IconComponent: IconHome3D },
-  { name: 'Tiện ích', path: '/utilities', icon: IconMeter3D, IconComponent: IconMeter3D },
-  { name: 'Hóa đơn & Thanh toán', path: '/invoices', icon: IconWallet3D, IconComponent: IconWallet3D },
-  { name: 'Hợp đồng', path: '/contract', icon: IconCalendar3D, IconComponent: IconCalendar3D },
-  { name: 'Cá nhân', path: '/profile', icon: IconProfile3D, IconComponent: IconProfile3D },
+interface NavItem {
+  name: string;
+  path: string;
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  IconComponent?: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+}
+
+const defaultNavItems: NavItem[] = [
+  { name: 'Trang chủ', path: '/', icon: Home, IconComponent: Home },
+  { name: 'Tiện ích', path: '/utilities', icon: LayoutGrid, IconComponent: LayoutGrid },
+  { name: 'Hóa đơn & Thanh toán', path: '/invoices', icon: Receipt, IconComponent: Receipt },
+  { name: 'Hợp đồng', path: '/contract', icon: FileText, IconComponent: FileText },
+  { name: 'Cá nhân', path: '/profile', icon: User, IconComponent: User },
 ];
 
 export function Sidebar() {
@@ -153,7 +153,7 @@ export function Sidebar() {
                         /* Collapsed Icon */
                         <div className="relative flex items-center justify-center w-full h-full">
                           <div className={cn("transition-transform duration-200 shrink-0", isActive ? "scale-110" : "group-hover:scale-105")}>
-                            <Icon size={26} />
+                            <Icon size={20} strokeWidth={2} />
                           </div>
 
                           {(item.path === '/invoices' || item.path === '/utilities') && unpaidCount > 0 && (
@@ -167,7 +167,7 @@ export function Sidebar() {
                         <>
                           <div className="flex items-center gap-3 min-w-0">
                             <div className={cn("transition-transform duration-200 shrink-0", isActive ? "scale-105" : "group-hover:scale-105")}>
-                              <Icon size={26} />
+                              <Icon size={20} strokeWidth={2} />
                             </div>
                             <span className="text-sm tracking-tight truncate">{item.name}</span>
                           </div>

@@ -305,6 +305,7 @@ export function LoginPage() {
                   checked={rememberMe}
                   onChange={setRememberMe}
                   label="Ghi nhớ đăng nhập"
+                  color="black"
                 />
               </div>
 

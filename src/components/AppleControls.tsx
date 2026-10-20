@@ -121,13 +121,14 @@ export interface AppleCheckboxProps {
   label?: React.ReactNode;
   className?: string;
   ariaLabel?: string;
+  color?: 'black' | 'blue' | 'theme';
 }
 
 /**
  * Skeuomorphic Inset Checkbox
- * Designed per Figma specs:
- * Unchecked: linear-gradient(141.47deg, #D9D9D9 24.4%, #FFFFFF 75.04%), inset 0px 4px 4px rgba(0,0,0,0.45)
- * Checked: linear-gradient(141.47deg, Theme Gradient), inset shadow, with #ECECEC inner mark
+ * Designed per Apple & modern skeuomorphism specs:
+ * Unchecked: subtle inset bevel
+ * Checked: Pitch black or theme gradient, inset shadow, with crisp white inner mark
  */
 export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
   checked,
@@ -137,6 +138,7 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
   label,
   className,
   ariaLabel = 'Checkbox',
+  color = 'black',
 }) => {
   const sizeConfig = {
     sm: {
@@ -186,15 +188,19 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
           }
         }}
         className={cn(
-          'relative shrink-0 flex items-center justify-center transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50',
+          'relative shrink-0 flex items-center justify-center transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/40 dark:focus-visible:ring-white/40',
           sizeConfig.box
         )}
         style={{
           background: checked
-            ? 'linear-gradient(141.47deg, #2563EB 24.4%, #60A5FA 75.04%)'
+            ? color === 'black'
+              ? 'linear-gradient(141.47deg, #09090b 24.4%, #27272a 75.04%)'
+              : 'linear-gradient(141.47deg, #2563EB 24.4%, #60A5FA 75.04%)'
             : 'linear-gradient(141.47deg, #D9D9D9 24.4%, #FFFFFF 75.04%)',
           boxShadow: checked
-            ? 'inset 0px 2px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(37,99,235,0.2)'
+            ? color === 'black'
+              ? 'inset 0px 2px 3px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0,0,0,0.3)'
+              : 'inset 0px 2px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(37,99,235,0.2)'
             : 'inset 0px 2px 3px rgba(0, 0, 0, 0.45)',
         }}
       >
@@ -202,7 +208,7 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
           <Check
             size={sizeConfig.icon}
             strokeWidth={3.2}
-            className="text-white drop-shadow-[-0.6px_1.5px_2px_rgba(0,0,0,0.4)] animate-in zoom-in-75 duration-150"
+            className="text-white drop-shadow-[-0.6px_1.5px_2px_rgba(0,0,0,0.5)] animate-in zoom-in-75 duration-150"
           />
         )}
       </button>
