@@ -20,6 +20,7 @@ import {
   Calendar, 
   ChevronRight, 
   ChevronLeft, 
+  ChevronDown,
   LogOut,
   Building2,
   LayoutGrid,
@@ -997,41 +998,40 @@ export function AdminPortal() {
           <div className="w-full space-y-2.5 pt-3 border-t border-slate-900/5 dark:border-white/10">
             {!isSidebarCollapsed ? (
               <div className="space-y-2.5">
-                {/* 1. Month Selector */}
-                <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center gap-2.5 shadow-2xs">
-                  <Calendar size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[9px] text-slate-400 dark:text-slate-400 uppercase tracking-wider block font-bold leading-none mb-1">
-                      Kỳ tháng
-                    </span>
-                    <select
-                      value={selectedMonth}
-                      onChange={e => {
-                        playSound('click');
-                        setSelectedMonth(e.target.value);
-                      }}
-                      className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer p-0"
-                    >
-                      {months.map(m => (
-                        <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                          Tháng {m}
-                        </option>
-                      ))}
-                    </select>
+                {/* 1. Month Selector - 3D Glassmorphism Card */}
+                <div className="soft-surface p-2.5 sm:p-3 rounded-2xl relative overflow-hidden group">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
+                  <div className="flex items-center gap-2.5">
+                    <Calendar size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[9px] text-slate-400 dark:text-slate-400 uppercase tracking-wider block font-bold leading-none mb-1">
+                        Kỳ tháng
+                      </span>
+                      <select
+                        value={selectedMonth}
+                        onChange={e => setSelectedMonth(e.target.value)}
+                        className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer p-0"
+                      >
+                        {months.map(m => (
+                          <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                            Tháng {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <ChevronDown size={14} className="text-slate-400 shrink-0 pointer-events-none" />
                   </div>
                 </div>
 
-                {/* 2. Theme Toggle & Refresh Row */}
+                {/* 2. Theme Toggle & Refresh Row - 3D Glassmorphism Cards */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      playSound('click');
-                      toggleTheme();
-                    }}
-                    className="h-10 px-2 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all cursor-pointer shadow-2xs"
+                    onClick={toggleTheme}
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
                     title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
                   >
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                     {mode === 'light' ? (
                       <Sun size={15} className="text-amber-500 shrink-0 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                     ) : mode === 'dark' ? (
@@ -1046,23 +1046,22 @@ export function AdminPortal() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      playSound('click');
-                      loadTabContent(activeMenu, selectedMonth);
-                    }}
-                    className="h-10 px-2 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all cursor-pointer shadow-2xs"
+                    onClick={() => loadTabContent(activeMenu, selectedMonth)}
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
                     title="Làm mới dữ liệu từ Google Sheets"
                   >
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                     <RefreshCw size={14} className={cn("text-blue-600 dark:text-blue-400 shrink-0", isLoading && "animate-spin")} />
                     <span className="truncate text-[11px] font-bold">Làm mới</span>
                   </button>
                 </div>
 
-                {/* 3. Cổng thanh toán Q2 */}
-                <div className="p-2.5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between shadow-2xs">
+                {/* 3. Cổng thanh toán Q2 - 3D Glassmorphism Card */}
+                <div className="soft-surface p-3 rounded-2xl relative overflow-hidden flex items-center justify-between">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cổng thanh toán Q2</p>
-                    <p className={cn("text-xs font-black uppercase font-num", paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider">Cổng thanh toán Q2</p>
+                    <p className={cn("text-xs font-black uppercase font-num mt-0.5", paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                       {paymentGate === 'START' ? 'ĐANG BẬT (START)' : 'ĐANG TẮT (STOP)'}
                     </p>
                   </div>
@@ -1075,18 +1074,18 @@ export function AdminPortal() {
                   />
                 </div>
 
-                {/* 4. Single Logout Button */}
+                {/* 4. Single Logout Button - 3D Glassmorphism Rose Card */}
                 <button
                   type="button"
                   onClick={() => {
-                    playSound('click');
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-rose-100 dark:border-rose-900/40"
+                  className="w-full py-2.5 px-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/15 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/20 dark:border-rose-500/30 shadow-[0_4px_16px_rgba(244,63,94,0.08),inset_0_1px_1px_rgba(255,255,255,0.8)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.06)] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] relative overflow-hidden group"
                   title="Đăng xuất khỏi hệ thống quản lý"
                 >
-                  <LogOut size={15} />
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-rose-300/60 dark:via-rose-400/20 to-transparent" />
+                  <LogOut size={15} className="group-hover:translate-x-0.5 transition-transform" />
                   <span>Đăng xuất Admin</span>
                 </button>
               </div>
@@ -1095,16 +1094,13 @@ export function AdminPortal() {
               <div className="flex flex-col items-center gap-2 pt-1 w-full">
                 {/* Month Selector in Collapsed Mode */}
                 <div 
-                  className="relative w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800/40 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-100/80 transition-colors shadow-2xs cursor-pointer group"
+                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 hover:scale-105 transition-all cursor-pointer group"
                   title={`Kỳ tháng: Tháng ${selectedMonth} (Bấm để chọn tháng)`}
                 >
                   <Calendar size={18} />
                   <select
                     value={selectedMonth}
-                    onChange={e => {
-                      playSound('click');
-                      setSelectedMonth(e.target.value);
-                    }}
+                    onChange={e => setSelectedMonth(e.target.value)}
                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                     title={`Kỳ tháng: Tháng ${selectedMonth}`}
                   >
@@ -1119,11 +1115,8 @@ export function AdminPortal() {
                 {/* Theme Mode in Collapsed Mode */}
                 <button
                   type="button"
-                  onClick={() => {
-                    playSound('click');
-                    toggleTheme();
-                  }}
-                  className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer shadow-2xs"
+                  onClick={toggleTheme}
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
                   title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
                 >
                   {mode === 'light' ? (
@@ -1138,11 +1131,8 @@ export function AdminPortal() {
                 {/* Refresh in Collapsed Mode */}
                 <button
                   type="button"
-                  onClick={() => {
-                    playSound('click');
-                    loadTabContent(activeMenu, selectedMonth);
-                  }}
-                  className="w-11 h-11 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer shadow-2xs"
+                  onClick={() => loadTabContent(activeMenu, selectedMonth)}
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
                   title="Làm mới dữ liệu từ Google Sheets"
                 >
                   <RefreshCw size={17} className={cn("text-blue-600 dark:text-blue-400", isLoading && "animate-spin")} />
@@ -1153,7 +1143,7 @@ export function AdminPortal() {
                   type="button"
                   onClick={togglePaymentGate}
                   className={cn(
-                    "w-11 h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-xs transition-colors",
+                    "w-11 h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-xs hover:scale-105 transition-all",
                     paymentGate === 'START' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
                   )}
                   title={`Cổng thanh toán: ${paymentGate}`}
@@ -1165,11 +1155,10 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={() => {
-                    playSound('click');
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                   title="Đăng xuất Admin"
                 >
                   <LogOut size={16} />

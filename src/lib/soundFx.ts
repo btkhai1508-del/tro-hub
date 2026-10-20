@@ -27,17 +27,17 @@ type SfxName =
   | 'alert';
 
 const SFX_FILES: Record<SfxName, string> = {
-  switchOn: '/sfx/switch-on.ogg?v=5',
-  switchOff: '/sfx/switch-off.ogg?v=5',
-  click: '/sfx/click.ogg?v=5',
-  tab: '/sfx/tab.ogg?v=5',
-  success: '/sfx/success.ogg?v=5',
-  modalOpen: '/sfx/modal-open.ogg?v=5',
-  modalClose: '/sfx/modal-close.ogg?v=5',
-  notification: '/sfx/notification.ogg?v=5',
-  tick: '/sfx/tick.ogg?v=5',
-  hover: '/sfx/hover.ogg?v=5',
-  alert: '/sfx/alert.ogg?v=5',
+  switchOn: '/sfx/switch-on.ogg?v=6',
+  switchOff: '/sfx/switch-off.ogg?v=6',
+  click: '/sfx/click.ogg?v=6',
+  tab: '/sfx/tab.ogg?v=6',
+  success: '/sfx/success.ogg?v=6',
+  modalOpen: '/sfx/modal-open.ogg?v=6',
+  modalClose: '/sfx/modal-close.ogg?v=6',
+  notification: '/sfx/notification.ogg?v=6',
+  tick: '/sfx/tick.ogg?v=6',
+  hover: '/sfx/hover.ogg?v=6',
+  alert: '/sfx/alert.ogg?v=6',
 };
 
 class SoundFxEngine {
@@ -145,7 +145,7 @@ class SoundFxEngine {
     if (!ctx) return;
 
     const url = SFX_FILES[name];
-    const defaultVol = (name === 'tick' || name === 'hover') ? 0.4 : 0.6;
+    const defaultVol = (name === 'tick' || name === 'hover') ? 0.28 : 0.6;
     const vol = customVolume !== undefined ? customVolume : defaultVol;
 
     // Check if buffer is already cached
@@ -156,7 +156,18 @@ class SoundFxEngine {
         source.buffer = cached;
         const gain = ctx.createGain();
         gain.gain.setValueAtTime(vol, ctx.currentTime);
-        source.connect(gain);
+
+        if (name === 'hover' || name === 'tick') {
+          // Warm low-pass filter to eliminate any sharp/piercing high-frequency harmonics
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1000, ctx.currentTime);
+          source.connect(filter);
+          filter.connect(gain);
+        } else {
+          source.connect(gain);
+        }
+
         gain.connect(ctx.destination);
         source.start(0);
         return;
@@ -278,9 +289,9 @@ class SoundFxEngine {
   }
 
   /**
-   * Hover sound: gentle Kenney UI select_001 blip when hovering clickable elements (~40% volume)
+   * Hover sound: warm, neutral, gentle non-piercing micro feedback (~28% volume)
    */
-  public hover(volume = 0.4) {
+  public hover(volume = 0.28) {
     this.playOgg('hover', () => {
       const ctx = this.getContext();
       if (!ctx) return;
@@ -288,21 +299,21 @@ class SoundFxEngine {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(650, t);
-      osc.frequency.exponentialRampToValueAtTime(850, t + 0.04);
-      gain.gain.setValueAtTime(0.05, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+      osc.frequency.setValueAtTime(380, t);
+      osc.frequency.exponentialRampToValueAtTime(280, t + 0.035);
+      gain.gain.setValueAtTime(0.02, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(t);
-      osc.stop(t + 0.04);
+      osc.stop(t + 0.035);
     }, volume);
   }
 
   /**
-   * Tick OGG sound: micro-tap for copy or lightweight actions (~40% volume)
+   * Tick OGG sound: micro-tap for copy or lightweight actions (~28% volume)
    */
-  public tick(volume = 0.4) {
+  public tick(volume = 0.28) {
     this.playOgg('tick', undefined, volume);
   }
 
