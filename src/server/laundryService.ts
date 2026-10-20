@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { addNotification } from './notificationStore.js';
+import { fetchSheetDataViaGviz, DEFAULT_SPREADSHEET_ID } from './googleSheetsBackendService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -362,6 +363,16 @@ export const LaundryService = {
       sender: 'LaundryFlow 24/7'
     });
 
+    // Sync booking deposit confirmation to Google Sheet tab Laundry_Bookings
+    pushToGoogleSheetAsync({
+      action: 'laundry_confirm_deposit',
+      bookingId: matchedBooking ? matchedBooking.bookingId : '',
+      machineId: cleanId,
+      transactionId: referenceCode,
+      depositAmount: amount,
+      depositStatus: 'PAID'
+    });
+
     return {
       success: true,
       message: `Đã xác nhận đặt cọc giữ chỗ máy ${cleanId} (${amount.toLocaleString('vi-VN')}₫)!`,
@@ -401,6 +412,23 @@ export const LaundryService = {
 
     storeData.bookings.unshift(booking);
     saveStore();
+
+    // Sync new booking to Google Sheet tab Laundry_Bookings
+    pushToGoogleSheetAsync({
+      action: 'laundry_add_booking',
+      bookingId: booking.bookingId,
+      machineId: booking.machineId,
+      room: booking.roomNumber,
+      name: booking.tenantName,
+      phone: booking.tenantPhone,
+      bookingDate: booking.bookingDate,
+      bookingTime: booking.bookingTime,
+      depositAmount: booking.depositAmount,
+      depositStatus: booking.depositStatus,
+      transactionId: '',
+      status: booking.status,
+      createdAt: booking.createdAt
+    });
 
     return {
       success: true,
@@ -563,6 +591,63 @@ export const LaundryService = {
       totalSessions,
       activeBookings: storeData.bookings.filter(b => b.status === 'ACTIVE').length
     };
+  },
+
+  /**
+   * Sync machine list and prices directly from Google Sheet tab "Machines"
+   */
+  async syncFromGoogleSheet(sheetId: string = DEFAULT_SPREADSHEET_ID) {
+    try {
+      console.log(`[LaundryService] 🔄 Đang quét cấu hình máy từ Google Sheet (${sheetId})...`);
+      const rows = await fetchSheetDataViaGviz(sheetId, 'Machines');
+      if (!rows || rows.length <= 1) {
+        return { success: false, updatedCount: 0, message: 'Tab "Machines" chưa có dữ liệu trên Google Sheet' };
+      }
+
+      let updatedCount = 0;
+      // Row 0 is header: machine_id, name, type, status, price, cycle_minutes, expected_end_time, plug_state
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const mId = String(row[0] || '').trim().toUpperCase();
+        if (!mId) continue;
+
+        const mName = String(row[1] || '').trim();
+        const rawType = String(row[2] || '').trim().toUpperCase();
+        const mType: MachineType = (rawType.includes('DRYER') || rawType.includes('SẤY')) ? 'DRYER' : 'WASHER';
+        const mPrice = Number(String(row[4] || '').replace(/[^0-9]/g, ''));
+        const mCycle = Number(String(row[5] || '').replace(/[^0-9]/g, ''));
+
+        const existing = storeData.machines.find(m => m.machineId.toUpperCase() === mId);
+        if (existing) {
+          if (mName) existing.name = mName;
+          existing.type = mType;
+          if (!isNaN(mPrice) && mPrice > 0) existing.price = mPrice;
+          if (!isNaN(mCycle) && mCycle > 0) existing.cycleMinutes = mCycle;
+          updatedCount++;
+        } else {
+          storeData.machines.push({
+            machineId: mId,
+            name: mName || `Máy ${mId}`,
+            type: mType,
+            status: 'AVAILABLE',
+            price: !isNaN(mPrice) && mPrice > 0 ? mPrice : 15000,
+            cycleMinutes: !isNaN(mCycle) && mCycle > 0 ? mCycle : 45,
+            expectedEndTime: '',
+            plugState: 'OFF',
+            plugOnUrl: '',
+            plugOffUrl: ''
+          });
+          updatedCount++;
+        }
+      }
+
+      saveStore();
+      console.log(`[LaundryService] ✅ Đã đồng bộ thành công ${updatedCount} máy từ Google Sheet tab Machines.`);
+      return { success: true, updatedCount, message: `Đã đồng bộ ${updatedCount} máy từ Google Sheet` };
+    } catch (err: any) {
+      console.warn(`[LaundryService] ⚠️ Không thể quét tab Machines từ Google Sheet:`, err.message);
+      return { success: false, updatedCount: 0, message: err.message };
+    }
   }
 };
 
@@ -572,6 +657,9 @@ export const LaundryService = {
  */
 export function startLaundryWorker(): NodeJS.Timeout {
   console.log('[LaundryService] 🚀 Background worker started (3s ticker)');
+
+  // Initial sync from Google Sheet Machines tab if available
+  LaundryService.syncFromGoogleSheet().catch(() => {});
 
   return setInterval(() => {
     try {

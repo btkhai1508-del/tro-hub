@@ -37,7 +37,8 @@ import {
   Flame,
   Play,
   RotateCcw,
-  CalendarClock
+  CalendarClock,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -397,6 +398,29 @@ export function AdminPortal() {
     } catch (e: any) {
       playSound('alert');
       setLaundryActionMsg(e.message || 'Lỗi cập nhật giá');
+    }
+  };
+
+  const handleAdminSyncSheet = async () => {
+    playSound('click');
+    try {
+      setLaundryLoading(true);
+      const res = await apiFetch('/api/laundry/admin/sync-sheet', { method: 'POST' });
+      const d = await res.json();
+      if (d.success) {
+        playSound('success');
+        setLaundryActionMsg(d.message || 'Đã đồng bộ máy từ Google Sheet');
+        fetchAdminLaundry();
+      } else {
+        playSound('alert');
+        setLaundryActionMsg(d.message || 'Không thể đồng bộ từ Google Sheet');
+      }
+      setTimeout(() => setLaundryActionMsg(''), 4000);
+    } catch (e: any) {
+      playSound('alert');
+      setLaundryActionMsg(e.message || 'Lỗi đồng bộ Google Sheet');
+    } finally {
+      setLaundryLoading(false);
     }
   };
 
@@ -3329,6 +3353,16 @@ export function AdminPortal() {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>LaundryFlow Server Engine Active</span>
                 </span>
+                <button
+                  type="button"
+                  onClick={handleAdminSyncSheet}
+                  disabled={laundryLoading}
+                  className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60"
+                  title="Đồng bộ danh sách máy và giá từ tab Machines trên Google Sheet"
+                >
+                  <FileSpreadsheet size={14} className={cn(laundryLoading && "animate-spin")} />
+                  <span className="hidden sm:inline">Đồng bộ Sheet</span>
+                </button>
                 <button
                   type="button"
                   onClick={fetchAdminLaundry}

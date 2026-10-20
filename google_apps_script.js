@@ -340,6 +340,56 @@ function handleRequest(e) {
       return createJsonResponse({ success: true, message: "Đã đồng bộ trạng thái máy " + machineId });
     }
 
+    // ----------------------------------------------------
+    // ACTION 7: LAUNDRY - GHI ĐẶT CHỖ (BOOKINGS)
+    // ----------------------------------------------------
+    if (action === "laundry_add_booking") {
+      var bookSheet = ss.getSheetByName("Laundry_Bookings");
+      if (!bookSheet) {
+        bookSheet = ss.insertSheet("Laundry_Bookings");
+        bookSheet.appendRow(["Booking ID", "Mã máy", "Phòng", "Khách hàng", "SĐT", "Ngày hẹn", "Giờ hẹn", "Tiền cọc", "Trạng thái cọc", "Mã GD", "Trạng thái", "Ngày tạo"]);
+        bookSheet.getRange(1, 1, 1, 12).setBackground("#1E293B").setFontColor("#FFFFFF").setFontWeight("bold");
+        bookSheet.setFrozenRows(1);
+      }
+      bookSheet.appendRow([
+        params.bookingId || "",
+        params.machineId || "",
+        params.room || "",
+        params.name || "",
+        params.phone || "",
+        params.bookingDate || "",
+        params.bookingTime || "",
+        Number(params.depositAmount) || 0,
+        params.depositStatus || "PENDING",
+        params.transactionId || "",
+        params.status || "ACTIVE",
+        params.createdAt || new Date().toLocaleString("vi-VN")
+      ]);
+      SpreadsheetApp.flush();
+      return createJsonResponse({ success: true, message: "Đã ghi lịch đặt chỗ vào tab Laundry_Bookings" });
+    }
+
+    // ----------------------------------------------------
+    // ACTION 8: LAUNDRY - XÁC NHẬN CỌC ĐẶT CHỖ
+    // ----------------------------------------------------
+    if (action === "laundry_confirm_deposit") {
+      var bookSheet = ss.getSheetByName("Laundry_Bookings");
+      if (bookSheet) {
+        var bData = bookSheet.getDataRange().getValues();
+        var bId = String(params.bookingId || "").trim();
+        var mId = String(params.machineId || "").trim().toUpperCase();
+        for (var bi = 1; bi < bData.length; bi++) {
+          if ((bId && String(bData[bi][0]).trim() === bId) || (!bId && String(bData[bi][1]).trim().toUpperCase() === mId && String(bData[bi][8]).toUpperCase() === "PENDING")) {
+            bookSheet.getRange(bi + 1, 9).setValue("PAID");
+            if (params.transactionId) bookSheet.getRange(bi + 1, 10).setValue(params.transactionId);
+            break;
+          }
+        }
+        SpreadsheetApp.flush();
+      }
+      return createJsonResponse({ success: true, message: "Đã cập nhật trạng thái cọc đặt chỗ" });
+    }
+
     return createJsonResponse({ success: true, message: "EcoStay Apps Script Web App is active" });
   } catch (error) {
     return createJsonResponse({ success: false, error: error.toString() });

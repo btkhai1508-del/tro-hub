@@ -605,6 +605,16 @@ async function startServer() {
     }
   });
 
+  // Sync machines directly from Google Sheet tab "Machines"
+  app.post('/api/laundry/admin/sync-sheet', requireAdmin, async (_req, res) => {
+    try {
+      const result = await LaundryService.syncFromGoogleSheet();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // =========================================================================
   // ADMIN PORTAL API ENDPOINTS (Quản lý trọ Phong Lan / EcoStay)
   // =========================================================================
