@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, FileText, Printer, ExternalLink, Building2 } from 'lucide-react';
+import { X, Printer, ExternalLink, Building2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { IconContract3D, IconDeclaration3D } from './Icons3D';
 
 export function ContractModal() {
   const { profile, isContractModalOpen, closeContractModal } = useApp();
@@ -49,10 +50,8 @@ export function ContractModal() {
       >
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-md">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-              <FileText size={20} />
-            </div>
+          <div className="flex items-center gap-3">
+            <IconContract3D size={40} className="shrink-0" />
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -70,19 +69,18 @@ export function ContractModal() {
             <button
               type="button"
               onClick={handleOpenFull}
-              className="w-11 h-11 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+              className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               title="Mở toàn màn hình"
-              aria-label="Mở toàn màn hình"
             >
               <ExternalLink size={18} />
             </button>
             <button 
               type="button"
               onClick={closeContractModal}
-              className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Đóng"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -92,24 +90,26 @@ export function ContractModal() {
           <button
             type="button"
             onClick={() => setActiveTab('contract')}
-            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'contract'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200 dark:border-slate-700'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            Hợp đồng thuê phòng (PDF 2)
+            <IconContract3D size={18} />
+            <span>Hợp đồng thuê phòng</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('ct01')}
-            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'ct01'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200 dark:border-slate-700'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            Tờ khai cư trú CT01 (PDF 1)
+            <IconDeclaration3D size={18} />
+            <span>Tờ khai cư trú (CT01)</span>
           </button>
         </div>
 

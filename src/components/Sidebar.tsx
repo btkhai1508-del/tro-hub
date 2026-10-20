@@ -17,13 +17,21 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
+import {
+  IconHome3D,
+  IconMeter3D,
+  IconWallet3D,
+  IconCalendar3D,
+  IconProfile3D
+} from './Icons3D';
+import { soundFx } from '../lib/soundFx';
 
 const defaultNavItems = [
-  { name: 'Trang chủ', path: '/', icon: Home },
-  { name: 'Tiện ích', path: '/utilities', icon: LayoutGrid },
-  { name: 'Hóa đơn & Thanh toán', path: '/invoices', icon: Receipt },
-  { name: 'Hợp đồng', path: '/contract', icon: FileText },
-  { name: 'Cá nhân', path: '/profile', icon: User },
+  { name: 'Trang chủ', path: '/', icon: IconHome3D, IconComponent: IconHome3D },
+  { name: 'Tiện ích', path: '/utilities', icon: IconMeter3D, IconComponent: IconMeter3D },
+  { name: 'Hóa đơn & Thanh toán', path: '/invoices', icon: IconWallet3D, IconComponent: IconWallet3D },
+  { name: 'Hợp đồng', path: '/contract', icon: IconCalendar3D, IconComponent: IconCalendar3D },
+  { name: 'Cá nhân', path: '/profile', icon: IconProfile3D, IconComponent: IconProfile3D },
 ];
 
 export function Sidebar() {
@@ -77,7 +85,7 @@ export function Sidebar() {
             /* Collapsed Logo */
             <div className="flex justify-center mb-7 w-full">
               <div 
-                className="w-12 h-12 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-slate-900/15 cursor-pointer hover:scale-105 transition-transform"
+                className="w-12 h-12 rounded-2xl bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center shadow-md shadow-slate-900/15 cursor-pointer hover:scale-105 transition-transform"
                 title={`Nhà Trọ Phong Lan - Phòng ${profile.room.roomNumber}`}
               >
                 <Building2 size={24} className="text-white" />
@@ -86,7 +94,7 @@ export function Sidebar() {
           ) : (
             /* Expanded Brand Header */
             <div className="flex items-center gap-3 px-1 mb-7">
-              <div className="w-11 h-11 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-slate-900/15 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center shadow-md shadow-slate-900/15 shrink-0">
                 <Building2 size={22} className="text-white" />
               </div>
               <div className="min-w-0 flex-1">
@@ -98,7 +106,7 @@ export function Sidebar() {
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
+                <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium truncate">
                   {profile.room.building || 'Trung Kim'}
                 </p>
               </div>
@@ -111,7 +119,7 @@ export function Sidebar() {
             isSidebarCollapsed ? "flex flex-col items-center space-y-3.5" : "space-y-1.5"
           )}>
             {navItems.map((item) => {
-              const Icon = item.icon;
+              const Icon = item.icon || (item as any).IconComponent;
               const tutorialAttr = item.path === '/' 
                 ? 'nav-dashboard' 
                 : item.path === '/utilities' 
@@ -128,13 +136,14 @@ export function Sidebar() {
                   to={item.path}
                   data-tutorial={tutorialAttr}
                   title={isSidebarCollapsed ? item.name : undefined}
+                  onClick={() => soundFx.tab()}
                   className={({ isActive }) => cn(
-                    "group relative transition-all duration-200 select-none",
+                    "group relative transition-all duration-200 select-none cursor-pointer",
                     isSidebarCollapsed 
                       ? "w-12 h-12 rounded-2xl flex items-center justify-center mx-auto" 
-                      : "w-full flex items-center justify-between px-3.5 py-3 rounded-2xl",
+                      : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
                     isActive 
-                      ? "bg-slate-900 dark:bg-indigo-600 text-white shadow-md shadow-slate-900/15 dark:shadow-indigo-600/30 font-semibold" 
+                      ? "bg-slate-900 dark:bg-slate-800 text-white shadow-md shadow-slate-900/15 font-semibold" 
                       : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/60 font-medium"
                   )}
                 >
@@ -143,13 +152,9 @@ export function Sidebar() {
                       {isSidebarCollapsed ? (
                         /* Collapsed Icon */
                         <div className="relative flex items-center justify-center w-full h-full">
-                          <Icon 
-                            size={22} 
-                            className={cn(
-                              "transition-all duration-200 shrink-0 drop-shadow-[0_4px_8px_rgba(0,60,255,0.18)]", 
-                              isActive ? "text-white scale-105" : "text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white group-hover:scale-105"
-                            )} 
-                          />
+                          <div className={cn("transition-transform duration-200 shrink-0", isActive ? "scale-110" : "group-hover:scale-105")}>
+                            <Icon size={26} />
+                          </div>
 
                           {(item.path === '/invoices' || item.path === '/utilities') && unpaidCount > 0 && (
                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center font-num shadow-xs ring-2 ring-white dark:ring-slate-900">
@@ -161,13 +166,9 @@ export function Sidebar() {
                         /* Expanded Full Row */
                         <>
                           <div className="flex items-center gap-3 min-w-0">
-                            <Icon 
-                              size={21} 
-                              className={cn(
-                                "transition-all duration-200 shrink-0 drop-shadow-[0_3px_6px_rgba(0,60,255,0.16)]", 
-                                isActive ? "text-white" : "text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white group-hover:scale-105"
-                              )} 
-                            />
+                            <div className={cn("transition-transform duration-200 shrink-0", isActive ? "scale-105" : "group-hover:scale-105")}>
+                              <Icon size={26} />
+                            </div>
                             <span className="text-sm tracking-tight truncate">{item.name}</span>
                           </div>
 
@@ -201,8 +202,7 @@ export function Sidebar() {
                 type="button"
                 onClick={handleCopyPhone}
                 title="Sao chép SĐT BQL Bùi Trung Khải (0902 371 800)"
-                aria-label="Sao chép số điện thoại Ban Quản Lý (0902 371 800)"
-                className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100/80 dark:hover:bg-indigo-900/60 transition-colors shadow-2xs relative cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800/40 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-100/80 dark:hover:bg-blue-900/60 transition-colors shadow-2xs relative cursor-pointer"
               >
                 {hasCopiedPhone ? <Check size={16} className="text-emerald-600" /> : <PhoneCall size={18} />}
               </button>
@@ -222,22 +222,22 @@ export function Sidebar() {
               className="p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2"
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-800/40">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
                   <PhoneCall size={15} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">BQL: Bùi Trung Khải</p>
+                  <p className="text-[10px] text-slate-400 font-medium truncate">BQL: Bùi Trung Khải</p>
                   <button
                     type="button"
                     onClick={handleCopyPhone}
                     title="Bấm để sao chép số điện thoại"
-                    className="text-xs font-bold font-num text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold font-num text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <span>0902 371 800</span>
                     {hasCopiedPhone ? (
                       <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">Đã chép</span>
                     ) : (
-                      <Copy size={11} className="text-slate-400 hover:text-indigo-500 shrink-0" />
+                      <Copy size={11} className="text-slate-400 hover:text-blue-500 shrink-0" />
                     )}
                   </button>
                 </div>
@@ -261,7 +261,7 @@ export function Sidebar() {
             <div className="flex flex-col items-center gap-2 w-full">
               <NavLink 
                 to="/profile"
-                className="w-11 h-11 rounded-2xl ring-2 ring-white dark:ring-slate-700 shadow-xs overflow-hidden flex items-center justify-center hover:ring-indigo-300 transition-all cursor-pointer"
+                className="w-11 h-11 rounded-2xl ring-2 ring-white dark:ring-slate-700 shadow-xs overflow-hidden flex items-center justify-center hover:ring-blue-300 transition-all cursor-pointer"
                 title={`Hồ sơ: ${profile.name}`}
               >
                 <img 
@@ -273,11 +273,10 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={logoutUser}
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                 title="Đăng xuất"
-                aria-label="Đăng xuất"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
@@ -293,7 +292,7 @@ export function Sidebar() {
                 />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{profile.name}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-num truncate">
+                  <p className="text-[10px] text-slate-400 font-num truncate">
                     {profile.room.roomNumber ? (profile.room.roomNumber.startsWith('P.') ? profile.room.roomNumber : `P. ${profile.room.roomNumber}`) : profile.phone}
                   </p>
                 </div>
@@ -303,18 +302,16 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={openProfileEditModal}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
                   title="Cài đặt thông tin"
-                  aria-label="Cài đặt thông tin"
                 >
                   <SlidersHorizontal size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={logoutUser}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                   title="Đăng xuất"
-                  aria-label="Đăng xuất"
                 >
                   <LogOut size={14} />
                 </button>

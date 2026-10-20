@@ -1,5 +1,3 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   X, 
   Download, 
@@ -7,21 +5,23 @@ import {
   Zap, 
   Droplet, 
   Wifi, 
-  Sparkles, 
+  ShieldCheck, 
   Bike,
   ReceiptText,
   QrCode,
   Lock
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
+import { IconWallet3D } from './Icons3D';
 
 // Reliable Lucide SVG icons mapped to invoice categories
 const getCategoryIcon = (type: string) => {
   switch (type) {
     case 'room':
-      return <Building2 size={16} className="text-indigo-600 dark:text-indigo-400" />;
+      return <Building2 size={16} className="text-slate-700 dark:text-slate-300" />;
     case 'electricity':
       return <Zap size={16} className="text-amber-500 dark:text-amber-400" />;
     case 'water':
@@ -29,9 +29,9 @@ const getCategoryIcon = (type: string) => {
     case 'internet':
       return <Wifi size={16} className="text-blue-500 dark:text-blue-400" />;
     case 'service':
-      return <Sparkles size={16} className="text-purple-500 dark:text-purple-400" />;
+      return <ShieldCheck size={16} className="text-emerald-500 dark:text-emerald-400" />;
     case 'parking':
-      return <Bike size={16} className="text-emerald-500 dark:text-emerald-400" />;
+      return <Bike size={16} className="text-indigo-500 dark:text-indigo-400" />;
     default:
       return <ReceiptText size={16} className="text-slate-500 dark:text-slate-400" />;
   }
@@ -144,12 +144,7 @@ export function InvoiceDetailModal() {
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-[#101726]/95 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0",
-              isUnpaid ? "bg-slate-900 dark:bg-indigo-600 text-white" : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
-            )}>
-              <ReceiptText size={20} className={isUnpaid ? "text-white" : "text-emerald-600 dark:text-emerald-400"} />
-            </div>
+            <IconWallet3D size={42} className="shrink-0" />
             <div>
               <h3 className="type-h3 text-slate-900 dark:text-white font-bold">Hóa đơn Tháng {viewingInvoice.month}</h3>
               <p className="type-caption text-slate-400 font-num">Mã số: {viewingInvoice.id}</p>
@@ -159,7 +154,7 @@ export function InvoiceDetailModal() {
           <button 
             type="button"
             onClick={closeInvoiceDetailModal}
-            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />

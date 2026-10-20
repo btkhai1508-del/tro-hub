@@ -16,6 +16,8 @@ import {
   PhoneCall
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { IconHome3D } from './Icons3D';
+import { AppleCheckbox } from './AppleControls';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -66,7 +68,7 @@ export function LoginPage() {
           navigate(target, { replace: true });
         }, 400);
       } else {
-        setErrorMsg(res.error || 'Sai số điện thoại hoặc mật khẩu. Thử lại hoặc liên hệ chủ trọ để reset.');
+        setErrorMsg(res.error || 'Số điện thoại hoặc mật khẩu không chính xác');
       }
     } catch (err: any) {
       setIsLoading(false);
@@ -90,11 +92,15 @@ export function LoginPage() {
           navigate(target, { replace: true });
         }, 400);
       } else {
-        setErrorMsg(res.error || 'Không thể đăng nhập bằng Zalo. Bạn có thể đăng nhập bằng Số điện thoại và mật khẩu bên dưới.');
+        setErrorMsg(res.error || 'Không thể đăng nhập bằng Zalo. Vui lòng đăng nhập bằng Số điện thoại và Mật khẩu.');
       }
     } catch (err: any) {
       setIsLoading(false);
-      setErrorMsg('Lỗi kết nối Zalo: ' + (err.message || 'Vui lòng thử lại'));
+      let friendlyMsg = 'Tính năng đăng nhập nhanh Zalo 1-chạm chỉ hoạt động khi mở trong ứng dụng Zalo trên điện thoại. Trên trình duyệt web, vui lòng đăng nhập bằng Số điện thoại và Mật khẩu bên dưới.';
+      if (err?.code !== -2000 && err?.message && !err.message.includes('-2000') && !err.message.includes('Unknown error')) {
+        friendlyMsg = err.message;
+      }
+      setErrorMsg(friendlyMsg);
     }
   };
 
@@ -140,31 +146,25 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 bg-gradient-to-br from-slate-100 via-[#f3f4f8] to-slate-200 select-none">
+    <div className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 bg-slate-100/70 dark:bg-[#0b0f19] select-none">
       
-      {/* Background Ambient Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-[15%] -left-[10%] w-[500px] h-[500px] rounded-full bg-indigo-200/40 blur-[120px]" />
-        <div className="absolute -bottom-[15%] -right-[10%] w-[500px] h-[500px] rounded-full bg-emerald-200/35 blur-[120px]" />
-      </div>
-
-      <div className="w-full max-w-[430px] relative z-10 animate-in fade-in zoom-in-95 duration-300">
+      <div className="w-full max-w-[440px] relative z-10 animate-in fade-in zoom-in-95 duration-300">
         
-        {/* Brand Header */}
+        {/* Brand Header with 3D Home Icon */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-[22px] bg-slate-900 text-white flex items-center justify-center shadow-xl shadow-slate-900/20 ring-4 ring-white dark:ring-slate-800 mb-4">
-            <Building2 size={32} className="text-white" />
+          <div className="mb-3">
+            <IconHome3D size={64} className="shrink-0 drop-shadow-md" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
             Nhà Trọ Phong Lan
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            Cổng dịch vụ cư dân thông minh
+            Hệ sinh thái nhà trọ dành cho cư dân & ban quản lý
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white/95 dark:bg-[#111827]/95 backdrop-blur-xl rounded-[32px] border border-white/80 dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] p-6 sm:p-8">
+        <div className="bg-white dark:bg-[#121927] rounded-[32px] border border-slate-200/90 dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] p-6 sm:p-8">
           
           {/* Switch Mode: Login vs Register */}
           {mode !== 'forgot' && mode !== 'pending_approval' && (
@@ -238,7 +238,7 @@ export function LoginPage() {
               {/* Divider */}
               <div className="relative flex items-center justify-center pt-1 pb-1">
                 <div className="border-t border-slate-200/80 dark:border-slate-800 w-full" />
-                <span className="bg-white dark:bg-[#111827] px-3 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">hoặc số điện thoại</span>
+                <span className="bg-white dark:bg-[#111827] px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">hoặc số điện thoại</span>
                 <div className="border-t border-slate-200/80 dark:border-slate-800 w-full" />
               </div>
 
@@ -291,26 +291,21 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-1 w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
+                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
                     title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
 
               {/* Remember Me */}
               <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900 cursor-pointer accent-slate-900"
-                  />
-                  <span className="text-xs text-slate-600 font-medium">Ghi nhớ đăng nhập</span>
-                </label>
+                <AppleCheckbox
+                  checked={rememberMe}
+                  onChange={setRememberMe}
+                  label="Ghi nhớ đăng nhập"
+                />
               </div>
 
               {/* Submit Button */}
@@ -426,7 +421,7 @@ export function LoginPage() {
                 disabled={isLoading}
                 className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer mt-3"
               >
-                <span>{isLoading ? 'Đang gửi yêu cầu...' : 'Đăng ký – Chờ chủ trọ duyệt'}</span>
+                <span>{isLoading ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu đăng ký cho Chủ trọ'}</span>
                 {!isLoading && <ArrowRight size={16} />}
               </button>
             </form>
@@ -548,7 +543,7 @@ export function LoginPage() {
         </div>
 
         {/* Footer Support Info */}
-        <div className="text-center mt-6 text-xs text-slate-500 dark:text-slate-400">
+        <div className="text-center mt-6 text-xs text-slate-400">
           Cần hỗ trợ nhận phòng hoặc xác thực tài khoản? Hotline BQL (Bùi Trung Khải):{' '}
           <a href="tel:0902371800" className="text-slate-700 font-bold hover:underline">
             0902 371 800

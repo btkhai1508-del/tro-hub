@@ -1,8 +1,7 @@
-import React from 'react';
 import { X, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { GlassIconBell, GlassIconAlert, GlassIconInvoice, GlassIconSecurity } from './GlassIcons';
+import { IconWallet3D, IconAlert3D, IconSecurity3D, IconNotification3D } from './Icons3D';
 
 const badgeColorMap = {
   invoice: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800',
@@ -49,8 +48,8 @@ export function NotificationModal() {
           <button 
             type="button"
             onClick={closeNotificationModal}
-            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Đóng"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Đóng thông báo"
           >
             <X size={18} />
           </button>
@@ -60,13 +59,13 @@ export function NotificationModal() {
         <div className="p-6 space-y-4">
           <div className="flex items-start gap-4">
             {activeNotification.type === 'invoice' ? (
-              <GlassIconInvoice size={48} />
+              <IconWallet3D size={48} className="shrink-0" />
             ) : activeNotification.type === 'alert' ? (
-              <GlassIconAlert size={48} />
+              <IconAlert3D size={48} className="shrink-0" />
             ) : activeNotification.type === 'success' ? (
-              <GlassIconSecurity size={48} />
+              <IconSecurity3D size={48} className="shrink-0" />
             ) : (
-              <GlassIconBell size={48} />
+              <IconNotification3D size={48} className="shrink-0" />
             )}
 
             <div className="min-w-0 flex-1">

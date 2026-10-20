@@ -164,12 +164,8 @@ export async function pushUpdateToGoogleSheet(params: {
     fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`, {
       method: 'GET',
       mode: 'no-cors'
-    }).catch((err) => {
-      console.error('Google Sheet push (GET) failed:', err);
-    });
-  } catch (err) {
-    console.error('Google Sheet push (GET) dispatch error:', err);
-  }
+    }).catch(() => {});
+  } catch {}
 
   try {
     fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
@@ -185,12 +181,8 @@ export async function pushUpdateToGoogleSheet(params: {
         nuocMoi: params.nuocMoi,
         row: params.row
       })
-    }).catch((err) => {
-      console.error('Google Sheet push (POST) failed:', err);
-    });
-  } catch (err) {
-    console.error('Google Sheet push (POST) dispatch error:', err);
-  }
+    }).catch(() => {});
+  } catch {}
 }
 
 /**

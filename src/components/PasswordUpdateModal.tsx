@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
-import { GlassIconLock, GlassIconSecurity } from './GlassIcons';
+import { IconKey3D } from './Icons3D';
 
 interface PasswordUpdateModalProps {
   isOpen: boolean;
@@ -99,34 +99,19 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
         className="w-full max-w-md bg-white dark:bg-[#101726] rounded-[32px] border border-white/80 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
         onClick={e => e.stopPropagation()}
       >
-        {/* Background ambient glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[80px] pointer-events-none" />
-
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5 relative z-10">
           
           {/* Header */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-800/50 shadow-sm">
-                <GlassIconLock size={38} />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Cập nhật mật khẩu
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Bạn đang sử dụng mật khẩu mặc định. Bạn có muốn cập nhật mật khẩu mới để bảo mật tài khoản hơn không?
-                </p>
-              </div>
+          <div className="flex items-start gap-4">
+            <IconKey3D size={48} className="shrink-0" />
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Cập nhật mật khẩu
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Bạn đang sử dụng mật khẩu mặc định. Bạn có muốn cập nhật mật khẩu mới để bảo mật tài khoản hơn không?
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={handlePostpone}
-              className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 -mt-1 -mr-1"
-              aria-label="Đóng"
-            >
-              <X size={18} />
-            </button>
           </div>
 
           {/* Alert Messages */}
@@ -164,10 +149,9 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                 <button
                   type="button"
                   onClick={() => setShowCurPass(!showCurPass)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  aria-label={showCurPass ? "Ẩn mật khẩu hiện tại" : "Hiện mật khẩu hiện tại"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
-                  {showCurPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showCurPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
@@ -189,10 +173,9 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                 <button
                   type="button"
                   onClick={() => setShowNewPass(!showNewPass)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  aria-label={showNewPass ? "Ẩn mật khẩu mới" : "Hiện mật khẩu mới"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
-                  {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showNewPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
@@ -214,10 +197,9 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                 <button
                   type="button"
                   onClick={() => setShowConfirmPass(!showConfirmPass)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  aria-label={showConfirmPass ? "Ẩn xác nhận mật khẩu" : "Hiện xác nhận mật khẩu"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
-                  {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showConfirmPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
@@ -231,7 +213,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
               onClick={handlePostpone}
               className="w-full sm:flex-1 py-3 px-4 rounded-2xl soft-button text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer text-center"
             >
-              Nhắc lại sau
+              Để sau
             </button>
 
             <button

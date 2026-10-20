@@ -6,7 +6,12 @@
  */
 import { storage, STORAGE_KEYS } from './storage';
 
-export const API_BASE_URL: string = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+const rawApiBase = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL: string = String(
+  rawApiBase && rawApiBase !== 'https://tro-hub.web.app'
+    ? rawApiBase
+    : 'https://tro-hub.onrender.com'
+).replace(/\/+$/, '');
 
 export const UNAUTHORIZED_EVENT = 'ecostay:unauthorized';
 

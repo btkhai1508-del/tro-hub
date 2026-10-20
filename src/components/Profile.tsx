@@ -14,13 +14,12 @@ import {
   LogOut,
   Sun,
   Moon,
-  Sparkles,
   Palette,
   KeyRound
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { GlassIconProfile, GlassIconLocation, GlassIconHome, GlassIconClock } from './GlassIcons';
+import { IconProfile3D, IconVehicle3D, IconHome3D, IconClock3D, IconSettings3D } from './Icons3D';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
 import { cn } from '../lib/utils';
 
@@ -31,7 +30,7 @@ export function Profile() {
 
   const renderValue = (val?: string) => {
     if (!val || !val.trim()) {
-      return <span className="text-slate-500 font-normal italic text-xs">(Chưa cập nhật)</span>;
+      return <span className="text-slate-400 font-normal italic text-xs">(Chưa cập nhật)</span>;
     }
     return val;
   };
@@ -41,7 +40,7 @@ export function Profile() {
       
       {/* Header */}
       <div>
-        <span className="type-label text-slate-500 dark:text-slate-400">Tài khoản & Cá nhân</span>
+        <span className="type-label text-slate-400">Tài khoản & Cá nhân</span>
         <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">Hồ sơ cư dân</h1>
         <p className="type-body text-slate-500 dark:text-slate-400 mt-1">
           Thông tin hợp đồng, thông tin định danh và phương tiện đã đăng ký với ban quản lý.
@@ -55,11 +54,17 @@ export function Profile() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-slate-100 dark:border-slate-800">
           <div data-tutorial="profile-id-card" className="flex items-center gap-4">
             <div className="relative">
-              <img 
-                src={profile.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'} 
-                alt={profile.name} 
-                className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl object-cover ring-4 ring-white dark:ring-slate-800 shadow-md"
-              />
+              {profile.avatar && !profile.avatar.includes('unsplash.com') ? (
+                <img 
+                  src={profile.avatar} 
+                  alt={profile.name} 
+                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl object-cover ring-4 ring-white dark:ring-slate-800 shadow-md"
+                />
+              ) : (
+                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-4 ring-white dark:ring-slate-800 shadow-md">
+                  <IconProfile3D size={52} />
+                </div>
+              )}
               <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-white text-[10px]" title="Đang cư trú">
                 ✓
               </span>
@@ -71,7 +76,7 @@ export function Profile() {
                 <span className="badge-paid text-[10px] py-0.5">Cư dân chính</span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-num mt-0.5">
-                {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : <span className="italic text-slate-500 dark:text-slate-400">Chưa xếp phòng</span>}
+                {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : <span className="italic text-slate-400">Chưa xếp phòng</span>}
               </p>
             </div>
           </div>
@@ -111,38 +116,38 @@ export function Profile() {
         {/* Section 1: Thông tin cá nhân & định danh */}
         <div className="space-y-3.5">
           <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">
-            <GlassIconProfile size={22} className="shrink-0" />
+            <IconProfile3D size={24} className="shrink-0" />
             <span>Thông tin cá nhân & định danh</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{profile.name}</span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">{profile.phone}</span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Email liên hệ:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Email liên hệ:</span>
               <span className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block truncate">{renderValue(profile.email)}</span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số CCCD / Hộ chiếu:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số CCCD / Hộ chiếu:</span>
               <span className="font-bold font-num text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.cccd)}</span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày sinh:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày sinh:</span>
               <span className="font-bold font-num text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.dob)}</span>
             </div>
 
             <div className="sm:col-span-2 lg:col-span-1">
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Địa chỉ thường trú:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Địa chỉ thường trú:</span>
               <span className="font-medium text-slate-900 dark:text-slate-100 text-xs sm:text-sm mt-1 block leading-relaxed">{renderValue(profile.address)}</span>
             </div>
           </div>
@@ -151,20 +156,20 @@ export function Profile() {
         {/* Section 2: Phương tiện */}
         <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
           <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">
-            <GlassIconLocation size={22} className="shrink-0" />
+            <IconVehicle3D size={28} className="shrink-0" />
             <span>Phương tiện đã đăng ký</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Biển số xe:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Biển số xe:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block font-num">
                 {renderValue(profile.vehicle.plateNumber)}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Loại phương tiện:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Loại phương tiện:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.vehicle.type)}</span>
             </div>
           </div>
@@ -173,20 +178,20 @@ export function Profile() {
         {/* Section 3: Căn hộ đang thuê */}
         <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
           <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">
-            <GlassIconHome size={22} className="shrink-0" />
+            <IconHome3D size={26} className="shrink-0" />
             <span>Căn hộ đang thuê</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Phòng:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Phòng:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">
                 {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : renderValue('')}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày bắt đầu thuê:</span>
+              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày bắt đầu thuê:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">{renderValue(profile.room.startDate)}</span>
             </div>
           </div>
@@ -203,26 +208,26 @@ export function Profile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
+              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.name)}</span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Mối quan hệ:</span>
+              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Mối quan hệ:</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.relationship)}</span>
             </div>
 
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại khẩn:</span>
+              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại khẩn:</span>
               <span className="font-bold font-num text-rose-600 dark:text-rose-400 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.phone)}</span>
             </div>
           </div>
         </div>
 
         {/* Section 5: Giao diện & Chế độ sáng tối */}
-        <div className="space-y-3.5 pt-2 border-t border-slate-100/90">
+        <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
           <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
-            <Palette size={20} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <IconSettings3D size={26} className="shrink-0" />
             <span>Chế độ hiển thị giao diện</span>
           </div>
 
@@ -254,11 +259,11 @@ export function Profile() {
               className={cn(
                 "p-4 rounded-2xl border flex items-center gap-3.5 transition-all text-left cursor-pointer",
                 mode === 'dark'
-                  ? "bg-indigo-500/15 border-indigo-500/50 text-indigo-900 dark:text-indigo-200 shadow-sm ring-2 ring-indigo-500/30"
+                  ? "bg-blue-500/15 border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-sm ring-2 ring-blue-500/30"
                   : "bg-white/60 dark:bg-slate-800/60 border-white/90 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800"
               )}
             >
-              <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
                 <Moon size={20} />
               </div>
               <div>
@@ -279,7 +284,7 @@ export function Profile() {
               )}
             >
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
-                <GlassIconClock size={24} />
+                <IconClock3D size={24} />
               </div>
               <div>
                 <span className="text-sm font-bold block">Tự động</span>

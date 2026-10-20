@@ -288,9 +288,8 @@ export function InteractiveOnboardingTutorial() {
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="pointer-events-auto text-white/70 hover:text-white w-11 h-11 flex items-center justify-center rounded-xl hover:bg-white/20 text-base transition-colors cursor-pointer -mr-2 -mt-2"
+                className="pointer-events-auto text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/20 text-sm transition-colors cursor-pointer"
                 title="Bỏ qua hướng dẫn"
-                aria-label="Bỏ qua hướng dẫn"
               >
                 ✕
               </button>

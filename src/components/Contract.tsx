@@ -7,6 +7,7 @@ import {
   Building2 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { IconContract3D, IconDeclaration3D } from './Icons3D';
 
 export function Contract() {
   const { profile } = useApp();
@@ -50,7 +51,7 @@ export function Contract() {
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
               ✓ Đang hiệu lực (01/06/2026 — 01/12/2028)
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">Mã: {contractCode}</span>
+            <span className="text-xs text-slate-400 font-mono">Mã: {contractCode}</span>
           </div>
           <h1 className="text-xl sm:text-2xl text-slate-900 dark:text-white mt-1.5 font-bold">
             Văn bản Pháp lý & Hợp đồng
@@ -67,11 +68,10 @@ export function Contract() {
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.max(75, prev - 10))}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer transition-colors"
+              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer"
               title="Thu nhỏ"
-              aria-label="Thu nhỏ"
             >
-              <ZoomOut size={16} />
+              <ZoomOut size={15} />
             </button>
             <span className="text-[11px] font-mono px-2 font-semibold text-slate-700 dark:text-slate-300">
               {zoomLevel}%
@@ -79,11 +79,10 @@ export function Contract() {
             <button
               type="button"
               onClick={() => setZoomLevel(prev => Math.min(125, prev + 10))}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer transition-colors"
+              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer"
               title="Phóng to"
-              aria-label="Phóng to"
             >
-              <ZoomIn size={16} />
+              <ZoomIn size={15} />
             </button>
           </div>
 
@@ -101,30 +100,30 @@ export function Contract() {
       </div>
 
       {/* Tabs Selector: Hợp đồng vs Mẫu CT01 (Hidden on Print) */}
-      <div className="print:hidden flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/80 max-w-md">
+      <div className="print:hidden flex items-center bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 max-w-lg">
         <button
           type="button"
           onClick={() => setActiveTab('contract')}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
             activeTab === 'contract'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <FileText size={15} />
+          <IconContract3D size={20} />
           <span>Hợp đồng thuê phòng</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('ct01')}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
             activeTab === 'ct01'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Building2 size={15} />
+          <IconDeclaration3D size={20} />
           <span>Tờ khai cư trú (CT01)</span>
         </button>
       </div>

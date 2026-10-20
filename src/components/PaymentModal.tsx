@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from 'lucide-react';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { saveQrToDevice } from '../lib/qrHelper';
+import { IconWallet3D, IconSecurity3D } from './Icons3D';
 
 export function PaymentModal() {
   const { isPaymentModalOpen, closePaymentModal, activeInvoice, processPayment, profile, paymentGateStatus } = useApp();
@@ -51,9 +52,7 @@ export function PaymentModal() {
         {/* Sticky Modal Header with Close Button */}
         <div className="shrink-0 flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-[#101726]/90 backdrop-blur-md z-20">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-              ₫
-            </div>
+            <IconWallet3D size={38} className="shrink-0" />
             <div>
               <span className="type-label text-slate-400 dark:text-slate-400 block text-[10px]">Cổng thanh toán điện tử</span>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
@@ -65,8 +64,8 @@ export function PaymentModal() {
           <button 
             type="button"
             onClick={handleClose}
-            className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
-            aria-label="Đóng"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+            aria-label="Đóng cửa sổ thanh toán"
           >
             <X size={18} className="stroke-[2.5]" />
           </button>

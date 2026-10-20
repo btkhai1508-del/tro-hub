@@ -8,7 +8,7 @@ function zaloMiniAppAutoConfigPlugin(): Plugin {
   return {
     name: 'zalo-mini-app-auto-config',
     closeBundle() {
-      const distDir = path.resolve(__dirname, 'dist');
+      const distDir = path.resolve(import.meta.dirname, 'dist');
       if (!fs.existsSync(distDir)) return;
 
       const assetsDir = path.join(distDir, 'assets');
@@ -23,7 +23,7 @@ function zaloMiniAppAutoConfigPlugin(): Plugin {
 
       const syncJs = mainJs ? [`assets/${mainJs}`] : [];
 
-      const rootConfigPath = path.resolve(__dirname, 'app-config.json');
+      const rootConfigPath = path.resolve(import.meta.dirname, 'app-config.json');
       let baseConfig: any = {
         app: {
           title: "EcoStay",
@@ -68,9 +68,16 @@ export default defineConfig(() => {
   return {
     base: './',
     plugins: [react(), tailwindcss(), zaloMiniAppAutoConfigPlugin()],
+    define: {
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
+        process.env.VITE_API_BASE_URL && process.env.VITE_API_BASE_URL !== 'https://tro-hub.web.app'
+          ? process.env.VITE_API_BASE_URL
+          : 'https://tro-hub.onrender.com'
+      ),
+    },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     build: {

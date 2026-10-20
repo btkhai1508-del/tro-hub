@@ -19,7 +19,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useApp, Invoice } from '../context/AppContext';
 import { cn } from '../lib/utils';
-import { GlassIconInvoice } from './GlassIcons';
+import { IconContract3D } from './Icons3D';
 
 interface PaymentHistoryExportModalProps {
   isOpen: boolean;
@@ -101,9 +101,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
         {/* Modal Header */}
         <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-[#101726]/95 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <FileText size={20} />
-            </div>
+            <IconContract3D size={40} className="shrink-0" />
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 Xuất Lịch Sử Thanh Toán (PDF)
@@ -147,10 +145,8 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
             </div>
 
             <button
-              type="button"
               onClick={onClose}
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              aria-label="Đóng"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
