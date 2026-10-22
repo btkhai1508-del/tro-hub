@@ -49,19 +49,32 @@ export function Home() {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Welcome Header */}
-      <div data-tutorial="resident-welcome" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="type-label text-slate-400">Không gian cư dân</span>
-          <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">
-            Xin chào, {profile.name}!
-          </h1>
-          <p className="type-body text-slate-500 dark:text-slate-400 mt-1">
-            Tổng quan phòng thuê, hóa đơn cần thanh toán và thông báo quan trọng.
-          </p>
+      <div data-tutorial="resident-welcome" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center justify-between sm:block">
+          <div>
+            <span className="type-label text-slate-400">Không gian cư dân</span>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">
+              Xin chào, {profile.name}!
+            </h1>
+            <p className="type-body text-slate-500 dark:text-slate-400 mt-1 hidden sm:block">
+              Tổng quan phòng thuê, hóa đơn cần thanh toán và thông báo quan trọng.
+            </p>
+          </div>
+
+          {/* Quick Room Badge (Visible directly on top right on mobile) */}
+          <div className="sm:hidden shrink-0">
+            <div className="soft-card px-3 py-1.5 flex items-center gap-2">
+              <IconHome3D size={32} className="shrink-0" />
+              <div>
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-bold leading-none">Phòng</span>
+                <span className="text-sm font-black font-num text-slate-900 dark:text-slate-100">{profile.room.roomNumber}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Quick Room Badge with 3D Home Icon */}
-        <div className="flex items-center gap-3">
+        {/* Quick Room Badge for Desktop */}
+        <div className="hidden sm:flex items-center gap-3">
           <div className="soft-card px-4 py-2 flex items-center gap-3.5">
             <IconHome3D size={40} className="shrink-0" />
             <div>
@@ -76,7 +89,7 @@ export function Home() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
         
         {/* Main Payment & Billing Highlight Card (8 columns) */}
-        <div data-tutorial="billing-card" className="md:col-span-8 soft-surface p-6 sm:p-8 relative overflow-hidden group transition-all">
+        <div data-tutorial="billing-card" className="md:col-span-8 soft-surface p-5 sm:p-8 relative overflow-hidden group transition-all">
 
           {/* Tick mark at the bottom-right corner of the card */}
           {isPaid && (
@@ -85,14 +98,14 @@ export function Home() {
             </div>
           )}
 
-          <div className="relative z-10 flex flex-col justify-between h-full gap-6">
+          <div className="relative z-10 flex flex-col justify-between h-full gap-5 sm:gap-6">
             
             {/* Top row */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-              <div className="flex items-start gap-4">
-                <IconWallet3D size={52} className="shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 sm:gap-4">
+                <IconWallet3D size={46} className="shrink-0 mt-0.5" />
                 <div>
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-num">
                       Kỳ thu phí Tháng {currentInvoice?.month}
                     </span>
@@ -103,9 +116,9 @@ export function Home() {
                 </div>
               </div>
 
-              <div className="text-left sm:text-right">
+              <div className="text-left sm:text-right flex items-center justify-between sm:block bg-slate-50/80 dark:bg-slate-800/60 sm:bg-transparent sm:dark:bg-transparent p-2 sm:p-0 rounded-xl">
                 <span className="text-[10px] text-slate-400 dark:text-slate-400 block uppercase font-medium">Hạn thanh toán</span>
-                <span className="type-button font-num text-slate-900 dark:text-slate-100 block mt-0.5 font-bold">
+                <span className="type-button font-num text-slate-900 dark:text-slate-100 block sm:mt-0.5 font-bold">
                   {currentInvoice?.dueDate}
                 </span>
               </div>
@@ -117,25 +130,25 @@ export function Home() {
                 {isUnpaid ? 'Số tiền cần thanh toán' : 'Tổng số tiền đã thanh toán'}
               </p>
               <div className={cn(
-                "type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold",
+                "text-3xl sm:text-4xl md:text-5xl font-black font-num tracking-tight flex items-baseline gap-1.5",
                 isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-slate-100"
               )}>
                 {formatCurrency(currentInvoice?.total || 0)}
                 <span className={cn(
-                  "text-2xl font-normal",
+                  "text-xl sm:text-2xl font-normal",
                   isPaid ? "text-emerald-500/70 dark:text-emerald-400/70" : "text-slate-400 dark:text-slate-500"
                 )}>₫</span>
               </div>
             </div>
 
             {/* Bottom Actions */}
-            <div data-tutorial="billing-pay-btn" className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/10">
+            <div data-tutorial="billing-pay-btn" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-4 border-t border-slate-900/5 dark:border-white/10">
               {isUnpaid ? (
                 <>
                   <button
                     type="button"
                     onClick={() => handleGoToPayment(currentInvoice?.id)}
-                    className="primary-button py-2.5 px-5 text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer font-bold"
+                    className="primary-button py-3 sm:py-2.5 px-5 text-sm flex items-center justify-center gap-2 shadow-xs cursor-pointer font-bold w-full sm:w-auto"
                   >
                     {paymentGateStatus === 'STOP' ? (
                       <>
@@ -152,7 +165,7 @@ export function Home() {
                   <button
                     type="button"
                     onClick={() => openInvoiceDetailModal(currentInvoice)}
-                    className="soft-button py-2.5 px-4 text-xs sm:text-sm flex items-center gap-1.5 text-slate-700 dark:text-slate-200 cursor-pointer"
+                    className="soft-button py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-1.5 text-slate-700 dark:text-slate-200 cursor-pointer w-full sm:w-auto"
                   >
                     <span>Xem chi tiết hóa đơn</span>
                     <ArrowRight size={14} />
@@ -162,7 +175,7 @@ export function Home() {
                 <button
                   type="button"
                   onClick={() => openInvoiceDetailModal(currentInvoice)}
-                  className="soft-button py-2.5 px-4 text-xs sm:text-sm flex items-center gap-2 cursor-pointer text-slate-800 dark:text-slate-200"
+                  className="soft-button py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer text-slate-800 dark:text-slate-200 w-full sm:w-auto"
                 >
                   <IconWallet3D size={24} />
                   <span>Xem chi tiết hóa đơn & biên lai</span>

@@ -34,7 +34,7 @@ export function Layout() {
       
       {/* Main Content Area: dynamic left margin aligning with floating sidebar on desktop */}
       <main className={cn(
-        "flex-1 p-3 sm:p-5 md:p-6 pb-[90px] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
+        "flex-1 p-3 sm:p-5 md:p-6 pb-[calc(env(safe-area-inset-bottom)+5.75rem)] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
         isPaymentPage ? "overflow-hidden" : "overflow-x-hidden",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>

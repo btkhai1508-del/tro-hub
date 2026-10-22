@@ -265,6 +265,41 @@ export function AdminPortal() {
   const [plateQuery, setPlateQuery] = useState('');
   const [plateResults, setPlateResults] = useState<any[]>([]);
 
+  // Mobile & Desktop Quick Filter & Search State
+  const [roomFilterTab, setRoomFilterTab] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
+  const [roomSearchText, setRoomSearchText] = useState('');
+  const [billingFilterTab, setBillingFilterTab] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
+  const [billingSearchText, setBillingSearchText] = useState('');
+
+  const filteredRoomsList = useMemo(() => {
+    return roomsList.filter(r => {
+      const q = roomSearchText.trim().toLowerCase();
+      const matchSearch = !q || 
+        String(r.room || '').toLowerCase().includes(q) ||
+        String(r.name || '').toLowerCase().includes(q) ||
+        String(r.phone || '').includes(q);
+      const isPaid = r.status === 'paid' || r.paymentStatus === 'paid';
+      const matchStatus = roomFilterTab === 'ALL' || 
+        (roomFilterTab === 'PAID' && isPaid) || 
+        (roomFilterTab === 'UNPAID' && !isPaid);
+      return matchSearch && matchStatus;
+    });
+  }, [roomsList, roomSearchText, roomFilterTab]);
+
+  const filteredBillingList = useMemo(() => {
+    return billingList.filter(b => {
+      const q = billingSearchText.trim().toLowerCase();
+      const matchSearch = !q || 
+        String(b.room || '').toLowerCase().includes(q) ||
+        String(b.name || '').toLowerCase().includes(q);
+      const isPaid = b.paymentStatus === 'paid';
+      const matchStatus = billingFilterTab === 'ALL' || 
+        (billingFilterTab === 'PAID' && isPaid) || 
+        (billingFilterTab === 'UNPAID' && !isPaid);
+      return matchSearch && matchStatus;
+    });
+  }, [billingList, billingSearchText, billingFilterTab]);
+
   // Contract state
   const [contractMode, setContractMode] = useState<'new' | 'history'>('new');
   const [contractHouse, setContractHouse] = useState<'TRUNG_KIM' | 'LVC'>('TRUNG_KIM');
@@ -1333,96 +1368,98 @@ export function AdminPortal() {
           MAIN ADMIN WORKSPACE (Aligning with resident page layout & margin)
           ========================================================================= */}
       <main className={cn(
-        "flex-1 p-3 sm:p-5 md:p-6 pb-[90px] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
+        "flex-1 p-3 sm:p-5 md:p-6 pb-[calc(env(safe-area-inset-bottom)+5.75rem)] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>
         
         {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="type-label text-slate-400">Không gian quản lý chủ trọ</span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
-                Admin
-              </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="type-label text-slate-400">Không gian quản lý chủ trọ</span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
+                  Admin
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                Bảng Quản Lý Chủ Trọ
+              </h1>
+              <p className="type-body text-slate-500 dark:text-slate-400 mt-0.5 text-xs sm:text-sm hidden sm:block">
+                Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
+              </p>
             </div>
-            <h1 className="type-h1 text-slate-900 dark:text-white font-bold">
-              Bảng Quản Lý Chủ Trọ
-            </h1>
-            <p className="type-body text-slate-500 mt-0.5 text-xs sm:text-sm">
-              Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
-            </p>
+
+            {/* Mobile Top Action Toolbar (Theme, Refresh, Logout) */}
+            <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  toggleTheme();
+                }}
+                className="soft-surface w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer shadow-xs active:scale-95 transition-all"
+                title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
+              >
+                {mode === 'light' ? (
+                  <Sun size={16} className="text-amber-500" />
+                ) : mode === 'dark' ? (
+                  <Moon size={16} className="text-indigo-400" />
+                ) : (
+                  <IconClock3D size={18} />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  loadTabContent(activeMenu, selectedMonth);
+                }}
+                className="soft-surface w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shadow-xs active:scale-95 transition-all"
+                title="Làm mới dữ liệu từ Google Sheets"
+              >
+                <RefreshCw size={15} className={cn("text-blue-600 dark:text-blue-400", isLoading && "animate-spin")} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  logoutUser();
+                  navigate('/login');
+                }}
+                className="soft-surface w-9 h-9 rounded-xl flex items-center justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer shadow-xs active:scale-95 transition-all"
+                title="Đăng xuất Admin"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
 
-          {/* Action Capsule: Month & Refresh - Only shown on mobile, moved to sidebar on desktop */}
-          <div className="flex lg:hidden flex-wrap items-center gap-2">
-            {/* Month Selector */}
-            <div className="soft-card px-3 py-1.5 flex items-center gap-2">
-              <Calendar size={15} className="text-blue-600 shrink-0" />
-              <div>
-                <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
-                <select
-                  value={selectedMonth}
-                  onChange={e => {
-                    playSound('click');
-                    setSelectedMonth(e.target.value);
-                  }}
-                  className="bg-transparent border-none text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer pr-1"
-                >
-                  {months.map(m => (
-                    <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Tháng {m}</option>
-                  ))}
-                </select>
-              </div>
+          {/* Mobile Month Capsule Bar (Dedicated full-width clean selector) */}
+          <div className="flex lg:hidden items-center justify-between gap-2 px-3 py-2 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
+            <div className="flex items-center gap-2">
+              <Calendar size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Kỳ thu phí:</span>
             </div>
-
-            {/* Real-time Light/Dark Mode Switcher */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                toggleTheme();
-              }}
-              className="soft-button h-9 px-3 rounded-2xl flex items-center gap-1.5 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
-              title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
-            >
-              {mode === 'light' ? (
-                <Sun size={15} className="text-amber-500" />
-              ) : mode === 'dark' ? (
-                <Moon size={15} className="text-indigo-400" />
-              ) : (
-                <IconClock3D size={18} />
-              )}
-              <span>{mode === 'light' ? 'Sáng' : mode === 'dark' ? 'Tối' : 'Tự động'}</span>
-            </button>
-
-            {/* Refresh Button */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                loadTabContent(activeMenu, selectedMonth);
-              }}
-              className="soft-button w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer"
-              title="Làm mới dữ liệu từ Google Sheets"
-            >
-              <RefreshCw size={15} className={isLoading ? "animate-spin text-blue-600" : ""} />
-            </button>
-
-            {/* Logout Button */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                logoutUser();
-                navigate('/login');
-              }}
-              className="soft-button px-3 h-9 rounded-2xl flex items-center gap-1 text-rose-600 text-xs font-bold cursor-pointer"
-              title="Đăng xuất Admin"
-            >
-              <LogOut size={14} />
-              <span>Đăng xuất</span>
-            </button>
+            <div className="relative">
+              <select
+                value={selectedMonth}
+                onChange={e => {
+                  playSound('click');
+                  setSelectedMonth(e.target.value);
+                }}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-black font-num text-slate-900 dark:text-white px-3 py-1.5 rounded-xl outline-none cursor-pointer pr-7 appearance-none shadow-xs"
+              >
+                {months.map(m => (
+                  <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    Tháng {m}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
         </div>
 
@@ -1613,49 +1650,109 @@ export function AdminPortal() {
             2. ROOMS MANAGEMENT
            ========================================================================= */}
         {activeMenu === 'rooms' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {roomsList.map(r => {
-                const isPaid = r.status === 'paid';
-                const isPending = r.status === 'pending';
-                return (
-                  <div
-                    key={r.room}
-                    onClick={() => openRoomDetail(r.room)}
-                    className="soft-card p-5 flex flex-col justify-between hover:border-blue-500 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base group-hover:bg-slate-900 dark:group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        {r.room}
-                      </span>
-                      <div 
-                        className="flex items-center gap-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <AppleSwitch
-                          checked={isPaid}
-                          onChange={() => updateRoomPaymentStatus(r.room, isPaid ? 'unpaid' : 'paid', r.row)}
-                          color="emerald"
-                          size="sm"
-                          ariaLabel={`Trạng thái thu tiền phòng ${r.room}`}
-                        />
-                        <span className={cn(
-                          "text-[11px] font-bold min-w-14 text-right transition-colors",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
-                        )}>
-                          {isPaid ? 'Đã đóng' : 'Chưa đóng'}
+          <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+            {/* Quick Filter & Search Bar for Mobile & Desktop */}
+            <div className="space-y-2.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                {/* Search Input */}
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={roomSearchText}
+                    onChange={e => setRoomSearchText(e.target.value)}
+                    placeholder="Tìm phòng, tên khách thuê, SĐT..."
+                    className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-xs placeholder:text-slate-400"
+                  />
+                  {roomSearchText && (
+                    <button
+                      type="button"
+                      onClick={() => setRoomSearchText('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                  {[
+                    { key: 'ALL', label: `Tất cả (${roomsList.length})` },
+                    { key: 'UNPAID', label: `Chưa đóng (${roomsList.filter(r => r.status !== 'paid' && r.paymentStatus !== 'paid').length})` },
+                    { key: 'PAID', label: `Đã đóng (${roomsList.filter(r => r.status === 'paid' || r.paymentStatus === 'paid').length})` },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setRoomFilterTab(tab.key as any);
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all shadow-xs",
+                        roomFilterTab === tab.key
+                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                          : "bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                      )}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Rooms Grid */}
+            {filteredRoomsList.length === 0 ? (
+              <div className="p-8 text-center soft-card">
+                <p className="text-xs font-bold text-slate-400">Không tìm thấy phòng phù hợp.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                {filteredRoomsList.map(r => {
+                  const isPaid = r.status === 'paid' || r.paymentStatus === 'paid';
+                  return (
+                    <div
+                      key={r.room}
+                      onClick={() => openRoomDetail(r.room)}
+                      className="soft-card p-4 sm:p-5 flex flex-col justify-between hover:border-blue-500 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <span className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black text-sm sm:text-base group-hover:bg-slate-900 dark:group-hover:bg-blue-600 group-hover:text-white transition-colors font-num">
+                          {r.room}
                         </span>
+                        <div 
+                          className="flex items-center gap-1.5 sm:gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-bold font-num",
+                            isPaid 
+                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60" 
+                              : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60"
+                          )}>
+                            {isPaid ? 'Đã thu' : 'Chưa thu'}
+                          </span>
+                          <AppleSwitch
+                            checked={isPaid}
+                            onChange={() => updateRoomPaymentStatus(r.room, isPaid ? 'unpaid' : 'paid', r.row)}
+                            color="emerald"
+                            size="sm"
+                            ariaLabel={`Trạng thái thu tiền phòng ${r.room}`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5 sm:space-y-1">
+                        <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">{r.name}</h4>
+                        <p className="text-[11px] sm:text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                       </div>
                     </div>
-
-                    <div className="space-y-1">
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">{r.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -2066,78 +2163,141 @@ export function AdminPortal() {
            ========================================================================= */}
         {activeMenu === 'billing' && (
           <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+            {/* Quick Filter & Search Bar for Mobile & Desktop */}
+            <div className="space-y-2.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                {/* Search Input */}
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={billingSearchText}
+                    onChange={e => setBillingSearchText(e.target.value)}
+                    placeholder="Tìm phòng, tên khách thuê..."
+                    className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-xs placeholder:text-slate-400"
+                  />
+                  {billingSearchText && (
+                    <button
+                      type="button"
+                      onClick={() => setBillingSearchText('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                  {[
+                    { key: 'ALL', label: `Tất cả (${billingList.length})` },
+                    { key: 'UNPAID', label: `Chưa đóng (${billingList.filter(b => b.paymentStatus !== 'paid').length})` },
+                    { key: 'PAID', label: `Đã đóng (${billingList.filter(b => b.paymentStatus === 'paid').length})` },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        setBillingFilterTab(tab.key as any);
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all shadow-xs",
+                        billingFilterTab === tab.key
+                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                          : "bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                      )}
+                    >
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
-            <div className="block md:hidden space-y-3.5">
-              {billingList.map(item => {
-                const isPaid = item.paymentStatus === 'paid';
-                return (
-                  <div key={item.room} className="soft-card p-4 space-y-3.5">
-                    {/* Header: Room, Tenant, AppleSwitch */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-blue-600 text-white font-bold text-xs shrink-0 font-num">
-                          {item.room}
-                        </span>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-slate-900 dark:text-white text-xs truncate">{item.name}</h4>
+            {filteredBillingList.length === 0 ? (
+              <div className="p-8 text-center soft-card block md:hidden">
+                <p className="text-xs font-bold text-slate-400">Không tìm thấy phòng phù hợp.</p>
+              </div>
+            ) : (
+              <div className="block md:hidden space-y-3.5">
+                {filteredBillingList.map(item => {
+                  const isPaid = item.paymentStatus === 'paid';
+                  return (
+                    <div key={item.room} className="soft-card p-4 space-y-3">
+                      {/* Header: Room, Tenant, AppleSwitch */}
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-blue-600 text-white font-black text-xs shrink-0 font-num">
+                            {item.room}
+                          </span>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">{item.name}</h4>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-bold font-num",
+                            isPaid 
+                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60" 
+                              : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60"
+                          )}>
+                            {isPaid ? 'Đã thu' : 'Chưa thu'}
+                          </span>
+                          <AppleSwitch
+                            checked={isPaid}
+                            onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
+                            color="emerald"
+                            size="sm"
+                            ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
+                          />
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <AppleSwitch
-                          checked={isPaid}
-                          onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
-                          color="emerald"
-                          size="sm"
-                          ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                        />
+
+                      {/* Service breakdown in 3 columns without scrolling */}
+                      <div className="grid grid-cols-3 gap-2 bg-slate-50/90 dark:bg-slate-850/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60 text-[10.5px] sm:text-[11px]">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Phòng</span>
+                          <span className="font-num font-bold text-slate-800 dark:text-slate-200 truncate block">{fmt(item.tienPhong)} đ</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-semibold block leading-tight">Điện</span>
+                          <span className="font-num font-bold text-amber-600 dark:text-amber-400 truncate block">{fmt(item.tienDien)} đ</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold block leading-tight">Nước</span>
+                          <span className="font-num font-bold text-blue-600 dark:text-blue-400 truncate block">{fmt(item.tienNuoc)} đ</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Rác</span>
+                          <span className="font-num font-bold text-slate-700 dark:text-slate-300 truncate block">{fmt(item.tienRac)} đ</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Net</span>
+                          <span className="font-num font-bold text-slate-700 dark:text-slate-300 truncate block">{fmt(item.tienNet)} đ</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Xe</span>
+                          <span className="font-num font-bold text-slate-700 dark:text-slate-300 truncate block">{fmt(item.tienXe)} đ</span>
+                        </div>
+                      </div>
+
+                      {/* Total Row */}
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tổng tiền</span>
                         <span className={cn(
-                          "text-[11px] font-bold min-w-14 text-right transition-colors",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                          "text-base font-black font-num tracking-tight",
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
                         )}>
-                          {isPaid ? 'Đã đóng' : 'Chưa đóng'}
+                          {fmt(item.tongTien)} <span className="text-xs font-normal">₫</span>
                         </span>
                       </div>
                     </div>
-
-                    {/* Service breakdown in 3 columns without scrolling */}
-                    <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 text-[11px]">
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Phòng</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{fmt(item.tienPhong)} đ</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-semibold block">Điện</span>
-                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{fmt(item.tienDien)} đ</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold block">Nước</span>
-                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{fmt(item.tienNuoc)} đ</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Rác</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{fmt(item.tienRac)} đ</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Net</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{fmt(item.tienNet)} đ</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Xe</span>
-                        <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{fmt(item.tienXe)} đ</span>
-                      </div>
-                    </div>
-
-                    {/* Total Row */}
-                    <div className="flex items-center justify-between pt-0.5">
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Tổng cộng:</span>
-                      <span className="text-sm font-black font-mono text-slate-900 dark:text-white">
-                        {fmt(item.tongTien)} đ
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Desktop View: Full Spacious Table */}
             <div className="hidden md:block soft-card overflow-hidden">
@@ -2158,7 +2318,7 @@ export function AdminPortal() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {billingList.map(item => {
+                    {filteredBillingList.map(item => {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={item.room} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
@@ -3598,9 +3758,9 @@ export function AdminPortal() {
       </main>
 
       {/* =========================================================================
-          MOBILE BOTTOM NAVIGATION (Fixed bottom on mobile)
+          MOBILE BOTTOM NAVIGATION (Fixed bottom on mobile with safe area padding)
          ========================================================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-slate-200 dark:border-slate-800 px-3 py-2 flex items-center justify-around shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#101726]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 px-2 sm:px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)] rounded-t-[28px] transition-all">
         {[
           { key: 'dashboard', icon: Home, label: 'Tổng quan' },
           { key: 'rooms', icon: Users, label: 'Phòng' },
@@ -3617,20 +3777,30 @@ export function AdminPortal() {
                 setActiveMenu(m.key as any);
               }}
               className={cn(
-                "flex flex-col items-center justify-center p-2 rounded-2xl transition-all cursor-pointer",
-                isActive ? "text-slate-900 dark:text-white font-bold" : "text-slate-400 dark:text-slate-500 font-medium"
+                "relative flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all cursor-pointer select-none min-w-[54px]",
+                isActive 
+                  ? "text-slate-900 dark:text-white font-bold" 
+                  : "text-slate-400 dark:text-slate-500 font-medium hover:text-slate-600 dark:hover:text-slate-300"
               )}
             >
-              <Icon size={20} />
-              <span className="text-[10px] mt-0.5">{m.label}</span>
+              <div className={cn("transition-transform duration-200", isActive && "scale-110")}>
+                <Icon size={21} strokeWidth={isActive ? 2.4 : 1.8} />
+              </div>
+              <span className="text-[10px] mt-0.5 tracking-tight font-medium">{m.label}</span>
+              {isActive && (
+                <span className="w-1 h-1 rounded-full bg-slate-900 dark:bg-white mt-0.5" />
+              )}
             </button>
           );
         })}
 
+        {/* Vertical divider */}
+        <div className="w-px h-7 bg-slate-200 dark:bg-slate-800 my-auto mx-0.5" />
+
         {/* Cổng thanh toán AppleSwitch (Đồng bộ với Sidebar) */}
         <div 
           onClick={togglePaymentGate}
-          className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all cursor-pointer select-none"
+          className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all cursor-pointer select-none min-w-[54px]"
           title={`Cổng thanh toán: ${paymentGate === 'START' ? 'Mở' : 'Tắt'}`}
         >
           <AppleSwitch
@@ -3644,7 +3814,7 @@ export function AdminPortal() {
             "text-[9px] font-bold uppercase font-num mt-1 leading-none tracking-tight",
             paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
           )}>
-            {paymentGate === 'START' ? 'Mở' : 'Tắt'}
+            {paymentGate === 'START' ? 'Mở cổng' : 'Tắt cổng'}
           </span>
         </div>
       </nav>
