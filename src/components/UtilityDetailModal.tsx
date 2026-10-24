@@ -157,13 +157,13 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* Electricity Card */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/5 dark:bg-amber-950/20 border border-amber-500/20 dark:border-amber-900/40 space-y-3">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-400 font-bold text-sm">
+                    <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-sm">
                       <IconElectricity3D size={28} className="shrink-0" />
                       <span>Đồng hồ Điện</span>
                     </div>
-                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200">
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
                       3.500 ₫/kWh
                     </span>
                   </div>
@@ -177,21 +177,21 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                       <span>Chỉ số cuối kỳ:</span>
                       <span className="font-mono font-bold text-slate-900 dark:text-white">1.482 kWh</span>
                     </div>
-                    <div className="pt-2 border-t border-amber-500/20 flex justify-between items-baseline">
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex justify-between items-baseline">
                       <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Tiêu thụ:</span>
-                      <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400">132 kWh (462.000 ₫)</span>
+                      <span className="text-base font-bold font-mono text-slate-900 dark:text-white">132 kWh (462.000 ₫)</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Water Card */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-cyan-500/5 dark:bg-cyan-950/20 border border-cyan-500/20 dark:border-cyan-900/40 space-y-3">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 text-cyan-700 dark:text-cyan-400 font-bold text-sm">
+                    <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-sm">
                       <IconWater3D size={28} className="shrink-0" />
                       <span>Đồng hồ Nước</span>
                     </div>
-                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200">
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
                       25.000 ₫/m³
                     </span>
                   </div>
@@ -205,9 +205,9 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                       <span>Chỉ số cuối kỳ:</span>
                       <span className="font-mono font-bold text-slate-900 dark:text-white">78 m³</span>
                     </div>
-                    <div className="pt-2 border-t border-cyan-500/20 flex justify-between items-baseline">
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex justify-between items-baseline">
                       <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Tiêu thụ:</span>
-                      <span className="text-base font-bold font-mono text-cyan-600 dark:text-cyan-400">8 m³ (200.000 ₫)</span>
+                      <span className="text-base font-bold font-mono text-slate-900 dark:text-white">8 m³ (200.000 ₫)</span>
                     </div>
                   </div>
                 </div>

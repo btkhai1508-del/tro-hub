@@ -11,6 +11,23 @@
   font-family: "Times New Roman", Times, Georgia, serif !important;
 }
 
+.font-apple,
+.font-apple * {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "SF Pro Rounded", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+
+/* 70% bold so với bold bình thường (SemiBold 600 weight in Apple ecosystem) */
+.font-apple .font-bold,
+.font-apple .font-semibold,
+.font-apple-semibold,
+.font-apple-70bold {
+  font-weight: 600 !important;
+}
+
+.font-apple-medium {
+  font-weight: 500 !important;
+}
+
 @layer base {
   :root {
     /* TRUE APPLE ECOSYSTEM FONT STACK (-apple-system, SF Pro, BlinkMacSystemFont) */

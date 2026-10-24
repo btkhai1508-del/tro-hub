@@ -171,19 +171,23 @@ function chuyenCuDanSangTabCaNhan() {
     ];
 
     tenants.forEach(function(t) {
-      if (t.name && t.name.toString().trim() !== '' && t.name.toString().trim() !== '1') {
+      var tName = (t.name || '').toString().trim();
+      var isNumeric = /^\d+(\.\d+)?$/.test(tName);
+      var isHeader = /^họ\s*(?:và\s*)?tên/i.test(tName);
+      if (tName && tName !== '1' && !isNumeric && !isHeader) {
         var rawPhone = t.phone ? t.phone.toString().trim() : '';
-        var phone = (rawPhone && rawPhone !== '' && rawPhone !== '0') ? rawPhone : '1';
+        var isPhoneNumericOnly = /^[0-9](\.0+)?$/.test(rawPhone);
+        var phone = (rawPhone && rawPhone !== '' && rawPhone !== '0' && !isPhoneNumericOnly) ? rawPhone : '1';
         var pass = (phone !== '1' && phone.length >= 6) ? phone.slice(-6) : '180505';
         
         out.push([
-          t.name.toString().trim(),
+          tName,
           phone,
-          t.cccd ? t.cccd.toString().trim() : '',
+          t.cccd && !/^[0-9](\.0+)?$/.test(t.cccd.toString().trim()) ? t.cccd.toString().trim() : '',
           '',
           '',
           '',
-          t.plate ? t.plate.toString().trim() : '',
+          t.plate && !/^\d+(\.\d+)?$/.test(t.plate.toString().trim()) ? t.plate.toString().trim() : '',
           'Xe máy',
           room,
           '',

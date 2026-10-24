@@ -216,7 +216,7 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === 'all'
-                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             )}
           >
@@ -229,11 +229,11 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === 'dien'
-                ? "bg-amber-500 text-white shadow-xs"
-                : "text-slate-500 hover:text-amber-600 dark:hover:text-amber-400"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <Zap size={13} className={activeFilter === 'dien' ? "text-white" : "text-amber-500"} />
+            <Zap size={13} className={activeFilter === 'dien' ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white"} />
             <span>Điện (kW)</span>
           </button>
 
@@ -243,11 +243,11 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === 'nuoc'
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <Droplet size={13} className={activeFilter === 'nuoc' ? "text-white" : "text-blue-600"} />
+            <Droplet size={13} className={activeFilter === 'nuoc' ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white"} />
             <span>Nước (m³)</span>
           </button>
         </div>

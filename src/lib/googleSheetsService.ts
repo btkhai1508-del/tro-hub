@@ -581,31 +581,34 @@ export async function fetchAllResidentsFromSheet(
         ];
 
         tenants.forEach((t) => {
-          if (t.name && t.name !== '1') {
+          const trimmedName = (t.name || '').trim();
+          const isNumericCount = /^\d+(\.\d+)?$/.test(trimmedName);
+          const isHeader = /^họ\s*(?:và\s*)?tên/i.test(trimmedName);
+          if (trimmedName && trimmedName !== '1' && !isNumericCount && !isHeader) {
             const cleanPhone = t.phone.replace(/[\s.-]/g, '');
             const existing = residents.find(res => {
               const resP = res.phone.replace(/[\s.-]/g, '');
               return (cleanPhone && cleanPhone !== '1' && resP === cleanPhone) ||
-                     (res.name.toLowerCase() === t.name.toLowerCase());
+                     (res.name.toLowerCase() === trimmedName.toLowerCase());
             });
 
             if (existing) {
               if (!existing.roomNumber) existing.roomNumber = cleanRoom;
-              if (!existing.cccd && t.cccd) existing.cccd = t.cccd;
-              if (!existing.plateNumber && t.plateNumber) existing.plateNumber = t.plateNumber;
+              if (!existing.cccd && t.cccd && !/^[0-9](\.0+)?$/.test(t.cccd)) existing.cccd = t.cccd;
+              if (!existing.plateNumber && t.plateNumber && !/^\d+(\.\d+)?$/.test(t.plateNumber)) existing.plateNumber = t.plateNumber;
               if (roomRent > 0 && !existing.rentPrice) existing.rentPrice = roomRent;
               if (roomDeposit > 0 && !existing.depositAmount) existing.depositAmount = roomDeposit;
               if (roomTotal > 0 && !existing.totalMonthlyAmount) existing.totalMonthlyAmount = roomTotal;
             } else {
-              const effectivePhone = t.phone || '1';
+              const effectivePhone = t.phone && !/^[0-9](\.0+)?$/.test(t.phone) ? t.phone : '1';
               residents.push({
-                name: t.name,
+                name: trimmedName,
                 phone: effectivePhone,
-                cccd: t.cccd || '',
+                cccd: t.cccd && !/^[0-9](\.0+)?$/.test(t.cccd) ? t.cccd : '',
                 email: '',
                 dob: '',
                 address: '',
-                plateNumber: t.plateNumber || '',
+                plateNumber: t.plateNumber && !/^\d+(\.\d+)?$/.test(t.plateNumber) ? t.plateNumber : '',
                 vehicleType: 'Xe máy',
                 roomNumber: cleanRoom,
                 emergencyName: '',
@@ -691,10 +694,10 @@ export async function updateResidentProfileToSheet(
   if (getRes.ok) {
     const data = await getRes.json();
     const rows: string[][] = data.values || [];
-    const cleanPhone = profileData.phone.replace(/[\s.-]/g, '');
-    const cleanName = profileData.name.trim().toLowerCase();
-    const cleanRoom = (profileData.roomNumber || '').replace(/[^\d]/g, '');
-    const cleanCccd = (profileData.cccd || '').trim();
+    const cleanPhone = String(profileData.phone || '').replace(/[\s.-]/g, '');
+    const cleanName = String(profileData.name || '').trim().toLowerCase();
+    const cleanRoom = String(profileData.roomNumber || '').replace(/[^\d]/g, '');
+    const cleanCccd = String(profileData.cccd || '').trim();
 
     const foundIdx = rows.findIndex((r) => {
       const rPhone = String(r[1] || '').replace(/[\s.-]/g, '');

@@ -265,41 +265,6 @@ export function AdminPortal() {
   const [plateQuery, setPlateQuery] = useState('');
   const [plateResults, setPlateResults] = useState<any[]>([]);
 
-  // Mobile & Desktop Quick Filter & Search State
-  const [roomFilterTab, setRoomFilterTab] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
-  const [roomSearchText, setRoomSearchText] = useState('');
-  const [billingFilterTab, setBillingFilterTab] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
-  const [billingSearchText, setBillingSearchText] = useState('');
-
-  const filteredRoomsList = useMemo(() => {
-    return roomsList.filter(r => {
-      const q = roomSearchText.trim().toLowerCase();
-      const matchSearch = !q || 
-        String(r.room || '').toLowerCase().includes(q) ||
-        String(r.name || '').toLowerCase().includes(q) ||
-        String(r.phone || '').includes(q);
-      const isPaid = r.status === 'paid' || r.paymentStatus === 'paid';
-      const matchStatus = roomFilterTab === 'ALL' || 
-        (roomFilterTab === 'PAID' && isPaid) || 
-        (roomFilterTab === 'UNPAID' && !isPaid);
-      return matchSearch && matchStatus;
-    });
-  }, [roomsList, roomSearchText, roomFilterTab]);
-
-  const filteredBillingList = useMemo(() => {
-    return billingList.filter(b => {
-      const q = billingSearchText.trim().toLowerCase();
-      const matchSearch = !q || 
-        String(b.room || '').toLowerCase().includes(q) ||
-        String(b.name || '').toLowerCase().includes(q);
-      const isPaid = b.paymentStatus === 'paid';
-      const matchStatus = billingFilterTab === 'ALL' || 
-        (billingFilterTab === 'PAID' && isPaid) || 
-        (billingFilterTab === 'UNPAID' && !isPaid);
-      return matchSearch && matchStatus;
-    });
-  }, [billingList, billingSearchText, billingFilterTab]);
-
   // Contract state
   const [contractMode, setContractMode] = useState<'new' | 'history'>('new');
   const [contractHouse, setContractHouse] = useState<'TRUNG_KIM' | 'LVC'>('TRUNG_KIM');
@@ -551,6 +516,24 @@ export function AdminPortal() {
     loadPaymentGateStatus(selectedMonth);
   }, []);
 
+  const handlePrevMonth = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const currentIndex = months.indexOf(selectedMonth);
+    if (currentIndex > 0) {
+      setSelectedMonth(months[currentIndex - 1]);
+      playSound('click');
+    }
+  };
+
+  const handleNextMonth = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const currentIndex = months.indexOf(selectedMonth);
+    if (currentIndex < months.length - 1) {
+      setSelectedMonth(months[currentIndex + 1]);
+      playSound('click');
+    }
+  };
+
   // Compute complete dashboard statistics from room list
   const updateDashboardStats = (list: any[], month: string) => {
     const totalRev = list.reduce((acc, r) => acc + (Number(r.tongTien) || 0), 0);
@@ -728,12 +711,53 @@ export function AdminPortal() {
     setCurrentRoomData(null);
     setIsLoading(true);
 
+    const sanitizeName = (val: any) => {
+      if (!val) return '';
+      const s = String(val).trim();
+      if (/^\d+(\.\d+)?$/.test(s)) return '';
+      if (/^họ\s*(?:và\s*)?tên/i.test(s)) return '';
+      return s;
+    };
+
+    const sanitizeCCCD = (val: any) => {
+      if (!val) return '';
+      const s = String(val).trim();
+      if (/^[0-9](\.0+)?$/.test(s)) return '';
+      return s;
+    };
+
+    const sanitizePhone = (val: any) => {
+      if (!val) return '';
+      const s = String(val).trim();
+      if (/^[0-9](\.0+)?$/.test(s)) return '';
+      return s;
+    };
+
+    const sanitizePlate = (val: any) => {
+      if (!val) return '';
+      const s = String(val).trim();
+      if (/^\d+(\.\d+)?$/.test(s)) return '';
+      return s;
+    };
+
     // 1. Immediately find from local roomsList
     const localFound = roomsList.find(r => canonicalRoomId(r.room) === cleanId) ||
                        roomsList.find(r => r.room === room);
     if (localFound) {
       setCurrentRoomData({
         ...localFound,
+        nguoi1: sanitizeName(localFound.nguoi1),
+        cccd1: sanitizeCCCD(localFound.cccd1),
+        sdt1: sanitizePhone(localFound.sdt1),
+        xe1: sanitizePlate(localFound.xe1),
+        nguoi2: sanitizeName(localFound.nguoi2),
+        cccd2: sanitizeCCCD(localFound.cccd2),
+        sdt2: sanitizePhone(localFound.sdt2),
+        xe2: sanitizePlate(localFound.xe2),
+        nguoi3: sanitizeName(localFound.nguoi3),
+        cccd3: sanitizeCCCD(localFound.cccd3),
+        sdt3: sanitizePhone(localFound.sdt3),
+        xe3: sanitizePlate(localFound.xe3),
         statusHTML: localFound.paymentStatus === 'paid'
           ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
           : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>'
@@ -751,7 +775,23 @@ export function AdminPortal() {
       .then(d => {
         setIsLoading(false);
         if (d.success && d.data) {
-          setCurrentRoomData((prev: any) => ({ ...prev, ...d.data }));
+          const fresh = d.data;
+          setCurrentRoomData((prev: any) => ({
+            ...prev,
+            ...fresh,
+            nguoi1: sanitizeName(fresh.nguoi1),
+            cccd1: sanitizeCCCD(fresh.cccd1),
+            sdt1: sanitizePhone(fresh.sdt1),
+            xe1: sanitizePlate(fresh.xe1),
+            nguoi2: sanitizeName(fresh.nguoi2),
+            cccd2: sanitizeCCCD(fresh.cccd2),
+            sdt2: sanitizePhone(fresh.sdt2),
+            xe2: sanitizePlate(fresh.xe2),
+            nguoi3: sanitizeName(fresh.nguoi3),
+            cccd3: sanitizeCCCD(fresh.cccd3),
+            sdt3: sanitizePhone(fresh.sdt3),
+            xe3: sanitizePlate(fresh.xe3)
+          }));
         }
       })
       .catch(() => setIsLoading(false));
@@ -778,11 +818,12 @@ export function AdminPortal() {
           { plate: r.xe2, name: r.nguoi2, phone: r.sdt2 },
           { plate: r.xe3, name: r.nguoi3, phone: r.sdt3 }
         ].forEach(item => {
-          if (!isValidLicensePlate(item.plate)) return;
-          if (!cleanQ || item.plate.toLowerCase().replace(/[\s.-]/g, '').includes(cleanQ)) {
+          const plateStr = String(item.plate || '').trim();
+          if (!isValidLicensePlate(plateStr)) return;
+          if (!cleanQ || plateStr.toLowerCase().replace(/[\s.-]/g, '').includes(cleanQ)) {
             results.push({
               room: r.room,
-              plate: item.plate,
+              plate: plateStr,
               tenant: item.name || r.name,
               phone: item.phone || r.phone
             });
@@ -1191,19 +1232,33 @@ export function AdminPortal() {
           <div className="w-full space-y-2.5 pt-3 border-t border-slate-900/5 dark:border-white/10">
             {!isSidebarCollapsed ? (
               <div className="space-y-2.5">
-                {/* 1. Month Selector - 3D Glassmorphism Card */}
-                <div className="soft-surface p-2.5 sm:p-3 rounded-2xl relative overflow-hidden group">
+                {/* 1. Month Selector - 3D Glassmorphism Card with Functional Previous/Next Arrows */}
+                <div className="soft-surface p-2 sm:p-2.5 rounded-2xl relative overflow-hidden group">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                  <div className="flex items-center gap-2.5">
-                    <Calendar size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[9px] text-slate-400 dark:text-slate-400 uppercase tracking-wider block font-bold leading-none mb-1">
-                        Kỳ tháng
-                      </span>
+                  <div className="flex items-center justify-between gap-1.5">
+                    {/* Clickable Month Label with Dropdown Overlay */}
+                    <div className="flex items-center gap-2 min-w-0 flex-1 relative cursor-pointer">
+                      <Calendar size={18} className="text-slate-900 dark:text-white shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] text-slate-400 dark:text-slate-400 uppercase tracking-wider block font-bold leading-none mb-0.5">
+                          Kỳ tháng
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            Tháng {selectedMonth}
+                          </span>
+                          <ChevronDown size={13} className="text-slate-900 dark:text-white shrink-0" />
+                        </div>
+                      </div>
+                      {/* Full-coverage select so clicking text or chevron opens native picker */}
                       <select
                         value={selectedMonth}
-                        onChange={e => setSelectedMonth(e.target.value)}
-                        className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-slate-100 outline-none cursor-pointer p-0 appearance-none pr-3"
+                        onChange={e => {
+                          playSound('click');
+                          setSelectedMonth(e.target.value);
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        title={`Kỳ tháng: Tháng ${selectedMonth}`}
                       >
                         {months.map(m => (
                           <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -1212,7 +1267,30 @@ export function AdminPortal() {
                         ))}
                       </select>
                     </div>
-                    <ChevronDown size={14} className="text-slate-400 shrink-0 pointer-events-none" />
+
+                    {/* Functional Month Navigation Arrow Buttons */}
+                    <div className="flex items-center gap-1 shrink-0 z-20">
+                      <button
+                        type="button"
+                        onClick={handlePrevMonth}
+                        disabled={months.indexOf(selectedMonth) <= 0}
+                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                        title="Tháng trước"
+                        aria-label="Tháng trước"
+                      >
+                        <ChevronLeft size={14} className="stroke-[2.5]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNextMonth}
+                        disabled={months.indexOf(selectedMonth) >= months.length - 1}
+                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                        title="Tháng tiếp theo"
+                        aria-label="Tháng tiếp theo"
+                      >
+                        <ChevronRight size={14} className="stroke-[2.5]" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1221,7 +1299,7 @@ export function AdminPortal() {
                   <button
                     type="button"
                     onClick={toggleTheme}
-                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
                     title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
@@ -1240,11 +1318,11 @@ export function AdminPortal() {
                   <button
                     type="button"
                     onClick={() => loadTabContent(activeMenu, selectedMonth)}
-                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer group active:scale-[0.98]"
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
                     title="Làm mới dữ liệu từ Google Sheets"
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                    <RefreshCw size={14} className={cn("text-blue-600 dark:text-blue-400 shrink-0", isLoading && "animate-spin")} />
+                    <RefreshCw size={14} className={cn("text-slate-900 dark:text-white shrink-0", isLoading && "animate-spin")} />
                     <span className="truncate text-[11px] font-bold">Làm mới</span>
                   </button>
                 </div>
@@ -1288,10 +1366,10 @@ export function AdminPortal() {
               <div className="flex flex-col items-center gap-2 pt-1 w-full">
                 {/* Month Selector in Collapsed Mode */}
                 <div 
-                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 hover:scale-105 transition-all cursor-pointer group"
+                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white hover:scale-105 transition-all cursor-pointer group"
                   title={`Kỳ tháng: Tháng ${selectedMonth} (Bấm để chọn tháng)`}
                 >
-                  <Calendar size={18} />
+                  <Calendar size={18} className="text-slate-900 dark:text-white" />
                   <select
                     value={selectedMonth}
                     onChange={e => setSelectedMonth(e.target.value)}
@@ -1310,7 +1388,7 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:scale-105 transition-all cursor-pointer"
                   title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
                 >
                   {mode === 'light' ? (
@@ -1326,10 +1404,10 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={() => loadTabContent(activeMenu, selectedMonth)}
-                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 transition-all cursor-pointer"
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white hover:scale-105 transition-all cursor-pointer"
                   title="Làm mới dữ liệu từ Google Sheets"
                 >
-                  <RefreshCw size={17} className={cn("text-blue-600 dark:text-blue-400", isLoading && "animate-spin")} />
+                  <RefreshCw size={17} className={cn("text-slate-900 dark:text-white", isLoading && "animate-spin")} />
                 </button>
 
                 {/* Payment Gate in Collapsed Mode */}
@@ -1368,98 +1446,125 @@ export function AdminPortal() {
           MAIN ADMIN WORKSPACE (Aligning with resident page layout & margin)
           ========================================================================= */}
       <main className={cn(
-        "flex-1 p-3 sm:p-5 md:p-6 pb-[calc(env(safe-area-inset-bottom)+5.75rem)] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
+        "flex-1 p-3 sm:p-5 md:p-6 pb-[90px] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>
         
         {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-          <div className="flex items-center justify-between w-full sm:w-auto">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="type-label text-slate-400">Không gian quản lý chủ trọ</span>
-                <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
-                  Admin
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                Bảng Quản Lý Chủ Trọ
-              </h1>
-              <p className="type-body text-slate-500 dark:text-slate-400 mt-0.5 text-xs sm:text-sm hidden sm:block">
-                Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
-              </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="type-label text-slate-400">Không gian quản lý chủ trọ</span>
+              <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
+                Admin
+              </span>
             </div>
-
-            {/* Mobile Top Action Toolbar (Theme, Refresh, Logout) */}
-            <div className="flex lg:hidden items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  toggleTheme();
-                }}
-                className="soft-surface w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer shadow-xs active:scale-95 transition-all"
-                title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
-              >
-                {mode === 'light' ? (
-                  <Sun size={16} className="text-amber-500" />
-                ) : mode === 'dark' ? (
-                  <Moon size={16} className="text-indigo-400" />
-                ) : (
-                  <IconClock3D size={18} />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  loadTabContent(activeMenu, selectedMonth);
-                }}
-                className="soft-surface w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shadow-xs active:scale-95 transition-all"
-                title="Làm mới dữ liệu từ Google Sheets"
-              >
-                <RefreshCw size={15} className={cn("text-blue-600 dark:text-blue-400", isLoading && "animate-spin")} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  logoutUser();
-                  navigate('/login');
-                }}
-                className="soft-surface w-9 h-9 rounded-xl flex items-center justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer shadow-xs active:scale-95 transition-all"
-                title="Đăng xuất Admin"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
+            <h1 className="type-h1 text-slate-900 dark:text-white font-bold">
+              Bảng Quản Lý Chủ Trọ
+            </h1>
+            <p className="type-body text-slate-500 mt-0.5 text-xs sm:text-sm">
+              Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
+            </p>
           </div>
 
-          {/* Mobile Month Capsule Bar (Dedicated full-width clean selector) */}
-          <div className="flex lg:hidden items-center justify-between gap-2 px-3 py-2 bg-slate-100/90 dark:bg-slate-800/90 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Calendar size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Kỳ thu phí:</span>
-            </div>
-            <div className="relative">
-              <select
-                value={selectedMonth}
-                onChange={e => {
-                  playSound('click');
-                  setSelectedMonth(e.target.value);
-                }}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-black font-num text-slate-900 dark:text-white px-3 py-1.5 rounded-xl outline-none cursor-pointer pr-7 appearance-none shadow-xs"
+          {/* Action Capsule: Month & Refresh - Only shown on mobile, moved to sidebar on desktop */}
+          <div className="flex lg:hidden flex-wrap items-center gap-2">
+            {/* Month Selector with interactive Previous/Next Arrows */}
+            <div className="soft-card px-2.5 py-1.5 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                disabled={months.indexOf(selectedMonth) <= 0}
+                className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                title="Tháng trước"
+                aria-label="Tháng trước"
               >
-                {months.map(m => (
-                  <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    Tháng {m}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronLeft size={13} className="stroke-[2.5]" />
+              </button>
+
+              <div className="relative flex items-center gap-1.5 px-1 cursor-pointer">
+                <Calendar size={15} className="text-slate-900 dark:text-white shrink-0" />
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
+                  <div className="flex items-center gap-0.5">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Tháng {selectedMonth}</span>
+                    <ChevronDown size={11} className="text-slate-900 dark:text-white shrink-0" />
+                  </div>
+                </div>
+                <select
+                  value={selectedMonth}
+                  onChange={e => {
+                    playSound('click');
+                    setSelectedMonth(e.target.value);
+                  }}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                  title={`Kỳ tháng: Tháng ${selectedMonth}`}
+                >
+                  {months.map(m => (
+                    <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Tháng {m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                disabled={months.indexOf(selectedMonth) >= months.length - 1}
+                className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                title="Tháng tiếp theo"
+                aria-label="Tháng tiếp theo"
+              >
+                <ChevronRight size={13} className="stroke-[2.5]" />
+              </button>
             </div>
+
+            {/* Real-time Light/Dark Mode Switcher */}
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                toggleTheme();
+              }}
+              className="soft-button h-9 px-3 rounded-2xl flex items-center gap-1.5 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
+              title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
+            >
+              {mode === 'light' ? (
+                <Sun size={15} className="text-amber-500" />
+              ) : mode === 'dark' ? (
+                <Moon size={15} className="text-indigo-400" />
+              ) : (
+                <IconClock3D size={18} />
+              )}
+              <span>{mode === 'light' ? 'Sáng' : mode === 'dark' ? 'Tối' : 'Tự động'}</span>
+            </button>
+
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                loadTabContent(activeMenu, selectedMonth);
+              }}
+              className="soft-button w-9 h-9 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white cursor-pointer"
+              title="Làm mới dữ liệu từ Google Sheets"
+            >
+              <RefreshCw size={15} className={cn("text-slate-900 dark:text-white", isLoading && "animate-spin")} />
+            </button>
+
+            {/* Logout Button */}
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                logoutUser();
+                navigate('/login');
+              }}
+              className="soft-button px-3 h-9 rounded-2xl flex items-center gap-1 text-rose-600 text-xs font-bold cursor-pointer"
+              title="Đăng xuất Admin"
+            >
+              <LogOut size={14} />
+              <span>Đăng xuất</span>
+            </button>
           </div>
         </div>
 
@@ -1562,13 +1667,13 @@ export function AdminPortal() {
 
                   {/* Progress Bar */}
                   <div className="space-y-2 pt-4 border-t border-slate-900/5 dark:border-white/5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
                       <span>Tỷ lệ hoàn thành thu phí:</span>
-                      <span className="font-num text-blue-600 dark:text-blue-400">{collectionPercent}%</span>
+                      <span className="font-num text-slate-900 dark:text-white font-bold">{collectionPercent}%</span>
                     </div>
-                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-700"
+                        className="h-full bg-slate-900 dark:bg-white rounded-full transition-all duration-700"
                         style={{ width: `${collectionPercent}%` }}
                       />
                     </div>
@@ -1583,13 +1688,13 @@ export function AdminPortal() {
                 <div className="soft-card p-5 flex-1 flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <IconElectricity3D size={42} className="shrink-0 drop-shadow-xs" />
+                      <IconElectricity3D size={42} className="shrink-0" />
                       <div>
                         <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Điện tiêu thụ</h3>
                         <p className="text-[11px] text-slate-400 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-amber-600 font-num">{fmt(dashboardData?.tienDien ?? 0)} đ</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white font-num">{fmt(dashboardData?.tienDien ?? 0)} đ</span>
                   </div>
                 </div>
 
@@ -1597,13 +1702,13 @@ export function AdminPortal() {
                 <div className="soft-card p-5 flex-1 flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <IconWater3D size={42} className="shrink-0 drop-shadow-xs" />
+                      <IconWater3D size={42} className="shrink-0" />
                       <div>
                         <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Nước tiêu thụ</h3>
                         <p className="text-[11px] text-slate-400 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-blue-600 font-num">{fmt(dashboardData?.tienNuoc ?? 0)} đ</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white font-num">{fmt(dashboardData?.tienNuoc ?? 0)} đ</span>
                   </div>
                 </div>
 
@@ -1650,109 +1755,49 @@ export function AdminPortal() {
             2. ROOMS MANAGEMENT
            ========================================================================= */}
         {activeMenu === 'rooms' && (
-          <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
-            {/* Quick Filter & Search Bar for Mobile & Desktop */}
-            <div className="space-y-2.5">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                {/* Search Input */}
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={roomSearchText}
-                    onChange={e => setRoomSearchText(e.target.value)}
-                    placeholder="Tìm phòng, tên khách thuê, SĐT..."
-                    className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-xs placeholder:text-slate-400"
-                  />
-                  {roomSearchText && (
-                    <button
-                      type="button"
-                      onClick={() => setRoomSearchText('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                  {[
-                    { key: 'ALL', label: `Tất cả (${roomsList.length})` },
-                    { key: 'UNPAID', label: `Chưa đóng (${roomsList.filter(r => r.status !== 'paid' && r.paymentStatus !== 'paid').length})` },
-                    { key: 'PAID', label: `Đã đóng (${roomsList.filter(r => r.status === 'paid' || r.paymentStatus === 'paid').length})` },
-                  ].map(tab => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setRoomFilterTab(tab.key as any);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all shadow-xs",
-                        roomFilterTab === tab.key
-                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
-                          : "bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
-                      )}
-                    >
-                      <span>{tab.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Rooms Grid */}
-            {filteredRoomsList.length === 0 ? (
-              <div className="p-8 text-center soft-card">
-                <p className="text-xs font-bold text-slate-400">Không tìm thấy phòng phù hợp.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-                {filteredRoomsList.map(r => {
-                  const isPaid = r.status === 'paid' || r.paymentStatus === 'paid';
-                  return (
-                    <div
-                      key={r.room}
-                      onClick={() => openRoomDetail(r.room)}
-                      className="soft-card p-4 sm:p-5 flex flex-col justify-between hover:border-blue-500 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center justify-between mb-2 sm:mb-3">
-                        <span className="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-black text-sm sm:text-base group-hover:bg-slate-900 dark:group-hover:bg-blue-600 group-hover:text-white transition-colors font-num">
-                          {r.room}
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {roomsList.map(r => {
+                const isPaid = r.status === 'paid';
+                const isPending = r.status === 'pending';
+                return (
+                  <div
+                    key={r.room}
+                    onClick={() => openRoomDetail(r.room)}
+                    className="soft-card p-5 flex flex-col justify-between hover:border-blue-500 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base group-hover:bg-slate-900 dark:group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        {r.room}
+                      </span>
+                      <div 
+                        className="flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <AppleSwitch
+                          checked={isPaid}
+                          onChange={() => updateRoomPaymentStatus(r.room, isPaid ? 'unpaid' : 'paid', r.row)}
+                          color="emerald"
+                          size="sm"
+                          ariaLabel={`Trạng thái thu tiền phòng ${r.room}`}
+                        />
+                        <span className={cn(
+                          "text-[11px] font-bold min-w-14 text-right transition-colors",
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                        )}>
+                          {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
-                        <div 
-                          className="flex items-center gap-1.5 sm:gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[10px] font-bold font-num",
-                            isPaid 
-                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60" 
-                              : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60"
-                          )}>
-                            {isPaid ? 'Đã thu' : 'Chưa thu'}
-                          </span>
-                          <AppleSwitch
-                            checked={isPaid}
-                            onChange={() => updateRoomPaymentStatus(r.room, isPaid ? 'unpaid' : 'paid', r.row)}
-                            color="emerald"
-                            size="sm"
-                            ariaLabel={`Trạng thái thu tiền phòng ${r.room}`}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-0.5 sm:space-y-1">
-                        <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">{r.name}</h4>
-                        <p className="text-[11px] sm:text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">{r.name}</h4>
+                      <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -1806,7 +1851,22 @@ export function AdminPortal() {
                     <input
                       type="text"
                       value={currentRoomData[`nguoi${slot}`] || ''}
-                      onChange={e => setCurrentRoomData({ ...currentRoomData, [`nguoi${slot}`]: e.target.value })}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const nextRoom = { ...currentRoomData, [`nguoi${slot}`]: val };
+                        const validOccupants = [
+                          slot === 1 ? val : nextRoom.nguoi1,
+                          slot === 2 ? val : nextRoom.nguoi2,
+                          slot === 3 ? val : nextRoom.nguoi3
+                        ].filter(n => n && !/^\d+(\.\d+)?$/.test(String(n).trim())).length;
+                        const soNguoi = validOccupants > 0 ? validOccupants : 1;
+                        nextRoom.soNguoi = soNguoi;
+                        const netUnitPrice = unitConfig.net || 40000;
+                        const tienNet = soNguoi * netUnitPrice;
+                        nextRoom.tienNet = tienNet;
+                        nextRoom.tongTien = (nextRoom.tienPhong || 0) + (nextRoom.tienDien || 0) + (nextRoom.tienNuoc || 0) + (nextRoom.tienRac || 0) + tienNet + (nextRoom.tienXe || 0) + (nextRoom.tienKhac || 0);
+                        setCurrentRoomData(nextRoom);
+                      }}
                       placeholder={`Người ${slot}`}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
@@ -1836,7 +1896,21 @@ export function AdminPortal() {
                     <input
                       type="text"
                       value={currentRoomData[`xe${slot}`] || ''}
-                      onChange={e => setCurrentRoomData({ ...currentRoomData, [`xe${slot}`]: e.target.value })}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const nextRoom = { ...currentRoomData, [`xe${slot}`]: val };
+                        const validPlates = [
+                          slot === 1 ? val : nextRoom.xe1,
+                          slot === 2 ? val : nextRoom.xe2,
+                          slot === 3 ? val : nextRoom.xe3
+                        ].filter(isValidLicensePlate).length;
+                        nextRoom.soXe = validPlates;
+                        const xeUnitPrice = unitConfig.xe || 50000;
+                        const tienXe = validPlates * xeUnitPrice;
+                        nextRoom.tienXe = tienXe;
+                        nextRoom.tongTien = (nextRoom.tienPhong || 0) + (nextRoom.tienDien || 0) + (nextRoom.tienNuoc || 0) + (nextRoom.tienRac || 0) + (nextRoom.tienNet || 0) + tienXe + (nextRoom.tienKhac || 0);
+                        setCurrentRoomData(nextRoom);
+                      }}
                       placeholder="Biển số xe"
                       className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none uppercase font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
@@ -1849,7 +1923,7 @@ export function AdminPortal() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="soft-card p-6 space-y-4">
                 <div className="flex items-center gap-3">
-                  <IconElectricity3D size={40} className="shrink-0 drop-shadow-xs" />
+                  <IconElectricity3D size={40} className="shrink-0" />
                   <div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
                     <p className="text-[11px] text-slate-400">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
@@ -1874,7 +1948,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + tienDien + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                     />
                   </div>
                   <div>
@@ -1895,19 +1969,19 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + tienDien + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                     />
                   </div>
                 </div>
                 <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
                   <span>Tiền điện:</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-bold">{fmt(currentRoomData.tienDien)} đ</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{fmt(currentRoomData.tienDien)} đ</span>
                 </div>
               </div>
 
               <div className="soft-card p-6 space-y-4">
                 <div className="flex items-center gap-3">
-                  <IconWater3D size={40} className="shrink-0 drop-shadow-xs" />
+                  <IconWater3D size={40} className="shrink-0" />
                   <div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
                     <p className="text-[11px] text-slate-400">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
@@ -1932,7 +2006,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + tienNuoc + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                     />
                   </div>
                   <div>
@@ -1953,13 +2027,13 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + tienNuoc + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" 
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                     />
                   </div>
                 </div>
                 <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
                   <span>Tiền nước:</span>
-                  <span className="text-blue-600 dark:text-blue-400 font-bold">{fmt(currentRoomData.tienNuoc)} đ</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{fmt(currentRoomData.tienNuoc)} đ</span>
                 </div>
               </div>
             </div>
@@ -2162,179 +2236,116 @@ export function AdminPortal() {
             3. BILLING TAB (THU TIỀN THÁNG)
            ========================================================================= */}
         {activeMenu === 'billing' && (
-          <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
-            {/* Quick Filter & Search Bar for Mobile & Desktop */}
-            <div className="space-y-2.5">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                {/* Search Input */}
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={billingSearchText}
-                    onChange={e => setBillingSearchText(e.target.value)}
-                    placeholder="Tìm phòng, tên khách thuê..."
-                    className="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 shadow-xs placeholder:text-slate-400"
-                  />
-                  {billingSearchText && (
-                    <button
-                      type="button"
-                      onClick={() => setBillingSearchText('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                  {[
-                    { key: 'ALL', label: `Tất cả (${billingList.length})` },
-                    { key: 'UNPAID', label: `Chưa đóng (${billingList.filter(b => b.paymentStatus !== 'paid').length})` },
-                    { key: 'PAID', label: `Đã đóng (${billingList.filter(b => b.paymentStatus === 'paid').length})` },
-                  ].map(tab => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setBillingFilterTab(tab.key as any);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all shadow-xs",
-                        billingFilterTab === tab.key
-                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
-                          : "bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
-                      )}
-                    >
-                      <span>{tab.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
+          <div className="font-apple space-y-4 sm:space-y-6 animate-in fade-in duration-300">
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
-            {filteredBillingList.length === 0 ? (
-              <div className="p-8 text-center soft-card block md:hidden">
-                <p className="text-xs font-bold text-slate-400">Không tìm thấy phòng phù hợp.</p>
-              </div>
-            ) : (
-              <div className="block md:hidden space-y-3.5">
-                {filteredBillingList.map(item => {
-                  const isPaid = item.paymentStatus === 'paid';
-                  return (
-                    <div key={item.room} className="soft-card p-4 space-y-3">
-                      {/* Header: Room, Tenant, AppleSwitch */}
-                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-blue-600 text-white font-black text-xs shrink-0 font-num">
-                            {item.room}
-                          </span>
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">{item.name}</h4>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[10px] font-bold font-num",
-                            isPaid 
-                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60" 
-                              : "bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60"
-                          )}>
-                            {isPaid ? 'Đã thu' : 'Chưa thu'}
-                          </span>
-                          <AppleSwitch
-                            checked={isPaid}
-                            onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
-                            color="emerald"
-                            size="sm"
-                            ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                          />
+            <div className="block md:hidden space-y-3.5 font-apple">
+              {billingList.map(item => {
+                const isPaid = item.paymentStatus === 'paid';
+                return (
+                  <div key={item.room} className="soft-card p-4 space-y-3.5 font-apple">
+                    {/* Header: Room, Tenant, AppleSwitch */}
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5 font-apple">
+                      <div className="flex items-center gap-2.5 min-w-0 font-apple">
+                        <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-blue-600 text-white font-semibold text-xs shrink-0 font-apple">
+                          {item.room}
+                        </span>
+                        <div className="min-w-0 font-apple">
+                          <h4 className="font-semibold text-slate-900 dark:text-white text-xs truncate font-apple">{item.name}</h4>
                         </div>
                       </div>
-
-                      {/* Service breakdown in 3 columns without scrolling */}
-                      <div className="grid grid-cols-3 gap-2 bg-slate-50/90 dark:bg-slate-850/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/60 text-[10.5px] sm:text-[11px]">
-                        <div>
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Phòng</span>
-                          <span className="font-num font-bold text-slate-800 dark:text-slate-200 truncate block">{fmt(item.tienPhong)} đ</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-semibold block leading-tight">Điện</span>
-                          <span className="font-num font-bold text-amber-600 dark:text-amber-400 truncate block">{fmt(item.tienDien)} đ</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold block leading-tight">Nước</span>
-                          <span className="font-num font-bold text-blue-600 dark:text-blue-400 truncate block">{fmt(item.tienNuoc)} đ</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Rác</span>
-                          <span className="font-num font-bold text-slate-700 dark:text-slate-300 truncate block">{fmt(item.tienRac)} đ</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Net</span>
-                          <span className="font-num font-bold text-slate-700 dark:text-slate-300 truncate block">{fmt(item.tienNet)} đ</span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 uppercase font-semibold block leading-tight">Xe</span>
-                          <span className="font-num font-bold text-slate-700 dark:text-slate-300 truncate block">{fmt(item.tienXe)} đ</span>
-                        </div>
-                      </div>
-
-                      {/* Total Row */}
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/80">
-                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tổng tiền</span>
+                      <div className="flex items-center gap-2 shrink-0 font-apple">
+                        <AppleSwitch
+                          checked={isPaid}
+                          onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
+                          color="emerald"
+                          size="sm"
+                          ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
+                        />
                         <span className={cn(
-                          "text-base font-black font-num tracking-tight",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-blue-600 dark:text-blue-400"
+                          "text-[11px] font-semibold min-w-14 text-right transition-colors font-apple",
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
                         )}>
-                          {fmt(item.tongTien)} <span className="text-xs font-normal">₫</span>
+                          {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+
+                    {/* Service breakdown in 3 columns without scrolling */}
+                    <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 text-[11px] font-apple">
+                      <div className="font-apple">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Phòng</span>
+                        <span className="font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienPhong)} đ</span>
+                      </div>
+                      <div className="font-apple">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Điện</span>
+                        <span className="font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienDien)} đ</span>
+                      </div>
+                      <div className="font-apple">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Nước</span>
+                        <span className="font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienNuoc)} đ</span>
+                      </div>
+                      <div className="font-apple">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Rác</span>
+                        <span className="font-apple font-semibold text-slate-700 dark:text-slate-300">{fmt(item.tienRac)} đ</span>
+                      </div>
+                      <div className="font-apple">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Net</span>
+                        <span className="font-apple font-semibold text-slate-700 dark:text-slate-300">{fmt(item.tienNet)} đ</span>
+                      </div>
+                      <div className="font-apple">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Xe</span>
+                        <span className="font-apple font-semibold text-slate-700 dark:text-slate-300">{fmt(item.tienXe)} đ</span>
+                      </div>
+                    </div>
+
+                    {/* Total Row */}
+                    <div className="flex items-center justify-between pt-0.5 font-apple">
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-apple">Tổng cộng:</span>
+                      <span className="text-sm font-semibold font-apple text-slate-900 dark:text-white">
+                        {fmt(item.tongTien)} đ
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Desktop View: Full Spacious Table */}
-            <div className="hidden md:block soft-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+            <div className="hidden md:block soft-card overflow-hidden font-apple">
+              <div className="overflow-x-auto font-apple">
+                <table className="w-full text-left text-xs font-apple">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
-                      <th className="p-4">Phòng</th>
-                      <th className="p-4">Khách thuê</th>
-                      <th className="p-4">Tiền phòng</th>
-                      <th className="p-4">Điện</th>
-                      <th className="p-4">Nước</th>
-                      <th className="p-4">Rác</th>
-                      <th className="p-4">Net</th>
-                      <th className="p-4">Xe</th>
-                      <th className="p-4 font-bold text-slate-900 dark:text-white">Tổng cộng</th>
-                      <th className="p-4 text-center">Trạng thái</th>
+                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider font-apple">
+                      <th className="p-4 font-semibold font-apple">Phòng</th>
+                      <th className="p-4 font-semibold font-apple">Khách thuê</th>
+                      <th className="p-4 font-semibold font-apple">Tiền phòng</th>
+                      <th className="p-4 font-semibold font-apple">Điện</th>
+                      <th className="p-4 font-semibold font-apple">Nước</th>
+                      <th className="p-4 font-semibold font-apple">Rác</th>
+                      <th className="p-4 font-semibold font-apple">Net</th>
+                      <th className="p-4 font-semibold font-apple">Xe</th>
+                      <th className="p-4 font-semibold text-slate-900 dark:text-white font-apple">Tổng cộng</th>
+                      <th className="p-4 text-center font-semibold font-apple">Trạng thái</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredBillingList.map(item => {
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-apple">
+                    {billingList.map(item => {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
-                        <tr key={item.room} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="p-4 font-bold text-slate-900 dark:text-white">{item.room}</td>
-                          <td className="p-4 font-medium text-slate-700 dark:text-slate-200">{item.name}</td>
-                          <td className="p-4 font-mono">{fmt(item.tienPhong)} đ</td>
-                          <td className="p-4 font-mono text-amber-600 dark:text-amber-400">{fmt(item.tienDien)} đ</td>
-                          <td className="p-4 font-mono text-blue-600 dark:text-blue-400">{fmt(item.tienNuoc)} đ</td>
-                          <td className="p-4 font-mono">{fmt(item.tienRac)} đ</td>
-                          <td className="p-4 font-mono">{fmt(item.tienNet)} đ</td>
-                          <td className="p-4 font-mono">{fmt(item.tienXe)} đ</td>
-                          <td className="p-4 font-bold text-sm text-slate-900 dark:text-white font-mono">
+                        <tr key={item.room} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors font-apple">
+                          <td className="p-4 font-semibold text-slate-900 dark:text-white font-apple">{item.room}</td>
+                          <td className="p-4 font-semibold text-slate-700 dark:text-slate-200 font-apple">{item.name}</td>
+                          <td className="p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
+                          <td className="p-4 font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienDien)} đ</td>
+                          <td className="p-4 font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienNuoc)} đ</td>
+                          <td className="p-4 font-apple font-semibold">{fmt(item.tienRac)} đ</td>
+                          <td className="p-4 font-apple font-semibold">{fmt(item.tienNet)} đ</td>
+                          <td className="p-4 font-apple font-semibold">{fmt(item.tienXe)} đ</td>
+                          <td className="p-4 font-semibold text-sm text-slate-900 dark:text-white font-apple">
                             {fmt(item.tongTien)} đ
                           </td>
-                          <td className="p-4">
-                            <div className="flex items-center justify-center gap-2.5">
+                          <td className="p-4 font-apple">
+                            <div className="flex items-center justify-center gap-2.5 font-apple">
                               <AppleSwitch
                                 checked={isPaid}
                                 onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
@@ -2343,7 +2354,7 @@ export function AdminPortal() {
                                 ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
                               />
                               <span className={cn(
-                                "text-xs font-bold min-w-16 text-left transition-colors",
+                                "text-xs font-semibold min-w-16 text-left transition-colors font-apple",
                                 isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
                               )}>
                                 {isPaid ? 'Đã đóng' : 'Chưa đóng'}
@@ -2685,7 +2696,7 @@ export function AdminPortal() {
               </button>
 
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <Zap size={15} className="text-blue-600" />
+                <Zap size={15} className="text-slate-900 dark:text-white" />
                 <span>Nhập chỉ số điện nước</span>
               </div>
             </div>
@@ -2729,7 +2740,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentDienCu} 
                               onChange={e => handleBatchMeterChange(r.room, 'dienCu', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" 
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                             />
                           </td>
                           <td className="p-2">
@@ -2737,7 +2748,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentDienMoi} 
                               onChange={e => handleBatchMeterChange(r.room, 'dienMoi', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-amber-600 dark:text-amber-400 outline-none focus:ring-2 focus:ring-blue-500" 
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                             />
                           </td>
                           <td className="p-2">
@@ -2745,7 +2756,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentNuocCu} 
                               onChange={e => handleBatchMeterChange(r.room, 'nuocCu', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" 
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                             />
                           </td>
                           <td className="p-2">
@@ -2753,7 +2764,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentNuocMoi} 
                               onChange={e => handleBatchMeterChange(r.room, 'nuocMoi', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-blue-600 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500" 
+                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
                             />
                           </td>
                         </tr>
@@ -3758,9 +3769,9 @@ export function AdminPortal() {
       </main>
 
       {/* =========================================================================
-          MOBILE BOTTOM NAVIGATION (Fixed bottom on mobile with safe area padding)
+          MOBILE BOTTOM NAVIGATION (Fixed bottom on mobile)
          ========================================================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#101726]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 px-2 sm:px-4 py-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)] rounded-t-[28px] transition-all">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-slate-200 dark:border-slate-800 px-3 py-2 flex items-center justify-around shadow-lg">
         {[
           { key: 'dashboard', icon: Home, label: 'Tổng quan' },
           { key: 'rooms', icon: Users, label: 'Phòng' },
@@ -3777,46 +3788,28 @@ export function AdminPortal() {
                 setActiveMenu(m.key as any);
               }}
               className={cn(
-                "relative flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all cursor-pointer select-none min-w-[54px]",
-                isActive 
-                  ? "text-slate-900 dark:text-white font-bold" 
-                  : "text-slate-400 dark:text-slate-500 font-medium hover:text-slate-600 dark:hover:text-slate-300"
+                "flex flex-col items-center justify-center p-2 rounded-2xl transition-all cursor-pointer",
+                isActive ? "text-slate-900 dark:text-white font-bold" : "text-slate-400 dark:text-slate-500 font-medium"
               )}
             >
-              <div className={cn("transition-transform duration-200", isActive && "scale-110")}>
-                <Icon size={21} strokeWidth={isActive ? 2.4 : 1.8} />
-              </div>
-              <span className="text-[10px] mt-0.5 tracking-tight font-medium">{m.label}</span>
-              {isActive && (
-                <span className="w-1 h-1 rounded-full bg-slate-900 dark:bg-white mt-0.5" />
-              )}
+              <Icon size={20} />
+              <span className="text-[10px] mt-0.5">{m.label}</span>
             </button>
           );
         })}
 
-        {/* Vertical divider */}
-        <div className="w-px h-7 bg-slate-200 dark:bg-slate-800 my-auto mx-0.5" />
-
-        {/* Cổng thanh toán AppleSwitch (Đồng bộ với Sidebar) */}
-        <div 
+        {/* Center Power Switch Button */}
+        <button
           onClick={togglePaymentGate}
-          className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all cursor-pointer select-none min-w-[54px]"
-          title={`Cổng thanh toán: ${paymentGate === 'START' ? 'Mở' : 'Tắt'}`}
+          className={cn(
+            "w-11 h-11 rounded-2xl flex flex-col items-center justify-center text-white shadow-md cursor-pointer",
+            paymentGate === 'START' ? "bg-emerald-500" : "bg-rose-500"
+          )}
+          title={`Cổng thanh toán: ${paymentGate}`}
         >
-          <AppleSwitch
-            checked={paymentGate === 'START'}
-            onChange={togglePaymentGate}
-            color="emerald"
-            size="sm"
-            ariaLabel="Bật tắt Cổng thanh toán"
-          />
-          <span className={cn(
-            "text-[9px] font-bold uppercase font-num mt-1 leading-none tracking-tight",
-            paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-          )}>
-            {paymentGate === 'START' ? 'Mở cổng' : 'Tắt cổng'}
-          </span>
-        </div>
+          <Power size={17} />
+          <span className="text-[8px] font-bold uppercase leading-none mt-0.5">{paymentGate}</span>
+        </button>
       </nav>
 
     </div>

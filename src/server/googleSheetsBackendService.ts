@@ -532,6 +532,39 @@ export function findRoomRow(
 }
 
 /**
+ * Helper to sanitize tenant name from columns Q, U, Y
+ * Filters out numeric values like "1", "1.0", "2.0", "3.0"
+ */
+function sanitizeTenantName(val: any): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) return '';
+  if (/^họ\s*(?:và\s*)?tên/i.test(s)) return '';
+  return s;
+}
+
+function sanitizeCitizenId(val: any): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[0-9](\.0+)?$/.test(s)) return '';
+  return s;
+}
+
+function sanitizeTenantPhone(val: any): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[0-9](\.0+)?$/.test(s)) return '';
+  return s;
+}
+
+function sanitizeVehiclePlate(val: any): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) return '';
+  return s;
+}
+
+/**
  * PHẦN 4 & 5: Xác định người số 1 / 2 / 3 dựa trên số điện thoại, họ tên, hoặc CCCD
  * Person 1: Cột Q (16), R (17), S (18)
  * Person 2: Cột U (20), V (21), W (22)
@@ -551,21 +584,21 @@ export function identifyPersonByPhone(
 
   // 1. Check Phone
   if (target) {
-    const phoneS = normalizePhone(roomRow[18]);
+    const phoneS = normalizePhone(sanitizeTenantPhone(roomRow[18]));
     if (phoneS && (phoneS === target || (targetDigits.length >= 9 && phoneS.endsWith(targetDigits.slice(-9))))) return 'person1';
 
-    const phoneW = normalizePhone(roomRow[22]);
+    const phoneW = normalizePhone(sanitizeTenantPhone(roomRow[22]));
     if (phoneW && (phoneW === target || (targetDigits.length >= 9 && phoneW.endsWith(targetDigits.slice(-9))))) return 'person2';
 
-    const phoneAA = normalizePhone(roomRow[26]);
+    const phoneAA = normalizePhone(sanitizeTenantPhone(roomRow[26]));
     if (phoneAA && (phoneAA === target || (targetDigits.length >= 9 && phoneAA.endsWith(targetDigits.slice(-9))))) return 'person3';
   }
 
-  // 2. Check Name
-  if (cleanName) {
-    const n1 = String(roomRow[16] || '').toLowerCase().trim();
-    const n2 = String(roomRow[20] || '').toLowerCase().trim();
-    const n3 = String(roomRow[24] || '').toLowerCase().trim();
+  // 2. Check Name (Only compare against sanitized non-numeric names)
+  if (cleanName && cleanName.length >= 2) {
+    const n1 = sanitizeTenantName(roomRow[16]).toLowerCase().trim();
+    const n2 = sanitizeTenantName(roomRow[20]).toLowerCase().trim();
+    const n3 = sanitizeTenantName(roomRow[24]).toLowerCase().trim();
 
     if (n1 && (n1.includes(cleanName) || cleanName.includes(n1))) return 'person1';
     if (n2 && (n2.includes(cleanName) || cleanName.includes(n2))) return 'person2';
@@ -574,9 +607,9 @@ export function identifyPersonByPhone(
 
   // 3. Check CCCD
   if (cleanCccd) {
-    const c1 = String(roomRow[17] || '').replace(/\D/g, '');
-    const c2 = String(roomRow[21] || '').replace(/\D/g, '');
-    const c3 = String(roomRow[25] || '').replace(/\D/g, '');
+    const c1 = sanitizeCitizenId(roomRow[17]).replace(/\D/g, '');
+    const c2 = sanitizeCitizenId(roomRow[21]).replace(/\D/g, '');
+    const c3 = sanitizeCitizenId(roomRow[25]).replace(/\D/g, '');
 
     if (c1 && c1 === cleanCccd) return 'person1';
     if (c2 && c2 === cleanCccd) return 'person2';
@@ -584,7 +617,7 @@ export function identifyPersonByPhone(
   }
 
   // Default safely to person1 if the room has an occupant
-  if (roomRow[16]) return 'person1';
+  if (sanitizeTenantName(roomRow[16])) return 'person1';
   return 'person1';
 }
 
@@ -601,10 +634,10 @@ export function getPersonData(roomRow: string[], personType: PersonType, fallbac
     return {
       roomNumber,
       personType: 'person1',
-      name: String(roomRow[16] || '').trim(),
-      citizenId: String(roomRow[17] || '').trim(),
-      phone: normalizePhone(roomRow[18]) || String(roomRow[18] || '').trim(),
-      licensePlate: String(roomRow[19] || '').trim()
+      name: sanitizeTenantName(roomRow[16]),
+      citizenId: sanitizeCitizenId(roomRow[17]),
+      phone: normalizePhone(sanitizeTenantPhone(roomRow[18])),
+      licensePlate: sanitizeVehiclePlate(roomRow[19])
     };
   }
 
@@ -612,10 +645,10 @@ export function getPersonData(roomRow: string[], personType: PersonType, fallbac
     return {
       roomNumber,
       personType: 'person2',
-      name: String(roomRow[20] || '').trim(),
-      citizenId: String(roomRow[21] || '').trim(),
-      phone: normalizePhone(roomRow[22]) || String(roomRow[22] || '').trim(),
-      licensePlate: String(roomRow[23] || '').trim()
+      name: sanitizeTenantName(roomRow[20]),
+      citizenId: sanitizeCitizenId(roomRow[21]),
+      phone: normalizePhone(sanitizeTenantPhone(roomRow[22])),
+      licensePlate: sanitizeVehiclePlate(roomRow[23])
     };
   }
 
@@ -623,10 +656,10 @@ export function getPersonData(roomRow: string[], personType: PersonType, fallbac
   return {
     roomNumber,
     personType: 'person3',
-    name: String(roomRow[24] || '').trim(),
-    citizenId: String(roomRow[25] || '').trim(),
-    phone: normalizePhone(roomRow[26]) || String(roomRow[26] || '').trim(),
-    licensePlate: String(roomRow[27] || '').trim()
+    name: sanitizeTenantName(roomRow[24]),
+    citizenId: sanitizeCitizenId(roomRow[25]),
+    phone: normalizePhone(sanitizeTenantPhone(roomRow[26])),
+    licensePlate: sanitizeVehiclePlate(roomRow[27])
   };
 }
 
@@ -652,8 +685,34 @@ function parseInvoiceFromRoomRow(
 
   const roomRent = parseSheetVNDAmount(row[9]) || 3000000;
   const trashCost = parseSheetVNDAmount(row[10]) || 0;
-  const internetCost = parseSheetVNDAmount(row[11]) || 100000;
-  const parkingCost = parseSheetVNDAmount(row[12]) || 0;
+
+  // Tính số lượng người trong phòng để nhân tiền Internet
+  const validOccupants = [
+    sanitizeTenantName(row[16]),
+    sanitizeTenantName(row[20]),
+    sanitizeTenantName(row[24])
+  ].filter(Boolean).length;
+  const soNguoi = parseFloat(String(row[28] || '0')) || (validOccupants > 0 ? validOccupants : 1);
+  const internetCost = parseSheetVNDAmount(row[11]) || (soNguoi * 40000);
+
+  // Tiền giữ xe (Cột M - row[12]): nếu không tick thì không tính thu tiền xe còn nếu tick thì thu
+  const validPlates = [
+    sanitizeVehiclePlate(row[19]),
+    sanitizeVehiclePlate(row[23]),
+    sanitizeVehiclePlate(row[27])
+  ].filter(Boolean).length;
+  const soXe = parseFloat(String(row[29] || '0')) || validPlates;
+  
+  let parkingCost = 0;
+  const rawM = String(row[12] || '').trim().toUpperCase();
+  if (rawM === 'TRUE' || rawM === '1' || rawM === '✓' || rawM === '✔') {
+    parkingCost = (soXe > 0 ? soXe : 1) * 50000;
+  } else if (rawM === 'FALSE') {
+    parkingCost = 0;
+  } else {
+    parkingCost = parseSheetVNDAmount(row[12]) || (soXe > 0 ? soXe * 50000 : 0);
+  }
+
   const totalCost = parseSheetVNDAmount(row[15]) || (roomRent + electricCost + waterCost + internetCost + trashCost + parkingCost);
 
   const cleanRoom = roomNumber.replace(/[^0-9A-Za-z]/g, '').toUpperCase();

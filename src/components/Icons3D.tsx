@@ -180,126 +180,86 @@ export function IconLocation3D({ size = 48, className = '', style }: Icon3DProps
 }
 
 // =========================================================================
-// 9. ELECTRICITY & WATER / METER ICON (Figma 3D Glassmorphic Lightning & Water Droplet)
+// 9. ELECTRICITY & WATER / METER ICON (Figma 3D Glassmorphic Golden Lightning & Sky-Blue Water Droplet)
 // =========================================================================
-export function IconMeter3D({ size = 48, className = '', style }: Icon3DProps) {
+export function IconElectricity3D({ size = 48, className = '', style }: Icon3DProps) {
   return (
     <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(245,158,11,0.25)]">
+      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(245,158,11,0.28)]">
         <defs>
-          <linearGradient id="fg_meter_bolt" x1="102" y1="34" x2="84" y2="148" gradientUnits="userSpaceOnUse">
+          <linearGradient id="fg_el_depth" x1="60" y1="30" x2="130" y2="160" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#D97706" />
+            <stop offset="100%" stopColor="#B45309" />
+          </linearGradient>
+          <linearGradient id="fg_el_gold" x1="70" y1="28" x2="115" y2="155" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#FDE047" />
             <stop offset="50%" stopColor="#F59E0B" />
             <stop offset="100%" stopColor="#D97706" />
           </linearGradient>
-          <linearGradient id="fg_meter_water" x1="50" y1="56" x2="110" y2="142" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#38BDF8" />
-            <stop offset="100%" stopColor="#0284C7" />
+          <linearGradient id="fg_el_glass" x1="75" y1="35" x2="110" y2="145" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#FEF9C3" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#FDE047" stopOpacity="0.7" />
           </linearGradient>
         </defs>
-
-        {/* 1. 3D Golden Lightning Bolt (Điện) */}
-        <path
-          d="M106 34L64 88H96L84 148L136 82H102L114 34H106Z"
-          fill="url(#fg_meter_bolt)"
-        />
-        {/* Specular Ridge on Lightning */}
-        <path
-          d="M106 38L69 86H96L88 140"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          opacity="0.85"
-        />
-
-        {/* 2. 3D Glassmorphic Water Droplet (Nước) - Layered in front with translucent frosted sheen */}
-        <path
-          d="M78 56C78 56 46 94 46 116C46 133 60 144 78 144C96 144 110 133 110 116C110 94 78 56 78 56Z"
-          fill="url(#fg_meter_water)"
-          fillOpacity="0.88"
-        />
-        <path
-          d="M78 58C78 58 48 95 48 116C48 131 61 142 78 142C95 142 108 131 108 116C108 95 78 58 78 58Z"
-          fill="#BAE6FD"
-          fillOpacity="0.65"
-          stroke="white"
-          strokeWidth="1.5"
-        />
-
-        {/* Glass specular curved reflection highlights */}
-        <path
-          d="M62 88C56 96 56 108 62 118"
-          stroke="white"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          opacity="0.9"
-        />
-        <circle cx="62" cy="80" r="2.5" fill="white" opacity="0.95" />
+        <path d="M107 26L61 92H89L73 158L123 82H95L107 26Z" fill="url(#fg_el_depth)" />
+        <path d="M107 26L113 32L101 88H129L79 164L73 158L123 82H95L107 26Z" fill="#92400E" opacity="0.6" />
+        <path d="M104 28L58 94H86L70 160L120 84H92L104 28Z" fill="url(#fg_el_depth)" />
+        <path d="M101 30L55 96H83L67 162L117 86H89L101 30Z" fill="url(#fg_el_gold)" />
+        <path d="M99 34L59 94H85L71 154L113 88H89L99 34Z" fill="url(#fg_el_glass)" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M97 38L65 92H83L77 114L93 88H89L97 38Z" fill="white" fillOpacity="0.85" />
+        <ellipse cx="88" cy="74" rx="3.5" ry="12" transform="rotate(-30 88 74)" fill="white" fillOpacity="0.9" />
+        <circle cx="73" cy="148" r="2" fill="white" fillOpacity="0.95" />
       </svg>
     </div>
   );
 }
 
-// Dedicated Pure 3D Electricity Icon
-export function IconElectricity3D({ size = 48, className = '', style }: Icon3DProps) {
-  return (
-    <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(245,158,11,0.25)]">
-        <defs>
-          <linearGradient id="fg_elec_bolt" x1="94" y1="28" x2="76" y2="152" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#FEF08A" />
-            <stop offset="45%" stopColor="#FBBF24" />
-            <stop offset="100%" stopColor="#EA580C" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M102 28L54 90H92L78 154L138 82H98L112 28H102Z"
-          fill="url(#fg_elec_bolt)"
-        />
-        <path
-          d="M102 32L60 88H92L82 146"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.85"
-        />
-      </svg>
-    </div>
-  );
-}
-
-// Dedicated Pure 3D Water Droplet Icon
 export function IconWater3D({ size = 48, className = '', style }: Icon3DProps) {
   return (
     <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
       <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_14px_rgba(2,132,199,0.25)]">
         <defs>
-          <linearGradient id="fg_pure_water" x1="56" y1="46" x2="128" y2="148" gradientUnits="userSpaceOnUse">
+          <linearGradient id="fg_wt_base" x1="50" y1="40" x2="130" y2="160" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#0284C7" />
+            <stop offset="100%" stopColor="#0369A1" />
+          </linearGradient>
+          <linearGradient id="fg_wt_core" x1="60" y1="50" x2="110" y2="150" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#38BDF8" />
+            <stop offset="60%" stopColor="#0284C7" />
+            <stop offset="100%" stopColor="#0369A1" />
+          </linearGradient>
+          <linearGradient id="fg_wt_glass" x1="70" y1="60" x2="100" y2="140" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#E0F2FE" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="#BAE6FD" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.75" />
+          </linearGradient>
+          <linearGradient id="fg_wt_accent" x1="110" y1="35" x2="145" y2="95" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#7DD3FC" />
             <stop offset="100%" stopColor="#0284C7" />
           </linearGradient>
         </defs>
-        <path
-          d="M92 46C92 46 54 90 54 116C54 137 71 150 92 150C113 150 130 137 130 116C130 90 92 46 92 46Z"
-          fill="url(#fg_pure_water)"
-          fillOpacity="0.9"
-        />
-        <path
-          d="M92 48C92 48 56 91 56 116C56 135 72 148 92 148C112 148 128 135 128 116C128 91 92 48 92 48Z"
-          fill="#BAE6FD"
-          fillOpacity="0.65"
-          stroke="white"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M72 88C64 98 64 114 72 124"
-          stroke="white"
-          strokeWidth="4"
-          strokeLinecap="round"
-          opacity="0.9"
-        />
-        <circle cx="72" cy="78" r="3" fill="white" opacity="0.95" />
+        <path d="M128 36C128 36 148 68 148 84C148 95.0457 139.046 104 128 104C116.954 104 108 95.0457 108 84C108 68 128 36 128 36Z" fill="#0369A1" opacity="0.35" transform="translate(2, 3)" />
+        <path d="M128 36C128 36 148 68 148 84C148 95.0457 139.046 104 128 104C116.954 104 108 95.0457 108 84C108 68 128 36 128 36Z" fill="url(#fg_wt_accent)" />
+        <path d="M128 42C128 42 144 70 144 83C144 92 137 99 128 99C119 99 112 92 112 83C112 70 128 42 128 42Z" fill="#BAE6FD" fillOpacity="0.65" stroke="white" strokeWidth="1.2" />
+        <ellipse cx="121" cy="74" rx="3" ry="8" transform="rotate(-30 121 74)" fill="white" fillOpacity="0.9" />
+        <path d="M80 50C80 50 116 98 116 120C116 139.882 99.8823 156 80 156C60.1177 156 44 139.882 44 120C44 98 80 50 80 50Z" fill="#0284C7" opacity="0.4" transform="translate(3, 4)" />
+        <path d="M80 50C80 50 116 98 116 120C116 139.882 99.8823 156 80 156C60.1177 156 44 139.882 44 120C44 98 80 50 80 50Z" fill="url(#fg_wt_base)" />
+        <path d="M80 52C80 52 114 98 114 119C114 137.778 98.7777 153 80 153C61.2223 153 46 137.778 46 119C46 98 80 52 80 52Z" fill="url(#fg_wt_core)" />
+        <path d="M80 56C80 56 110 99 110 118C110 134.569 96.5685 148 80 148C63.4315 148 50 134.569 50 118C50 99 80 56 80 56Z" fill="url(#fg_wt_glass)" stroke="white" strokeWidth="1.5" />
+        <path d="M68 84C62 94 60 106 60 118C60 120 62 120 63 118C67 106 72 96 78 86C79 84 78 82 76 82C73 82 70 83 68 84Z" fill="white" fillOpacity="0.85" />
+        <ellipse cx="68" cy="100" rx="4.5" ry="14" transform="rotate(-25 68 100)" fill="white" fillOpacity="0.95" />
+        <ellipse cx="73" cy="80" rx="3" ry="5" transform="rotate(-20 73 80)" fill="white" fillOpacity="0.8" />
+        <path d="M64 136C70 142 90 142 96 136C92 140 78 143 64 136Z" fill="#38BDF8" opacity="0.9" />
       </svg>
+    </div>
+  );
+}
+
+export function IconMeter3D({ size = 48, className = '', style }: Icon3DProps) {
+  return (
+    <div className={`relative inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
+      <IconElectricity3D size={Math.round(size * 0.72)} className="absolute left-0 top-0 -rotate-6" />
+      <IconWater3D size={Math.round(size * 0.72)} className="absolute right-0 bottom-0" />
     </div>
   );
 }
@@ -920,8 +880,8 @@ export const IconFigmaNotification = IconNotification3D;
 export const IconFigmaCalendar = IconCalendar3D;
 export const IconFigmaMessage = IconMessage3D;
 export const IconFigmaLocations = IconLocation3D;
-export const IconFigmaElectricity = IconMeter3D;
-export const IconFigmaWater = IconMeter3D;
+export const IconFigmaElectricity = IconElectricity3D;
+export const IconFigmaWater = IconWater3D;
 export const IconFigmaElectricWater = IconMeter3D;
 
 export const GlassIconHome = IconHome3D;

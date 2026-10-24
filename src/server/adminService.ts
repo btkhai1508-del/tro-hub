@@ -349,6 +349,71 @@ function emptyDashboardData() {
 }
 
 /**
+ * Sanitize and validate resident information from columns Q-AB
+ * Person 1: Q(Name), R(CCCD), S(Phone), T(Plate)
+ * Person 2: U(Name), V(CCCD), W(Phone), X(Plate)
+ * Person 3: Y(Name), Z(CCCD), AA(Phone), AB(Plate)
+ */
+export function sanitizeTenantName(val: any): string {
+  if (!val) return '';
+  const str = String(val).trim();
+  // Strip out numeric counts like "1", "1.0", "2.0", "3.0", "0", etc.
+  if (/^\d+(\.\d+)?$/.test(str)) return '';
+  if (/^họ\s*(?:và\s*)?tên/i.test(str)) return '';
+  return str;
+}
+
+export function sanitizeCitizenId(val: any): string {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (/^[0-9](\.0+)?$/.test(str)) return '';
+  return str;
+}
+
+export function sanitizeTenantPhone(val: any): string {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (/^[0-9](\.0+)?$/.test(str)) return '';
+  return str;
+}
+
+export function sanitizeVehiclePlate(val: any): string {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (/^\d+(\.\d+)?$/.test(str)) return '';
+  return str;
+}
+
+/**
+ * Tiền giữ xe:
+ * "Tiền giữ xe nếu không tick thì không tính thu tiền xe còn nếu tick thì thu"
+ * Checks boolean / checkbox state of cell M or uses registered bikes count.
+ */
+export function computeParkingFee(mCell: any, soXe: number, unitPriceXe: number = 50000): number {
+  if (!mCell) {
+    return soXe > 0 ? soXe * unitPriceXe : 0;
+  }
+  const rawVal = String(mCell.value || '').trim();
+  const num = mCell.num;
+
+  // Checkbox boolean states
+  if (rawVal === 'TRUE' || rawVal === 'true' || rawVal === '✓' || rawVal === '✔' || rawVal === '1' || rawVal === 'V' || rawVal === 'v') {
+    return (soXe > 0 ? soXe : 1) * unitPriceXe;
+  }
+  if (rawVal === 'FALSE' || rawVal === 'false') {
+    return 0; // Không tick thì không thu
+  }
+  // Explicit number already entered in cell M
+  if (num !== undefined && !isNaN(num) && num > 0) {
+    return num;
+  }
+  if (num === 0 && (rawVal === '0' || rawVal === '0.0')) {
+    return 0;
+  }
+  return soXe > 0 ? soXe * unitPriceXe : 0;
+}
+
+/**
  * Get Room List for a given month
  */
 export async function getRoomListByMonth(month: string = '10/2026') {
@@ -358,14 +423,31 @@ export async function getRoomListByMonth(month: string = '10/2026') {
 
     const { rows } = await parseSheetXmlRows(zip, month);
     const rooms: any[] = [];
+    const netUnitPrice = unitConfigState[month]?.net || 40000;
+    const xeUnitPrice = unitConfigState[month]?.xe || 50000;
 
     rows.forEach(r => {
       if (r.rowNumber >= 7 && r.rowNumber <= 50) {
         const c = r.cells;
-          const roomName = canonicalRoom(c.A?.value);
+        const roomName = canonicalRoom(c.A?.value);
         if (roomName) {
-          const tenantName = c.Q?.value || c.U?.value || c.Y?.value || '';
-          const phone = c.S?.value || c.W?.value || c.AA?.value || '';
+          const nguoi1 = sanitizeTenantName(c.Q?.value);
+          const cccd1 = sanitizeCitizenId(c.R?.value);
+          const sdt1 = sanitizeTenantPhone(c.S?.value);
+          const xe1 = sanitizeVehiclePlate(c.T?.value);
+
+          const nguoi2 = sanitizeTenantName(c.U?.value);
+          const cccd2 = sanitizeCitizenId(c.V?.value);
+          const sdt2 = sanitizeTenantPhone(c.W?.value);
+          const xe2 = sanitizeVehiclePlate(c.X?.value);
+
+          const nguoi3 = sanitizeTenantName(c.Y?.value);
+          const cccd3 = sanitizeCitizenId(c.Z?.value);
+          const sdt3 = sanitizeTenantPhone(c.AA?.value);
+          const xe3 = sanitizeVehiclePlate(c.AB?.value);
+
+          const tenantName = nguoi1 || nguoi2 || nguoi3 || `Phòng ${roomName}`;
+          const phone = sdt1 || sdt2 || sdt3 || '';
           const fillHex = c.P?.fillHex || '#F8D7DA';
           const mapped = mapColorToPaymentStatus(fillHex);
           
@@ -380,11 +462,35 @@ export async function getRoomListByMonth(month: string = '10/2026') {
             statusText = 'Chờ xác nhận';
           }
 
+          const validPeopleCount = [nguoi1, nguoi2, nguoi3].filter(Boolean).length;
+          const soNguoi = (c.AC?.num && c.AC.num > 0)
+            ? c.AC.num
+            : (validPeopleCount > 0 ? validPeopleCount : (nguoi1 ? 1 : 1));
+
+          const validPlatesCount = [xe1, xe2, xe3].filter(isValidLicensePlate).length;
+          const soXe = (c.AD?.num !== undefined && !isNaN(c.AD.num))
+            ? c.AD.num
+            : validPlatesCount;
+
+          // Tiền Internet cũng tính theo số lượng người
+          const tienNet = c.L?.num && c.L.num > 0 ? c.L.num : (soNguoi * netUnitPrice);
+
+          // Tiền giữ xe nếu không tick thì không tính thu tiền xe còn nếu tick thì thu
+          const tienXe = computeParkingFee(c.M, soXe, xeUnitPrice);
+
+          const tienPhong = c.J?.num || 0;
+          const tienDien = c.H?.num || 0;
+          const tienNuoc = c.I?.num || 0;
+          const tienRac = c.K?.num || 0;
+          const tienKhac = c.N?.num || 0;
+          const tienCoc = c.O?.num || 0;
+          const tongTien = c.P?.num || (tienPhong + tienDien + tienNuoc + tienRac + tienNet + tienXe + tienKhac);
+
           rooms.push({
             row: r.rowNumber,
             room: roomName,
-            name: tenantName || `Phòng ${roomName}`,
-            phone: phone || '',
+            name: tenantName,
+            phone,
             status: statusClass,
             statusText,
             paymentStatus: mapped.paymentStatus,
@@ -394,29 +500,29 @@ export async function getRoomListByMonth(month: string = '10/2026') {
             nuocCu: c.E?.num || 0,
             nuocMoi: c.F?.num || 0,
             nuocUsed: c.G?.num || 0,
-            tienDien: c.H?.num || 0,
-            tienNuoc: c.I?.num || 0,
-            tienPhong: c.J?.num || 0,
-            tienRac: c.K?.num || 0,
-            tienNet: c.L?.num || 0,
-            tienXe: c.M?.num || 0,
-            tienKhac: c.N?.num || 0,
-            tienCoc: c.O?.num || 0,
-            tongTien: c.P?.num || 0,
-            nguoi1: c.Q?.value || '',
-            cccd1: c.R?.value || '',
-            sdt1: c.S?.value || '',
-            xe1: c.T?.value || '',
-            nguoi2: c.U?.value || '',
-            cccd2: c.V?.value || '',
-            sdt2: c.W?.value || '',
-            xe2: c.X?.value || '',
-            nguoi3: c.Y?.value || '',
-            cccd3: c.Z?.value || '',
-            sdt3: c.AA?.value || '',
-            xe3: c.AB?.value || '',
-            soNguoi: c.AC?.num || [c.Q?.value, c.U?.value, c.Y?.value].filter(Boolean).length || 1,
-            soXe: c.AD?.num || [c.T?.value, c.X?.value, c.AB?.value].filter(Boolean).length || 1
+            tienDien,
+            tienNuoc,
+            tienPhong,
+            tienRac,
+            tienNet,
+            tienXe,
+            tienKhac,
+            tienCoc,
+            tongTien,
+            nguoi1,
+            cccd1,
+            sdt1,
+            xe1,
+            nguoi2,
+            cccd2,
+            sdt2,
+            xe2,
+            nguoi3,
+            cccd3,
+            sdt3,
+            xe3,
+            soNguoi,
+            soXe
           });
         }
       }
@@ -453,6 +559,48 @@ export async function getRoomDataByMonth(month: string, room: string) {
       statusHTML = '<span style="color:#ca8a04">Chờ xác nhận</span>';
     }
 
+    const netUnitPrice = unitConfigState[month]?.net || 40000;
+    const xeUnitPrice = unitConfigState[month]?.xe || 50000;
+
+    const nguoi1 = sanitizeTenantName(c.Q?.value);
+    const cccd1 = sanitizeCitizenId(c.R?.value);
+    const sdt1 = sanitizeTenantPhone(c.S?.value);
+    const xe1 = sanitizeVehiclePlate(c.T?.value);
+
+    const nguoi2 = sanitizeTenantName(c.U?.value);
+    const cccd2 = sanitizeCitizenId(c.V?.value);
+    const sdt2 = sanitizeTenantPhone(c.W?.value);
+    const xe2 = sanitizeVehiclePlate(c.X?.value);
+
+    const nguoi3 = sanitizeTenantName(c.Y?.value);
+    const cccd3 = sanitizeCitizenId(c.Z?.value);
+    const sdt3 = sanitizeTenantPhone(c.AA?.value);
+    const xe3 = sanitizeVehiclePlate(c.AB?.value);
+
+    const validPeopleCount = [nguoi1, nguoi2, nguoi3].filter(Boolean).length;
+    const soNguoi = (c.AC?.num && c.AC.num > 0)
+      ? c.AC.num
+      : (validPeopleCount > 0 ? validPeopleCount : (nguoi1 ? 1 : 1));
+
+    const validPlatesCount = [xe1, xe2, xe3].filter(isValidLicensePlate).length;
+    const soXe = (c.AD?.num !== undefined && !isNaN(c.AD.num))
+      ? c.AD.num
+      : validPlatesCount;
+
+    // Tiền Internet cũng tính theo số lượng người
+    const tienNet = c.L?.num && c.L.num > 0 ? c.L.num : (soNguoi * netUnitPrice);
+
+    // Tiền giữ xe nếu không tick thì không tính thu tiền xe còn nếu tick thì thu
+    const tienXe = computeParkingFee(c.M, soXe, xeUnitPrice);
+
+    const tienPhong = c.J?.num || 0;
+    const tienDien = c.H?.num || 0;
+    const tienNuoc = c.I?.num || 0;
+    const tienRac = c.K?.num || 0;
+    const tienKhac = c.N?.num || 0;
+    const tienCoc = c.O?.num || 0;
+    const tongTien = c.P?.num || (tienPhong + tienDien + tienNuoc + tienRac + tienNet + tienXe + tienKhac);
+
     return {
       row: rowNum,
       dienCu: c.B?.num || 0,
@@ -461,29 +609,29 @@ export async function getRoomDataByMonth(month: string, room: string) {
       nuocCu: c.E?.num || 0,
       nuocMoi: c.F?.num || 0,
       nuocUsed: c.G?.num || 0,
-      tienDien: c.H?.num || 0,
-      tienNuoc: c.I?.num || 0,
-      tienPhong: c.J?.num || 0,
-      tienRac: c.K?.num || 0,
-      tienNet: c.L?.num || 0,
-      tienXe: c.M?.num || 0,
-      tienKhac: c.N?.num || 0,
-      tienCoc: c.O?.num || 0,
-      tongTien: c.P?.num || 0,
-      nguoi1: c.Q?.value || '',
-      cccd1: c.R?.value || '',
-      sdt1: c.S?.value || '',
-      xe1: c.T?.value || '',
-      nguoi2: c.U?.value || '',
-      cccd2: c.V?.value || '',
-      sdt2: c.W?.value || '',
-      xe2: c.X?.value || '',
-      nguoi3: c.Y?.value || '',
-      cccd3: c.Z?.value || '',
-      sdt3: c.AA?.value || '',
-      xe3: c.AB?.value || '',
-      soNguoi: c.AC?.num || [c.Q?.value, c.U?.value, c.Y?.value].filter(Boolean).length,
-      soXe: c.AD?.num || [c.T?.value, c.X?.value, c.AB?.value].filter(Boolean).length,
+      tienDien,
+      tienNuoc,
+      tienPhong,
+      tienRac,
+      tienNet,
+      tienXe,
+      tienKhac,
+      tienCoc,
+      tongTien,
+      nguoi1,
+      cccd1,
+      sdt1,
+      xe1,
+      nguoi2,
+      cccd2,
+      sdt2,
+      xe2,
+      nguoi3,
+      cccd3,
+      sdt3,
+      xe3,
+      soNguoi,
+      soXe,
       soNet: c.AE?.num || 0,
       statusHTML,
       paymentStatus: mapped.paymentStatus
@@ -503,6 +651,8 @@ export async function getMonthlyBilling(month: string = '10/2026') {
 
     const { rows } = await parseSheetXmlRows(zip, month);
     const list: any[] = [];
+    const netUnitPrice = unitConfigState[month]?.net || 40000;
+    const xeUnitPrice = unitConfigState[month]?.xe || 50000;
 
     rows.forEach(r => {
       if (r.rowNumber >= 7 && r.rowNumber <= 50) {
@@ -512,8 +662,48 @@ export async function getMonthlyBilling(month: string = '10/2026') {
           const fillHex = c.P?.fillHex || '#F8D7DA';
           const mapped = mapColorToPaymentStatus(fillHex);
 
-          const tenantName = c.Q?.value || c.U?.value || c.Y?.value || `Phòng ${room}`;
-          const tenantPhone = c.S?.value || c.W?.value || c.AA?.value || '';
+          const nguoi1 = sanitizeTenantName(c.Q?.value);
+          const cccd1 = sanitizeCitizenId(c.R?.value);
+          const sdt1 = sanitizeTenantPhone(c.S?.value);
+          const xe1 = sanitizeVehiclePlate(c.T?.value);
+
+          const nguoi2 = sanitizeTenantName(c.U?.value);
+          const cccd2 = sanitizeCitizenId(c.V?.value);
+          const sdt2 = sanitizeTenantPhone(c.W?.value);
+          const xe2 = sanitizeVehiclePlate(c.X?.value);
+
+          const nguoi3 = sanitizeTenantName(c.Y?.value);
+          const cccd3 = sanitizeCitizenId(c.Z?.value);
+          const sdt3 = sanitizeTenantPhone(c.AA?.value);
+          const xe3 = sanitizeVehiclePlate(c.AB?.value);
+
+          const tenantName = nguoi1 || nguoi2 || nguoi3 || `Phòng ${room}`;
+          const tenantPhone = sdt1 || sdt2 || sdt3 || '';
+
+          const validPeopleCount = [nguoi1, nguoi2, nguoi3].filter(Boolean).length;
+          const soNguoi = (c.AC?.num && c.AC.num > 0)
+            ? c.AC.num
+            : (validPeopleCount > 0 ? validPeopleCount : (nguoi1 ? 1 : 1));
+
+          const validPlatesCount = [xe1, xe2, xe3].filter(isValidLicensePlate).length;
+          const soXe = (c.AD?.num !== undefined && !isNaN(c.AD.num))
+            ? c.AD.num
+            : validPlatesCount;
+
+          // Tiền Internet cũng tính theo số lượng người
+          const tienNet = c.L?.num && c.L.num > 0 ? c.L.num : (soNguoi * netUnitPrice);
+
+          // Tiền giữ xe nếu không tick thì không tính thu tiền xe còn nếu tick thì thu
+          const tienXe = computeParkingFee(c.M, soXe, xeUnitPrice);
+
+          const tienPhong = c.J?.num || 0;
+          const tienDien = c.H?.num || 0;
+          const tienNuoc = c.I?.num || 0;
+          const tienRac = c.K?.num || 0;
+          const tienKhac = c.N?.num || 0;
+          const tienCoc = c.O?.num || 0;
+          const tongTien = c.P?.num || (tienPhong + tienDien + tienNuoc + tienRac + tienNet + tienXe + tienKhac);
+
           list.push({
             row: r.rowNumber,
             room: canonicalRoom(room),
@@ -525,29 +715,29 @@ export async function getMonthlyBilling(month: string = '10/2026') {
             nuocCu: c.E?.num || 0,
             nuocMoi: c.F?.num || 0,
             nuocUsed: c.G?.num || 0,
-            tienPhong: c.J?.num || 0,
-            tienDien: c.H?.num || 0,
-            tienNuoc: c.I?.num || 0,
-            tienRac: c.K?.num || 0,
-            tienNet: c.L?.num || 0,
-            tienXe: c.M?.num || 0,
-            tienKhac: c.N?.num || 0,
-            tienCoc: c.O?.num || 0,
-            tongTien: c.P?.num || 0,
-            nguoi1: c.Q?.value || '',
-            cccd1: c.R?.value || '',
-            sdt1: c.S?.value || '',
-            xe1: c.T?.value || '',
-            nguoi2: c.U?.value || '',
-            cccd2: c.V?.value || '',
-            sdt2: c.W?.value || '',
-            xe2: c.X?.value || '',
-            nguoi3: c.Y?.value || '',
-            cccd3: c.Z?.value || '',
-            sdt3: c.AA?.value || '',
-            xe3: c.AB?.value || '',
-            soNguoi: c.AC?.num || [c.Q?.value, c.U?.value, c.Y?.value].filter(Boolean).length,
-            soXe: c.AD?.num || [c.T?.value, c.X?.value, c.AB?.value].filter(Boolean).length,
+            tienPhong,
+            tienDien,
+            tienNuoc,
+            tienRac,
+            tienNet,
+            tienXe,
+            tienKhac,
+            tienCoc,
+            tongTien,
+            nguoi1,
+            cccd1,
+            sdt1,
+            xe1,
+            nguoi2,
+            cccd2,
+            sdt2,
+            xe2,
+            nguoi3,
+            cccd3,
+            sdt3,
+            xe3,
+            soNguoi,
+            soXe,
             soNet: c.AE?.num || 0,
             paymentStatus: mapped.paymentStatus,
             statusText: mapped.paymentStatus === 'paid' ? 'Đã đóng' : ((mapped.paymentStatus as string) === 'pending' ? 'Chờ xác nhận' : 'Chưa đóng'),

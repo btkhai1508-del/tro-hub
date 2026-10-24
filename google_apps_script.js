@@ -408,31 +408,176 @@ function createJsonResponse(data) {
 // ----------------------------------------------------
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🏢 Nhà Trọ Phong Lan')
-    .addItem('✅ 1. Đánh dấu ĐÃ THANH TOÁN (Màu xanh lá Cột P)', 'markRowPaid')
-    .addItem('⏳ 2. Đánh dấu CHƯA THANH TOÁN (Màu đỏ Cột P)', 'markRowUnpaid')
+    .addItem('➡️ 1. Tự Động Chuyển Cư Dân (Q-AB) Sang Tab THÔNG TIN CÁ NHÂN', 'chuyenCuDanSangTabCaNhan')
+    .addSeparator()
+    .addItem('✅ 2. Đánh dấu ĐÃ THANH TOÁN (Màu xanh lá Cột P)', 'markRowPaid')
+    .addItem('⏳ 3. Đánh dấu CHƯA THANH TOÁN (Màu đỏ Cột P)', 'markRowUnpaid')
     .addToUi();
 }
 
+/**
+ * Tự động chuyển cư dân từ cột Q-AB sang tab THÔNG TIN CÁ NHÂN
+ * Person 1: Q (Họ tên), R (CCCD), S (SĐT), T (Biển số xe)
+ * Person 2: U (Họ tên), V (CCCD), W (SĐT), X (Biển số xe)
+ * Person 3: Y (Họ tên), Z (CCCD), AA (SĐT), AB (Biển số xe)
+ */
+function showAlertSafely(msg) {
+  try {
+    SpreadsheetApp.getUi().alert(msg);
+  } catch (e) {
+    Logger.log(msg);
+  }
+}
+
+function getSafeSpreadsheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    try {
+      ss = SpreadsheetApp.openById(DEFAULT_SPREADSHEET_ID);
+    } catch (e) {
+      Logger.log("Không thể mở Spreadsheet: " + e);
+    }
+  }
+  return ss;
+}
+
+/**
+ * Tự động chuyển cư dân từ cột Q-AB sang tab THÔNG TIN CÁ NHÂN
+ * Person 1: Q (Họ tên), R (CCCD), S (SĐT), T (Biển số xe)
+ * Person 2: U (Họ tên), V (CCCD), W (SĐT), X (Biển số xe)
+ * Person 3: Y (Họ tên), Z (CCCD), AA (SĐT), AB (Biển số xe)
+ */
+function chuyenCuDanSangTabCaNhan() {
+  var ss = getSafeSpreadsheet();
+  if (!ss) {
+    showAlertSafely('⚠️ Không thể kết nối tới Google Spreadsheet.');
+    return;
+  }
+  var activeSheet = ss.getActiveSheet();
+  var monthSheet = (activeSheet && (activeSheet.getName().indexOf('/') !== -1 || /^\d{6}$/.test(activeSheet.getName()))) 
+    ? activeSheet 
+    : (ss.getSheetByName('10/2026') || ss.getSheetByName('102026') || ss.getSheets()[0]);
+    
+  var profileSheet = ss.getSheetByName('THÔNG TIN CÁ NHÂN');
+  if (!profileSheet) {
+    profileSheet = ss.insertSheet('THÔNG TIN CÁ NHÂN');
+    profileSheet.getRange(1, 1, 1, 14).setValues([[
+      'Họ và Tên', 'SĐT', 'CCCD', 'Email Liên Hệ', 'Ngày sinh', 'Địa chỉ thường trú', 
+      'Biển số xe', 'Loại xe dòng xe', 'Phòng số', 'Người liên hệ', 'Mối quan hệ', 
+      'Số điện thoại khẩn', 'Password', 'Hợp đồng'
+    ]]);
+  }
+
+  var lastRow = Math.min(monthSheet.getLastRow(), 60);
+  if (lastRow < 7) {
+    showAlertSafely('⚠️ Không tìm thấy dữ liệu phòng từ dòng 7 trở đi!');
+    return;
+  }
+  
+  var data = monthSheet.getRange(7, 1, lastRow - 6, 28).getValues();
+  var out = [];
+
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i];
+    var rawA = (r[0] || '').toString().trim();
+    var sheetRowNumber = i + 7;
+    var room = rawA;
+
+    if (!room) {
+      if (sheetRowNumber >= 7 && sheetRowNumber <= 13) {
+        room = 'G0' + (sheetRowNumber - 6);
+      }
+    }
+    if (!room) continue;
+    if (!room.startsWith('P.') && !room.startsWith('P. ')) room = 'P. ' + room;
+
+    var contractCode = 'HĐ-' + room.replace(/[^0-9A-Za-z]/g, '');
+
+    // Cột Q-T (Index 16-19): Người 1
+    // Cột U-X (Index 20-23): Người 2
+    // Cột Y-AB (Index 24-27): Người 3
+    var tenants = [
+      { name: r[16], cccd: r[17], phone: r[18], plate: r[19] },
+      { name: r[20], cccd: r[21], phone: r[22], plate: r[23] },
+      { name: r[24], cccd: r[25], phone: r[26], plate: r[27] }
+    ];
+
+    tenants.forEach(function(t) {
+      var tName = (t.name || '').toString().trim();
+      var isNumeric = /^\d+(\.\d+)?$/.test(tName);
+      var isHeader = /^họ\s*(?:và\s*)?tên/i.test(tName);
+      if (tName && tName !== '1' && !isNumeric && !isHeader) {
+        var rawPhone = t.phone ? t.phone.toString().trim() : '';
+        var isPhoneNumericOnly = /^[0-9](\.0+)?$/.test(rawPhone);
+        var phone = (rawPhone && rawPhone !== '' && rawPhone !== '0' && !isPhoneNumericOnly) ? rawPhone : '1';
+        var pass = (phone !== '1' && phone.length >= 6) ? phone.slice(-6) : '180505';
+        
+        out.push([
+          tName,
+          phone,
+          t.cccd && !/^[0-9](\.0+)?$/.test(t.cccd.toString().trim()) ? t.cccd.toString().trim() : '',
+          '',
+          '',
+          '',
+          t.plate && !/^\d+(\.\d+)?$/.test(t.plate.toString().trim()) ? t.plate.toString().trim() : '',
+          'Xe máy',
+          room,
+          '',
+          '',
+          '',
+          pass,
+          contractCode
+        ]);
+      }
+    });
+  }
+
+  if (out.length > 0) {
+    profileSheet.getRange(2, 1, out.length, 14).setValues(out);
+    SpreadsheetApp.flush();
+    showAlertSafely('🎉 Thành công! Đã tự động cập nhật ' + out.length + ' cư dân từ tab \"' + monthSheet.getName() + '\" sang tab \"THÔNG TIN CÁ NHÂN\"!');
+  } else {
+    showAlertSafely('⚠️ Không tìm thấy thông tin cư dân ở cột Q - AB!');
+  }
+}
+
 function markRowPaid() {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var row = sheet.getActiveCell().getRow();
+  var ss = getSafeSpreadsheet();
+  if (!ss) return;
+  var sheet = ss.getActiveSheet();
+  if (!sheet) return;
+  var cell = sheet.getActiveCell();
+  if (!cell) {
+    showAlertSafely('Vui lòng chọn một ô trên dòng phòng cần đánh dấu!');
+    return;
+  }
+  var row = cell.getRow();
   if (row < 7 || row > 50) {
-    SpreadsheetApp.getUi().alert('Vui lòng chọn hàng từ dòng 7 đến dòng 50 (danh sách phòng)!');
+    showAlertSafely('Vui lòng chọn hàng từ dòng 7 đến dòng 50 (danh sách phòng)!');
     return;
   }
   sheet.getRange(row, 16).setBackground('#d4edda');
   SpreadsheetApp.flush();
-  SpreadsheetApp.getUi().alert('✅ Đã đổi Cột P dòng ' + row + ' sang màu xanh lá (Đã thanh toán)!');
+  showAlertSafely('✅ Đã đổi Cột P dòng ' + row + ' sang màu xanh lá (Đã thanh toán)!');
 }
 
 function markRowUnpaid() {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var row = sheet.getActiveCell().getRow();
+  var ss = getSafeSpreadsheet();
+  if (!ss) return;
+  var sheet = ss.getActiveSheet();
+  if (!sheet) return;
+  var cell = sheet.getActiveCell();
+  if (!cell) {
+    showAlertSafely('Vui lòng chọn một ô trên dòng phòng cần đánh dấu!');
+    return;
+  }
+  var row = cell.getRow();
   if (row < 7 || row > 50) {
-    SpreadsheetApp.getUi().alert('Vui lòng chọn hàng từ dòng 7 đến dòng 50 (danh sách phòng)!');
+    showAlertSafely('Vui lòng chọn hàng từ dòng 7 đến dòng 50 (danh sách phòng)!');
     return;
   }
   sheet.getRange(row, 16).setBackground('#F8D7DA');
   SpreadsheetApp.flush();
-  SpreadsheetApp.getUi().alert('⏳ Đã đổi Cột P dòng ' + row + ' sang màu đỏ pastel (Chưa thanh toán)!');
+  showAlertSafely('⏳ Đã đổi Cột P dòng ' + row + ' sang màu đỏ pastel (Chưa thanh toán)!');
 }
+

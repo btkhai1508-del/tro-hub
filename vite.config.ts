@@ -64,10 +64,46 @@ function zaloMiniAppAutoConfigPlugin(): Plugin {
   };
 }
 
+function patchZmpSdkPlugin(): Plugin {
+  return {
+    name: 'patch-zmp-sdk-plugin',
+    transform(code, id) {
+      if (id.includes('zmp-sdk') && code.includes('window.location.hostname.includes("localhost")')) {
+        return {
+          code: code.replace(
+            /window\.location\.hostname\.includes\("localhost"\)/g,
+            '(!window.location.hostname.includes("zdn.vn") && !window.location.hostname.includes("zadn.vn"))'
+          ),
+          map: null
+        };
+      }
+      return null;
+    }
+  };
+}
+
+function disableViteHmrClientPlugin(): Plugin {
+  return {
+    name: 'disable-vite-hmr-client',
+    transform(code, id) {
+      if ((id.includes('vite/dist/client') || id.includes('@vite/client')) && code.includes('const createWebSocketModuleRunnerTransport = (options) => {')) {
+        return {
+          code: code.replace(
+            'const createWebSocketModuleRunnerTransport = (options) => {',
+            'const createWebSocketModuleRunnerTransport = () => ({ connect: async () => {}, disconnect: async () => {}, send: () => {} }); const _orig_createWebSocketModuleRunnerTransport = (options) => {'
+          ),
+          map: null
+        };
+      }
+      return null;
+    }
+  };
+}
+
 export default defineConfig(() => {
   return {
     base: './',
-    plugins: [react(), tailwindcss(), zaloMiniAppAutoConfigPlugin()],
+    plugins: [react(), tailwindcss(), zaloMiniAppAutoConfigPlugin(), patchZmpSdkPlugin(), disableViteHmrClientPlugin()],
     define: {
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
         process.env.VITE_API_BASE_URL || 'https://tro-hub.onrender.com'
@@ -92,8 +128,9 @@ export default defineConfig(() => {
     },
     server: {
       allowedHosts: true as true,
-      hmr: process.env.DISABLE_HMR !== 'true',
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      hmr: false,
+      watch: null,
     },
   };
 });
+
