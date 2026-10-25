@@ -262,9 +262,9 @@ export function LaundryPage() {
         {viewMode === 'success' && selectedMachine ? (
           <motion.div
             key="laundry-success-view"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-4"
           >
@@ -308,7 +308,7 @@ export function LaundryPage() {
                 </div>
                 <div className="py-3 flex items-center justify-between">
                   <span className="text-neutral-700 dark:text-neutral-200">Mã thiết bị</span>
-                  <span className="font-bold font-mono text-neutral-600 dark:text-neutral-200">{selectedMachine.machineId}</span>
+                  <span className="font-bold font-num text-neutral-600 dark:text-neutral-200">{selectedMachine.machineId}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
                   <span className="text-neutral-700 dark:text-neutral-200">Cư dân kích hoạt</span>
@@ -363,9 +363,9 @@ export function LaundryPage() {
         ) : viewMode === 'activate' && selectedMachine ? (
           <motion.div
             key="laundry-qr-view"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-2"
           >
@@ -407,12 +407,12 @@ export function LaundryPage() {
                   </div>
 
                   {/* Sharp Straight Square Pure QR Container */}
-                  <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block">
+                  <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block max-w-full">
                     {qrUrl ? (
                       <img 
                         src={qrUrl} 
                         alt="VietQR Matrix"
-                        className="w-[280px] h-[280px] object-contain rounded-none select-none"
+                        className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
                       />
                     ) : (
                       <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
@@ -440,7 +440,7 @@ export function LaundryPage() {
                     <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
                       Chi tiết giao dịch
                     </h2>
-                    <div className="liquid-panel-subtle p-4 sm:p-5 space-y-4">
+                    <div className="kit-inset p-4 sm:p-5 space-y-4">
                       <div className="flex items-center justify-between text-[14px]">
                         <span className="text-neutral-700 dark:text-neutral-200 font-normal">Thiết bị</span>
                         <span className="font-bold text-black dark:text-white">
@@ -471,7 +471,7 @@ export function LaundryPage() {
                         <span className="text-neutral-700 dark:text-neutral-200 font-normal">Số tài khoản</span>
                         <span 
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="font-bold text-black dark:text-white tracking-wider font-mono cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-bold text-black dark:text-white tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
                           {copiedKey === 'd-acc' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
@@ -481,7 +481,7 @@ export function LaundryPage() {
                         <span className="text-neutral-700 dark:text-neutral-200 font-normal">Nội dung CK</span>
                         <span 
                           onClick={() => handleCopy(selectedMachine.machineId, 'd-content')}
-                          className="font-bold text-neutral-600 dark:text-neutral-200 font-mono text-xs cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-xs cursor-pointer hover:underline flex items-center gap-1"
                           title="Bắt buộc giữ nguyên mã máy"
                         >
                           {selectedMachine.machineId}
@@ -544,12 +544,12 @@ export function LaundryPage() {
 
               {/* Mobile Straight Pure QR Code Section */}
               <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
-                <div className="bg-white p-3 rounded-2xl shadow-sm inline-block">
+                <div className="bg-white p-3 rounded-2xl shadow-sm inline-block max-w-full">
                   {qrUrl ? (
                     <img 
                       src={qrUrl} 
                       alt="VietQR Matrix"
-                      className="w-[240px] h-[240px] object-contain rounded-none select-none"
+                      className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
                   ) : (
                     <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
@@ -573,7 +573,7 @@ export function LaundryPage() {
 
               {/* Mobile Payment Details */}
               <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
-                <div className="liquid-panel-subtle p-3.5 space-y-3">
+                <div className="kit-inset p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-700 dark:text-neutral-200">Thiết bị</span>
                     <span className="font-bold text-black dark:text-white truncate max-w-[200px]">
@@ -604,7 +604,7 @@ export function LaundryPage() {
                     <span className="text-neutral-700 dark:text-neutral-200">Số TK</span>
                     <span 
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="font-bold text-black dark:text-white font-mono cursor-pointer"
+                      className="font-bold text-black dark:text-white font-num cursor-pointer"
                     >
                       {accountNumber}
                       {copiedKey === 'm-acc' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
@@ -614,7 +614,7 @@ export function LaundryPage() {
                     <span className="text-neutral-700 dark:text-neutral-200">Nội dung CK</span>
                     <span 
                       onClick={() => handleCopy(selectedMachine.machineId, 'm-content')}
-                      className="font-bold text-neutral-600 dark:text-neutral-200 font-mono text-[11px] cursor-pointer"
+                      className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-[11px] cursor-pointer"
                     >
                       {selectedMachine.machineId}
                       {copiedKey === 'm-content' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
@@ -645,13 +645,13 @@ export function LaundryPage() {
         ) : viewMode === 'timer' && selectedMachine ? (
           <motion.div
             key="laundry-timer-view"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-4"
           >
-            <main className="w-full max-w-[500px] liquid-panel rounded-[28px] border border-neutral-200/90 dark:border-neutral-800 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
+            <main className="w-full max-w-[500px] liquid-panel rounded-[34px] border border-neutral-200/90 dark:border-neutral-800 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
               
               {/* Header with back button */}
               <div className="w-full flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-2">
@@ -817,14 +817,14 @@ export function LaundryPage() {
             transition={{ duration: 0.15 }}
             className="w-full space-y-6"
           >
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <header className="kit-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-9 w-9 items-center justify-center text-neutral-600 dark:text-neutral-200"><ArrowLeft size={16} /></button>
+                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-11 w-11 items-center justify-center text-neutral-600 dark:text-neutral-200"><ArrowLeft size={16} /></button>
                   <span className="liquid-eyebrow">DỊCH VỤ CƯ DÂN</span>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">Giặt sấy, thật nhẹ nhàng.</h1>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">Chọn máy, quét mã và dành thời gian cho điều bạn thích.</p>
+                <h1 className="kit-page-title">Giặt sấy</h1>
+                <p className="kit-page-description">Chọn máy, quét mã và theo dõi chu kỳ ngay tại đây.</p>
               </div>
               <div className="liquid-chip inline-flex items-center gap-2 self-start px-3 py-2 text-xs text-neutral-600 dark:text-neutral-300">
                 <Home size={14} className="text-neutral-700" /><span>{profile.room.roomNumber || 'Phòng của bạn'}</span><span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">/</span><span>Tự phục vụ 24/7</span>
@@ -833,7 +833,7 @@ export function LaundryPage() {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
+              <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40">
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
@@ -847,7 +847,7 @@ export function LaundryPage() {
                 </div>
               </div>
 
-              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
+              <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-200 flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40">
                   <Clock size={23} strokeWidth={1.7} />
                 </div>
@@ -861,7 +861,7 @@ export function LaundryPage() {
                 </div>
               </div>
 
-              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
+              <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50/70 dark:bg-neutral-950/30 flex items-center justify-center shrink-0 border border-neutral-100/60 dark:border-neutral-800/30">
                   <WashingMachine size={23} strokeWidth={1.7} className="text-neutral-700 dark:text-neutral-200" />
                 </div>
@@ -875,7 +875,7 @@ export function LaundryPage() {
                 </div>
               </div>
 
-              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
+              <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 flex items-center justify-center shrink-0 border border-amber-100/60 dark:border-amber-800/30">
                   <Sparkles size={23} strokeWidth={1.7} className="text-amber-500" />
                 </div>
@@ -892,7 +892,7 @@ export function LaundryPage() {
 
             {/* Apple Segmented Tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <div className="flex w-full sm:w-fit items-center gap-1 rounded-[20px] border border-neutral-200/50 dark:border-white/5 bg-neutral-200/40 dark:bg-black/20 p-1">
+              <div className="kit-segmented flex w-full sm:w-fit items-center gap-1 p-1" aria-label="Mục giặt sấy">
                 {[
                   { key: 'machines', label: 'Chọn máy', icon: WashingMachine },
                   { key: 'booking', label: 'Đặt lịch', icon: CalendarClock },
@@ -910,13 +910,11 @@ export function LaundryPage() {
                         setActiveTab(t.key as any);
                       }}
                       className={cn(
-                        "min-h-11 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-medium flex justify-center items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap",
-                        isActive
-                          ? "bg-white dark:bg-neutral-700/80 text-neutral-600 dark:text-neutral-300 shadow-sm"
-                          : "text-neutral-600 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white"
+                        "kit-segment min-h-11 min-w-0 flex-1 sm:flex-none px-2 sm:px-4 py-2 flex justify-center items-center gap-1.5 cursor-pointer whitespace-nowrap",
+                        isActive && "kit-segment-active"
                       )}
                     >
-                      <Icon size={15} />
+                      <Icon size={15} className="hidden sm:block" />
                       <span>{t.label}</span>
                     </button>
                   );
@@ -942,7 +940,7 @@ export function LaundryPage() {
             {activeTab === 'machines' && (
               <div className="space-y-5 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="kit-segmented flex flex-wrap items-center gap-1 p-1" aria-label="Loại máy">
                     {[
                       { key: 'ALL', label: 'Tất cả máy' },
                       { key: 'WASHER', label: 'Máy giặt' },
@@ -957,10 +955,8 @@ export function LaundryPage() {
                           setActiveFilter(f.key as any);
                         }}
                         className={cn(
-                          "min-h-10 px-3.5 py-2 rounded-full text-xs font-medium cursor-pointer transition-all",
-                          activeFilter === f.key
-                            ? "bg-neutral-600 text-white dark:bg-neutral-500 shadow-sm shadow-neutral-500/20"
-                            : "soft-button text-neutral-600 dark:text-neutral-200"
+                          "kit-segment min-h-11 px-3.5 py-2 text-xs cursor-pointer",
+                          activeFilter === f.key && "kit-segment-active"
                         )}
                       >
                         {f.label}
@@ -986,7 +982,7 @@ export function LaundryPage() {
                         key={m.machineId}
                         onClick={() => handleOpenMachine(m)}
                         className={cn(
-                          "soft-surface group relative flex flex-col justify-between p-6 sm:p-7 rounded-[28px] hover:-translate-y-1 active:translate-y-0 transition-all duration-300 cursor-pointer overflow-hidden border",
+                          "soft-surface group relative flex flex-col justify-between p-5 sm:p-6 rounded-[34px] transition-colors duration-150 cursor-pointer overflow-hidden border",
                           isRunning 
                             ? "border-neutral-300/80 dark:border-neutral-800/60 shadow-md ring-2 ring-neutral-100 dark:ring-neutral-950/40"
                             : "border-white/80 dark:border-white/10"
@@ -994,8 +990,8 @@ export function LaundryPage() {
                       >
                         <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
 
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
+                          <div className="flex min-w-0 items-center gap-3">
                             {/* Simplified 3D Icon */}
                             <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
                               {isWasher ? <IconLaundry3D size={56} /> : <IconDryer3D size={56} />}
@@ -1008,7 +1004,7 @@ export function LaundryPage() {
                             </div>
 
                             <div>
-                              <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-600 dark:text-neutral-300">
                                 <span className="font-bold font-num text-neutral-900 dark:text-neutral-100">
                                   {m.machineId}
                                 </span>
@@ -1110,7 +1106,7 @@ export function LaundryPage() {
             {activeTab === 'booking' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                  <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[28px] border border-white/80 dark:border-white/10 space-y-5">
+                  <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[34px] border border-white/80 dark:border-white/10 space-y-5">
                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900/5 dark:border-white/10">
                       <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-200 flex items-center justify-center shrink-0">
                         <CalendarClock size={22} />
@@ -1145,7 +1141,7 @@ export function LaundryPage() {
                         <select
                           value={bookingMachineId}
                           onChange={e => setBookingMachineId(e.target.value)}
-                          className="w-full p-3 rounded-xl text-xs font-bold text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-neutral-500 cursor-pointer"
+                          className="kit-field w-full min-w-0 p-3 cursor-pointer"
                         >
                           {machines.map(m => (
                             <option key={m.machineId} value={m.machineId}>
@@ -1165,7 +1161,7 @@ export function LaundryPage() {
                             value={bookingTime}
                             onChange={e => setBookingTime(e.target.value)}
                             required
-                            className="w-full p-2.5 rounded-xl text-xs font-bold text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-neutral-500"
+                            className="kit-field w-full min-w-0 p-2.5"
                           />
                         </div>
 
@@ -1178,7 +1174,7 @@ export function LaundryPage() {
                             value={bookingDate}
                             onChange={e => setBookingDate(e.target.value)}
                             placeholder="DD/MM/YYYY"
-                            className="w-full p-2.5 rounded-xl text-xs font-bold text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-neutral-500"
+                            className="kit-field w-full min-w-0 p-2.5"
                           />
                         </div>
                       </div>

@@ -146,349 +146,237 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-svh relative isolate overflow-hidden px-4 py-8 sm:px-8 sm:py-12 flex items-center justify-center">
+    <div className="relative isolate flex min-h-svh items-center justify-center overflow-hidden px-3 py-6 sm:px-8 sm:py-10">
       <Background />
-      <div className="relative z-10 w-full max-w-[440px]">
-        <div className="w-full max-w-[440px] mx-auto">
-          <div className="mb-6 flex flex-col items-center text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-white/55 dark:bg-white/5 mb-3"><IconHome3D size={72} /></span>
-            <span className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-white">Trọ-Hub<span className="text-neutral-700 dark:text-neutral-200">.</span></span>
-            <p className="mt-1.5 text-sm text-neutral-700 dark:text-neutral-200">Không gian của bạn tại Phong Lan</p>
+      <div className="kit-login-window liquid-panel auth-panel relative z-10 mx-auto w-full max-w-[464px] overflow-hidden">
+        <div className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
+          <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
+            <IconHome3D size={56} />
+          </span>
+          <div className="min-w-0">
+            <span className="block text-[17px] font-semibold tracking-[-0.025em] text-neutral-950 dark:text-white">Trọ-Hub</span>
+            <span className="block text-[13px] text-neutral-600 dark:text-neutral-300">Nhà trọ Phong Lan</span>
           </div>
-          <div className="liquid-panel auth-panel rounded-[32px] sm:rounded-[36px] p-6 sm:p-8">
-            <div className="mb-7">
-              <span className="liquid-eyebrow text-neutral-700 dark:text-neutral-200">NHÀ TRỌ PHONG LAN</span>
-              <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.045em] text-neutral-950 dark:text-white">
-                {mode === 'register' ? 'Bắt đầu với Trọ-Hub' : mode === 'forgot' ? 'Lấy lại quyền truy cập' : mode === 'pending_approval' ? 'Chào mừng bạn' : 'Chào bạn trở lại.'}
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
-                {mode === 'register' ? 'Tạo tài khoản để kết nối với nơi bạn đang sống.' : mode === 'forgot' ? 'Chúng mình sẽ giúp bạn trở lại không gian của mình.' : mode === 'pending_approval' ? 'Thông tin đăng ký của bạn đã được ghi nhận.' : 'Đăng nhập để xem hóa đơn và quản lý tiện ích.'}
-              </p>
-            </div>
+        </div>
 
-          {/* Switch Mode: Login vs Register */}
+        <div className="px-5 pb-7 pt-6 sm:px-7 sm:pb-8 sm:pt-7">
+          <div className="mb-6">
+            <h1 className="text-[26px] leading-[1.2] font-semibold tracking-[-0.035em] text-neutral-950 dark:text-white">
+              {mode === 'register' ? 'Bắt đầu với Trọ-Hub' : mode === 'forgot' ? 'Lấy lại quyền truy cập' : mode === 'pending_approval' ? 'Chào mừng bạn' : 'Chào bạn trở lại.'}
+            </h1>
+            <p className="mt-2 text-[15px] leading-[1.5] text-neutral-600 dark:text-neutral-300">
+              {mode === 'register' ? 'Tạo tài khoản để kết nối với nơi bạn đang sống.' : mode === 'forgot' ? 'Chúng mình sẽ giúp bạn trở lại không gian của mình.' : mode === 'pending_approval' ? 'Thông tin đăng ký của bạn đã được ghi nhận.' : 'Đăng nhập để xem hóa đơn và quản lý tiện ích.'}
+            </p>
+          </div>
+
           {mode !== 'forgot' && mode !== 'pending_approval' && (
-            <div className="grid grid-cols-2 p-1.5 bg-white/20 dark:bg-white/5 rounded-full mb-6 border border-white/50 dark:border-white/5">
+            <div className="kit-segmented mb-6 grid grid-cols-2 gap-1 p-1" aria-label="Chọn đăng nhập hoặc đăng ký">
               <button
                 type="button"
+                aria-pressed={mode === 'login'}
                 onClick={() => {
                   setMode('login');
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`py-2.5 text-sm font-semibold rounded-full transition-all duration-200 cursor-pointer ${
-                  mode === 'login'
-                    ? 'bg-white/95 dark:bg-white/12 text-neutral-950 dark:text-white shadow-sm ring-1 ring-black/3 dark:ring-white/10'
-                    : 'text-neutral-700 dark:text-neutral-200 hover:text-neutral-800 dark:hover:text-white'
-                }`}
+                className={`kit-segment min-h-11 px-3 text-[15px] font-medium ${mode === 'login' ? 'kit-segment-active' : ''}`}
               >
                 Đăng nhập
               </button>
               <button
                 type="button"
+                aria-pressed={mode === 'register'}
                 onClick={() => {
                   setMode('register');
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`py-2.5 text-sm font-semibold rounded-full transition-all duration-200 cursor-pointer ${
-                  mode === 'register'
-                    ? 'bg-white/95 dark:bg-white/12 text-neutral-950 dark:text-white shadow-sm ring-1 ring-black/3 dark:ring-white/10'
-                    : 'text-neutral-700 dark:text-neutral-200 hover:text-neutral-800 dark:hover:text-white'
-                }`}
+                className={`kit-segment min-h-11 px-3 text-[15px] font-medium ${mode === 'register' ? 'kit-segment-active' : ''}`}
               >
                 Đăng ký mới
               </button>
             </div>
           )}
 
-          {/* Feedback Alerts */}
           {errorMsg && (
-            <div role="alert" className="mb-4 p-3.5 rounded-2xl bg-rose-50/85 dark:bg-rose-500/10 border border-rose-200/80 dark:border-rose-500/20 text-rose-800 dark:text-rose-200 text-sm flex items-start gap-2 animate-in fade-in duration-150">
-              <AlertCircle size={16} className="shrink-0 text-rose-600 mt-0.5" />
+            <div role="alert" className="mb-4 flex items-start gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/90 p-3.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-950/70 dark:text-rose-200 animate-in fade-in">
+              <AlertCircle aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
               <span className="leading-relaxed">{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div role="status" className="mb-4 p-3.5 rounded-2xl bg-emerald-50/85 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-sm flex items-center gap-2 animate-in fade-in duration-150">
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-              <span>{successMsg}</span>
+            <div role="status" className="mb-4 flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-3.5 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-950/70 dark:text-emerald-200 animate-in fade-in">
+              <CheckCircle2 aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
+              <span className="leading-relaxed">{successMsg}</span>
             </div>
           )}
 
-          {/* =========================================================================
-              1. LOGIN MODE (Zalo 1-Tap Login OR Phone Number & Password)
-              ========================================================================= */}
           {mode === 'login' && (
             <div className="space-y-4">
-              {/* Quick Zalo Login Button */}
               <button
                 type="button"
                 onClick={handleZaloLogin}
                 disabled={isLoading}
                 aria-busy={isLoading}
-                className="group flex min-h-14 w-full items-center justify-center gap-3 rounded-[20px] border border-white/90 bg-white/55 px-4 py-2.5 text-sm font-semibold text-neutral-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_4px_12px_-8px_rgba(0,0,0,0.16)] transition-[background-color,box-shadow] duration-150 hover:bg-white/80 active:bg-white/90 disabled:cursor-wait disabled:opacity-65 dark:border-white/20 dark:bg-white/[0.08] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] dark:hover:bg-white/[0.14] dark:active:bg-white/[0.18]"
+                className="soft-button group flex min-h-14 w-full items-center justify-center gap-2 px-4 sm:gap-3 py-2 text-[17px] font-medium disabled:cursor-wait"
               >
-                {/* Original Zalo artwork, served locally rather than a generic letter tile. */}
                 <img src="/brand/zalo-logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
                 <span>{isLoading ? 'Đang kết nối với Zalo…' : 'Đăng nhập với Zalo'}</span>
-                {isLoading ? <span aria-hidden="true" className="ui-spinner ml-1 shrink-0" /> : <ArrowRight aria-hidden="true" size={16} className="ml-1 shrink-0 text-neutral-600 dark:text-neutral-300" />}
+                {isLoading ? <span aria-hidden="true" className="ui-spinner h-4 w-4 shrink-0" /> : <ArrowRight aria-hidden="true" size={17} className="hidden shrink-0 text-neutral-500 dark:text-neutral-400 sm:block" />}
               </button>
 
-              {/* Divider */}
-              <div className="relative flex items-center justify-center pt-1 pb-1">
-                <div className="border-t border-neutral-200/80 dark:border-neutral-800 w-full" />
-                <span className="px-3 text-xs font-medium text-neutral-700 dark:text-neutral-200 whitespace-nowrap shrink-0">hoặc số điện thoại</span>
-                <div className="border-t border-neutral-200/80 dark:border-neutral-800 w-full" />
+              <div className="flex items-center justify-center gap-3 py-1" aria-hidden="true">
+                <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
+                <span className="shrink-0 text-[13px] text-neutral-600 dark:text-neutral-300">hoặc số điện thoại</span>
+                <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
-              
-              {/* Phone Input */}
-              <div>
-                <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1.5">
-                  Số điện thoại
-                </label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-3.5 text-neutral-600 dark:text-neutral-300 pointer-events-none">
-                    <Phone size={17} />
+                <div>
+                  <label htmlFor="login-phone" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số điện thoại</label>
+                  <div className="relative flex items-center">
+                    <Phone aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
+                    <input
+                      id="login-phone"
+                      type="tel"
+                      autoComplete="tel"
+                      required
+                      placeholder="Ví dụ: 0902 371 800"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="kit-field min-h-12 w-full pl-11 pr-3.5 font-num"
+                    />
                   </div>
-                  <input
-                    type="tel"
-                    autoComplete="tel"
-                    required
-                    placeholder="Ví dụ: 0902 371 800"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-3 text-xs sm:text-sm font-medium rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 focus:outline-none transition-all font-num placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
                 </div>
-              </div>
 
-              {/* Password Input */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Mật khẩu</label>
-                  <button
-                    type="button"
-                    onClick={() => setMode('forgot')}
-                    className="text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:underline cursor-pointer"
-                  >
-                    Quên mật khẩu?
-                  </button>
-                </div>
-                <div className="relative flex items-center">
-                  <div className="absolute left-3.5 text-neutral-600 dark:text-neutral-300 pointer-events-none">
-                    <Lock size={17} />
+                <div>
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3">
+                    <label htmlFor="login-password" className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Mật khẩu</label>
+                    <button
+                      type="button"
+                      onClick={() => setMode('forgot')}
+                      className="min-h-9 cursor-pointer text-[13px] font-medium text-neutral-700 underline-offset-4 hover:underline dark:text-neutral-200"
+                    >
+                      Quên mật khẩu?
+                    </button>
                   </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    placeholder="Nhập mật khẩu"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-3 text-xs sm:text-sm font-medium rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 focus:outline-none transition-all font-mono placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-neutral-600 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-neutral-200 p-1 cursor-pointer"
-                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                  <div className="relative flex items-center">
+                    <Lock aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
+                    <input
+                      id="login-password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      required
+                      placeholder="Nhập mật khẩu"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="kit-field min-h-12 w-full pl-11 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-0.5 flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl text-neutral-600 hover:text-neutral-950 dark:text-neutral-300 dark:hover:text-white"
+                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Remember Me */}
-              <div className="flex items-center justify-between pt-1">
-                <AppleCheckbox
-                  checked={rememberMe}
-                  onChange={setRememberMe}
-                  label="Ghi nhớ đăng nhập"
-                  color="black"
-                />
-              </div>
+                <div className="flex min-h-10 items-center">
+                  <AppleCheckbox checked={rememberMe} onChange={setRememberMe} label="Ghi nhớ đăng nhập" color="black" />
+                </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="primary-button w-full min-h-12 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
-              >
-                <span>{isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
-                {!isLoading && <ArrowRight size={16} />}
-              </button>
-
-            </form>
+                <button type="submit" disabled={isLoading} className="primary-button mt-1 min-h-12 w-full px-4 text-[17px]">
+                  {isLoading && <span aria-hidden="true" className="ui-spinner h-4 w-4" />}
+                  <span>{isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
+                  {!isLoading && <ArrowRight aria-hidden="true" size={18} />}
+                </button>
+              </form>
             </div>
           )}
 
-          {/* =========================================================================
-              2. REGISTER MODE (Requires Landlord Approval)
-              ========================================================================= */}
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-              
-              {/* Notice Banner */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs leading-relaxed flex items-start gap-2">
-                <ShieldAlert size={16} className="shrink-0 text-amber-600 mt-0.5" />
-                <span>
-                  <strong>Yêu cầu xác nhận:</strong> Sau khi đăng ký, tài khoản cần được <strong>Chủ trọ / Ban quản lý</strong> xác nhận duyệt phòng trước khi có thể đăng nhập.
-                </span>
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              <div className="flex items-start gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/90 p-3.5 text-[13px] leading-relaxed text-amber-900 dark:border-amber-500/20 dark:bg-amber-950/60 dark:text-amber-200">
+                <ShieldAlert aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
+                <span><strong>Yêu cầu xác nhận:</strong> Sau khi đăng ký, tài khoản cần được <strong>Chủ trọ / Ban quản lý</strong> xác nhận duyệt phòng trước khi có thể đăng nhập.</span>
               </div>
 
               <div>
-                <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Họ và tên cư dân</label>
+                <label htmlFor="register-name" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Họ và tên cư dân</label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-3.5 text-neutral-600 dark:text-neutral-300 pointer-events-none">
-                    <User size={16} />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Họ và tên của bạn"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:outline-none placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
+                  <User aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
+                  <input id="register-name" type="text" autoComplete="name" required placeholder="Họ và tên của bạn" value={regName} onChange={(e) => setRegName(e.target.value)} className="kit-field min-h-12 w-full pl-11 pr-3.5" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Số điện thoại</label>
-                  <input
-                    type="tel"
-                    autoComplete="tel"
-                    required
-                    placeholder="09xx xxx xxx"
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs sm:text-sm font-num rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:outline-none placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <label htmlFor="register-phone" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số điện thoại</label>
+                  <input id="register-phone" type="tel" autoComplete="tel" required placeholder="09xx xxx xxx" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
                 </div>
-
-                <div>
-                  <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Số phòng thuê</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="P. 203"
-                    value={regRoom}
-                    onChange={(e) => setRegRoom(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs sm:text-sm font-num rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:outline-none placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
+                <div className="min-w-0">
+                  <label htmlFor="register-room" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số phòng thuê</label>
+                  <input id="register-room" type="text" required placeholder="P. 203" value={regRoom} onChange={(e) => setRegRoom(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Email liên hệ (tùy chọn)</label>
-                <input
-                  type="email"
-                  placeholder="ban@example.com"
-                  value={regEmail}
-                  onChange={(e) => setRegEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:outline-none placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                />
+                <label htmlFor="register-email" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Email liên hệ (tùy chọn)</label>
+                <input id="register-email" type="email" autoComplete="email" placeholder="ban@example.com" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Mật khẩu</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Ít nhất 6 ký tự"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:outline-none placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <label htmlFor="register-password" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Mật khẩu</label>
+                  <input id="register-password" type="password" autoComplete="new-password" required placeholder="Ít nhất 6 ký tự" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
-
-                <div>
-                  <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Nhập lại mật khẩu</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Nhập lại mật khẩu"
-                    value={regConfirmPass}
-                    onChange={(e) => setRegConfirmPass(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/35 dark:bg-white/5 text-neutral-950 dark:text-white focus:ring-2 focus:ring-neutral-900/10 focus:outline-none placeholder:text-neutral-600 dark:placeholder:text-neutral-300"
-                  />
+                <div className="min-w-0">
+                  <label htmlFor="register-confirm" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Nhập lại mật khẩu</label>
+                  <input id="register-confirm" type="password" autoComplete="new-password" required placeholder="Nhập lại mật khẩu" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="primary-button w-full min-h-12 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-3"
-              >
+              <button type="submit" disabled={isLoading} className="primary-button min-h-12 w-full px-4 py-3 text-[15px]">
+                {isLoading && <span aria-hidden="true" className="ui-spinner h-4 w-4 shrink-0" />}
                 <span>{isLoading ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu đăng ký cho Chủ trọ'}</span>
-                {!isLoading && <ArrowRight size={16} />}
+                {!isLoading && <ArrowRight aria-hidden="true" size={17} className="shrink-0" />}
               </button>
             </form>
           )}
 
-          {/* =========================================================================
-              3. PENDING APPROVAL CONFIRMATION
-              ========================================================================= */}
           {mode === 'pending_approval' && (
-            <div className="text-center space-y-4 py-2 animate-in fade-in zoom-in-95 duration-200">
-              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200/60 shadow-xs">
+            <div className="space-y-5 py-1 text-center animate-in fade-in zoom-in-95">
+              <div aria-hidden="true" className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-950/60 dark:text-amber-200">
                 <Clock size={28} />
               </div>
-
               <div>
-                <span className="inline-block px-3 py-1 rounded-full bg-amber-100/80 text-amber-800 text-[11px] font-bold uppercase tracking-wider mb-2">
-                  Đang chờ chủ trọ xác nhận
-                </span>
-                <h3 className="text-lg font-semibold text-neutral-950 dark:text-white">
-                  Yêu cầu đăng ký đã được gửi!
-                </h3>
+                <span className="mb-2 inline-block rounded-full bg-amber-100/80 px-3 py-1 text-[13px] font-medium text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">Đang chờ chủ trọ xác nhận</span>
+                <h3 className="text-[17px] font-semibold text-neutral-950 dark:text-white">Yêu cầu đăng ký đã được gửi!</h3>
               </div>
 
               {registeredData && (
-                <div className="liquid-panel-subtle p-4 rounded-2xl text-left text-sm space-y-2 font-medium">
-                  <div className="flex justify-between text-neutral-700">
-                    <span>Họ và tên:</span>
-                    <strong className="text-neutral-950 dark:text-neutral-100">{registeredData.name}</strong>
-                  </div>
-                  <div className="flex justify-between text-neutral-700">
-                    <span>Số điện thoại:</span>
-                    <strong className="text-neutral-950 dark:text-neutral-100 font-num">{registeredData.phone}</strong>
-                  </div>
-                  <div className="flex justify-between text-neutral-700">
-                    <span>Số phòng đăng ký:</span>
-                    <strong className="text-neutral-950 dark:text-neutral-100 font-num">{registeredData.roomNumber}</strong>
-                  </div>
-                </div>
+                <dl className="liquid-panel-subtle space-y-3 rounded-2xl p-4 text-left text-[15px]">
+                  <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-neutral-600 dark:text-neutral-300">Họ và tên</dt><dd className="break-all font-medium text-neutral-950 dark:text-white">{registeredData.name}</dd></div>
+                  <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-neutral-600 dark:text-neutral-300">Số điện thoại</dt><dd className="font-num font-medium text-neutral-950 dark:text-white">{registeredData.phone}</dd></div>
+                  <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-neutral-600 dark:text-neutral-300">Số phòng đăng ký</dt><dd className="break-all font-num font-medium text-neutral-950 dark:text-white">{registeredData.roomNumber}</dd></div>
+                </dl>
               )}
 
-              <p className="text-xs text-neutral-700 dark:text-neutral-200 leading-relaxed">
-                Chủ trọ sẽ đối chiếu hợp đồng thuê phòng và kích hoạt tài khoản của bạn. Sau khi được duyệt, bạn có thể đăng nhập bằng số điện thoại này.
-              </p>
+              <p className="text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300">Chủ trọ sẽ đối chiếu hợp đồng thuê phòng và kích hoạt tài khoản của bạn. Sau khi được duyệt, bạn có thể đăng nhập bằng số điện thoại này.</p>
 
-              <div className="pt-2 space-y-2">
-                <a
-                  href="tel:0902371800"
-                  className="soft-button w-full min-h-12 px-4 text-neutral-700 dark:text-neutral-200 font-medium text-xs flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <PhoneCall size={14} />
+              <div className="space-y-3">
+                <a href="tel:0902371800" className="soft-button min-h-12 w-full px-4 py-3 text-[13px]">
+                  <PhoneCall aria-hidden="true" size={16} className="shrink-0" />
                   <span>Liên hệ BQL Bùi Trung Khải duyệt nhanh (0902 371 800)</span>
                 </a>
-
                 <button
                   type="button"
-                  onClick={() => {
-                    setMode('login');
-                    setErrorMsg('');
-                    setSuccessMsg('');
-                  }}
-                  className="primary-button w-full min-h-12 px-4 text-sm cursor-pointer"
+                  onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
+                  className="primary-button min-h-12 w-full px-4 py-3 text-[15px]"
                 >
                   Quay lại màn hình đăng nhập
                 </button>
@@ -496,64 +384,37 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* =========================================================================
-              4. FORGOT PASSWORD MODE
-              ========================================================================= */}
           {mode === 'forgot' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2.5 text-neutral-800 dark:text-neutral-100 pb-1">
-                <KeyRound size={20} className="text-amber-500" />
-                <h3 className="font-bold text-sm">Khôi phục mật khẩu tài khoản</h3>
+              <div className="flex items-center gap-2.5 text-neutral-800 dark:text-neutral-100">
+                <KeyRound aria-hidden="true" size={20} className="text-amber-600 dark:text-amber-300" />
+                <h3 className="text-[17px] font-semibold">Khôi phục mật khẩu tài khoản</h3>
               </div>
-
-              <p className="text-xs text-neutral-700 dark:text-neutral-200 leading-relaxed">
-                Nhập số điện thoại đã đăng ký với Ban Quản Lý Nhà Trọ Phong Lan. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.
-              </p>
-
+              <p className="text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300">Nhập số điện thoại đã đăng ký với Ban Quản Lý Nhà Trọ Phong Lan. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.</p>
               <div>
-                <label className="block text-[13px] font-medium text-neutral-700 dark:text-neutral-200 mb-1">Số điện thoại</label>
-                <input
-                  type="tel"
-                  placeholder="Ví dụ: 0902 371 800"
-                  value={forgotInput}
-                  onChange={(e) => setForgotInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-neutral-200 bg-white/35 text-neutral-950 focus:ring-2 focus:ring-neutral-900/10 focus:outline-none font-num"
-                />
+                <label htmlFor="forgot-phone" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số điện thoại</label>
+                <input id="forgot-phone" type="tel" autoComplete="tel" placeholder="Ví dụ: 0902 371 800" value={forgotInput} onChange={(e) => setForgotInput(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
               </div>
-
               <button
                 type="button"
                 onClick={() => {
                   setSuccessMsg('Đã gửi mã khôi phục tới số điện thoại của bạn. Vui lòng kiểm tra tin nhắn SMS.');
                   setTimeout(() => setMode('login'), 2500);
                 }}
-                className="primary-button w-full min-h-12 px-4 text-sm cursor-pointer"
+                className="primary-button min-h-12 w-full px-4 text-[17px]"
               >
                 Gửi mã xác nhận OTP
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setErrorMsg('');
-                  setSuccessMsg('');
-                }}
-                className="w-full text-center text-xs font-semibold text-neutral-700 hover:text-neutral-950 py-1 transition-colors cursor-pointer"
-              >
-                Quay lại đăng nhập
-              </button>
+              <button type="button" onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} className="soft-button min-h-11 w-full px-4 text-[15px]">Quay lại đăng nhập</button>
             </div>
           )}
-
         </div>
 
-          <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-neutral-700 dark:text-neutral-200">
-            <a href="tel:0902371800" className="inline-flex min-h-10 items-center gap-2 rounded-full px-4 font-medium text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-600 transition-colors">
-              <PhoneCall size={14} /> Cần hỗ trợ? Liên hệ quản lý
-            </a>
-            <span className="text-[11px] text-neutral-700 dark:text-neutral-200">Trọ-Hub · Một nơi cho mọi điều ở nhà.</span>
-          </div>
+        <div className="kit-login-footer flex flex-col items-center gap-1 px-5 py-3 text-center sm:px-7">
+          <a href="tel:0902371800" className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-[13px] font-medium text-neutral-700 underline-offset-4 hover:underline dark:text-neutral-200">
+            <PhoneCall aria-hidden="true" size={15} /> Cần hỗ trợ? Liên hệ quản lý
+          </a>
+          <span className="pb-1 text-[11px] text-neutral-500 dark:text-neutral-400">Trọ-Hub · Một nơi cho mọi điều ở nhà.</span>
         </div>
       </div>
     </div>

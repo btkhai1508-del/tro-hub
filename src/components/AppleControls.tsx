@@ -61,8 +61,7 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
         return 'bg-blue-600 shadow-inner shadow-blue-800/20';
       case 'theme':
       default:
-        // App theme primary gradient (slate/blue elegant theme)
-        return 'bg-gradient-to-r from-blue-600 to-sky-500 shadow-inner shadow-blue-800/30';
+        return 'bg-neutral-900 dark:bg-white/90 shadow-inner shadow-black/15';
     }
   };
 
@@ -86,11 +85,11 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
         }
       }}
       className={cn(
-        'relative inline-flex shrink-0 items-center rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer select-none',
+        'relative inline-flex shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-neutral-900/50 dark:focus-visible:ring-white/50 cursor-pointer select-none',
         sizeConfig.track,
         checked
           ? getActiveClass()
-          : 'bg-[#EEEEEE] dark:bg-slate-700 shadow-inner shadow-black/10',
+          : 'bg-black/10 dark:bg-white/15 shadow-inner shadow-black/10',
         disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
@@ -100,7 +99,7 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
     >
       <span
         className={cn(
-          'pointer-events-none absolute block rounded-full transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]',
+          'pointer-events-none absolute block rounded-full transition-transform duration-200 ease-out',
           sizeConfig.knob,
           checked ? sizeConfig.translate : sizeConfig.baseTranslate
         )}
@@ -193,12 +192,12 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
         )}
         style={{
           background: checked
-            ? color === 'black'
+            ? color !== 'blue'
               ? 'linear-gradient(141.47deg, #09090b 24.4%, #27272a 75.04%)'
               : 'linear-gradient(141.47deg, #2563EB 24.4%, #60A5FA 75.04%)'
             : 'linear-gradient(141.47deg, #D9D9D9 24.4%, #FFFFFF 75.04%)',
           boxShadow: checked
-            ? color === 'black'
+            ? color !== 'blue'
               ? 'inset 0px 2px 3px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0,0,0,0.3)'
               : 'inset 0px 2px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(37,99,235,0.2)'
             : 'inset 0px 2px 3px rgba(0, 0, 0, 0.45)',
@@ -216,7 +215,7 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
       {label && (
         <span
           className={cn(
-            'text-slate-700 dark:text-slate-300 font-medium group-hover:text-slate-900 dark:group-hover:text-white transition-colors',
+            'text-neutral-700 dark:text-neutral-200 font-medium group-hover:text-neutral-900 dark:group-hover:text-white transition-colors',
             sizeConfig.text
           )}
         >

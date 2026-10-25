@@ -96,7 +96,7 @@ export function ProfileEditModal() {
         setHasGoogleToken(true);
         setSyncStatus({
           type: 'success',
-          message: `Đã kết nối tài khoản Google (${res.user.email}). Sẵn sàng ghi trực tiếp lên Google Sheet!`
+          message: `Đã kết nối tài khoản Google (${res.user.email}). Bạn có thể tiếp tục cập nhật hồ sơ.`
         });
       }
     } catch (err: any) {
@@ -171,7 +171,7 @@ export function ProfileEditModal() {
       if (res.ok) {
         setSyncStatus({
           type: 'success',
-          message: '✅ Đã cập nhật và đồng bộ trực tiếp vào Google Sheet thành công!'
+          message: 'Đã lưu thông tin cư dân.'
         });
 
         setTimeout(() => {
@@ -184,7 +184,7 @@ export function ProfileEditModal() {
       console.warn('Backend profile update error:', err);
       setSyncStatus({
         type: 'error',
-        message: 'Lỗi cập nhật Google Sheet: ' + (err.message || 'Vui lòng thử lại')
+        message: 'Không thể lưu hồ sơ: ' + (err.message || 'Vui lòng thử lại')
       });
     } finally {
       setIsSaving(false);
@@ -205,29 +205,29 @@ export function ProfileEditModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200"
       onClick={closeProfileEditModal}
     >
       <div 
-        className="w-full max-w-lg liquid-panel rounded-3xl flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        role="dialog" aria-modal="true" aria-labelledby="profile-edit-dialog-title" className="kit-dialog w-full max-w-lg flex flex-col max-h-[92svh] overflow-hidden relative animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Header */}
-        <div className="shrink-0 flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/10 dark:bg-white/[0.025] backdrop-blur-md">
+        <div className="kit-window-toolbar shrink-0 flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 flex items-center justify-center">
               <User size={18} />
             </div>
             <div>
               <span className="type-label text-neutral-600 dark:text-neutral-200 block text-[10px]">Cài đặt tài khoản</span>
-              <h3 className="type-h4 text-slate-900 dark:text-slate-100 font-bold">Chỉnh sửa thông tin cư dân</h3>
+              <h3 id="profile-edit-dialog-title" className="text-[17px] leading-snug font-semibold text-neutral-900 dark:text-neutral-100">Chỉnh sửa thông tin cư dân</h3>
             </div>
           </div>
 
           <button 
             type="button"
             onClick={closeProfileEditModal}
-            className="w-9 h-9 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="kit-dialog-close h-11 w-11 shrink-0 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -235,7 +235,7 @@ export function ProfileEditModal() {
         </div>
 
         {/* Scrollable Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="kit-dialog-body min-h-0 flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
 
           {/* Status Alert Message */}
           {syncStatus.type === 'success' && (
@@ -263,12 +263,12 @@ export function ProfileEditModal() {
               <img 
                 src={formData.avatar || sampleAvatars[0]} 
                 alt="Avatar" 
-                className="w-20 h-20 rounded-3xl object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md"
+                className="w-20 h-20 rounded-3xl object-cover ring-4 ring-neutral-100 dark:ring-neutral-800 shadow-md"
               />
               <button
                 type="button"
                 onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-900 dark:bg-indigo-600 text-white flex items-center justify-center shadow-md hover:bg-slate-800 dark:hover:bg-indigo-500 transition-colors cursor-pointer"
+                className="absolute -bottom-1 -right-1 h-11 w-11 rounded-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 flex items-center justify-center shadow-md hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors cursor-pointer"
                 title="Thay đổi ảnh đại diện"
               >
                 <Camera size={13} />
@@ -276,7 +276,7 @@ export function ProfileEditModal() {
             </div>
 
             {showAvatarPicker && (
-              <div className="mt-3 p-3 bg-white/25 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2.5 animate-in fade-in duration-150">
+              <div className="mt-3 p-3 bg-white/25 dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex flex-col items-center gap-2.5 animate-in fade-in duration-150">
                 <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Chọn ảnh mẫu hoặc tải ảnh lên:</span>
                 <div className="flex items-center gap-2">
                   {sampleAvatars.map((url, idx) => (
@@ -288,10 +288,10 @@ export function ProfileEditModal() {
                         setFormData(prev => ({ ...prev, avatar: url }));
                         setShowAvatarPicker(false);
                       }}
-                      className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-300 dark:ring-slate-600 hover:scale-105 cursor-pointer transition-transform"
+                      className="w-9 h-9 rounded-xl object-cover ring-1 ring-neutral-300 dark:ring-neutral-600 hover:scale-105 cursor-pointer transition-transform"
                     />
                   ))}
-                  <label className="w-9 h-9 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-500 cursor-pointer text-xs">
+                  <label className="w-9 h-9 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-800 dark:hover:text-neutral-200 hover:border-neutral-500 cursor-pointer text-xs">
                     +
                     <input type="file" accept="image/*" onChange={handleCustomAvatarUpload} className="hidden" />
                   </label>
@@ -301,173 +301,173 @@ export function ProfileEditModal() {
           </div>
 
           {/* Section 1: Thông tin cơ bản */}
-          <div className="space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-200">Thông tin cơ bản (Ghi Cột A - E)</span>
+          <div className="kit-inset p-4 space-y-3">
+            <span className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-200">Thông tin cơ bản</span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Họ và tên * (Cột A)</label>
+                <label htmlFor="profile-edit-name" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Họ và tên *</label>
                 <input
                   type="text"
                   required
                   placeholder="Ví dụ: Bùi Trung Khải"
-                  value={formData.name}
+                  id="profile-edit-name" value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Số điện thoại * (Cột B)</label>
+                <label htmlFor="profile-edit-phone" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Số điện thoại *</label>
                 <input
                   type="tel"
                   required
                   placeholder="0902371800"
-                  value={formData.phone}
+                  id="profile-edit-phone" value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs font-num rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Số CCCD / Hộ chiếu (Cột C)</label>
+                <label htmlFor="profile-edit-cccd" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Số CCCD / Hộ chiếu</label>
                 <input
                   type="text"
                   placeholder="Nhập số CCCD"
-                  value={formData.cccd}
+                  id="profile-edit-cccd" value={formData.cccd}
                   onChange={(e) => setFormData({ ...formData, cccd: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs font-num rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Email liên hệ (Cột D)</label>
+                <label htmlFor="profile-edit-email" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Email liên hệ</label>
                 <input
                   type="email"
                   placeholder="name@example.com"
-                  value={formData.email}
+                  id="profile-edit-email" value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Ngày sinh (Cột E)</label>
+                <label htmlFor="profile-edit-dob" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Ngày sinh</label>
                 <input
                   type="text"
                   placeholder="DD/MM/YYYY"
-                  value={formData.dob}
+                  id="profile-edit-dob" value={formData.dob}
                   onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs font-num rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Số phòng đang ở (Cột I)</label>
+                <label htmlFor="profile-edit-roomNumber" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Số phòng đang ở</label>
                 <input
                   type="text"
                   placeholder="Ví dụ: 203 hoặc P. 203"
-                  value={formData.roomNumber}
+                  id="profile-edit-roomNumber" value={formData.roomNumber}
                   onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs font-num font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Địa chỉ thường trú (Cột F)</label>
+              <label htmlFor="profile-edit-address" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Địa chỉ thường trú</label>
               <textarea
                 rows={2}
                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/TP"
-                value={formData.address}
+                id="profile-edit-address" value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none resize-none"
+                className="kit-field w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none resize-none"
               />
             </div>
           </div>
 
           {/* Section 2: Phương tiện */}
-          <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="kit-inset p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Bike size={15} className="text-indigo-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-200">Phương tiện (Cột G & H)</span>
+              <Bike size={15} className="text-neutral-600 dark:text-neutral-300" />
+              <span className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-200">Phương tiện</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Biển số xe (Cột G)</label>
+                <label htmlFor="profile-edit-plateNumber" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Biển số xe</label>
                 <input
                   type="text"
                   placeholder="Ví dụ: 59-X1 123.45"
-                  value={formData.plateNumber}
+                  id="profile-edit-plateNumber" value={formData.plateNumber}
                   onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num font-bold uppercase rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs font-num font-bold uppercase rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Loại phương tiện (Cột H)</label>
+                <label htmlFor="profile-edit-vehicleType" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Loại phương tiện</label>
                 <input
                   type="text"
                   placeholder="Xe máy / Vision / AirBlade"
-                  value={formData.vehicleType}
+                  id="profile-edit-vehicleType" value={formData.vehicleType}
                   onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 3: Người liên hệ khẩn cấp */}
-          <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="kit-inset p-4 space-y-3">
             <div className="flex items-center gap-2">
               <ShieldAlert size={15} className="text-rose-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-200">Người liên hệ khẩn cấp (Cột J - L)</span>
+              <span className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-200">Người liên hệ khẩn cấp</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Họ tên (Cột J)</label>
+                <label htmlFor="profile-edit-emergencyName" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Họ tên</label>
                 <input
                   type="text"
                   placeholder="Người thân"
-                  value={formData.emergencyName}
+                  id="profile-edit-emergencyName" value={formData.emergencyName}
                   onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">Mối quan hệ (Cột K)</label>
+                <label htmlFor="profile-edit-emergencyRelation" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Mối quan hệ</label>
                 <input
                   type="text"
                   placeholder="Bố / Mẹ / Anh"
-                  value={formData.emergencyRelation}
+                  id="profile-edit-emergencyRelation" value={formData.emergencyRelation}
                   onChange={(e) => setFormData({ ...formData, emergencyRelation: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block mb-1">SĐT khẩn (Cột L)</label>
+                <label htmlFor="profile-edit-emergencyPhone" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">SĐT khẩn</label>
                 <input
                   type="tel"
                   placeholder="090..."
-                  value={formData.emergencyPhone}
+                  id="profile-edit-emergencyPhone" value={formData.emergencyPhone}
                   onChange={(e) => setFormData({ ...formData, emergencyPhone: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="kit-field w-full px-3 py-2 text-xs font-num rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 font-medium focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Submit Action */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+          <div className="kit-dialog-footer pt-4 flex flex-wrap items-center justify-end gap-3">
             <button
               type="button"
               disabled={isSaving}
               onClick={closeProfileEditModal}
-              className="soft-button py-2 px-4 text-xs text-slate-600 dark:text-slate-300 cursor-pointer disabled:opacity-50"
+              className="min-h-11 soft-button py-2 px-4 text-xs text-neutral-600 dark:text-neutral-300 cursor-pointer disabled:opacity-50"
             >
               Hủy bỏ
             </button>
@@ -475,17 +475,17 @@ export function ProfileEditModal() {
             <button
               type="submit"
               disabled={isSaving}
-              className="primary-button py-2.5 px-5 text-xs flex items-center gap-1.5 cursor-pointer font-bold disabled:opacity-50 shadow-sm"
+              className="min-h-11 primary-button py-2.5 px-5 text-xs flex items-center gap-1.5 cursor-pointer font-bold disabled:opacity-50 shadow-sm"
             >
               {isSaving ? (
                 <>
                   <RefreshCw size={14} className="animate-spin" />
-                  <span>Đang ghi lên Google Sheet...</span>
+                  <span>Đang lưu thông tin…</span>
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  <span>Lưu & Cập nhật Google Sheet</span>
+                  <span>Lưu thay đổi</span>
                 </>
               )}
             </button>

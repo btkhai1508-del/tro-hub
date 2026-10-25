@@ -92,20 +92,20 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200 select-none"
       onClick={handlePostpone}
     >
       <div 
-        className="w-full max-w-md liquid-panel rounded-[32px] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" className="kit-dialog w-full max-w-md max-h-[90svh] overflow-y-auto relative animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5 relative z-10">
+        <form onSubmit={handleSubmit} className="kit-dialog-body p-5 sm:p-7 space-y-5 relative z-10">
           
           {/* Header */}
           <div className="flex items-start gap-4">
             <IconKey3D size={48} className="shrink-0" />
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              <h2 id="password-dialog-title" className="text-[20px] font-semibold tracking-tight text-neutral-900 dark:text-white">
                 Cập nhật mật khẩu
               </h2>
               <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1 leading-relaxed">
@@ -134,22 +134,23 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
             
             {/* Field 1: Mật khẩu hiện tại */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-200 mb-1">
+              <label htmlFor="password-curPass" className="block text-[13px] font-semibold text-neutral-700 dark:text-neutral-200 mb-1">
                 Mật khẩu hiện tại
               </label>
               <div className="relative">
                 <input
                   type={showCurPass ? 'text' : 'password'}
-                  value={curPass}
+                  id="password-curPass" value={curPass}
                   onChange={e => setCurPass(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
+                  className="kit-field w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-neutral-200 dark:border-neutral-700 text-xs font-mono font-medium text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
                   placeholder="Mật khẩu hiện tại (1)"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurPass(!showCurPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label={showCurPass ? 'Ẩn mật khẩu hiện tại' : 'Hiện mật khẩu hiện tại'}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
                 >
                   {showCurPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -158,22 +159,23 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
             {/* Field 2: Mật khẩu mới */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-200 mb-1">
+              <label htmlFor="password-newPass" className="block text-[13px] font-semibold text-neutral-700 dark:text-neutral-200 mb-1">
                 Mật khẩu mới
               </label>
               <div className="relative">
                 <input
                   type={showNewPass ? 'text' : 'password'}
-                  value={newPass}
+                  id="password-newPass" value={newPass}
                   onChange={e => setNewPass(e.target.value)}
                   required
                   placeholder="Nhập ít nhất 6 ký tự"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
+                  className="kit-field w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-neutral-200 dark:border-neutral-700 text-xs font-mono font-medium text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPass(!showNewPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label={showNewPass ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
                 >
                   {showNewPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -182,22 +184,23 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
             {/* Field 3: Xác nhận mật khẩu mới */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-200 mb-1">
+              <label htmlFor="password-confirmPass" className="block text-[13px] font-semibold text-neutral-700 dark:text-neutral-200 mb-1">
                 Xác nhận mật khẩu mới
               </label>
               <div className="relative">
                 <input
                   type={showConfirmPass ? 'text' : 'password'}
-                  value={confirmPass}
+                  id="password-confirmPass" value={confirmPass}
                   onChange={e => setConfirmPass(e.target.value)}
                   required
                   placeholder="Nhập lại mật khẩu mới"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
+                  className="kit-field w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-neutral-200 dark:border-neutral-700 text-xs font-mono font-medium text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPass(!showConfirmPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label={showConfirmPass ? 'Ẩn xác nhận mật khẩu mới' : 'Hiện xác nhận mật khẩu mới'}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
                 >
                   {showConfirmPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -211,7 +214,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
             <button
               type="button"
               onClick={handlePostpone}
-              className="w-full sm:flex-1 py-3 px-4 rounded-2xl soft-button text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer text-center"
+              className="min-h-11 w-full sm:flex-1 py-3 px-4 rounded-2xl soft-button text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer text-center"
             >
               Để sau
             </button>
@@ -219,7 +222,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:flex-1 py-3 px-4 rounded-2xl primary-button text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer text-center"
+              className="min-h-11 w-full sm:flex-1 py-3 px-4 rounded-2xl primary-button text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer text-center"
             >
               {isSubmitting ? (
                 <span>Đang cập nhật...</span>

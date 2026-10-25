@@ -50,24 +50,20 @@ export function Layout() {
       <OfflineBanner />
       <Background />
       
-      {/* Desktop Fixed Side Navigation (Floating Capsule with Neumorphism & Glass) */}
-      <Sidebar />
-      
-      {/* Main Content Area: dynamic left margin aligning with floating sidebar on desktop */}
-      <main className={cn(
-        "min-h-screen min-w-0 relative z-10 px-4 pt-5 sm:px-7 sm:pt-7 lg:px-8 lg:pt-7 pb-[calc(env(safe-area-inset-bottom)+7rem)] lg:pb-10 transition-[margin] duration-300 ease-out",
-        isSidebarCollapsed ? "lg:ml-[128px]" : "lg:ml-[280px]"
-      )}>
-        {/* On /payment, hide the detached TopHeader so there is no empty gap above the return button */}
-        <div className="mx-auto w-full max-w-[1180px]">
+      <div className={cn('kit-window-shell relative', isSidebarCollapsed && 'kit-desktop-collapsed')}>
+        <Sidebar />
+        <main className="kit-main min-w-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] lg:pb-8">
+          {/* The payment flow already includes its own back control. */}
           {!isPaymentPage && <TopHeader />}
-          <Suspense key={location.pathname} fallback={<PageLoading />}>
-            <div className="route-content">
-              <Outlet />
-            </div>
-          </Suspense>
-        </div>
-      </main>
+          <div className={cn('kit-page-content mx-auto w-full max-w-[1180px]', isPaymentPage && 'kit-payment-content')}>
+            <Suspense key={location.pathname} fallback={<PageLoading />}>
+              <div className="route-content">
+                <Outlet />
+              </div>
+            </Suspense>
+          </div>
+        </main>
+      </div>
 
       {/* Pop-up Modals for quick views */}
       <NotificationModal />
@@ -79,8 +75,7 @@ export function Layout() {
       {/* Interactive Resident Onboarding Tour Guide */}
       <InteractiveOnboardingTutorial />
 
-      {/* Mobile & Tablet Bottom Navigation with complete Dark Mode styling - Permanently pinned to viewport */}
-      <BottomNav className="lg:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 z-50 w-[calc(100%_-_1.5rem)] max-w-[460px] -translate-x-1/2 pointer-events-auto" />
+      <BottomNav className="lg:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 z-30 w-[calc(100%_-_1.5rem)] max-w-[460px] -translate-x-1/2 pointer-events-auto" />
     </div>
   );
 }

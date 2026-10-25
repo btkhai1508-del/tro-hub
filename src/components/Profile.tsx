@@ -8,7 +8,7 @@ import { cn } from '../lib/utils';
 
 function ProfileField({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="min-w-0 py-3.5">
+    <div className="kit-profile-field min-w-0 border-b border-black/[0.06] py-3.5 dark:border-white/[0.08]">
       <dt className="text-xs font-medium text-neutral-700 dark:text-neutral-200">{label}</dt>
       <dd className={cn('mt-1.5 break-words text-sm leading-relaxed', value?.trim() ? 'font-medium text-neutral-900 dark:text-neutral-100' : 'text-neutral-700 dark:text-neutral-200')}>
         {value?.trim() || 'Chưa cập nhật'}
@@ -22,7 +22,7 @@ function ProfileSection({ icon: Icon, title, children }: { icon: React.Component
     <section className="liquid-panel px-5 py-2 sm:px-6">
       <div className="flex items-center gap-2.5 border-b border-neutral-200/50 py-4 dark:border-white/10">
         <span className="glass-icon h-9 w-9 text-neutral-700 dark:text-neutral-200"><Icon size={44} /></span>
-        <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">{title}</h2>
+        <h2 className="kit-card-heading">{title}</h2>
       </div>
       <dl className="grid grid-cols-1 gap-x-6 pb-2 sm:grid-cols-2">{children}</dl>
     </section>
@@ -37,14 +37,14 @@ export function Profile() {
   const roomLabel = profile.room.roomNumber ? `Phòng ${profile.room.roomNumber.replace(/^P\.\s*/i, '')}` : 'Chưa xếp phòng';
 
   return (
-    <div className="mx-auto max-w-5xl space-y-7 pb-6">
-      <header>
-        <span className="liquid-eyebrow">KHÔNG GIAN CÁ NHÂN</span>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">Hồ sơ của bạn</h1>
-        <p className="mt-2 text-sm text-neutral-700 dark:text-neutral-200">Thông tin cư trú và những tùy chỉnh dành riêng cho bạn.</p>
+    <div className="kit-page mx-auto max-w-5xl pb-6">
+      <header className="kit-page-header">
+        <div><p className="kit-page-kicker">Tài khoản</p>
+        <h1 className="kit-page-title">Hồ sơ của bạn</h1>
+        <p className="kit-page-description">Thông tin cư trú và những tùy chỉnh dành riêng cho bạn.</p></div>
       </header>
 
-      <section data-tutorial="profile-id-card" aria-label="Hồ sơ cư dân" className="liquid-panel relative overflow-hidden p-6 sm:p-8">
+      <section data-tutorial="profile-id-card" aria-label="Hồ sơ cư dân" className="liquid-panel relative overflow-hidden p-5 sm:p-7">
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4 sm:gap-5">
             {profile.avatar && !profile.avatar.includes('unsplash.com') ? (
@@ -95,20 +95,20 @@ export function Profile() {
               <span className="glass-icon h-9 w-9 text-neutral-700 dark:text-neutral-200"><IconSettings3D size={44} /></span>
               <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">Giao diện</h2>
             </div>
-            <div role="group" aria-label="Chế độ giao diện" className="flex gap-1 rounded-[20px] border border-white/65 bg-white/20 p-1 dark:border-white/15 dark:bg-white/5">
+            <div role="group" aria-label="Chế độ giao diện" className="kit-segmented flex gap-1">
               {([{ value: 'light', label: 'Sáng', icon: Sun }, { value: 'dark', label: 'Tối', icon: Moon }, { value: 'auto', label: 'Tự động', icon: Sunrise }] as const).map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 py-2 text-xs font-medium transition-colors', mode === value ? 'bg-white/65 text-neutral-950 shadow-sm dark:bg-white/15 dark:text-white' : 'text-neutral-700 hover:text-neutral-800 dark:text-neutral-200 dark:hover:text-neutral-200')}><Icon size={18} strokeWidth={1.7} />{label}</button>
+                <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('kit-segment min-h-16 min-w-0 flex-1 flex-col gap-1.5 px-1 py-2 text-xs', mode === value && 'kit-segment-active')}><Icon size={18} strokeWidth={1.7} />{label}</button>
               ))}
             </div>
             <p className="mt-3 text-xs leading-relaxed text-neutral-700 dark:text-neutral-200">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
           </section>
 
           <section className="liquid-panel overflow-hidden p-2" aria-label="Tài khoản và tài liệu">
-            <button type="button" onClick={openContractModal} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
+            <button type="button" onClick={openContractModal} className="kit-list-row flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
               <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200"><IconContract3D size={40} /></span><span className="flex-1 text-sm font-medium text-neutral-800 dark:text-neutral-200">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
             </button>
             <div className="mx-3 border-t border-neutral-200/50 dark:border-white/10" />
-            <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
+            <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="kit-list-row flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
               <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200"><IconKey3D size={40} /></span><span className="flex-1 text-sm font-medium text-neutral-800 dark:text-neutral-200">Đổi mật khẩu</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
             </button>
           </section>

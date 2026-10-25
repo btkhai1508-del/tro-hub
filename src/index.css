@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/macos-kit.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -6,50 +7,72 @@
   :root {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
-    --text-display: clamp(2.25rem, 4vw, 3.75rem);
-    --text-h1: clamp(1.75rem, 3vw, 2.5rem);
-    --text-h2: clamp(1.25rem, 2vw, 1.625rem);
-    --text-h3: 1.125rem;
+    --text-display: clamp(2rem, 4vw, 3.5rem);
+    --text-h1: clamp(1.625rem, 2.4vw, 2rem);
+    --text-h2: 1.375rem;
+    --text-h3: 1.0625rem;
     --text-h4: 1rem;
     --text-body-lg: 1rem;
     --text-body: 0.9375rem;
     --text-body-sm: 0.875rem;
     --text-caption: 0.8125rem;
     --text-label: 0.6875rem;
-    --text-button: 0.875rem;
+    --text-button: 1.0625rem;
     --text-nav: 0.875rem;
-    --text-primary: #0a0a0a;
-    --text-secondary: #262626;
-    --text-tertiary: #404040;
-    --text-muted: #525252;
+    --text-primary: #1d1d1f;
+    --text-secondary: #4d4d4d;
+    --text-tertiary: #57575b;
+    --text-muted: #636366;
     --text-disabled: #aaaaaa;
-    --radius-surface: 2rem;
-    --radius-card: 1.5rem;
-    --radius-control: 1rem;
+    --radius-surface: 34px;
+    --radius-card: 20px;
+    --radius-control: 12px;
+    /* macOS 26 Community kit: Materials / Light. Opacity belongs to the
+       material fill only; foreground text and original icons stay opaque. */
+    --material-ultrathin: rgba(246, 246, 246, 0.36);
+    --material-thin: rgba(246, 246, 246, 0.48);
+    --material-medium: rgba(246, 246, 246, 0.60);
+    --material-thick: rgba(246, 246, 246, 0.72);
+    --material-ultrathick: rgba(246, 246, 246, 0.84);
+    --material-blur: 15px;
+    --material-inset: rgba(255, 255, 255, 0.42);
+    --control-fill: rgba(255, 255, 255, 0.72);
+    --control-hover: rgba(255, 255, 255, 0.9);
+    --control-selected: #ffffff;
+    --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
-    --liquid-fill: rgba(255, 255, 255, 0.20);
-    --liquid-fill-subtle: rgba(255, 255, 255, 0.12);
+    --liquid-fill: var(--material-medium);
+    --liquid-fill-subtle: var(--material-ultrathin);
     --liquid-edge: rgba(255, 255, 255, 0.72);
-    --liquid-stroke: rgba(0, 0, 0, 0.10);
-    --liquid-shadow: 0 18px 48px -28px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.22);
+    --liquid-stroke: var(--separator);
+    --liquid-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
     --liquid-ease: cubic-bezier(0.22, 1, 0.36, 1);
     color-scheme: light;
   }
 
   .dark {
     --text-primary: #ffffff;
-    --text-secondary: #f5f5f5;
-    --text-tertiary: #e5e5e5;
-    --text-muted: #d4d4d4;
+    --text-secondary: #e5e5e7;
+    --text-tertiary: #d1d1d6;
+    --text-muted: #c0c0c6;
     --text-disabled: #7f7f7f;
     --liquid-accent: #fafafa;
     --liquid-accent-rgb: 250, 250, 250;
-    --liquid-fill: rgba(0, 0, 0, 0.20);
-    --liquid-fill-subtle: rgba(0, 0, 0, 0.12);
+    /* macOS 26 Community kit: Materials / Dark. */
+    --material-ultrathin: rgba(0, 0, 0, 0.10);
+    --material-thin: rgba(0, 0, 0, 0.20);
+    --material-medium: rgba(0, 0, 0, 0.29);
+    --material-thick: rgba(0, 0, 0, 0.40);
+    --material-ultrathick: rgba(0, 0, 0, 0.50);
+    --material-inset: rgba(255, 255, 255, 0.055);
+    --control-fill: rgba(255, 255, 255, 0.09);
+    --control-hover: rgba(255, 255, 255, 0.15);
+    --control-selected: rgba(255, 255, 255, 0.18);
+    --separator: rgba(255, 255, 255, 0.14);
     --liquid-edge: rgba(255, 255, 255, 0.20);
     --liquid-stroke: rgba(255, 255, 255, 0.16);
-    --liquid-shadow: 0 20px 56px -30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+    --liquid-shadow: 0 8px 40px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.14);
     color-scheme: dark;
   }
 
@@ -60,7 +83,8 @@
     color: var(--text-primary);
     background: #fafafa;
     font-family: var(--font-sans);
-    letter-spacing: -0.018em;
+    font-size: var(--text-body);
+    letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -76,7 +100,7 @@
     outline-offset: 4px;
   }
   ::selection { background: rgba(126, 126, 126, 0.18); }
-  h1, h2, h3, h4 { color: var(--text-primary); letter-spacing: -0.035em; text-wrap: balance; }
+  h1, h2, h3, h4 { color: var(--text-primary); letter-spacing: -0.025em; text-wrap: balance; }
   h1 { font-size: var(--text-h1); line-height: 1.15; font-weight: 700; }
   h2 { font-size: var(--text-h2); line-height: 1.25; font-weight: 650; }
   h3 { font-size: var(--text-h3); line-height: 1.35; font-weight: 650; }
@@ -117,8 +141,8 @@
     border: 1px solid var(--liquid-edge);
     border-radius: var(--radius-surface);
     box-shadow: var(--liquid-shadow);
-    -webkit-backdrop-filter: blur(12px) saturate(125%);
-    backdrop-filter: blur(12px) saturate(125%);
+    -webkit-backdrop-filter: blur(var(--material-blur));
+    backdrop-filter: blur(var(--material-blur));
     background-clip: padding-box;
   }
   .soft-card, .glass-card-3d, .apple-grouped-list { border-radius: var(--radius-card); }
@@ -274,13 +298,13 @@
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root { --liquid-fill: #fbfbfb; --liquid-fill-subtle: #f7f7f7; }
-  .dark { --liquid-fill: #2a2a2a; --liquid-fill-subtle: #323232; }
+  :root { --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; }
+  .dark { --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  :root { --liquid-fill: #fbfbfb; --liquid-fill-subtle: #f7f7f7; }
-  .dark { --liquid-fill: #2a2a2a; --liquid-fill-subtle: #323232; }
+  :root { --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; --material-blur: 0px; }
+  .dark { --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
 }
 
 /* =========================================================================

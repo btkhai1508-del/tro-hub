@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { IconWallet3D, IconAlert3D, IconSecurity3D, IconNotification3D } from './Icons3D';
 
 const badgeColorMap = {
-  invoice: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800',
+  invoice: 'bg-neutral-100/70 text-neutral-700 border-neutral-200/70 dark:bg-white/10 dark:text-neutral-100 dark:border-white/10',
   alert: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800',
   success: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800',
-  info: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800',
+  info: 'bg-neutral-100/70 text-neutral-700 border-neutral-200/70 dark:bg-white/10 dark:text-neutral-100 dark:border-white/10',
 };
 
 export function NotificationModal() {
@@ -27,17 +27,17 @@ export function NotificationModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200"
       onClick={closeNotificationModal}
     >
       <div 
-        className="w-full max-w-md liquid-panel rounded-3xl overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        role="dialog" aria-modal="true" aria-labelledby="notification-dialog-title" className="kit-dialog w-full max-w-md max-h-[90svh] overflow-y-auto relative animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Darker Bar & Clear Close X Button */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="kit-window-toolbar flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeColorMap[activeNotification.type]} dark:bg-slate-800 dark:border-slate-700`}>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeColorMap[activeNotification.type]} dark:bg-neutral-800 dark:border-neutral-700`}>
               {activeNotification.type === 'invoice' && 'Thông báo thanh toán'}
               {activeNotification.type === 'alert' && 'Nhắc nhở cư dân'}
               {activeNotification.type === 'success' && 'Giao dịch thành công'}
@@ -48,7 +48,7 @@ export function NotificationModal() {
           <button 
             type="button"
             onClick={closeNotificationModal}
-            className="w-9 h-9 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="kit-dialog-close h-11 w-11 shrink-0 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng thông báo"
           >
             <X size={18} />
@@ -56,7 +56,7 @@ export function NotificationModal() {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-4">
+        <div className="kit-dialog-body p-5 sm:p-6 space-y-4">
           <div className="flex items-start gap-4">
             {activeNotification.type === 'invoice' ? (
               <IconWallet3D size={48} className="shrink-0" />
@@ -69,10 +69,10 @@ export function NotificationModal() {
             )}
 
             <div className="min-w-0 flex-1">
-              <h3 className="type-h3 text-slate-900 dark:text-slate-100 leading-snug font-bold">
+              <h3 id="notification-dialog-title" className="type-h3 text-neutral-900 dark:text-neutral-100 leading-snug font-bold">
                 {activeNotification.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1 text-xs text-neutral-600 dark:text-neutral-300 font-num">
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-neutral-600 dark:text-neutral-300 font-num">
                 <span>{activeNotification.sender || 'Ban Quản Lý Nhà Trọ Phong Lan'}</span>
                 <span>•</span>
                 <span>{activeNotification.time}</span>
@@ -80,20 +80,20 @@ export function NotificationModal() {
             </div>
           </div>
 
-          <div className="bg-white/15 dark:bg-white/5 rounded-2xl p-4 border border-slate-100/90 dark:border-slate-700/80">
-            <p className="type-body text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+          <div className="kit-inset p-4">
+            <p className="type-body text-neutral-600 dark:text-neutral-300 text-sm leading-relaxed">
               {activeNotification.desc}
             </p>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 pb-6 pt-2 flex items-center justify-end gap-3">
+        <div className="kit-dialog-footer px-5 py-4 sm:px-6 flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
             onClick={closeNotificationModal}
             className={isInvoice 
-              ? "soft-button px-5 py-2.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer"
+              ? "soft-button px-5 py-2.5 text-xs text-neutral-600 dark:text-neutral-300 cursor-pointer"
               : "primary-button px-6 py-2.5 text-xs cursor-pointer font-bold"
             }
           >
@@ -104,7 +104,7 @@ export function NotificationModal() {
             <button
               type="button"
               onClick={handleAction}
-              className="primary-button px-5 py-2.5 text-xs flex items-center gap-1.5 shadow-sm cursor-pointer font-bold bg-blue-600 hover:bg-blue-700 text-white"
+              className="min-h-11 primary-button px-5 py-2.5 text-xs flex items-center gap-1.5 shadow-sm cursor-pointer font-bold"
             >
               <span>Thanh toán ngay</span>
               <ArrowRight size={14} />

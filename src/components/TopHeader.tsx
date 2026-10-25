@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell, CheckCheck, Receipt, AlertTriangle, CheckCircle2, MessageSquare, X, Sun, Moon, Monitor, Building2, ChevronRight } from 'lucide-react';
-import { IconClock3D } from './Icons3D';
+import { Bell, CheckCheck, Receipt, AlertTriangle, CheckCircle2, MessageSquare, X, Sun, Moon, Monitor, ChevronRight } from 'lucide-react';
+import { IconClock3D, IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { cn } from '../lib/utils';
@@ -44,26 +44,26 @@ export function TopHeader() {
   const ThemeIcon = mode === 'light' ? Sun : mode === 'dark' ? Moon : Monitor;
 
   return (
-    <header className="relative z-40 mb-7 flex min-h-11 w-full items-center justify-between gap-3 sm:mb-9">
+    <header className="kit-toolbar relative z-40 flex w-full items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className="glass-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] text-neutral-700 dark:text-neutral-200 lg:hidden"><Building2 size={19} strokeWidth={1.8} /></span>
-        <span className="text-[17px] font-bold tracking-[-0.05em] text-neutral-900 dark:text-white lg:hidden">trọ<span className="font-normal text-neutral-700 dark:text-neutral-200">hub.</span></span>
-        <span className="hidden text-[13px] font-medium text-neutral-700 dark:text-neutral-200 lg:inline">Không gian cư dân</span>
-        <ChevronRight size={13} className="hidden text-neutral-600 lg:block dark:text-neutral-300" />
-        <span className="hidden text-[13px] font-semibold text-neutral-700 dark:text-neutral-200 lg:inline">{pageLabels[location.pathname] || 'Trọ-Hub'}</span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center lg:hidden"><IconHome3D size={44} /></span>
+        <div className="min-w-0 lg:hidden"><span className="block text-[17px] font-semibold tracking-[-0.035em] text-[var(--text-primary)]">Trọ-Hub.</span><span className="block truncate text-[11px] text-[var(--text-secondary)]">{pageLabels[location.pathname] || 'Không gian cư dân'}</span></div>
+        <span className="hidden text-[13px] text-[var(--text-secondary)] xl:inline">Không gian cư dân</span>
+        <ChevronRight size={13} className="hidden text-[var(--text-tertiary)] xl:block" />
+        <span className="hidden truncate text-[17px] font-semibold tracking-[-0.025em] text-[var(--text-primary)] lg:inline">{pageLabels[location.pathname] || 'Trọ-Hub'}</span>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <button type="button" onClick={toggleTheme} className="liquid-panel flex h-11 items-center justify-center gap-2 rounded-full px-3 text-neutral-700 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-300 sm:px-4" aria-label={`${themeLabel}. Bấm để đổi giao diện`} title={`${themeLabel} · Bấm để chuyển Sáng, Tối hoặc Tự động`}>
+        <button type="button" onClick={toggleTheme} className="kit-toolbar-control flex h-11 items-center justify-center gap-2 rounded-full px-3 text-[var(--text-secondary)] sm:px-3.5" aria-label={`${themeLabel}. Bấm để đổi giao diện`} title={`${themeLabel} · Bấm để chuyển Sáng, Tối hoặc Tự động`}>
           {mode === 'auto' ? <IconClock3D size={24} /> : <ThemeIcon size={17} strokeWidth={1.8} />}<span className="hidden text-[12px] font-medium sm:inline">{themeLabel}</span>
         </button>
-        <button ref={buttonRef} type="button" data-tutorial="header-notifications" onClick={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)} className={cn('liquid-panel relative flex h-11 w-11 items-center justify-center rounded-full transition-colors', isNotificationPanelOpen ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300')} aria-label={`Thông báo${unreadNotiCount > 0 ? `, ${unreadNotiCount} chưa đọc` : ''}`} aria-expanded={isNotificationPanelOpen} aria-controls="header-notification-panel" title="Thông báo">
+        <button ref={buttonRef} type="button" data-tutorial="header-notifications" onClick={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)} className={cn('kit-toolbar-control relative flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-secondary)]', isNotificationPanelOpen && 'kit-nav-active')} aria-label={`Thông báo${unreadNotiCount > 0 ? `, ${unreadNotiCount} chưa đọc` : ''}`} aria-expanded={isNotificationPanelOpen} aria-controls="header-notification-panel" title="Thông báo">
           <Bell size={18} strokeWidth={1.8} />
           {unreadNotiCount > 0 && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-800" />}
         </button>
       </div>
 
-      {isNotificationPanelOpen && <div ref={panelRef} id="header-notification-panel" aria-label="Danh sách thông báo" className="liquid-panel absolute right-0 top-[56px] z-50 w-[min(380px,calc(100vw-2rem))] space-y-3 rounded-[28px] p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+      {isNotificationPanelOpen && <div ref={panelRef} id="header-notification-panel" aria-label="Danh sách thông báo" className="liquid-panel kit-popover absolute right-0 top-[calc(100%+8px)] z-50 w-[min(380px,calc(100vw-2rem))] space-y-3 rounded-[26px] p-4 animate-in fade-in slide-in-from-top-2 duration-200">
         <div className="flex items-center justify-between gap-2 border-b border-neutral-200/60 px-1 pb-3 dark:border-white/10">
           <div className="flex items-center gap-2"><h2 className="!text-[16px] font-semibold tracking-tight text-neutral-900 dark:text-white">Thông báo</h2>{unreadNotiCount > 0 && <span className="rounded-full bg-neutral-500/10 px-2 py-0.5 text-xs font-semibold text-neutral-700 dark:text-neutral-300">{unreadNotiCount} mới</span>}</div>
           <div className="flex items-center gap-1">

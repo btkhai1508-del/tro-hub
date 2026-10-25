@@ -259,11 +259,11 @@ export function PaymentPage() {
 
   return (
     <div className="w-full space-y-5 pb-4">
-      <header className="mx-auto flex w-full max-w-5xl items-center gap-3">
+      <header className="kit-page-header kit-payment-header mx-auto flex w-full max-w-5xl items-center gap-3">
         <button type="button" onClick={() => navigate('/invoices')} aria-label="Quay lại hóa đơn" className="soft-button flex h-11 w-11 shrink-0 items-center justify-center text-neutral-600 dark:text-neutral-200"><ChevronLeft size={22} /></button>
         <div>
-          <span className="liquid-eyebrow">THANH TOÁN</span>
-          <p className="mt-0.5 text-sm font-medium text-neutral-700 dark:text-neutral-200">Hóa đơn tháng {targetInvoice.month}</p>
+          <h1 className="kit-page-title">Thanh toán</h1>
+          <p className="kit-page-description">Hóa đơn tháng {targetInvoice.month}</p>
         </div>
       </header>
       {pdfError && <p role="alert" className="mx-auto max-w-5xl text-sm text-red-700 dark:text-red-300">{pdfError}</p>}
@@ -274,9 +274,9 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="processing-mode"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-6"
           >
@@ -285,15 +285,15 @@ export function PaymentPage() {
                 <CheckCircle2 size={36} />
               </div>
 
-              <h1 className="text-[24px] font-bold text-neutral-900 dark:text-white mb-2">
+              <h2 className="text-[24px] font-bold text-neutral-900 dark:text-white mb-2">
                 Đã ghi nhận chuyển khoản
-              </h1>
+              </h2>
 
               <p className="text-sm text-neutral-700 dark:text-neutral-200 max-w-sm mb-6">
                 Hệ thống ngân hàng đã nhận giao dịch của bạn. Đang cập nhật trạng thái hóa đơn...
               </p>
 
-              <div className="w-full liquid-panel-subtle rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-2 text-xs mb-6">
+              <div className="w-full kit-inset kit-group rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-2 text-xs mb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-neutral-600 dark:text-neutral-300">Kỳ hóa đơn:</span>
                   <span className="font-semibold text-neutral-800 dark:text-neutral-200">Tháng {targetInvoice.month}</span>
@@ -319,9 +319,9 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="success-mode"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-6"
           >
@@ -334,9 +334,9 @@ export function PaymentPage() {
 
               {/* Title */}
               <div className="text-center mb-6">
-                <h1 className="text-[28px] sm:text-[32px] leading-tight font-bold text-neutral-900 dark:text-white tracking-tight">
+                <h2 className="text-[28px] sm:text-[32px] leading-tight font-bold text-neutral-900 dark:text-white tracking-tight">
                   Hoàn Tất Thanh Toán!
-                </h1>
+                </h2>
               </div>
 
               {/* Amount Display Centerpiece */}
@@ -355,7 +355,7 @@ export function PaymentPage() {
               </div>
 
               {/* Transaction Details Table */}
-              <div className="w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 text-[14px]">
+              <div className="kit-inset kit-group w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 px-4 text-[14px]">
                 <div className="py-3 flex items-center justify-between">
                   <span className="text-neutral-700 dark:text-neutral-200">Phòng</span>
                   <span className="font-bold text-neutral-900 dark:text-white">{profile.room?.roomNumber || '—'}</span>
@@ -384,7 +384,7 @@ export function PaymentPage() {
                 <button 
                   type="button"
                   onClick={() => navigate('/')}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+                  className="primary-button w-full sm:flex-1 min-h-12 px-4"
                 >
                   <Home size={18} />
                   <span>Về trang chủ</span>
@@ -394,7 +394,7 @@ export function PaymentPage() {
                   type="button"
                   onClick={handleDownloadInvoicePDF}
                   disabled={isExportingPDF}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-900 dark:text-white border border-gray-200 dark:border-neutral-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
+                  className="soft-button w-full sm:flex-1 min-h-12 px-4"
                 >
                   <Download size={18} />
                   <span>{isExportingPDF ? 'Đang tạo PDF…' : 'Tải biên lai (PDF)'}</span>
@@ -409,9 +409,9 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="gate-closed-mode"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-6"
           >
@@ -422,16 +422,16 @@ export function PaymentPage() {
                 className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 drop-shadow-[0_10px_25px_rgba(239,68,68,0.22)] select-none pointer-events-none" 
               />
 
-              <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white mb-2">
                 Cổng thanh toán đang tạm đóng
-              </h1>
+              </h2>
 
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 max-w-md mb-6 leading-relaxed">
                 Ban Quản Lý đang tạm dừng nhận thanh toán trực tuyến qua mã VietQR cho kỳ Tháng {targetInvoice.month}. Quý cư dân vui lòng không chuyển khoản trong thời gian này.
               </p>
 
               {/* Manager Contact Box */}
-              <div className="w-full liquid-panel-subtle rounded-2xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-3 mb-6">
+              <div className="w-full kit-inset kit-group rounded-2xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-3 mb-6">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-neutral-700 dark:text-neutral-200">Ban Quản Lý:</span>
                   <span className="text-xs font-bold text-neutral-900 dark:text-white">Bùi Trung Khải</span>
@@ -466,14 +466,14 @@ export function PaymentPage() {
                   href="https://zalo.me/0902371800"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-3 px-4 rounded-xl bg-[#0068FF] hover:bg-[#0055d4] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                  className="primary-button flex-1 min-h-12 px-4"
                 >
                   <span>Nhắn tin Zalo với Quản lý</span>
                 </a>
                 <button
                   type="button"
                   onClick={() => navigate('/invoices')}
-                  className="flex-1 py-3 px-4 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 font-semibold text-xs transition-all cursor-pointer"
+                  className="soft-button flex-1 min-h-12 px-4"
                 >
                   Quay lại Hóa đơn
                 </button>
@@ -486,9 +486,9 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="qr-mode"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-2"
           >
@@ -511,21 +511,21 @@ export function PaymentPage() {
                 {/* Left Column: Title, Subtitles, Straight Square Pure QR Code */}
                 <div className="col-span-6 flex flex-col items-center text-center">
                   <div className="mb-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
+                    <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
                       QR Thanh toán
-                    </h1>
+                    </h2>
                     <p className="text-[14px] text-neutral-700 dark:text-neutral-200 font-normal mt-1 leading-relaxed">
                       Quét mã để thanh toán tự động
                     </p>
                   </div>
 
                   {/* Sharp Straight Square Pure QR Container */}
-                  <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block">
+                  <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block max-w-full">
                     {qrUrl ? (
                       <img 
                         src={qrUrl} 
                         alt="VietQR Matrix"
-                        className="w-[280px] h-[280px] object-contain rounded-none select-none"
+                        className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
                       />
                     ) : (
                       <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
@@ -554,7 +554,7 @@ export function PaymentPage() {
                     <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
                       Chi tiết giao dịch
                     </h2>
-                    <div className="liquid-panel-subtle p-4 sm:p-5 space-y-4">
+                    <div className="kit-inset kit-group p-4 sm:p-5 space-y-4">
                       <div className="flex items-center justify-between text-[14px]">
                         <span className="text-neutral-700 dark:text-neutral-200 font-normal">Người nhận</span>
                         <span 
@@ -579,7 +579,7 @@ export function PaymentPage() {
                         <span className="text-neutral-700 dark:text-neutral-200 font-normal">Số tài khoản</span>
                         <span 
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="font-bold text-black dark:text-white tracking-wider font-mono cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-bold text-black dark:text-white tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
                           {copiedKey === 'd-acc' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
@@ -589,7 +589,7 @@ export function PaymentPage() {
                         <span className="text-neutral-700 dark:text-neutral-200 font-normal">Nội dung CK</span>
                         <span 
                           onClick={() => handleCopy(transferContent, 'd-content')}
-                          className="font-bold text-neutral-600 dark:text-neutral-200 font-mono text-xs cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-xs cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {transferContent}
                           {copiedKey === 'd-content' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
@@ -626,9 +626,9 @@ export function PaymentPage() {
                 </button>
                 
                 <div className="text-center">
-                  <h1 className="text-[17px] font-bold text-black dark:text-white leading-tight">
+                  <h2 className="text-[17px] font-bold text-black dark:text-white leading-tight">
                     QR Thanh toán
-                  </h1>
+                  </h2>
                 </div>
 
                 <div className="w-8" />
@@ -636,12 +636,12 @@ export function PaymentPage() {
 
               {/* Mobile Straight Pure QR Code Section */}
               <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
-                <div className="bg-white p-3 rounded-2xl shadow-sm inline-block">
+                <div className="bg-white p-3 rounded-2xl shadow-sm inline-block max-w-full">
                   {qrUrl ? (
                     <img 
                       src={qrUrl} 
                       alt="VietQR Matrix"
-                      className="w-[240px] h-[240px] object-contain rounded-none select-none"
+                      className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
                   ) : (
                     <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
@@ -665,7 +665,7 @@ export function PaymentPage() {
 
               {/* Mobile Payment Details */}
               <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
-                <div className="liquid-panel-subtle p-3.5 space-y-3">
+                <div className="kit-inset kit-group p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-700 dark:text-neutral-200">Người nhận</span>
                     <span 
@@ -690,7 +690,7 @@ export function PaymentPage() {
                     <span className="text-neutral-700 dark:text-neutral-200">Số TK</span>
                     <span 
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="font-bold text-black dark:text-white font-mono cursor-pointer"
+                      className="font-bold text-black dark:text-white font-num cursor-pointer"
                     >
                       {accountNumber}
                       {copiedKey === 'm-acc' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
@@ -700,7 +700,7 @@ export function PaymentPage() {
                     <span className="text-neutral-700 dark:text-neutral-200">Nội dung CK</span>
                     <span 
                       onClick={() => handleCopy(transferContent, 'm-content')}
-                      className="font-bold text-neutral-600 dark:text-neutral-200 font-mono text-[11px] cursor-pointer"
+                      className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-[11px] cursor-pointer"
                     >
                       {transferContent}
                       {copiedKey === 'm-content' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}

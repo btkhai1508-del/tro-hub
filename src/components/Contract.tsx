@@ -1,11 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { 
-  FileText, 
-  Printer, 
-  ZoomIn, 
-  ZoomOut, 
-  Building2 
-} from 'lucide-react';
+import { Printer, ZoomIn, ZoomOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { IconContract3D, IconDeclaration3D } from './Icons3D';
 
@@ -42,90 +36,49 @@ export function Contract() {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300 max-w-5xl mx-auto pb-16 px-2 sm:px-4">
-      
-      {/* Top Header & Actions (Hidden on Print) */}
-      <div data-tutorial="contract-header" className="print:hidden flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-              ✓ Đang hiệu lực (01/06/2026 — 01/12/2028)
-            </span>
-            <span className="text-xs text-slate-400 font-mono">Mã: {contractCode}</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl text-slate-900 dark:text-white mt-1.5 font-bold">
-            Văn bản Pháp lý & Hợp đồng
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Mẫu văn bản hành chính khổ A4 chuẩn Times New Roman mực đen theo đúng nguyên gốc PDF.
-          </p>
+    <div className="kit-page max-w-5xl mx-auto pb-8">
+      <header data-tutorial="contract-header" className="kit-page-header print:hidden">
+        <div className="min-w-0">
+          <p className="kit-page-kicker">Tài liệu cư trú</p>
+          <h1 className="kit-page-title">Hợp đồng & cư trú</h1>
+          <p className="kit-page-description">Xem hợp đồng thuê phòng, tờ khai cư trú và lưu bản in.</p>
         </div>
+        <button type="button" onClick={handlePrint} className="primary-button min-h-11 self-start px-4 py-2.5" title="In hoặc Lưu thành file PDF">
+          <Printer size={16} />
+          <span>In / Lưu PDF</span>
+        </button>
+      </header>
 
-        {/* Action Buttons */}
-        <div className="flex items-center flex-wrap gap-2 shrink-0">
-          {/* Zoom Controls */}
-          <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-700">
-            <button
-              type="button"
-              onClick={() => setZoomLevel(prev => Math.max(75, prev - 10))}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer"
-              title="Thu nhỏ"
-            >
-              <ZoomOut size={15} />
+      <div className="print:hidden liquid-panel p-4 sm:p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-center gap-2"><span className="badge-paid">✓ Đang hiệu lực</span><span className="text-xs text-neutral-700 dark:text-neutral-200">01/06/2026 — 01/12/2028</span></div>
+          <span className="text-xs text-neutral-700 dark:text-neutral-200 break-all">Mã: {contractCode}</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div role="group" aria-label="Loại tài liệu" className="kit-segmented flex w-full max-w-lg items-stretch gap-1">
+            <button type="button" aria-pressed={activeTab === 'contract'} onClick={() => setActiveTab('contract')}
+              className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 text-xs sm:text-sm ${activeTab === 'contract' ? 'kit-segment-active' : ''}`}>
+              <IconContract3D size={25} />
+              <span>Hợp đồng thuê phòng</span>
             </button>
-            <span className="text-[11px] font-mono px-2 font-semibold text-slate-700 dark:text-slate-300">
-              {zoomLevel}%
-            </span>
-            <button
-              type="button"
-              onClick={() => setZoomLevel(prev => Math.min(125, prev + 10))}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 cursor-pointer"
-              title="Phóng to"
-            >
-              <ZoomIn size={15} />
+            <button type="button" aria-pressed={activeTab === 'ct01'} onClick={() => setActiveTab('ct01')}
+              className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 text-xs sm:text-sm ${activeTab === 'ct01' ? 'kit-segment-active' : ''}`}>
+              <IconDeclaration3D size={25} />
+              <span>Tờ khai cư trú (CT01)</span>
             </button>
           </div>
-
-          {/* Print / Export to PDF */}
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="primary-button text-xs py-2 px-4 flex items-center gap-1.5 shadow-sm font-semibold cursor-pointer active:scale-95"
-            title="In hoặc Lưu thành file PDF"
-          >
-            <Printer size={14} />
-            <span>In / Lưu PDF</span>
-          </button>
+          <div role="group" aria-label="Thu phóng tài liệu" className="kit-inset hidden lg:flex items-center gap-1 rounded-full p-1">
+            <button type="button" onClick={() => setZoomLevel(prev => Math.max(75, prev - 10))} disabled={zoomLevel <= 75}
+              className="soft-button h-11 w-11" aria-label="Thu nhỏ tài liệu" title="Thu nhỏ">
+              <ZoomOut size={16} />
+            </button>
+            <span className="font-num min-w-11 text-center text-xs font-medium text-neutral-800 dark:text-neutral-100">{zoomLevel}%</span>
+            <button type="button" onClick={() => setZoomLevel(prev => Math.min(125, prev + 10))} disabled={zoomLevel >= 125}
+              className="soft-button h-11 w-11" aria-label="Phóng to tài liệu" title="Phóng to">
+              <ZoomIn size={16} />
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Tabs Selector: Hợp đồng vs Mẫu CT01 (Hidden on Print) */}
-      <div className="print:hidden flex items-center bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 max-w-lg">
-        <button
-          type="button"
-          onClick={() => setActiveTab('contract')}
-          className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
-            activeTab === 'contract'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <IconContract3D size={20} />
-          <span>Hợp đồng thuê phòng</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('ct01')}
-          className={`flex-1 py-2 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
-            activeTab === 'ct01'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <IconDeclaration3D size={20} />
-          <span>Tờ khai cư trú (CT01)</span>
-        </button>
       </div>
 
       {/* =========================================================================

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, ArrowRight, Bell, CarFront, CheckCircle2, ChevronRight, Clock3, CreditCard, FileText, House, LockKeyhole, ReceiptText, Sparkles, UserRound, WashingMachine } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, CheckCircle2, ChevronRight, Clock3, CreditCard, LockKeyhole, Sparkles } from 'lucide-react';
 import { IconHome3D, IconWallet3D, IconLaundry3D, IconContract3D, IconProfile3D, IconVehicle3D, IconNotification3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
@@ -22,16 +22,16 @@ export function Home() {
   ];
 
   return (
-    <div className="space-y-7 sm:space-y-9">
-      <header data-tutorial="resident-welcome" className="flex items-center justify-between gap-4 pt-2">
+    <div className="kit-page">
+      <header data-tutorial="resident-welcome" className="kit-page-header">
         <div className="min-w-0">
-          <p className="liquid-eyebrow mb-2">KHÔNG GIAN CƯ DÂN</p>
-          <h1 className="text-[29px] leading-tight sm:text-[36px] font-semibold tracking-[-0.045em] text-neutral-950 dark:text-white">
+          <p className="kit-page-kicker">Trang chủ</p>
+          <h1 className="kit-page-title">
             Xin chào{firstName ? `, ${firstName}` : ''}<span className="text-neutral-950 dark:text-white">.</span>
           </h1>
-          <p className="mt-2 text-sm text-neutral-700 dark:text-neutral-200">Mọi điều về ngôi nhà, ngay trong tầm tay.</p>
+          <p className="kit-page-description">Thông tin phòng, hóa đơn và tiện ích của bạn.</p>
         </div>
-        <div className="liquid-panel-subtle hidden sm:flex items-center gap-3 px-4 py-3 rounded-[22px] shrink-0">
+        <div className="kit-inset hidden sm:flex items-center gap-3 px-3.5 py-2.5 rounded-[20px] shrink-0">
           <span className="glass-icon h-10 w-10 rounded-2xl text-neutral-700 dark:text-neutral-300"><IconHome3D size={44} /></span>
           <div>
             <span className="block text-xs font-medium text-neutral-700 dark:text-neutral-200">Phòng của bạn</span>
@@ -41,13 +41,13 @@ export function Home() {
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-        <div data-tutorial="billing-card" className="liquid-panel relative overflow-hidden p-6 sm:p-8 lg:col-span-8">
+        <div data-tutorial="billing-card" className="liquid-panel relative overflow-hidden p-5 sm:p-7 lg:col-span-8">
           <div className="relative">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="glass-icon h-11 w-11 rounded-[16px] text-neutral-700 dark:text-neutral-300"><IconWallet3D size={48} /></span>
                 <div>
-                  <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Chi phí phòng thuê</h2>
+                  <h2 className="kit-card-heading">Chi phí phòng thuê</h2>
                   <p className="mt-0.5 text-xs text-neutral-700 dark:text-neutral-200">{currentInvoice ? `Kỳ tháng ${currentInvoice.month}` : 'Hóa đơn của bạn'}</p>
                 </div>
               </div>
@@ -57,10 +57,10 @@ export function Home() {
               </span>}
             </div>
 
-            <div className="py-8 sm:py-10">
+            <div className="py-7 sm:py-9">
               <p className="text-sm text-neutral-700 dark:text-neutral-200 mb-2">{!currentInvoice ? 'Chưa có hóa đơn' : isPaid ? 'Số tiền đã thanh toán' : isPending ? 'Số tiền chờ xác nhận' : 'Số tiền cần thanh toán'}</p>
               {currentInvoice ? <div className="flex items-baseline gap-2 text-neutral-950 dark:text-white">
-                <span className="text-[42px] sm:text-[58px] leading-none font-semibold tracking-[-0.055em] font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
+                <span className="text-[38px] sm:text-[48px] leading-none font-semibold tracking-[-0.055em] font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
                 <span className="text-2xl font-normal text-neutral-600 dark:text-neutral-300">₫</span>
               </div> : <h3 className="text-[26px] sm:text-[32px] leading-tight tracking-[-0.035em] font-semibold text-neutral-900 dark:text-white">Một nơi để theo dõi<br />mọi khoản phí.</h3>}
               <p className="mt-4 flex items-center gap-1.5 text-xs text-neutral-700 dark:text-neutral-200">
@@ -81,17 +81,17 @@ export function Home() {
           </div>
         </div>
 
-        <div className="lg:col-span-4 liquid-panel p-6 sm:p-7 flex flex-col justify-between gap-6 relative overflow-hidden">
+        <div className="lg:col-span-4 liquid-panel p-5 sm:p-6 flex flex-col justify-between gap-5 relative overflow-hidden">
           <div className="relative flex items-center justify-between">
-            <span className="liquid-eyebrow">GÓC NHỎ CỦA BẠN</span>
+            <h2 className="kit-card-heading">Phòng của bạn</h2>
             <span className="glass-icon h-9 w-9 rounded-full text-neutral-700 dark:text-neutral-300"><IconHome3D size={44} /></span>
           </div>
           <div className="relative">
             <p className="text-sm text-neutral-700 dark:text-neutral-200">{profile.room.building || 'Thông tin phòng'}</p>
-            <h2 className="mt-1 text-[32px] font-semibold tracking-[-0.045em] text-neutral-900 dark:text-white">{room}</h2>
+            <p className="mt-1 text-[30px] leading-tight font-semibold tracking-[-0.035em] text-neutral-900 dark:text-white">{room}</p>
             <p className="mt-2 text-xs text-neutral-700 dark:text-neutral-200">{profile.room.floor || 'Không gian sống của bạn'}</p>
           </div>
-          <div className="relative space-y-1 border-t border-neutral-900/[0.06] dark:border-white/[0.08] pt-3">
+          <div className="relative divide-y divide-black/[0.07] dark:divide-white/10 border-t border-neutral-900/[0.06] dark:border-white/[0.08] pt-1">
             <NavLink to="/profile" className="flex items-center gap-3 rounded-2xl py-3 text-sm group">
               <IconVehicle3D size={32} />
               <span className="text-neutral-700 dark:text-neutral-200">Biển số xe</span>
@@ -114,10 +114,10 @@ export function Home() {
           <NavLink to="/utilities" className="text-xs font-medium text-neutral-700 dark:text-neutral-300 inline-flex items-center gap-1">Tất cả tiện ích <ChevronRight size={14} /></NavLink>
         </div>
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-          {quickActions.map(({ label, subtitle, Icon, onClick, color }) => <button key={label} type="button" onClick={onClick} className="liquid-panel-subtle p-4 sm:p-5 rounded-[24px] text-left group transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]">
-            <div className="flex items-center justify-between mb-4"><span className={cn('h-14 w-14 flex items-center justify-center', color)}><Icon size={56} /></span><ArrowUpRight size={16} className="text-neutral-600 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 dark:text-neutral-300" /></div>
-            <span className="block font-semibold text-sm text-neutral-900 dark:text-white">{label}</span>
-            <span className="block text-xs mt-1 text-neutral-700 dark:text-neutral-200">{subtitle}</span>
+          {quickActions.map(({ label, subtitle, Icon, onClick, color }) => <button key={label} type="button" onClick={onClick} className="kit-inset kit-quick-action rounded-[20px] p-3.5 sm:p-4 text-left group flex items-center gap-3 transition-colors">
+            <span className={cn('h-11 w-11 shrink-0 flex items-center justify-center', color)}><Icon size={48} /></span>
+            <span className="min-w-0 flex-1"><span className="block font-semibold text-sm text-neutral-900 dark:text-white">{label}</span><span className="block text-xs mt-1 leading-relaxed text-neutral-700 dark:text-neutral-200">{subtitle}</span></span>
+            <ChevronRight size={14} className="hidden sm:block shrink-0 text-neutral-600 dark:text-neutral-300" />
           </button>)}
         </div>
       </section>
@@ -129,12 +129,12 @@ export function Home() {
           {notifications.some(item => item.unread) && <span className="ml-auto h-2 w-2 rounded-full bg-neutral-500" aria-label="Có thông báo chưa đọc" />}
         </div>
         {notifications.length ? <div className="grid md:grid-cols-2 gap-3">
-          {notifications.slice(0, 2).map(item => <button type="button" key={item.id} onClick={() => openNotificationModal(item)} className="liquid-panel-subtle rounded-[20px] p-4 text-left flex items-start gap-3 group">
+          {notifications.slice(0, 2).map(item => <button type="button" key={item.id} onClick={() => openNotificationModal(item)} className="kit-inset rounded-[20px] p-4 text-left flex items-start gap-3 group">
             <span className={cn('mt-1.5 h-1.5 w-1.5 rounded-full shrink-0', item.unread ? 'bg-neutral-500' : 'bg-neutral-300 dark:bg-neutral-600')} />
             <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-neutral-800 dark:text-neutral-100 group-hover:text-neutral-900 dark:group-hover:text-neutral-300 line-clamp-2 dark:hover:text-white">{item.title}</span><span className="block mt-1.5 text-xs leading-relaxed text-neutral-700 dark:text-neutral-200 line-clamp-2">{item.desc}</span><span className="block mt-3 text-xs text-neutral-600 dark:text-neutral-300">{item.time}</span></span>
             <ChevronRight size={16} className="mt-1 text-neutral-600 shrink-0 dark:text-neutral-300" />
           </button>)}
-        </div> : <div className="liquid-panel-subtle rounded-[22px] px-5 py-7 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+        </div> : <div className="kit-inset rounded-[20px] px-5 py-6 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <Sparkles size={23} strokeWidth={1.5} className="text-neutral-600 dark:text-neutral-300" />
           <div><p className="text-sm font-medium text-neutral-700 dark:text-neutral-200">Bạn đã cập nhật mọi thứ.</p><p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">Thông báo mới từ ban quản lý sẽ xuất hiện tại đây.</p></div>
         </div>}

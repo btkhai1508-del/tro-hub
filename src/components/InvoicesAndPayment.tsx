@@ -21,12 +21,12 @@ export function InvoicesAndPayment() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-7 pb-6">
-      <header data-tutorial="invoices-header" className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="kit-page mx-auto max-w-5xl pb-6">
+      <header data-tutorial="invoices-header" className="kit-page-header">
         <div>
-          <span className="liquid-eyebrow">TÀI CHÍNH CỦA BẠN</span>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">Hóa đơn & thanh toán</h1>
-          <p className="mt-2 max-w-md text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">Mọi khoản phí, rõ ràng trong một nơi.</p>
+          <p className="kit-page-kicker">Quản lý chi phí</p>
+          <h1 className="kit-page-title">Hóa đơn & thanh toán</h1>
+          <p className="kit-page-description">Xem từng khoản phí và theo dõi lịch sử thanh toán.</p>
         </div>
         <button type="button" onClick={() => setIsExportModalOpen(true)} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 text-sm text-neutral-700 dark:text-neutral-200">
           <Download size={16} />Xuất lịch sử PDF
@@ -34,14 +34,14 @@ export function InvoicesAndPayment() {
       </header>
 
       <section aria-label="Tổng quan hóa đơn" className="liquid-panel overflow-hidden">
-        <div className="relative flex flex-col gap-6 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
+        <div className="relative flex flex-col gap-6 p-5 sm:p-7 md:flex-row md:items-center md:justify-between">
           <div className="relative">
             <div className="mb-5 flex items-center gap-2.5">
               <span className="glass-icon text-neutral-700 dark:text-neutral-200"><IconWallet3D size={48} /></span>
               <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{unpaidInvoices.length ? 'Tổng cần thanh toán' : 'Tổng quan thanh toán'}</span>
             </div>
             <div className="flex flex-wrap items-baseline gap-2 text-neutral-900 dark:text-white">
-              <span className="font-num text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">{currency(totalUnpaidAmount)}</span>
+              <span className="font-num text-[38px] leading-none font-semibold tracking-[-0.04em] sm:text-[46px]">{currency(totalUnpaidAmount)}</span>
               <span className="text-xl text-neutral-600 dark:text-neutral-300">₫</span>
             </div>
             <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-200">
@@ -57,19 +57,19 @@ export function InvoicesAndPayment() {
         </div>
       </section>
 
-      <section aria-labelledby="invoice-list-heading" className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 id="invoice-list-heading" className="liquid-section-title">Hóa đơn theo kỳ</h2>
+      <section aria-labelledby="invoice-list-heading" className="liquid-panel overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-black/[0.07] px-5 py-4 dark:border-white/10 sm:px-6">
+          <h2 id="invoice-list-heading" className="kit-card-heading">Hóa đơn theo kỳ</h2>
           <span className="text-xs text-neutral-700 dark:text-neutral-200">{invoices.length} hóa đơn</span>
         </div>
         {invoices.length === 0 ? (
-          <div className="liquid-panel flex flex-col items-center px-6 py-14 text-center">
+          <div className="flex flex-col items-center px-6 py-12 text-center">
             <span className="glass-icon mb-5 h-16 w-16 text-neutral-700"><IconWallet3D size={64} /></span>
             <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">Chưa có hóa đơn</h3>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">Khi có khoản phí mới, bạn có thể xem chi tiết và theo dõi thanh toán tại đây.</p>
           </div>
         ) : invoices.map(invoice => (
-          <article key={invoice.id} className="liquid-panel-subtle group flex flex-col gap-4 p-4 sm:p-5 md:flex-row md:items-center">
+          <article key={invoice.id} className="kit-list-row group flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-center">
             <button type="button" onClick={() => openInvoiceDetailModal(invoice)} aria-label={`Xem chi tiết hóa đơn tháng ${invoice.month}`} className="flex min-w-0 flex-1 items-start gap-3.5 rounded-2xl text-left sm:items-center">
               <span className="glass-icon shrink-0 text-neutral-700 dark:text-neutral-200"><IconWallet3D size={52} /></span>
               <span className="min-w-0">
