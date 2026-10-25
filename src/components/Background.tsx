@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** Uploaded Gradient Background #4, paired light/dark artwork at 65% opacity. */
+/** Uploaded Gradient Background #4, paired light/dark artwork at 90% opacity. */
 export function Background() {
   return (
     <div aria-hidden="true" className="app-wallpaper pointer-events-none fixed inset-0 z-0 overflow-hidden">

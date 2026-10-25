@@ -15,8 +15,6 @@ import {
   Layers,
   ChevronDown
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useApp, Invoice } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { IconContract3D } from './Icons3D';
@@ -57,6 +55,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
     setIsExporting(true);
 
     try {
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([import('jspdf'), import('html2canvas')]);
       // Temporary style adjustments for capture
       const element = printRef.current;
       

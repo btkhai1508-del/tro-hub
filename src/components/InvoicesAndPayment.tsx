@@ -11,8 +11,6 @@ export function InvoicesAndPayment() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const unpaidInvoices = invoices.filter(invoice => invoice.status === 'unpaid');
   const totalUnpaidAmount = unpaidInvoices.reduce((total, invoice) => total + invoice.total, 0);
-  const paidCount = invoices.filter(invoice => invoice.status === 'paid').length;
-  const pendingCount = invoices.filter(invoice => invoice.status === 'pending').length;
   const currency = (amount: number) => amount.toLocaleString('vi-VN');
   const handlePay = (invoiceId: string) => navigate(`/payment?invoiceId=${invoiceId}`);
 
@@ -56,14 +54,6 @@ export function InvoicesAndPayment() {
               {paymentGateStatus === 'STOP' ? 'Xem thông tin thanh toán' : 'Thanh toán ngay'}<ArrowUpRight size={17} />
             </button>
           )}
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-neutral-200/60 border-t border-white/70 bg-white/25 dark:divide-white/10 dark:border-white/10 dark:bg-white/[0.02]">
-          {[{ label: 'Tất cả', value: invoices.length }, { label: 'Đã thanh toán', value: paidCount }, { label: 'Chờ xác nhận', value: pendingCount }].map(item => (
-            <div key={item.label} className="px-3 py-4 text-center sm:px-6 sm:text-left">
-              <span className="font-num text-xl font-semibold text-neutral-900 dark:text-white">{item.value}</span>
-              <span className="mt-1 block text-xs text-neutral-700 dark:text-neutral-200">{item.label}</span>
-            </div>
-          ))}
         </div>
       </section>
 

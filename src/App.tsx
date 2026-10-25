@@ -1,18 +1,38 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Layout } from './components/Layout';
-import { Home } from './components/Home';
-import { Utilities } from './components/Utilities';
-import { InvoicesAndPayment } from './components/InvoicesAndPayment';
-import { Contract } from './components/Contract';
-import { Profile } from './components/Profile';
-import { PaymentPage } from './components/PaymentPage';
-import { LaundryPage } from './components/LaundryPage';
-import { LoginPage } from './components/LoginPage';
-import { AdminPortal } from './components/AdminPortal';
 import { Icons3DDefs } from './components/Icons3D';
+
+const Home = lazy(() => import('./components/Home').then(module => ({ default: module.Home })));
+const Utilities = lazy(() => import('./components/Utilities').then(module => ({ default: module.Utilities })));
+const InvoicesAndPayment = lazy(() => import('./components/InvoicesAndPayment').then(module => ({ default: module.InvoicesAndPayment })));
+const Contract = lazy(() => import('./components/Contract').then(module => ({ default: module.Contract })));
+const Profile = lazy(() => import('./components/Profile').then(module => ({ default: module.Profile })));
+const PaymentPage = lazy(() => import('./components/PaymentPage').then(module => ({ default: module.PaymentPage })));
+const LaundryPage = lazy(() => import('./components/LaundryPage').then(module => ({ default: module.LaundryPage })));
+const LoginPage = lazy(() => import('./components/LoginPage').then(module => ({ default: module.LoginPage })));
+const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
+
+
+function AppLoading() {
+  return (
+    <main role="status" aria-live="polite" aria-label="Đang tải giao diện" className="flex min-h-svh items-center justify-center px-5 py-10">
+      <div className="liquid-panel w-full max-w-sm space-y-5 p-7">
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="ui-spinner" />
+          <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Đang mở không gian của bạn…</p>
+        </div>
+        <div aria-hidden="true" className="space-y-3">
+          <div className="h-3 w-2/3 rounded-full bg-black/5 dark:bg-white/10" />
+          <div className="h-3 w-full rounded-full bg-black/5 dark:bg-white/10" />
+          <div className="h-24 rounded-2xl border border-white/50 bg-white/20 dark:border-white/10 dark:bg-white/5" />
+        </div>
+      </div>
+    </main>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useApp();
@@ -123,7 +143,9 @@ export default function App() {
       <AppProvider>
         <Icons3DDefs />
         <HashRouter>
-          <AppRoutes />
+          <Suspense fallback={<AppLoading />}>
+            <AppRoutes />
+          </Suspense>
         </HashRouter>
       </AppProvider>
     </ThemeProvider>

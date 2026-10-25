@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   X, 
   Download, 
@@ -12,7 +13,6 @@ import {
   Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { jsPDF } from 'jspdf';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { IconWallet3D } from './Icons3D';
@@ -21,25 +21,28 @@ import { IconWallet3D } from './Icons3D';
 const getCategoryIcon = (type: string) => {
   switch (type) {
     case 'room':
-      return <Building2 size={16} className="text-slate-700 dark:text-slate-300" />;
+      return <Building2 size={16} className="text-slate-700" />;
     case 'electricity':
-      return <Zap size={16} className="text-amber-500 dark:text-amber-400" />;
+      return <Zap size={16} className="text-amber-500" />;
     case 'water':
-      return <Droplet size={16} className="text-sky-500 dark:text-sky-400" />;
+      return <Droplet size={16} className="text-sky-500" />;
     case 'internet':
-      return <Wifi size={16} className="text-blue-500 dark:text-blue-400" />;
+      return <Wifi size={16} className="text-blue-500" />;
     case 'service':
-      return <ShieldCheck size={16} className="text-emerald-500 dark:text-emerald-400" />;
+      return <ShieldCheck size={16} className="text-emerald-500" />;
     case 'parking':
-      return <Bike size={16} className="text-indigo-500 dark:text-indigo-400" />;
+      return <Bike size={16} className="text-indigo-500" />;
     default:
-      return <ReceiptText size={16} className="text-neutral-700 dark:text-neutral-200" />;
+      return <ReceiptText size={16} className="text-neutral-700" />;
   }
 };
 
 export function InvoiceDetailModal() {
   const navigate = useNavigate();
   const { viewingInvoice, closeInvoiceDetailModal, profile, paymentGateStatus } = useApp();
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   if (!viewingInvoice) return null;
 
@@ -51,7 +54,12 @@ export function InvoiceDetailModal() {
     return amount.toLocaleString('vi-VN');
   };
 
-  const handleDownloadInvoicePDF = () => {
+  const handleDownloadInvoicePDF = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportError('');
+    try {
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
     // Header
@@ -124,6 +132,11 @@ export function InvoiceDetailModal() {
     doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
     
     doc.save(`HoaDon_PhongLan_${viewingInvoice.month.replace('/', '_')}.pdf`);
+    } catch {
+      setExportError('Chưa tạo được PDF. Vui lòng thử lại.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handlePayNow = () => {
@@ -134,27 +147,28 @@ export function InvoiceDetailModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/25 backdrop-blur-md animate-in fade-in duration-200"
       onClick={closeInvoiceDetailModal}
     >
       <div 
-        className="w-full max-w-lg liquid-panel rounded-3xl flex flex-col max-h-[76vh] sm:max-h-[82vh] mb-14 sm:mb-0 overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        role="dialog" aria-modal="true" aria-labelledby="invoice-detail-title"
+        className="w-full max-w-lg invoice-paper bg-white rounded-3xl flex flex-col max-h-[82dvh] sm:max-h-[86dvh] mb-14 sm:mb-0 overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/10 dark:bg-white/[0.025] backdrop-blur-md">
+        <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-3">
             <IconWallet3D size={42} className="shrink-0" />
             <div>
-              <h3 className="type-h3 text-slate-900 dark:text-white font-bold">Hóa đơn Tháng {viewingInvoice.month}</h3>
-              <p className="type-caption text-neutral-600 dark:text-neutral-300 font-num">Mã số: {viewingInvoice.id}</p>
+              <h3 id="invoice-detail-title" className="type-h3 text-slate-900 font-bold">Hóa đơn Tháng {viewingInvoice.month}</h3>
+              <p className="type-caption text-neutral-600 font-num">Mã số: {viewingInvoice.id}</p>
             </div>
           </div>
 
           <button 
             type="button"
             onClick={closeInvoiceDetailModal}
-            className="w-9 h-9 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/35 text-neutral-700 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -165,41 +179,41 @@ export function InvoiceDetailModal() {
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
           
           {/* Summary Box */}
-          <div className="p-3.5 sm:p-4 rounded-2xl liquid-panel-subtle border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">
             <div>
-              <span className="text-[10px] uppercase font-bold text-neutral-600 dark:text-neutral-300 block">Tổng tiền</span>
-              <span className="type-h2 font-num font-bold text-slate-900 dark:text-white">
+              <span className="text-xs uppercase font-bold text-neutral-600 block">Tổng tiền</span>
+              <span className="type-h2 font-num font-bold text-slate-900">
                 {formatCurrency(viewingInvoice.total)} ₫
               </span>
             </div>
             <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-neutral-600 dark:text-neutral-300 block">Hạn thanh toán</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 font-num">{viewingInvoice.dueDate}</span>
+              <span className="text-xs uppercase font-bold text-neutral-600 block">Hạn thanh toán</span>
+              <span className="font-semibold text-slate-800 font-num">{viewingInvoice.dueDate}</span>
             </div>
           </div>
 
           {/* Details breakdown */}
           <div className="space-y-2">
-            <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider block">Chi tiết khoản phí</span>
+            <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider block">Chi tiết khoản phí</span>
             
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden liquid-panel-subtle">
+            <div className="divide-y divide-neutral-200 border border-slate-100 rounded-2xl overflow-hidden bg-white">
               {viewingInvoice.details.map((detail, idx) => {
                 return (
-                  <div key={idx} className="p-2.5 sm:p-3 flex items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div key={idx} className="p-2.5 sm:p-3 flex items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                         {getCategoryIcon(detail.type)}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-slate-900 dark:text-slate-100 truncate leading-tight">{detail.name}</p>
+                        <p className="font-bold text-slate-900 truncate leading-tight">{detail.name}</p>
                         {detail.metric && (
-                          <p className="text-[10px] text-neutral-600 dark:text-neutral-300 font-num mt-0.5">{detail.metric}</p>
+                          <p className="text-xs text-neutral-600 font-num mt-0.5">{detail.metric}</p>
                         )}
                       </div>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="font-bold text-slate-900 dark:text-white font-num">
+                      <span className="font-bold text-slate-900 font-num">
                         {formatCurrency(detail.amount)} ₫
                       </span>
                     </div>
@@ -209,13 +223,15 @@ export function InvoiceDetailModal() {
             </div>
           </div>
 
+          {exportError && <p role="alert" className="text-sm text-red-700">{exportError}</p>}
+
           {/* Note */}
-          <div className="p-3 rounded-xl liquid-panel-subtle border border-transparent dark:border-slate-800 text-[11px] text-neutral-700 dark:text-neutral-200">
+          <div className="p-3 rounded-xl bg-white border border-transparent text-xs text-neutral-700">
             {isPaid && (
-              <p className="text-emerald-700 dark:text-emerald-400 font-medium">✓ Đã thanh toán đầy đủ ({viewingInvoice.paidAt || 'Đã ghi nhận trên Google Sheet'}).</p>
+              <p className="text-emerald-700 font-medium">✓ Đã thanh toán đầy đủ ({viewingInvoice.paidAt || 'Đã ghi nhận trên Google Sheet'}).</p>
             )}
             {isPending && (
-              <p className="text-amber-700 dark:text-amber-400 font-medium">⏳ Đã ghi nhận giao dịch. Đang chờ Ban Quản Lý đối soát và cập nhật trên Google Sheet.</p>
+              <p className="text-amber-700 font-medium">⏳ Đã ghi nhận giao dịch. Đang chờ Ban Quản Lý đối soát và cập nhật trên Google Sheet.</p>
             )}
             {isUnpaid && (
               <p>• Hóa đơn đã được gửi qua ứng dụng. Vui lòng thanh toán trước hạn {viewingInvoice.dueDate}.</p>
@@ -224,15 +240,16 @@ export function InvoiceDetailModal() {
         </div>
 
         {/* Footer Actions */}
-        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white/10 dark:bg-white/[0.025] flex items-center justify-between gap-2.5 sm:gap-3">
+        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-slate-100 bg-white flex items-center justify-between gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={handleDownloadInvoicePDF}
-            className="flex-1 sm:flex-initial soft-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 text-slate-700 dark:text-slate-200 cursor-pointer font-semibold active:scale-95 transition-all"
+            disabled={isExporting}
+            className="flex-1 sm:flex-initial soft-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 text-slate-700 cursor-pointer font-semibold active:scale-95 transition-all"
             title="Tải hóa đơn dạng tệp PDF"
           >
             <Download size={14} />
-            <span className="truncate">Tải hóa đơn (PDF)</span>
+            <span className="truncate">{isExporting ? 'Đang tạo PDF…' : 'Tải hóa đơn (PDF)'}</span>
           </button>
 
           {isUnpaid ? (
@@ -258,7 +275,7 @@ export function InvoiceDetailModal() {
             <button
               type="button"
               onClick={closeInvoiceDetailModal}
-              className="soft-button text-xs py-2.5 px-5 text-slate-700 dark:text-slate-200 cursor-pointer font-medium"
+              className="soft-button text-xs py-2.5 px-5 text-slate-700 cursor-pointer font-medium"
             >
               Đóng
             </button>

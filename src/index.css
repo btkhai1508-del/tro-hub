@@ -203,7 +203,7 @@
 }
 
 
-/* Reference: the supplied Gradient Background #4 / #4-1. No global color filter. */
+/* Reference: the supplied Gradient Background #4 / #4-1 at 90%. No global color filter. */
 .app-wallpaper { background: #fafafa; }
 .dark .app-wallpaper { background: #050505; }
 .wallpaper-art {
@@ -215,12 +215,52 @@
   object-position: right top;
   /* Crop the presentation frame in the supplied SVG; keep its gradient artwork. */
   transform: scale(1.08);
-  opacity: 0.65;
+  opacity: 0.90;
   user-select: none;
 }
 .wallpaper-art-dark { display: none; }
 .dark .wallpaper-art-light { display: none; }
 .dark .wallpaper-art-dark { display: block; }
+
+
+/* Reading surfaces stay opaque white, independently of the global theme. */
+.invoice-paper { background: #fff; color: #171717; border: 1px solid #e5e5e5; box-shadow: 0 24px 80px -24px rgba(0, 0, 0, 0.4); }
+.invoice-paper .type-h2, .invoice-paper .type-h3 { color: #171717; }
+.invoice-paper .soft-button { background: #fff; color: #262626; border-color: #d4d4d4; }
+.invoice-paper .primary-button { background: linear-gradient(#292929, #101010); color: #fff; }
+.invoice-paper .soft-button:hover { background: #f5f5f5; }
+.invoice-paper .primary-button:hover { background: #262626; }
+
+.ui-page-enter { animation: ui-page-appear 240ms var(--liquid-ease) backwards; }
+.ui-spinner {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ui-spin 700ms linear infinite;
+}
+.ui-skeleton {
+  border-radius: 1rem;
+  background: linear-gradient(100deg, rgba(120, 120, 120, 0.08) 20%, rgba(120, 120, 120, 0.18) 50%, rgba(120, 120, 120, 0.08) 80%);
+  background-size: 200% 100%;
+  animation: ui-shimmer 1.4s ease-in-out infinite;
+}
+.dark .ui-skeleton { background-image: linear-gradient(100deg, rgba(255,255,255,0.05) 20%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.05) 80%); }
+.animate-in {
+  --ui-enter-opacity: 1;
+  --ui-enter-scale: 1;
+  --ui-enter-y: 0px;
+  animation: ui-enter 200ms var(--liquid-ease) backwards;
+}
+.fade-in { --ui-enter-opacity: 0; }
+.zoom-in-95 { --ui-enter-scale: 0.95; }
+.slide-in-from-top-2 { --ui-enter-y: -8px; }
+@keyframes ui-page-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ui-enter { from { opacity: var(--ui-enter-opacity); transform: translateY(var(--ui-enter-y)) scale(var(--ui-enter-scale)); } to { opacity: 1; transform: none; } }
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+@keyframes ui-shimmer { to { background-position: -200% 0; } }
 
 @keyframes liquid-appear {
   from { opacity: 0; translate: 0 8px; }

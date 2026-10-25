@@ -5,8 +5,13 @@ import fs from 'fs';
 import { defineConfig, type Plugin } from 'vite';
 
 function zaloMiniAppAutoConfigPlugin(): Plugin {
+  let entryFileName: string | undefined;
   return {
     name: 'zalo-mini-app-auto-config',
+    generateBundle(_options, bundle) {
+      const entry = Object.values(bundle).find(item => item.type === 'chunk' && item.isEntry);
+      if (entry?.type === 'chunk') entryFileName = path.basename(entry.fileName);
+    },
     closeBundle() {
       const distDir = path.resolve(import.meta.dirname, 'dist');
       if (!fs.existsSync(distDir)) return;
@@ -17,7 +22,8 @@ function zaloMiniAppAutoConfigPlugin(): Plugin {
       const cssFiles = files.filter(f => f.endsWith('.css')).map(f => `assets/${f}`);
       
       // Main entry script must have .module.js so Zalo loads it as an ES Module (<script type="module">)
-      const mainJs = files.find(f => f.startsWith('index') && f.endsWith('.module.js'))
+      const mainJs = entryFileName
+        || files.find(f => f.startsWith('index') && f.endsWith('.module.js'))
         || files.find(f => f.endsWith('.module.js'))
         || files.find(f => f.startsWith('index') && f.endsWith('.js'));
 

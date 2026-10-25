@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { jsPDF } from 'jspdf';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { saveQrToDevice } from '../lib/qrHelper';
@@ -33,6 +32,8 @@ export function PaymentPage() {
   });
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [pdfError, setPdfError] = useState('');
 
   // Single-execution flag to prevent repeated looping
   const isCompletedRef = useRef(isAlreadyPaid || paymentMode === 'success');
@@ -139,7 +140,12 @@ export function PaymentPage() {
     };
   }, [hasInvoice, profile.room?.roomNumber, targetInvoice.id, targetInvoice.month, setInvoices]);
 
-  const handleDownloadInvoicePDF = () => {
+  const handleDownloadInvoicePDF = async () => {
+    if (isExportingPDF) return;
+    setIsExportingPDF(true);
+    setPdfError('');
+    try {
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
     // Header
@@ -207,6 +213,11 @@ export function PaymentPage() {
     doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
     
     doc.save(`HoaDon_PhongLan_${targetInvoice.month.replace('/', '_')}.pdf`);
+    } catch {
+      setPdfError('Chưa tạo được PDF. Vui lòng thử lại.');
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   const recipientName = 'Bùi Trung Khải';
@@ -255,6 +266,7 @@ export function PaymentPage() {
           <p className="mt-0.5 text-sm font-medium text-neutral-700 dark:text-neutral-200">Hóa đơn tháng {targetInvoice.month}</p>
         </div>
       </header>
+      {pdfError && <p role="alert" className="mx-auto max-w-5xl text-sm text-red-700 dark:text-red-300">{pdfError}</p>}
       <AnimatePresence mode="wait">
         {paymentMode === 'processing' ? (
           /* =========================================================================
@@ -381,10 +393,11 @@ export function PaymentPage() {
                 <button 
                   type="button"
                   onClick={handleDownloadInvoicePDF}
+                  disabled={isExportingPDF}
                   className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-900 dark:text-white border border-gray-200 dark:border-neutral-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
                 >
                   <Download size={18} />
-                  <span>Tải biên lai (PDF)</span>
+                  <span>{isExportingPDF ? 'Đang tạo PDF…' : 'Tải biên lai (PDF)'}</span>
                 </button>
               </div>
 
