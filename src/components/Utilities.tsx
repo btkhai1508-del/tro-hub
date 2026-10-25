@@ -1,239 +1,73 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowUpRight, ChevronRight, Compass, FileText, House, KeyRound, ReceiptText, ShieldCheck, UserRound, WashingMachine, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { 
-  IconHome3D, 
-  IconWallet3D, 
-  IconContract3D,
-  IconProfile3D,
-  IconGuide3D,
-  IconKey3D,
-  IconLaundry3D
-} from './Icons3D';
-import { KeyRound, Compass, X, ChevronRight, ShieldCheck, HelpCircle } from 'lucide-react';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
 import { UtilityDetailModal, UtilityModalType } from './UtilityDetailModal';
 
 export function Utilities() {
   const navigate = useNavigate();
-  const { 
-    profile, 
-    invoices, 
-    openContractModal,
-    openProfileEditModal,
-    openTourGuide 
-  } = useApp();
-
+  const { profile, invoices, openContractModal, openProfileEditModal, openTourGuide } = useApp();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isAccountGuideOpen, setIsAccountGuideOpen] = useState(false);
   const [activeModalType, setActiveModalType] = useState<UtilityModalType>(null);
-
-  const unpaidInvoices = invoices.filter(i => i.status === 'unpaid');
-  const unpaidCount = unpaidInvoices.length;
-
+  const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
   const utilitiesList = [
-    {
-      id: 'invoices',
-      title: 'Hóa đơn thanh toán',
-      desc: unpaidCount > 0 ? `${unpaidCount} hóa đơn cần đóng` : 'Đã hoàn tất thanh toán',
-      Icon: IconWallet3D,
-      action: () => navigate('/invoices')
-    },
-    {
-      id: 'contract',
-      title: 'Hợp đồng thuê phòng',
-      desc: 'Hợp đồng điện tử lưu trú',
-      Icon: IconContract3D,
-      action: () => openContractModal()
-    },
-    {
-      id: 'profile',
-      title: 'Thông tin cá nhân',
-      desc: `${profile.name || 'Cư dân'} · P.${profile.room?.roomNumber || '203'}`,
-      Icon: IconProfile3D,
-      action: () => openProfileEditModal()
-    },
-    {
-      id: 'laundry',
-      title: 'Giặt Sấy Tự Động 24/7',
-      desc: 'Máy giặt & sấy tự phục vụ quét mã QR',
-      Icon: IconLaundry3D,
-      action: () => navigate('/laundry')
-    },
-    {
-      id: 'account_guide',
-      title: 'Tài khoản & Hướng dẫn',
-      desc: 'Đổi mật khẩu & Khám phá ứng dụng',
-      Icon: IconGuide3D,
-      action: () => setIsAccountGuideOpen(true)
-    }
+    { id: 'invoices', title: 'Hóa đơn & thanh toán', desc: unpaidCount > 0 ? `${unpaidCount} hóa đơn cần thanh toán` : 'Theo dõi chi phí và lịch sử thanh toán', Icon: ReceiptText, color: 'bg-blue-500/10 text-blue-600 dark:text-blue-300', action: () => navigate('/invoices') },
+    { id: 'contract', title: 'Hợp đồng thuê phòng', desc: 'Văn bản và thông tin lưu trú', Icon: FileText, color: 'bg-violet-500/10 text-violet-600 dark:text-violet-300', action: openContractModal },
+    { id: 'profile', title: 'Thông tin cá nhân', desc: 'Hồ sơ, phương tiện và liên hệ', Icon: UserRound, color: 'bg-orange-500/10 text-orange-600 dark:text-orange-300', action: openProfileEditModal },
+    { id: 'account_guide', title: 'Tài khoản & trợ giúp', desc: 'Mật khẩu và hướng dẫn sử dụng', Icon: ShieldCheck, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300', action: () => setIsAccountGuideOpen(true) },
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-7 sm:space-y-9 pt-2">
+      <header className="flex items-center justify-between gap-4">
         <div>
-          <span className="type-label text-slate-400">Dịch vụ & Tiện ích cư dân</span>
-          <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">
-            Tiện ích
-          </h1>
-          <p className="type-body text-slate-500 dark:text-slate-400 mt-1">
-            Quản lý hóa đơn thanh toán, hợp đồng, hồ sơ cá nhân và hướng dẫn sử dụng.
-          </p>
+          <p className="liquid-eyebrow mb-2">CUỘC SỐNG THUẬN TIỆN HƠN</p>
+          <h1 className="text-[29px] sm:text-[36px] font-semibold tracking-[-0.045em] leading-tight text-slate-950 dark:text-white">Tiện ích<span className="text-blue-500">.</span></h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Một chạm cho những điều thường ngày.</p>
         </div>
+        <div className="liquid-panel-subtle rounded-full hidden sm:flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200"><House size={16} strokeWidth={1.7} />{profile.room.roomNumber || 'Phòng của bạn'}</div>
+      </header>
 
-        {/* Quick Room badge matching site template */}
-        <div className="flex items-center gap-3">
-          <div className="soft-card px-4 py-2 flex items-center gap-3.5 border border-white/80 dark:border-white/10">
-            <IconHome3D size={38} className="shrink-0" />
-            <div>
-              <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-semibold block tracking-wider">Phòng của tôi</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 font-num">
-                {profile.room.roomNumber} ({profile.room.building || 'Trung Kim'})
-              </span>
-            </div>
+      <section data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+        <button type="button" onClick={() => navigate('/laundry')} className="lg:col-span-2 liquid-panel p-6 sm:p-8 relative overflow-hidden text-left group flex flex-col justify-between min-h-[290px]">
+          <div aria-hidden="true" className="absolute w-64 h-64 -right-24 -top-20 rounded-full bg-cyan-300/25 dark:bg-cyan-500/10 blur-3xl" />
+          <div className="relative flex items-center justify-between"><span className="liquid-chip inline-flex items-center gap-1.5 text-xs text-cyan-700 dark:text-cyan-300"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />Dịch vụ cư dân</span><ArrowUpRight size={20} className="text-slate-400 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" /></div>
+          <div className="relative mt-8 mb-7 flex items-center gap-5">
+            <div className="glass-icon h-20 w-20 rounded-[27px] text-cyan-700 dark:text-cyan-300 shrink-0"><WashingMachine size={40} strokeWidth={1.25} /></div>
+            <div><h2 className="text-[27px] font-semibold tracking-[-0.04em] text-slate-900 dark:text-white">Giặt sạch.<br />Sống nhẹ.</h2></div>
+          </div>
+          <div className="relative"><p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Xem máy giặt, máy sấy và đặt lịch ngay trong ứng dụng.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-300">Khám phá giặt sấy <ChevronRight size={16} /></span></div>
+        </button>
+
+        <div className="lg:col-span-3 liquid-panel p-2 sm:p-3">
+          <div className="px-4 pt-3 pb-2"><h2 className="liquid-eyebrow">PHÒNG THUÊ & TÀI KHOẢN</h2></div>
+          {utilitiesList.map(({ id, title, desc, Icon, color, action }) => <button key={id} type="button" onClick={action} className="w-full flex items-center gap-3 sm:gap-4 p-4 rounded-[22px] text-left hover:bg-white/55 dark:hover:bg-white/5 transition-colors group">
+            <span className={`h-12 w-12 flex items-center justify-center rounded-[17px] shrink-0 ${color}`}><Icon size={23} strokeWidth={1.65} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</span><span className="block mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{desc}</span></span>
+            <ChevronRight size={17} className="text-slate-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </button>)}
+        </div>
+      </section>
+
+      <button type="button" onClick={openTourGuide} className="liquid-panel-subtle rounded-[26px] p-5 sm:p-6 w-full flex items-center gap-4 text-left group">
+        <span className="glass-icon h-11 w-11 rounded-2xl shrink-0 text-blue-600 dark:text-blue-300"><Compass size={21} strokeWidth={1.6} /></span>
+        <span className="flex-1"><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">Lần đầu dùng Trọ-Hub?</span><span className="block mt-1 text-xs text-slate-500 dark:text-slate-400">Khám phá nhanh các tính năng dành cho bạn.</span></span>
+        <ArrowUpRight size={18} className="text-slate-400 shrink-0 group-hover:text-blue-500 transition-colors" />
+      </button>
+
+      {isAccountGuideOpen && <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/30 backdrop-blur-md" onClick={() => setIsAccountGuideOpen(false)}>
+        <div role="dialog" aria-modal="true" aria-labelledby="account-guide-title" className="liquid-panel w-full max-w-md p-5 sm:p-7 space-y-5" onClick={e => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-4"><div><span className="liquid-eyebrow">DÀNH RIÊNG CHO BẠN</span><h2 id="account-guide-title" className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white mt-2">Tài khoản & trợ giúp</h2></div><button autoFocus type="button" aria-label="Đóng" onClick={() => setIsAccountGuideOpen(false)} className="soft-button h-10 w-10 flex items-center justify-center shrink-0"><X size={18} /></button></div>
+          <div className="space-y-2">
+            <button type="button" onClick={() => { setIsAccountGuideOpen(false); setIsPasswordModalOpen(true); }} className="liquid-panel-subtle rounded-[20px] p-4 w-full flex items-center gap-3 text-left"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-amber-500/10 text-amber-600 dark:text-amber-300 shrink-0"><KeyRound size={19} /></span><span className="flex-1"><span className="text-sm font-semibold text-slate-900 dark:text-white block">Đổi mật khẩu</span><span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">Quản lý mật khẩu tài khoản</span></span><ChevronRight size={17} className="text-slate-400" /></button>
+            <button type="button" onClick={() => { setIsAccountGuideOpen(false); openTourGuide(); }} className="liquid-panel-subtle rounded-[20px] p-4 w-full flex items-center gap-3 text-left"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-blue-500/10 text-blue-600 dark:text-blue-300 shrink-0"><Compass size={19} /></span><span className="flex-1"><span className="text-sm font-semibold text-slate-900 dark:text-white block">Hướng dẫn sử dụng</span><span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">Làm quen với không gian cư dân</span></span><ChevronRight size={17} className="text-slate-400" /></button>
           </div>
         </div>
-      </div>
-
-      {/* 3D Glassmorphism Utility Cards Grid (matching Home payment card elements: soft-surface, 3D glow & glass sheen) */}
-      <div data-tutorial="utilities-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {utilitiesList.map((item) => {
-          const Icon = item.Icon;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={item.action}
-              className="soft-surface group relative flex flex-col items-center text-center justify-between p-6 sm:p-7 rounded-[28px] hover:-translate-y-1.5 active:translate-y-0 transition-all duration-300 cursor-pointer min-h-[185px] overflow-hidden select-none"
-            >
-              {/* Subtle 3D Glass top sheen reflection */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-
-              {/* 3D Icon - Direct without background box */}
-              <div className="mt-2 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Icon size={58} className="shrink-0 drop-shadow-md" />
-              </div>
-
-              {/* Text Content */}
-              <div className="w-full mt-3.5">
-                <h3 className="text-sm sm:text-[15px] font-bold text-slate-900 dark:text-white line-clamp-1 leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {item.title}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 leading-snug">
-                  {item.desc}
-                </p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Combined Modal: Đổi mật khẩu & Hướng dẫn sử dụng */}
-      {isAccountGuideOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setIsAccountGuideOpen(false)}
-        >
-          <div 
-            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Tài khoản & Trợ giúp
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Bảo mật tài khoản cư dân và hướng dẫn sử dụng
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsAccountGuideOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {/* Option 1: Đổi mật khẩu */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAccountGuideOpen(false);
-                  setIsPasswordModalOpen(true);
-                }}
-                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between group transition-all text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                    <KeyRound size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                      Đổi mật khẩu tài khoản
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Cập nhật mật khẩu để bảo vệ thông tin cá nhân
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-
-              {/* Option 2: Hướng dẫn sử dụng */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAccountGuideOpen(false);
-                  openTourGuide();
-                }}
-                className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between group transition-all text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Compass size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      Hướng dẫn sử dụng hệ thống
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Khởi chạy tour tương tác khám phá các tính năng
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Password Update Modal */}
-      <PasswordUpdateModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-      />
-
-      {/* Dedicated Utility Detail Modal */}
-      <UtilityDetailModal
-        type={activeModalType}
-        isOpen={Boolean(activeModalType)}
-        onClose={() => setActiveModalType(null)}
-        onOpenContract={openContractModal}
-      />
-
+      </div>}
+      <PasswordUpdateModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
+      <UtilityDetailModal type={activeModalType} isOpen={Boolean(activeModalType)} onClose={() => setActiveModalType(null)} onOpenContract={openContractModal} />
     </div>
   );
 }

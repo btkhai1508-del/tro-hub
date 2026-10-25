@@ -29,9 +29,7 @@ import { soundFx } from '../lib/soundFx';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { 
   IconLaundry3D, 
-  IconDryer3D, 
-  IconHome3D, 
-  IconClock3D
+  IconDryer3D
 } from './Icons3D';
 
 interface Machine {
@@ -251,7 +249,7 @@ export function LaundryPage() {
   const dryerCount = machines.filter(m => m.type === 'DRYER').length;
 
   return (
-    <div className="w-full flex flex-col items-center select-none pb-16">
+    <div className="w-full flex flex-col items-center pb-6">
       
       <AnimatePresence mode="wait">
         
@@ -267,7 +265,7 @@ export function LaundryPage() {
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-4"
           >
-            <main className="w-full max-w-[500px] bg-white dark:bg-[#101726] rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
+            <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
               
               {/* Success Badge Icon */}
               <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
@@ -369,7 +367,7 @@ export function LaundryPage() {
             className="w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
-            <main className="hidden lg:block w-full max-w-5xl bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 p-8 lg:p-10 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.5)] transition-colors">
+            <main className="liquid-panel hidden lg:block w-full max-w-5xl p-8 lg:p-10 relative">
               
               {/* Top Bar: Back button to return to machine list */}
               <div className="mb-4 flex items-center justify-between">
@@ -380,7 +378,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-10 h-10 flex items-center justify-center text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-slate-800 active:scale-95 rounded-full transition-all duration-150 cursor-pointer -ml-2"
+                  className="soft-button w-11 h-11 flex items-center justify-center text-blue-600 dark:text-blue-400 active:scale-95 transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
@@ -397,7 +395,7 @@ export function LaundryPage() {
                 {/* Left Column: Title, Subtitles, Straight Square Pure QR Code */}
                 <div className="col-span-6 flex flex-col items-center text-center">
                   <div className="mb-3">
-                    <h1 className="text-[28px] font-bold tracking-tight text-black dark:text-white leading-tight">
+                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white leading-tight">
                       QR Kích hoạt {selectedMachine.type === 'WASHER' ? 'máy giặt' : 'máy sấy'}
                     </h1>
                     <p className="text-[14px] text-neutral-500 dark:text-slate-400 font-normal mt-1 leading-relaxed">
@@ -425,7 +423,7 @@ export function LaundryPage() {
                       type="button"
                       onClick={handleSaveQR}
                       disabled={isSavingQR}
-                      className="w-full py-2.5 px-3 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                      className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
@@ -439,7 +437,7 @@ export function LaundryPage() {
                     <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
                       Chi tiết giao dịch
                     </h2>
-                    <div className="bg-[#f8f9fa] dark:bg-[#162032] rounded-2xl p-4 sm:p-5 border border-[#ededf0] dark:border-slate-750 space-y-3">
+                    <div className="liquid-panel-subtle p-4 sm:p-5 space-y-4">
                       <div className="flex items-center justify-between text-[14px]">
                         <span className="text-neutral-500 dark:text-slate-400 font-normal">Thiết bị</span>
                         <span className="font-bold text-black dark:text-white">
@@ -517,7 +515,7 @@ export function LaundryPage() {
             </main>
 
             {/* 2. MOBILE VIEW (under lg): Compact, Straight Pure QR Code */}
-            <div className="lg:hidden w-full max-w-[390px] bg-white dark:bg-[#101726] rounded-[26px] border border-gray-200/80 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between px-4 pt-3.5 pb-4 relative transition-colors">
+            <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col justify-between px-5 pt-4 pb-5 relative">
               {/* Mobile Top Navigation */}
               <header className="w-full flex items-center justify-between mb-1.5">
                 <button 
@@ -527,7 +525,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-8 h-8 flex items-center justify-center text-black dark:text-white active:opacity-60 transition-opacity cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center text-blue-600 dark:text-blue-400 active:opacity-60 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
@@ -562,7 +560,7 @@ export function LaundryPage() {
                     type="button"
                     onClick={handleSaveQR}
                     disabled={isSavingQR}
-                    className="w-full py-2 px-2.5 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ImageDown size={14} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
@@ -571,8 +569,8 @@ export function LaundryPage() {
               </section>
 
               {/* Mobile Payment Details */}
-              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-1.5 my-1 text-xs">
-                <div className="bg-[#f8f9fa] dark:bg-[#162032] rounded-xl p-2.5 border border-[#ededf0] dark:border-slate-800 space-y-1.5">
+              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
+                <div className="liquid-panel-subtle p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-500 dark:text-slate-400">Thiết bị</span>
                     <span className="font-bold text-black dark:text-white truncate max-w-[200px]">
@@ -624,7 +622,7 @@ export function LaundryPage() {
                 {/* Total Line */}
                 <div className="flex items-center justify-between px-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                   <span className="text-[13px] font-medium text-neutral-500 dark:text-slate-400">Tổng tiền</span>
-                  <span className="text-[20px] font-bold text-black dark:text-white tracking-tight font-num">
+                  <span className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight font-num">
                     {formatCurrency(selectedMachine.price)} ₫
                   </span>
                 </div>
@@ -816,60 +814,28 @@ export function LaundryPage() {
             transition={{ duration: 0.15 }}
             className="w-full space-y-6"
           >
-            {/* Top Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start sm:items-center gap-3.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    soundFx.click();
-                    navigate(-1);
-                  }}
-                  className="soft-button p-2.5 cursor-pointer text-slate-700 dark:text-slate-200 hover:text-slate-900 shrink-0 mt-1 sm:mt-0"
-                  title="Quay lại"
-                >
-                  <ArrowLeft size={18} />
-                </button>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="type-label text-slate-400">Dịch vụ & Tiện ích cư dân</span>
-                    <span className="text-slate-300 dark:text-slate-700">·</span>
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Tự phục vụ 24/7</span>
-                    </span>
-                  </div>
-                  <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">
-                    Giặt Sấy Tự Động
-                  </h1>
-                  <p className="type-body text-slate-500 dark:text-slate-400 mt-0.5">
-                    Hệ thống máy giặt sấy thông minh kích hoạt tức thì qua mã VietQR.
-                  </p>
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="mb-3 flex items-center gap-2">
+                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-9 w-9 items-center justify-center text-blue-600 dark:text-blue-400"><ArrowLeft size={16} /></button>
+                  <span className="liquid-eyebrow">DỊCH VỤ CƯ DÂN</span>
                 </div>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Giặt sấy, thật nhẹ nhàng.</h1>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Chọn máy, quét mã và dành thời gian cho điều bạn thích.</p>
               </div>
-
-              {/* Quick Room badge */}
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="soft-card px-4 py-2 flex items-center gap-3.5 border border-white/80 dark:border-white/10">
-                  <IconHome3D size={38} className="shrink-0" />
-                  <div>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-semibold block tracking-wider">Phòng của tôi</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100 font-num">
-                      {profile.room.roomNumber} ({profile.room.building || 'Trung Kim'})
-                    </span>
-                  </div>
-                </div>
+              <div className="liquid-chip inline-flex items-center gap-2 self-start px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+                <Home size={14} className="text-blue-500" /><span>{profile.room.roomNumber || 'Phòng của bạn'}</span><span aria-hidden="true" className="text-slate-300 dark:text-slate-600">/</span><span>Tự phục vụ 24/7</span>
               </div>
-            </div>
+            </header>
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40">
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">
                     Máy sẵn sàng
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-slate-900 dark:text-white block mt-0.5">
@@ -878,12 +844,12 @@ export function LaundryPage() {
                 </div>
               </div>
 
-              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 border border-sky-100 dark:border-sky-800/40">
-                  <IconClock3D size={34} />
+                  <Clock size={23} strokeWidth={1.7} />
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">
                     Đang hoạt động
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-sky-600 dark:text-sky-400 block mt-0.5">
@@ -892,12 +858,12 @@ export function LaundryPage() {
                 </div>
               </div>
 
-              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-sky-50/70 dark:bg-sky-950/30 flex items-center justify-center shrink-0 border border-sky-100/60 dark:border-sky-800/30">
-                  <IconLaundry3D size={36} />
+                  <WashingMachine size={23} strokeWidth={1.7} className="text-blue-500" />
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">
                     Máy giặt cửa trước
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-slate-900 dark:text-white block mt-0.5">
@@ -906,12 +872,12 @@ export function LaundryPage() {
                 </div>
               </div>
 
-              <div className="soft-card p-4 sm:p-5 flex items-center gap-3.5 relative overflow-hidden group">
+              <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 flex items-center justify-center shrink-0 border border-amber-100/60 dark:border-amber-800/30">
-                  <IconDryer3D size={36} />
+                  <Sparkles size={23} strokeWidth={1.7} className="text-amber-500" />
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold block tracking-wider">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">
                     Máy sấy thông hơi
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-slate-900 dark:text-white block mt-0.5">
@@ -923,11 +889,11 @@ export function LaundryPage() {
 
             {/* Apple Segmented Tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/80 rounded-2xl backdrop-blur-md w-fit">
+              <div className="flex w-full sm:w-fit items-center gap-1 rounded-[20px] border border-slate-200/50 dark:border-white/5 bg-slate-200/40 dark:bg-black/20 p-1">
                 {[
-                  { key: 'machines', label: 'Danh sách máy giặt & sấy', icon: WashingMachine },
-                  { key: 'booking', label: 'Đặt lịch trước', icon: CalendarClock },
-                  { key: 'rules', label: 'Quy định & Bảng giá', icon: BookOpen }
+                  { key: 'machines', label: 'Chọn máy', icon: WashingMachine },
+                  { key: 'booking', label: 'Đặt lịch', icon: CalendarClock },
+                  { key: 'rules', label: 'Bảng giá', icon: BookOpen }
                 ].map(t => {
                   const Icon = t.icon;
                   const isActive = activeTab === t.key;
@@ -935,14 +901,15 @@ export function LaundryPage() {
                     <button
                       key={t.key}
                       type="button"
+                      aria-pressed={isActive}
                       onClick={() => {
                         soundFx.tab();
                         setActiveTab(t.key as any);
                       }}
                       className={cn(
-                        "px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
+                        "min-h-11 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-medium flex justify-center items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap",
                         isActive
-                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                          ? "bg-white dark:bg-slate-700/80 text-blue-600 dark:text-blue-300 shadow-sm"
                           : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                       )}
                     >
@@ -981,14 +948,15 @@ export function LaundryPage() {
                       <button
                         key={f.key}
                         type="button"
+                        aria-pressed={activeFilter === f.key}
                         onClick={() => {
                           soundFx.click();
                           setActiveFilter(f.key as any);
                         }}
                         className={cn(
-                          "px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all",
+                          "min-h-10 px-3.5 py-2 rounded-full text-xs font-medium cursor-pointer transition-all",
                           activeFilter === f.key
-                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                            ? "bg-blue-600 text-white dark:bg-blue-500 shadow-sm shadow-blue-500/20"
                             : "soft-button text-slate-600 dark:text-slate-400"
                         )}
                       >

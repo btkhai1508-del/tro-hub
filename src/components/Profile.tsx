@@ -1,296 +1,121 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Bike, 
-  Building, 
-  Calendar, 
-  CreditCard, 
-  Edit3, 
-  PhoneCall, 
-  ShieldAlert, 
-  LogOut,
-  Sun,
-  Moon,
-  Palette,
-  KeyRound
-} from 'lucide-react';
+import { Bike, ChevronRight, ContactRound, Edit3, FileText, House, KeyRound, LogOut, Moon, Settings2, Sun, Sunrise, UserRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
-import { IconProfile3D, IconVehicle3D, IconHome3D, IconClock3D, IconSettings3D } from './Icons3D';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
 import { cn } from '../lib/utils';
 
+function ProfileField({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="min-w-0 py-3.5">
+      <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className={cn('mt-1.5 break-words text-sm leading-relaxed', value?.trim() ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500')}>
+        {value?.trim() || 'Chưa cập nhật'}
+      </dd>
+    </div>
+  );
+}
+
+function ProfileSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; children: React.ReactNode }) {
+  return (
+    <section className="liquid-panel px-5 py-2 sm:px-6">
+      <div className="flex items-center gap-2.5 border-b border-slate-200/50 py-4 dark:border-white/10">
+        <span className="glass-icon h-9 w-9 text-blue-600 dark:text-blue-400"><Icon size={18} strokeWidth={1.8} /></span>
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h2>
+      </div>
+      <dl className="grid grid-cols-1 gap-x-6 pb-2 sm:grid-cols-2">{children}</dl>
+    </section>
+  );
+}
+
 export function Profile() {
   const { profile, openProfileEditModal, openContractModal, logoutUser } = useApp();
-  const { mode, isDark, setMode } = useTheme();
+  const { mode, setMode } = useTheme();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-
-  const renderValue = (val?: string) => {
-    if (!val || !val.trim()) {
-      return <span className="text-slate-400 font-normal italic text-xs">(Chưa cập nhật)</span>;
-    }
-    return val;
-  };
+  const initials = profile.name.trim().split(/\s+/).slice(-2).map(part => part.charAt(0)).join('').toUpperCase() || 'TH';
+  const roomLabel = profile.room.roomNumber ? `Phòng ${profile.room.roomNumber.replace(/^P\.\s*/i, '')}` : 'Chưa xếp phòng';
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 max-w-4xl mx-auto pb-10">
-      
-      {/* Header */}
-      <div>
-        <span className="type-label text-slate-400">Tài khoản & Cá nhân</span>
-        <h1 className="type-h1 text-slate-900 dark:text-white mt-1 font-bold">Hồ sơ cư dân</h1>
-        <p className="type-body text-slate-500 dark:text-slate-400 mt-1">
-          Thông tin hợp đồng, thông tin định danh và phương tiện đã đăng ký với ban quản lý.
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-7 pb-6">
+      <header>
+        <span className="liquid-eyebrow">KHÔNG GIAN CÁ NHÂN</span>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Hồ sơ của bạn</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Thông tin cư trú và những tùy chỉnh dành riêng cho bạn.</p>
+      </header>
 
-      {/* Main Profile Identity Card */}
-      <div className="soft-card p-6 sm:p-8 space-y-7">
-        
-        {/* Top Info Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-slate-100 dark:border-slate-800">
-          <div data-tutorial="profile-id-card" className="flex items-center gap-4">
-            <div className="relative">
-              {profile.avatar && !profile.avatar.includes('unsplash.com') ? (
-                <img 
-                  src={profile.avatar} 
-                  alt={profile.name} 
-                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl object-cover ring-4 ring-white dark:ring-slate-800 shadow-md"
-                />
-              ) : (
-                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center ring-4 ring-white dark:ring-slate-800 shadow-md">
-                  <IconProfile3D size={52} />
-                </div>
-              )}
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-white text-[10px]" title="Đang cư trú">
-                ✓
-              </span>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{profile.name}</h2>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-num mt-0.5">
-                {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : <span className="italic text-slate-400">Chưa xếp phòng</span>}
-              </p>
+      <section data-tutorial="profile-id-card" aria-label="Hồ sơ cư dân" className="liquid-panel relative overflow-hidden p-6 sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+            {profile.avatar && !profile.avatar.includes('unsplash.com') ? (
+              <img src={profile.avatar} alt={profile.name || 'Ảnh đại diện'} className="h-20 w-20 shrink-0 rounded-[26px] object-cover ring-4 ring-white/60 shadow-lg dark:ring-white/10" />
+            ) : (
+              <div aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-gradient-to-br from-blue-400 to-blue-600 text-2xl font-semibold tracking-tight text-white shadow-lg shadow-blue-500/20 ring-4 ring-white/60 dark:ring-white/10">{initials}</div>
+            )}
+            <div className="min-w-0">
+              <span className="liquid-chip mb-2 inline-flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300"><House size={12} />Cư dân Trọ-Hub</span>
+              <h2 className="break-words text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">{profile.name || 'Hồ sơ cư dân'}</h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{roomLabel}{profile.room.building ? ` · ${profile.room.building}` : ''}</p>
             </div>
           </div>
+          <button type="button" onClick={openProfileEditModal} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 text-sm text-blue-600 dark:text-blue-400 sm:self-center"><Edit3 size={16} />Chỉnh sửa hồ sơ</button>
+        </div>
+      </section>
 
-          <div className="flex flex-wrap items-center gap-2 sm:self-center">
-            <button 
-              type="button"
-              onClick={() => setIsPasswordModalOpen(true)}
-              className="soft-button flex items-center gap-1.5 text-slate-800 dark:text-slate-200 text-xs sm:text-sm py-2 px-3 shadow-xs cursor-pointer font-semibold"
-              title="Đổi mật khẩu tài khoản"
-            >
-              <KeyRound size={15} />
-              <span>Đổi mật khẩu</span>
-            </button>
-
-            <button 
-              type="button"
-              onClick={openProfileEditModal}
-              className="soft-button flex items-center gap-2 text-slate-900 text-xs sm:text-sm py-2 px-3.5 shadow-xs cursor-pointer font-semibold"
-            >
-              <Edit3 size={15} />
-              <span>Chỉnh sửa</span>
-            </button>
-
-            <button 
-              type="button"
-              onClick={logoutUser}
-              className="flex items-center gap-1.5 py-2 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-semibold transition-colors cursor-pointer border border-rose-200/60"
-              title="Đăng xuất khỏi tài khoản"
-            >
-              <LogOut size={15} />
-              <span className="hidden sm:inline">Đăng xuất</span>
-            </button>
-          </div>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-5">
+          <ProfileSection icon={UserRound} title="Thông tin cá nhân">
+            <ProfileField label="Họ và tên" value={profile.name} />
+            <ProfileField label="Số điện thoại" value={profile.phone} />
+            <ProfileField label="Email" value={profile.email} />
+            <ProfileField label="CCCD / Hộ chiếu" value={profile.cccd} />
+            <ProfileField label="Ngày sinh" value={profile.dob} />
+            <ProfileField label="Địa chỉ thường trú" value={profile.address} />
+          </ProfileSection>
+          <ProfileSection icon={House} title="Không gian sống">
+            <ProfileField label="Phòng đang thuê" value={profile.room.roomNumber ? roomLabel : ''} />
+            <ProfileField label="Khu nhà" value={profile.room.building} />
+            <ProfileField label="Ngày bắt đầu thuê" value={profile.room.startDate} />
+            <ProfileField label="Tầng" value={profile.room.floor} />
+          </ProfileSection>
+          <ProfileSection icon={Bike} title="Phương tiện đã đăng ký">
+            <ProfileField label="Biển số xe" value={profile.vehicle.plateNumber} />
+            <ProfileField label="Loại phương tiện" value={profile.vehicle.type} />
+          </ProfileSection>
+          <ProfileSection icon={ContactRound} title="Liên hệ khẩn cấp">
+            <ProfileField label="Họ và tên" value={profile.emergencyContact.name} />
+            <ProfileField label="Mối quan hệ" value={profile.emergencyContact.relationship} />
+            <ProfileField label="Số điện thoại" value={profile.emergencyContact.phone} />
+          </ProfileSection>
         </div>
 
-        {/* Section 1: Thông tin cá nhân & định danh */}
-        <div className="space-y-3.5">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">
-            <IconProfile3D size={24} className="shrink-0" />
-            <span>Thông tin cá nhân & định danh</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{profile.name}</span>
+        <div className="space-y-5">
+          <section className="liquid-panel p-5">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="glass-icon h-9 w-9 text-blue-600 dark:text-blue-400"><Settings2 size={18} /></span>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Giao diện</h2>
             </div>
-
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">{profile.phone}</span>
+            <div role="group" aria-label="Chế độ giao diện" className="flex gap-1 rounded-[20px] border border-slate-200/50 bg-slate-200/40 p-1 dark:border-white/5 dark:bg-black/20">
+              {([{ value: 'light', label: 'Sáng', icon: Sun }, { value: 'dark', label: 'Tối', icon: Moon }, { value: 'auto', label: 'Tự động', icon: Sunrise }] as const).map(({ value, label, icon: Icon }) => (
+                <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 py-2 text-xs font-medium transition-colors', mode === value ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700/80 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200')}><Icon size={18} strokeWidth={1.7} />{label}</button>
+              ))}
             </div>
+            <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
+          </section>
 
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Email liên hệ:</span>
-              <span className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block truncate">{renderValue(profile.email)}</span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Số CCCD / Hộ chiếu:</span>
-              <span className="font-bold font-num text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.cccd)}</span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày sinh:</span>
-              <span className="font-bold font-num text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.dob)}</span>
-            </div>
-
-            <div className="sm:col-span-2 lg:col-span-1">
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Địa chỉ thường trú:</span>
-              <span className="font-medium text-slate-900 dark:text-slate-100 text-xs sm:text-sm mt-1 block leading-relaxed">{renderValue(profile.address)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 2: Phương tiện */}
-        <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">
-            <IconVehicle3D size={28} className="shrink-0" />
-            <span>Phương tiện đã đăng ký</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Biển số xe:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block font-num">
-                {renderValue(profile.vehicle.plateNumber)}
-              </span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Loại phương tiện:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.vehicle.type)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Căn hộ đang thuê */}
-        <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">
-            <IconHome3D size={26} className="shrink-0" />
-            <span>Căn hộ đang thuê</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Phòng:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">
-                {profile.room.roomNumber ? `Phòng ${profile.room.roomNumber}` : renderValue('')}
-              </span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 dark:text-slate-400 block text-xs sm:text-[13px] font-medium">Ngày bắt đầu thuê:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 font-num text-sm sm:text-base mt-1 block">{renderValue(profile.room.startDate)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: Liên hệ khẩn cấp */}
-        <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-500 dark:text-slate-300">
-            <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50">
-              <ShieldAlert size={16} />
-            </div>
-            <span>Người liên hệ trong trường hợp khẩn cấp</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/60 dark:bg-slate-800/60 p-5 sm:p-6 rounded-2xl border border-white/90 dark:border-slate-700/80 shadow-[inset_1px_1px_3px_rgba(255,255,255,0.8),2px_2px_8px_rgba(166,175,195,0.08)] dark:shadow-none">
-            <div>
-              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Họ và tên:</span>
-              <span className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.name)}</span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Mối quan hệ:</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.relationship)}</span>
-            </div>
-
-            <div>
-              <span className="text-slate-400 block text-xs sm:text-[13px] font-medium">Số điện thoại khẩn:</span>
-              <span className="font-bold font-num text-rose-600 dark:text-rose-400 text-sm sm:text-base mt-1 block">{renderValue(profile.emergencyContact.phone)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 5: Giao diện & Chế độ sáng tối */}
-        <div className="space-y-3.5 pt-2 border-t border-slate-100/90 dark:border-slate-800/80">
-          <div className="flex items-center gap-2.5 text-xs sm:text-sm uppercase tracking-wider font-bold text-slate-700 dark:text-slate-300">
-            <IconSettings3D size={26} className="shrink-0" />
-            <span>Chế độ hiển thị giao diện</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Chế độ sáng */}
-            <button
-              type="button"
-              onClick={() => setMode('light')}
-              className={cn(
-                "p-4 rounded-2xl border flex items-center gap-3.5 transition-all text-left cursor-pointer",
-                mode === 'light'
-                  ? "bg-amber-500/10 border-amber-500/40 text-amber-900 dark:text-amber-200 shadow-sm ring-2 ring-amber-500/30"
-                  : "bg-white/60 dark:bg-slate-800/60 border-white/90 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800"
-              )}
-            >
-              <div className="shrink-0 text-amber-500 dark:text-amber-400 flex items-center justify-center">
-                <Sun size={24} />
-              </div>
-              <span className="text-sm font-bold block">Chế độ sáng</span>
+          <section className="liquid-panel overflow-hidden p-2" aria-label="Tài khoản và tài liệu">
+            <button type="button" onClick={openContractModal} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-blue-500/5">
+              <span className="glass-icon h-9 w-9 shrink-0 text-blue-600 dark:text-blue-400"><FileText size={17} /></span><span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-200">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-slate-400" />
             </button>
-
-            {/* Chế độ tối */}
-            <button
-              type="button"
-              onClick={() => setMode('dark')}
-              className={cn(
-                "p-4 rounded-2xl border flex items-center gap-3.5 transition-all text-left cursor-pointer",
-                mode === 'dark'
-                  ? "bg-blue-500/15 border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-sm ring-2 ring-blue-500/30"
-                  : "bg-white/60 dark:bg-slate-800/60 border-white/90 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800"
-              )}
-            >
-              <div className="shrink-0 text-blue-500 dark:text-blue-400 flex items-center justify-center">
-                <Moon size={24} />
-              </div>
-              <span className="text-sm font-bold block">Chế độ tối</span>
+            <div className="mx-3 border-t border-slate-200/50 dark:border-white/10" />
+            <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-blue-500/5">
+              <span className="glass-icon h-9 w-9 shrink-0 text-blue-600 dark:text-blue-400"><KeyRound size={17} /></span><span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-200">Đổi mật khẩu</span><ChevronRight size={16} className="text-slate-400" />
             </button>
-
-            {/* Tự động */}
-            <button
-              type="button"
-              onClick={() => setMode('auto')}
-              className={cn(
-                "p-4 rounded-2xl border flex items-center gap-3.5 transition-all text-left cursor-pointer",
-                mode === 'auto'
-                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 shadow-sm ring-2 ring-emerald-500/30"
-                  : "bg-white/60 dark:bg-slate-800/60 border-white/90 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800"
-              )}
-            >
-              <div className="shrink-0 text-emerald-500 dark:text-emerald-400 flex items-center justify-center">
-                <IconClock3D size={26} />
-              </div>
-              <span className="text-sm font-bold block">Tự động</span>
-            </button>
-          </div>
+          </section>
+          <button type="button" onClick={logoutUser} className="liquid-panel-subtle flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-500/5 dark:text-rose-400"><LogOut size={17} />Đăng xuất</button>
         </div>
       </div>
-
-      {/* Password Update Modal */}
-      <PasswordUpdateModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-      />
-
+      <PasswordUpdateModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
     </div>
   );
 }

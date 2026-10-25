@@ -236,7 +236,7 @@ export function PaymentPage() {
       <div className="w-full flex items-center justify-center p-4">
         <div className="soft-card max-w-md p-8 text-center space-y-4">
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">Chưa có hóa đơn để thanh toán</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Không tìm thấy hóa đơn trong dữ liệu Google Sheets.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Hóa đơn của bạn sẽ xuất hiện tại đây khi được phát hành.</p>
           <button type="button" onClick={() => navigate('/invoices')} className="primary-button px-4 py-2 text-sm inline-flex items-center gap-2">
             <ChevronLeft size={16} />
             <span>Quay lại hóa đơn</span>
@@ -247,8 +247,14 @@ export function PaymentPage() {
   }
 
   return (
-    <div className="w-full flex items-center justify-center p-2 sm:p-4 select-none">
-      
+    <div className="w-full space-y-5 pb-4">
+      <header className="mx-auto flex w-full max-w-5xl items-center gap-3">
+        <button type="button" onClick={() => navigate('/invoices')} aria-label="Quay lại hóa đơn" className="soft-button flex h-11 w-11 shrink-0 items-center justify-center text-blue-600 dark:text-blue-400"><ChevronLeft size={22} /></button>
+        <div>
+          <span className="liquid-eyebrow">THANH TOÁN</span>
+          <p className="mt-0.5 text-sm font-medium text-slate-700 dark:text-slate-200">Hóa đơn tháng {targetInvoice.month}</p>
+        </div>
+      </header>
       <AnimatePresence mode="wait">
         {paymentMode === 'processing' ? (
           /* =========================================================================
@@ -262,7 +268,7 @@ export function PaymentPage() {
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-6"
           >
-            <main className="w-full max-w-[500px] bg-white dark:bg-[#101726] rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-8 sm:p-10 flex flex-col items-center text-center transition-colors">
+            <main className="liquid-panel w-full max-w-[500px] p-8 sm:p-10 flex flex-col items-center text-center transition-colors">
               <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5 animate-pulse">
                 <CheckCircle2 size={36} />
               </div>
@@ -307,7 +313,7 @@ export function PaymentPage() {
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-6"
           >
-            <main className="w-full max-w-[500px] bg-white dark:bg-[#101726] rounded-2xl border border-gray-100 dark:border-slate-800 shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
+            <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
               
               {/* Success Badge Icon */}
               <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
@@ -396,7 +402,7 @@ export function PaymentPage() {
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-6"
           >
-            <main className="w-full max-w-[540px] bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center text-center transition-colors">
+            <main className="liquid-panel w-full max-w-[540px] p-6 sm:p-8 flex flex-col items-center text-center transition-colors">
               <img 
                 src="/lock.svg" 
                 alt="Cổng thanh toán đang tạm đóng" 
@@ -474,14 +480,14 @@ export function PaymentPage() {
             className="w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
-            <main className="hidden lg:block w-full max-w-5xl bg-white dark:bg-[#101726] rounded-[28px] border border-slate-200/90 dark:border-slate-800 p-8 lg:p-10 relative shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.5)] transition-colors">
+            <main className="liquid-panel hidden lg:block w-full max-w-5xl p-8 lg:p-10 relative">
               {/* Top Bar: Back button */}
               <div className="mb-4 flex items-center justify-start">
                 <button 
                   type="button"
                   aria-label="Quay lại" 
                   onClick={() => navigate('/invoices')}
-                  className="w-10 h-10 flex items-center justify-center text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-slate-800 active:scale-95 rounded-full transition-all duration-150 cursor-pointer -ml-2"
+                  className="soft-button w-11 h-11 flex items-center justify-center text-blue-600 dark:text-blue-400 active:scale-95 transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
@@ -492,7 +498,7 @@ export function PaymentPage() {
                 {/* Left Column: Title, Subtitles, Straight Square Pure QR Code */}
                 <div className="col-span-6 flex flex-col items-center text-center">
                   <div className="mb-3">
-                    <h1 className="text-[28px] font-bold tracking-tight text-black dark:text-white leading-tight">
+                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white leading-tight">
                       QR Thanh toán
                     </h1>
                     <p className="text-[14px] text-neutral-500 dark:text-slate-400 font-normal mt-1 leading-relaxed">
@@ -520,7 +526,7 @@ export function PaymentPage() {
                       type="button"
                       onClick={handleSaveQR}
                       disabled={isSavingQR}
-                      className="w-full py-2.5 px-3 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                      className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
@@ -535,7 +541,7 @@ export function PaymentPage() {
                     <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
                       Chi tiết giao dịch
                     </h2>
-                    <div className="bg-[#f8f9fa] dark:bg-[#162032] rounded-2xl p-4 sm:p-5 border border-[#ededf0] dark:border-slate-750 space-y-3">
+                    <div className="liquid-panel-subtle p-4 sm:p-5 space-y-4">
                       <div className="flex items-center justify-between text-[14px]">
                         <span className="text-neutral-500 dark:text-slate-400 font-normal">Người nhận</span>
                         <span 
@@ -594,14 +600,14 @@ export function PaymentPage() {
             </main>
 
             {/* 2. MOBILE VIEW (under lg): Compact, Straight Pure QR Code */}
-            <div className="lg:hidden w-full max-w-[390px] bg-white dark:bg-[#101726] rounded-[26px] border border-gray-200/80 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between px-4 pt-3.5 pb-4 relative transition-colors">
+            <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col justify-between px-5 pt-4 pb-5 relative">
               {/* Mobile Top Navigation */}
               <header className="w-full flex items-center justify-between mb-1.5">
                 <button 
                   type="button"
                   aria-label="Quay lại" 
                   onClick={() => navigate('/invoices')}
-                  className="w-8 h-8 flex items-center justify-center text-black dark:text-white active:opacity-60 transition-opacity cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center text-blue-600 dark:text-blue-400 active:opacity-60 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
@@ -636,7 +642,7 @@ export function PaymentPage() {
                     type="button"
                     onClick={handleSaveQR}
                     disabled={isSavingQR}
-                    className="w-full py-2 px-2.5 rounded-xl bg-black hover:bg-neutral-900 active:scale-[0.98] text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ImageDown size={14} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
@@ -645,8 +651,8 @@ export function PaymentPage() {
               </section>
 
               {/* Mobile Payment Details */}
-              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-1.5 my-1 text-xs">
-                <div className="bg-[#f8f9fa] dark:bg-[#162032] rounded-xl p-2.5 border border-[#ededf0] dark:border-slate-800 space-y-1.5">
+              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
+                <div className="liquid-panel-subtle p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-neutral-500 dark:text-slate-400">Người nhận</span>
                     <span 
@@ -692,7 +698,7 @@ export function PaymentPage() {
                 {/* Total Line */}
                 <div className="flex items-center justify-between px-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                   <span className="text-[13px] font-medium text-neutral-500 dark:text-slate-400">Tổng tiền</span>
-                  <span className="text-[20px] font-bold text-black dark:text-white tracking-tight font-num">
+                  <span className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight font-num">
                     {formatCurrency(targetInvoice.total)} ₫
                   </span>
                 </div>

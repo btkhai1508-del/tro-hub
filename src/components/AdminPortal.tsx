@@ -47,6 +47,7 @@ import { cn, getCurrentMonthStr } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { ModernLineGraph } from './ModernLineGraph';
+import { Background } from './Background';
 import { 
   IconHome3D, 
   IconWallet3D, 
@@ -1101,8 +1102,9 @@ export function AdminPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f4f8] dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased select-none">
+    <div className="min-h-screen relative isolate text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
       <OfflineBanner />
+      <Background />
       
       {portalToast && (
         <div 
@@ -1128,7 +1130,7 @@ export function AdminPortal() {
         )}
       >
         <div className={cn(
-          "relative w-full h-full bg-white/85 dark:bg-[#101726]/90 backdrop-blur-[16px] border border-white/80 dark:border-white/10 shadow-[8px_8px_24px_rgba(166,175,195,0.2),-8px_-8px_24px_rgba(255,255,255,0.95)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.6)] rounded-[31px] flex flex-col justify-between py-6 transition-all duration-300",
+          "liquid-panel relative w-full h-full flex flex-col justify-between py-6 transition-all duration-300",
           isSidebarCollapsed ? "px-3 items-center" : "px-4"
         )}>
           
@@ -1207,7 +1209,7 @@ export function AdminPortal() {
                         ? "w-11 h-11 rounded-2xl flex items-center justify-center mx-auto" 
                         : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
                       isActive 
-                        ? "bg-slate-900 text-white shadow-md shadow-slate-900/15 font-semibold" 
+                        ? "bg-blue-500/10 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] font-semibold"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium"
                     )}
                     title={item.label}
@@ -1217,7 +1219,7 @@ export function AdminPortal() {
                         size={20} 
                         className={cn(
                           "transition-all duration-200 shrink-0", 
-                          isActive ? "text-white scale-105" : "text-slate-600 group-hover:text-slate-900 group-hover:scale-105"
+                          isActive ? "text-blue-600 dark:text-blue-300 scale-105" : "text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white group-hover:scale-105"
                         )} 
                       />
                       {!isSidebarCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
@@ -1446,7 +1448,7 @@ export function AdminPortal() {
           MAIN ADMIN WORKSPACE (Aligning with resident page layout & margin)
           ========================================================================= */}
       <main className={cn(
-        "flex-1 p-3 sm:p-5 md:p-6 pb-[90px] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
+        "flex-1 min-w-0 p-4 sm:p-6 md:p-7 pb-[90px] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>
         
