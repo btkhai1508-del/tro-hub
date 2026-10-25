@@ -1092,7 +1092,7 @@ export function AdminPortal() {
         {Array.from({ length: 12 }).map((_, idx) => (
           <span
             key={idx}
-            className="w-6 h-7 border border-slate-800 text-center font-bold text-xs flex items-center justify-center font-mono bg-white"
+            className="w-6 h-7 border border-neutral-800 text-center font-bold text-xs flex items-center justify-center font-mono bg-white"
           >
             {digits[idx] || ''}
           </span>
@@ -1102,7 +1102,7 @@ export function AdminPortal() {
   };
 
   return (
-    <div className="min-h-screen relative isolate text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
+    <div className="min-h-screen relative isolate text-neutral-800 dark:text-neutral-100 flex flex-col lg:flex-row antialiased">
       <OfflineBanner />
       <Background />
       
@@ -1141,7 +1141,7 @@ export function AdminPortal() {
               playSound('click');
               setIsSidebarCollapsed(!isSidebarCollapsed);
             }}
-            className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 dark:bg-slate-800 backdrop-blur-md border border-white dark:border-slate-700 shadow-md hover:scale-105 active:scale-95 text-slate-700 dark:text-slate-200 hover:text-slate-900 flex items-center justify-center transition-all z-50 cursor-pointer"
+            className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 dark:bg-neutral-800 backdrop-blur-md border border-white dark:border-neutral-700 shadow-md hover:scale-105 active:scale-95 text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 flex items-center justify-center transition-all z-50 cursor-pointer"
             title={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
             aria-label={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
           >
@@ -1156,7 +1156,7 @@ export function AdminPortal() {
             {isSidebarCollapsed ? (
               <div className="flex justify-center mb-6 w-full">
                 <div 
-                  className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/15 cursor-pointer hover:scale-105 transition-transform"
+                  className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 cursor-pointer hover:scale-105 transition-transform"
                   title="Nhà Trọ Phong Lan - Quản lý chủ trọ"
                 >
                   <Building2 size={24} className="text-white" />
@@ -1164,17 +1164,17 @@ export function AdminPortal() {
               </div>
             ) : (
               <div className="flex items-center gap-3 px-1 mb-6">
-                <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/15 shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 shrink-0">
                   <Building2 size={22} className="text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white truncate">Phong Lan</span>
-                    <span className="px-1.5 py-0.2 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md font-num border border-blue-100 uppercase">
+                    <span className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">Phong Lan</span>
+                    <span className="px-1.5 py-0.2 bg-neutral-50 text-neutral-600 text-[10px] font-bold rounded-md font-num border border-neutral-100 uppercase">
                       Admin
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 font-medium truncate">
+                  <p className="text-[11px] text-neutral-400 font-medium truncate">
                     Quản lý chủ trọ
                   </p>
                 </div>
@@ -1209,8 +1209,8 @@ export function AdminPortal() {
                         ? "w-11 h-11 rounded-2xl flex items-center justify-center mx-auto" 
                         : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
                       isActive 
-                        ? "bg-blue-500/10 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] font-semibold"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium"
+                        ? "bg-neutral-500/10 text-neutral-700 dark:bg-neutral-400/15 dark:text-neutral-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] font-semibold"
+                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 font-medium"
                     )}
                     title={item.label}
                   >
@@ -1219,7 +1219,7 @@ export function AdminPortal() {
                         size={20} 
                         className={cn(
                           "transition-all duration-200 shrink-0", 
-                          isActive ? "text-blue-600 dark:text-blue-300 scale-105" : "text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white group-hover:scale-105"
+                          isActive ? "text-neutral-600 dark:text-neutral-300 scale-105" : "text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white group-hover:scale-105"
                         )} 
                       />
                       {!isSidebarCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
@@ -1231,7 +1231,7 @@ export function AdminPortal() {
           </div>
 
           {/* Bottom Section: Controls & Logout */}
-          <div className="w-full space-y-2.5 pt-3 border-t border-slate-900/5 dark:border-white/10">
+          <div className="w-full space-y-2.5 pt-3 border-t border-neutral-900/5 dark:border-white/10">
             {!isSidebarCollapsed ? (
               <div className="space-y-2.5">
                 {/* 1. Month Selector - 3D Glassmorphism Card with Functional Previous/Next Arrows */}
@@ -1240,16 +1240,16 @@ export function AdminPortal() {
                   <div className="flex items-center justify-between gap-1.5">
                     {/* Clickable Month Label with Dropdown Overlay */}
                     <div className="flex items-center gap-2 min-w-0 flex-1 relative cursor-pointer">
-                      <Calendar size={18} className="text-slate-900 dark:text-white shrink-0" />
+                      <Calendar size={18} className="text-neutral-900 dark:text-white shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <span className="text-[9px] text-slate-400 dark:text-slate-400 uppercase tracking-wider block font-bold leading-none mb-0.5">
+                        <span className="text-[9px] text-neutral-400 dark:text-neutral-400 uppercase tracking-wider block font-bold leading-none mb-0.5">
                           Kỳ tháng
                         </span>
                         <div className="flex items-center gap-1">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                             Tháng {selectedMonth}
                           </span>
-                          <ChevronDown size={13} className="text-slate-900 dark:text-white shrink-0" />
+                          <ChevronDown size={13} className="text-neutral-900 dark:text-white shrink-0" />
                         </div>
                       </div>
                       {/* Full-coverage select so clicking text or chevron opens native picker */}
@@ -1263,7 +1263,7 @@ export function AdminPortal() {
                         title={`Kỳ tháng: Tháng ${selectedMonth}`}
                       >
                         {months.map(m => (
-                          <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                          <option key={m} value={m} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
                             Tháng {m}
                           </option>
                         ))}
@@ -1276,7 +1276,7 @@ export function AdminPortal() {
                         type="button"
                         onClick={handlePrevMonth}
                         disabled={months.indexOf(selectedMonth) <= 0}
-                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                        className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                         title="Tháng trước"
                         aria-label="Tháng trước"
                       >
@@ -1286,7 +1286,7 @@ export function AdminPortal() {
                         type="button"
                         onClick={handleNextMonth}
                         disabled={months.indexOf(selectedMonth) >= months.length - 1}
-                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                        className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                         title="Tháng tiếp theo"
                         aria-label="Tháng tiếp theo"
                       >
@@ -1301,14 +1301,14 @@ export function AdminPortal() {
                   <button
                     type="button"
                     onClick={toggleTheme}
-                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
                     title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                     {mode === 'light' ? (
                       <Sun size={15} className="text-amber-500 shrink-0 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                     ) : mode === 'dark' ? (
-                      <Moon size={15} className="text-indigo-400 shrink-0 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
+                      <Moon size={15} className="text-neutral-400 shrink-0 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
                     ) : (
                       <IconClock3D size={18} className="shrink-0" />
                     )}
@@ -1320,11 +1320,11 @@ export function AdminPortal() {
                   <button
                     type="button"
                     onClick={() => loadTabContent(activeMenu, selectedMonth)}
-                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
                     title="Làm mới dữ liệu từ Google Sheets"
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                    <RefreshCw size={14} className={cn("text-slate-900 dark:text-white shrink-0", isLoading && "animate-spin")} />
+                    <RefreshCw size={14} className={cn("text-neutral-900 dark:text-white shrink-0", isLoading && "animate-spin")} />
                     <span className="truncate text-[11px] font-bold">Làm mới</span>
                   </button>
                 </div>
@@ -1333,7 +1333,7 @@ export function AdminPortal() {
                 <div className="soft-surface p-3 rounded-2xl relative overflow-hidden flex items-center justify-between">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                   <div>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider">Cổng thanh toán</p>
+                    <p className="text-[10px] text-neutral-400 dark:text-neutral-400 font-bold uppercase tracking-wider">Cổng thanh toán</p>
                     <p className={cn("text-xs font-black uppercase font-num mt-0.5", paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                       {paymentGate === 'START' ? 'Mở' : 'Tắt'}
                     </p>
@@ -1355,11 +1355,11 @@ export function AdminPortal() {
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="soft-surface w-full h-10 px-3 rounded-2xl relative overflow-hidden flex items-center justify-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/5 dark:hover:bg-rose-500/10 transition-all cursor-pointer active:scale-[0.98] group"
+                  className="soft-surface w-full h-10 px-3 rounded-2xl relative overflow-hidden flex items-center justify-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/5 dark:hover:bg-rose-500/10 transition-all cursor-pointer active:scale-[0.98] group"
                   title="Đăng xuất khỏi hệ thống quản lý"
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                  <LogOut size={15} className="text-slate-400 dark:text-slate-400 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
+                  <LogOut size={15} className="text-neutral-400 dark:text-neutral-400 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
                   <span>Đăng xuất Admin</span>
                 </button>
               </div>
@@ -1368,10 +1368,10 @@ export function AdminPortal() {
               <div className="flex flex-col items-center gap-2 pt-1 w-full">
                 {/* Month Selector in Collapsed Mode */}
                 <div 
-                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white hover:scale-105 transition-all cursor-pointer group"
+                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white hover:scale-105 transition-all cursor-pointer group"
                   title={`Kỳ tháng: Tháng ${selectedMonth} (Bấm để chọn tháng)`}
                 >
-                  <Calendar size={18} className="text-slate-900 dark:text-white" />
+                  <Calendar size={18} className="text-neutral-900 dark:text-white" />
                   <select
                     value={selectedMonth}
                     onChange={e => setSelectedMonth(e.target.value)}
@@ -1379,7 +1379,7 @@ export function AdminPortal() {
                     title={`Kỳ tháng: Tháng ${selectedMonth}`}
                   >
                     {months.map(m => (
-                      <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                      <option key={m} value={m} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
                         Tháng {m}
                       </option>
                     ))}
@@ -1390,13 +1390,13 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:scale-105 transition-all cursor-pointer"
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:scale-105 transition-all cursor-pointer"
                   title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
                 >
                   {mode === 'light' ? (
                     <Sun size={18} className="text-amber-500 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                   ) : mode === 'dark' ? (
-                    <Moon size={18} className="text-indigo-400 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
+                    <Moon size={18} className="text-neutral-400 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
                   ) : (
                     <IconClock3D size={20} />
                   )}
@@ -1406,10 +1406,10 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={() => loadTabContent(activeMenu, selectedMonth)}
-                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white hover:scale-105 transition-all cursor-pointer"
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white hover:scale-105 transition-all cursor-pointer"
                   title="Làm mới dữ liệu từ Google Sheets"
                 >
-                  <RefreshCw size={17} className={cn("text-slate-900 dark:text-white", isLoading && "animate-spin")} />
+                  <RefreshCw size={17} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
                 </button>
 
                 {/* Payment Gate in Collapsed Mode */}
@@ -1432,7 +1432,7 @@ export function AdminPortal() {
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                   title="Đăng xuất Admin"
                 >
                   <LogOut size={16} />
@@ -1456,15 +1456,15 @@ export function AdminPortal() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="type-label text-slate-400">Không gian quản lý chủ trọ</span>
-              <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
+              <span className="type-label text-neutral-400">Không gian quản lý chủ trọ</span>
+              <span className="px-2 py-0.5 rounded-md bg-neutral-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
                 Admin
               </span>
             </div>
-            <h1 className="type-h1 text-slate-900 dark:text-white font-bold">
+            <h1 className="type-h1 text-neutral-900 dark:text-white font-bold">
               Bảng Quản Lý Chủ Trọ
             </h1>
-            <p className="type-body text-slate-500 mt-0.5 text-xs sm:text-sm">
+            <p className="type-body text-neutral-500 mt-0.5 text-xs sm:text-sm">
               Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
             </p>
           </div>
@@ -1477,7 +1477,7 @@ export function AdminPortal() {
                 type="button"
                 onClick={handlePrevMonth}
                 disabled={months.indexOf(selectedMonth) <= 0}
-                className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                className="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                 title="Tháng trước"
                 aria-label="Tháng trước"
               >
@@ -1485,12 +1485,12 @@ export function AdminPortal() {
               </button>
 
               <div className="relative flex items-center gap-1.5 px-1 cursor-pointer">
-                <Calendar size={15} className="text-slate-900 dark:text-white shrink-0" />
+                <Calendar size={15} className="text-neutral-900 dark:text-white shrink-0" />
                 <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
+                  <span className="text-[9px] text-neutral-400 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
                   <div className="flex items-center gap-0.5">
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Tháng {selectedMonth}</span>
-                    <ChevronDown size={11} className="text-slate-900 dark:text-white shrink-0" />
+                    <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Tháng {selectedMonth}</span>
+                    <ChevronDown size={11} className="text-neutral-900 dark:text-white shrink-0" />
                   </div>
                 </div>
                 <select
@@ -1503,7 +1503,7 @@ export function AdminPortal() {
                   title={`Kỳ tháng: Tháng ${selectedMonth}`}
                 >
                   {months.map(m => (
-                    <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Tháng {m}</option>
+                    <option key={m} value={m} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">Tháng {m}</option>
                   ))}
                 </select>
               </div>
@@ -1512,7 +1512,7 @@ export function AdminPortal() {
                 type="button"
                 onClick={handleNextMonth}
                 disabled={months.indexOf(selectedMonth) >= months.length - 1}
-                className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                className="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                 title="Tháng tiếp theo"
                 aria-label="Tháng tiếp theo"
               >
@@ -1527,13 +1527,13 @@ export function AdminPortal() {
                 playSound('click');
                 toggleTheme();
               }}
-              className="soft-button h-9 px-3 rounded-2xl flex items-center gap-1.5 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
+              className="soft-button h-9 px-3 rounded-2xl flex items-center gap-1.5 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer"
               title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
             >
               {mode === 'light' ? (
                 <Sun size={15} className="text-amber-500" />
               ) : mode === 'dark' ? (
-                <Moon size={15} className="text-indigo-400" />
+                <Moon size={15} className="text-neutral-400" />
               ) : (
                 <IconClock3D size={18} />
               )}
@@ -1547,10 +1547,10 @@ export function AdminPortal() {
                 playSound('click');
                 loadTabContent(activeMenu, selectedMonth);
               }}
-              className="soft-button w-9 h-9 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white cursor-pointer"
+              className="soft-button w-9 h-9 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white cursor-pointer"
               title="Làm mới dữ liệu từ Google Sheets"
             >
-              <RefreshCw size={15} className={cn("text-slate-900 dark:text-white", isLoading && "animate-spin")} />
+              <RefreshCw size={15} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
             </button>
 
             {/* Logout Button */}
@@ -1590,7 +1590,7 @@ export function AdminPortal() {
                     playSound('click');
                     setActiveMenu(item.key as any);
                   }}
-                  className="soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:border-slate-400/80 transition-all cursor-pointer relative group"
+                  className="soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:border-neutral-400/80 transition-all cursor-pointer relative group"
                 >
                   <div className="group-hover:scale-105 transition-transform duration-200">
                     <Icon size={42} />
@@ -1642,14 +1642,14 @@ export function AdminPortal() {
                             <span>Kỳ thu phí {selectedMonth}</span>
                           </span>
                         </div>
-                        <h2 className="type-h2 text-slate-900 dark:text-white font-bold">
+                        <h2 className="type-h2 text-neutral-900 dark:text-white font-bold">
                           Tổng Doanh Thu Thực Tế Cả 2 Tòa
                         </h2>
                       </div>
                     </div>
 
                     <div className="text-left sm:text-right">
-                      <span className="text-[10px] text-slate-400 block uppercase font-medium">Tiến độ thu</span>
+                      <span className="text-[10px] text-neutral-400 block uppercase font-medium">Tiến độ thu</span>
                       <span className="type-button font-num text-emerald-600 block mt-0.5 font-bold">
                         {paidRoomsCount} / {totalRoomsCount} Phòng
                       </span>
@@ -1658,24 +1658,24 @@ export function AdminPortal() {
 
                   {/* Middle row: Big Amount */}
                   <div>
-                    <p className="type-label text-slate-400 mb-1">
+                    <p className="type-label text-neutral-400 mb-1">
                       Tổng tiền đã hạch toán cột P
                     </p>
-                    <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-slate-900 dark:text-white">
+                    <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
                       {fmt(dashboardData?.doanhThu ?? 0)}
-                      <span className="text-2xl font-normal text-slate-400">₫</span>
+                      <span className="text-2xl font-normal text-neutral-400">₫</span>
                     </div>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="space-y-2 pt-4 border-t border-slate-900/5 dark:border-white/5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
+                  <div className="space-y-2 pt-4 border-t border-neutral-900/5 dark:border-white/5">
+                    <div className="flex items-center justify-between text-xs font-bold text-neutral-900 dark:text-white">
                       <span>Tỷ lệ hoàn thành thu phí:</span>
-                      <span className="font-num text-slate-900 dark:text-white font-bold">{collectionPercent}%</span>
+                      <span className="font-num text-neutral-900 dark:text-white font-bold">{collectionPercent}%</span>
                     </div>
-                    <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-full h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-slate-900 dark:bg-white rounded-full transition-all duration-700"
+                        className="h-full bg-neutral-900 dark:bg-white rounded-full transition-all duration-700"
                         style={{ width: `${collectionPercent}%` }}
                       />
                     </div>
@@ -1692,11 +1692,11 @@ export function AdminPortal() {
                     <div className="flex items-center gap-3">
                       <IconElectricity3D size={42} className="shrink-0" />
                       <div>
-                        <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Điện tiêu thụ</h3>
-                        <p className="text-[11px] text-slate-400 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
+                        <h3 className="type-h4 text-neutral-900 dark:text-white font-bold">Điện tiêu thụ</h3>
+                        <p className="text-[11px] text-neutral-400 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white font-num">{fmt(dashboardData?.tienDien ?? 0)} đ</span>
+                    <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">{fmt(dashboardData?.tienDien ?? 0)} đ</span>
                   </div>
                 </div>
 
@@ -1706,11 +1706,11 @@ export function AdminPortal() {
                     <div className="flex items-center gap-3">
                       <IconWater3D size={42} className="shrink-0" />
                       <div>
-                        <h3 className="type-h4 text-slate-900 dark:text-white font-bold">Nước tiêu thụ</h3>
-                        <p className="text-[11px] text-slate-400 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
+                        <h3 className="type-h4 text-neutral-900 dark:text-white font-bold">Nước tiêu thụ</h3>
+                        <p className="text-[11px] text-neutral-400 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white font-num">{fmt(dashboardData?.tienNuoc ?? 0)} đ</span>
+                    <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">{fmt(dashboardData?.tienNuoc ?? 0)} đ</span>
                   </div>
                 </div>
 
@@ -1719,16 +1719,16 @@ export function AdminPortal() {
                   <div className="flex items-center gap-3">
                     <IconProfile3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
-                      <p className="text-xs font-bold text-slate-800 dark:text-white">{dashboardData?.soNguoi ?? 0} Cư dân</p>
-                      <p className="text-[10px] text-slate-400">Đang lưu trú</p>
+                      <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soNguoi ?? 0} Cư dân</p>
+                      <p className="text-[10px] text-neutral-400">Đang lưu trú</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 border-l border-slate-100 dark:border-slate-800 pl-4">
+                  <div className="flex items-center gap-3 border-l border-neutral-100 dark:border-neutral-800 pl-4">
                     <IconLocation3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
-                      <p className="text-xs font-bold text-slate-800 dark:text-white">{dashboardData?.soXe ?? 0} Xe máy</p>
-                      <p className="text-[10px] text-slate-400">Đăng ký giữ xe</p>
+                      <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soXe ?? 0} Xe máy</p>
+                      <p className="text-[10px] text-neutral-400">Đăng ký giữ xe</p>
                     </div>
                   </div>
                 </div>
@@ -1766,10 +1766,10 @@ export function AdminPortal() {
                   <div
                     key={r.room}
                     onClick={() => openRoomDetail(r.room)}
-                    className="soft-card p-5 flex flex-col justify-between hover:border-blue-500 transition-all cursor-pointer group"
+                    className="soft-card p-5 flex flex-col justify-between hover:border-neutral-500 transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-base group-hover:bg-slate-900 dark:group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <span className="px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base group-hover:bg-neutral-900 dark:group-hover:bg-neutral-600 group-hover:text-white transition-colors">
                         {r.room}
                       </span>
                       <div 
@@ -1785,7 +1785,7 @@ export function AdminPortal() {
                         />
                         <span className={cn(
                           "text-[11px] font-bold min-w-14 text-right transition-colors",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
                         )}>
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
@@ -1793,8 +1793,8 @@ export function AdminPortal() {
                     </div>
 
                     <div className="space-y-1">
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">{r.name}</h4>
-                      <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                      <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{r.name}</h4>
+                      <p className="text-xs text-neutral-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
                 );
@@ -1818,8 +1818,8 @@ export function AdminPortal() {
                 <span>Quay lại danh sách</span>
               </button>
 
-              <div className="flex items-center gap-3 bg-slate-50/90 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-2xs">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Trạng thái:</span>
+              <div className="flex items-center gap-3 bg-neutral-50/90 dark:bg-neutral-800/80 px-3.5 py-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 shadow-2xs">
+                <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400">Trạng thái:</span>
                 <div className="flex items-center gap-2">
                   <AppleSwitch
                     checked={currentRoomData.paymentStatus === 'paid'}
@@ -1830,7 +1830,7 @@ export function AdminPortal() {
                   />
                   <span className={cn(
                     "text-xs font-bold min-w-16 transition-colors",
-                    currentRoomData.paymentStatus === 'paid' ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                    currentRoomData.paymentStatus === 'paid' ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
                   )}>
                     {currentRoomData.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'}
                   </span>
@@ -1843,13 +1843,13 @@ export function AdminPortal() {
               <div className="flex items-center gap-3">
                 <IconProfile3D size={40} className="shrink-0 drop-shadow-xs" />
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-base">Thông tin người cư trú Phòng {selectedRoomId}</h4>
+                  <h4 className="font-bold text-neutral-900 dark:text-white text-base">Thông tin người cư trú Phòng {selectedRoomId}</h4>
                 </div>
               </div>
               {[1, 2, 3].map(slot => (
-                <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60">
+                <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Họ tên người {slot}</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Họ tên người {slot}</label>
                     <input
                       type="text"
                       value={currentRoomData[`nguoi${slot}`] || ''}
@@ -1870,31 +1870,31 @@ export function AdminPortal() {
                         setCurrentRoomData(nextRoom);
                       }}
                       placeholder={`Người ${slot}`}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Số CCCD</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Số CCCD</label>
                     <input
                       type="text"
                       value={currentRoomData[`cccd${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`cccd${slot}`]: e.target.value })}
                       placeholder="12 số CCCD"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Số điện thoại</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Số điện thoại</label>
                     <input
                       type="text"
                       value={currentRoomData[`sdt${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`sdt${slot}`]: e.target.value })}
                       placeholder="SĐT liên lạc"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Biển số xe</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Biển số xe</label>
                     <input
                       type="text"
                       value={currentRoomData[`xe${slot}`] || ''}
@@ -1914,7 +1914,7 @@ export function AdminPortal() {
                         setCurrentRoomData(nextRoom);
                       }}
                       placeholder="Biển số xe"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none uppercase font-mono focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none uppercase font-mono focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
                   </div>
                 </div>
@@ -1927,13 +1927,13 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconElectricity3D size={40} className="shrink-0" />
                   <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
-                    <p className="text-[11px] text-slate-400">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
+                    <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
+                    <p className="text-[11px] text-neutral-400">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Điện cũ</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Điện cũ</label>
                     <input 
                       type="number" 
                       value={currentRoomData.dienCu || ''} 
@@ -1950,11 +1950,11 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + tienDien + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Điện mới</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Điện mới</label>
                     <input 
                       type="number" 
                       value={currentRoomData.dienMoi || ''} 
@@ -1971,13 +1971,13 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + tienDien + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                     />
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-neutral-100 dark:border-neutral-800">
                   <span>Tiền điện:</span>
-                  <span className="text-slate-900 dark:text-white font-bold">{fmt(currentRoomData.tienDien)} đ</span>
+                  <span className="text-neutral-900 dark:text-white font-bold">{fmt(currentRoomData.tienDien)} đ</span>
                 </div>
               </div>
 
@@ -1985,13 +1985,13 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconWater3D size={40} className="shrink-0" />
                   <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
-                    <p className="text-[11px] text-slate-400">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
+                    <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
+                    <p className="text-[11px] text-neutral-400">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Nước cũ</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Nước cũ</label>
                     <input 
                       type="number" 
                       value={currentRoomData.nuocCu || ''} 
@@ -2008,11 +2008,11 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + tienNuoc + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Nước mới</label>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Nước mới</label>
                     <input 
                       type="number" 
                       value={currentRoomData.nuocMoi || ''} 
@@ -2029,13 +2029,13 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + tienNuoc + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                     />
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center text-xs font-bold pt-2 border-t border-neutral-100 dark:border-neutral-800">
                   <span>Tiền nước:</span>
-                  <span className="text-slate-900 dark:text-white font-bold">{fmt(currentRoomData.tienNuoc)} đ</span>
+                  <span className="text-neutral-900 dark:text-white font-bold">{fmt(currentRoomData.tienNuoc)} đ</span>
                 </div>
               </div>
             </div>
@@ -2046,14 +2046,14 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconWallet3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-base">Chi Phí Dịch Vụ & Hóa Đơn Chi Tiết</h4>
-                    <p className="text-xs text-slate-400">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
+                    <h4 className="font-bold text-neutral-900 dark:text-white text-base">Chi Phí Dịch Vụ & Hóa Đơn Chi Tiết</h4>
+                    <p className="text-xs text-neutral-400">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
                   </div>
                 </div>
                 
                 <div className="text-left sm:text-right">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
-                  <span className="text-lg font-black font-num text-slate-900 dark:text-white px-2.5 py-1 rounded-xl transition-all inline-block">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
+                  <span className="text-lg font-black font-num text-neutral-900 dark:text-white px-2.5 py-1 rounded-xl transition-all inline-block">
                     {fmt(currentRoomData.tongTien)} đ
                   </span>
                 </div>
@@ -2061,7 +2061,7 @@ export function AdminPortal() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền phòng (Cột J)</label>
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền phòng (Cột J)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2075,14 +2075,14 @@ export function AdminPortal() {
                           tongTien: tienPhong + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền rác (Cột K)</label>
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền rác (Cột K)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2096,14 +2096,14 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + tienRac + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2117,14 +2117,14 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + tienNet + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2138,16 +2138,16 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + tienXe + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Chi phí khác (Cột N)</label>
-                    <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-tight">Cố định</span>
+                    <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase">Chi phí khác (Cột N)</label>
+                    <span className="text-[9px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight">Cố định</span>
                   </div>
                   <div className="relative">
                     <input
@@ -2155,23 +2155,23 @@ export function AdminPortal() {
                       readOnly
                       disabled
                       value={currentRoomData.tienKhac ? fmt(currentRoomData.tienKhac) : '0'}
-                      className="w-full bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono cursor-not-allowed select-none"
+                      className="w-full bg-neutral-100/70 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700/50 text-neutral-500 dark:text-neutral-400 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono cursor-not-allowed select-none"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
+                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={currentRoomData.tienCoc ? fmt(currentRoomData.tienCoc) : ''}
                       placeholder="0"
                       onChange={e => setCurrentRoomData({ ...currentRoomData, tienCoc: parseCurrency(e.target.value) })}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
               </div>
@@ -2179,8 +2179,8 @@ export function AdminPortal() {
 
             {/* Card Tổng cộng */}
             <div className="soft-card p-5 sm:p-6 flex items-center justify-between">
-              <span className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200">Tổng cộng:</span>
-              <span className="text-2xl sm:text-3xl font-black font-num text-blue-600 dark:text-blue-400">
+              <span className="text-base sm:text-lg font-bold text-neutral-700 dark:text-neutral-200">Tổng cộng:</span>
+              <span className="text-2xl sm:text-3xl font-black font-num text-neutral-600 dark:text-neutral-400">
                 {fmt(currentRoomData.tongTien)} đ
               </span>
             </div>
@@ -2246,13 +2246,13 @@ export function AdminPortal() {
                 return (
                   <div key={item.room} className="soft-card p-4 space-y-3.5 font-apple">
                     {/* Header: Room, Tenant, AppleSwitch */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5 font-apple">
+                    <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2.5 font-apple">
                       <div className="flex items-center gap-2.5 min-w-0 font-apple">
-                        <span className="px-2.5 py-1 rounded-xl bg-slate-900 dark:bg-blue-600 text-white font-semibold text-xs shrink-0 font-apple">
+                        <span className="px-2.5 py-1 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-semibold text-xs shrink-0 font-apple">
                           {item.room}
                         </span>
                         <div className="min-w-0 font-apple">
-                          <h4 className="font-semibold text-slate-900 dark:text-white text-xs truncate font-apple">{item.name}</h4>
+                          <h4 className="font-semibold text-neutral-900 dark:text-white text-xs truncate font-apple">{item.name}</h4>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
@@ -2265,7 +2265,7 @@ export function AdminPortal() {
                         />
                         <span className={cn(
                           "text-[11px] font-semibold min-w-14 text-right transition-colors font-apple",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
                         )}>
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
@@ -2273,37 +2273,37 @@ export function AdminPortal() {
                     </div>
 
                     {/* Service breakdown in 3 columns without scrolling */}
-                    <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 text-[11px] font-apple">
+                    <div className="grid grid-cols-3 gap-2 bg-neutral-50 dark:bg-neutral-800/50 p-2.5 rounded-xl border border-neutral-100 dark:border-neutral-700/50 text-[11px] font-apple">
                       <div className="font-apple">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Phòng</span>
-                        <span className="font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienPhong)} đ</span>
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Phòng</span>
+                        <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienPhong)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Điện</span>
-                        <span className="font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienDien)} đ</span>
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Điện</span>
+                        <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Nước</span>
-                        <span className="font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienNuoc)} đ</span>
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Nước</span>
+                        <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienNuoc)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Rác</span>
-                        <span className="font-apple font-semibold text-slate-700 dark:text-slate-300">{fmt(item.tienRac)} đ</span>
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Rác</span>
+                        <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienRac)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Net</span>
-                        <span className="font-apple font-semibold text-slate-700 dark:text-slate-300">{fmt(item.tienNet)} đ</span>
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Net</span>
+                        <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienNet)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block font-apple">Xe</span>
-                        <span className="font-apple font-semibold text-slate-700 dark:text-slate-300">{fmt(item.tienXe)} đ</span>
+                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Xe</span>
+                        <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienXe)} đ</span>
                       </div>
                     </div>
 
                     {/* Total Row */}
                     <div className="flex items-center justify-between pt-0.5 font-apple">
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-apple">Tổng cộng:</span>
-                      <span className="text-sm font-semibold font-apple text-slate-900 dark:text-white">
+                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 font-apple">Tổng cộng:</span>
+                      <span className="text-sm font-semibold font-apple text-neutral-900 dark:text-white">
                         {fmt(item.tongTien)} đ
                       </span>
                     </div>
@@ -2317,7 +2317,7 @@ export function AdminPortal() {
               <div className="overflow-x-auto font-apple">
                 <table className="w-full text-left text-xs font-apple">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider font-apple">
+                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-400 dark:text-neutral-400 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">Phòng</th>
                       <th className="p-4 font-semibold font-apple">Khách thuê</th>
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
@@ -2326,24 +2326,24 @@ export function AdminPortal() {
                       <th className="p-4 font-semibold font-apple">Rác</th>
                       <th className="p-4 font-semibold font-apple">Net</th>
                       <th className="p-4 font-semibold font-apple">Xe</th>
-                      <th className="p-4 font-semibold text-slate-900 dark:text-white font-apple">Tổng cộng</th>
+                      <th className="p-4 font-semibold text-neutral-900 dark:text-white font-apple">Tổng cộng</th>
                       <th className="p-4 text-center font-semibold font-apple">Trạng thái</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-apple">
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 font-apple">
                     {billingList.map(item => {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
-                        <tr key={item.room} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors font-apple">
-                          <td className="p-4 font-semibold text-slate-900 dark:text-white font-apple">{item.room}</td>
-                          <td className="p-4 font-semibold text-slate-700 dark:text-slate-200 font-apple">{item.name}</td>
+                        <tr key={item.room} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple">
+                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple">{item.room}</td>
+                          <td className="p-4 font-semibold text-neutral-700 dark:text-neutral-200 font-apple">{item.name}</td>
                           <td className="p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
-                          <td className="p-4 font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienDien)} đ</td>
-                          <td className="p-4 font-apple font-semibold text-slate-800 dark:text-slate-200">{fmt(item.tienNuoc)} đ</td>
+                          <td className="p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>
+                          <td className="p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienNuoc)} đ</td>
                           <td className="p-4 font-apple font-semibold">{fmt(item.tienRac)} đ</td>
                           <td className="p-4 font-apple font-semibold">{fmt(item.tienNet)} đ</td>
                           <td className="p-4 font-apple font-semibold">{fmt(item.tienXe)} đ</td>
-                          <td className="p-4 font-semibold text-sm text-slate-900 dark:text-white font-apple">
+                          <td className="p-4 font-semibold text-sm text-neutral-900 dark:text-white font-apple">
                             {fmt(item.tongTien)} đ
                           </td>
                           <td className="p-4 font-apple">
@@ -2357,7 +2357,7 @@ export function AdminPortal() {
                               />
                               <span className={cn(
                                 "text-xs font-semibold min-w-16 text-left transition-colors font-apple",
-                                isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                                isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
                               )}>
                                 {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                               </span>
@@ -2386,14 +2386,14 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <Search size={15} className="text-blue-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                <Search size={15} className="text-neutral-600" />
                 <span>Tra cứu biển số xe</span>
               </div>
             </div>
@@ -2401,12 +2401,12 @@ export function AdminPortal() {
             <div className="soft-card p-6 sm:p-8 space-y-4 text-center">
               <IconLocation3D size={52} className="mx-auto drop-shadow-xs mb-1" />
               <div className="text-center max-w-md mx-auto space-y-1 mb-4">
-                <h3 className="type-h2 font-bold text-slate-900 dark:text-white">Tra Cứu Biển Số Xe</h3>
-                <p className="text-xs text-slate-400">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
+                <h3 className="type-h2 font-bold text-neutral-900 dark:text-white">Tra Cứu Biển Số Xe</h3>
+                <p className="text-xs text-neutral-400">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
               </div>
 
               <div className="relative max-w-xl mx-auto">
-                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input
                   type="text"
                   value={plateQuery}
@@ -2415,7 +2415,7 @@ export function AdminPortal() {
                     fetchPlates(selectedMonth, e.target.value);
                   }}
                   placeholder="Nhập biển số xe (VD: 59-X1, 888.88...)"
-                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-bold text-neutral-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                 />
               </div>
             </div>
@@ -2424,15 +2424,15 @@ export function AdminPortal() {
               {plateResults.map((r, i) => (
                 <div key={i} className="soft-card p-5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold rounded-lg text-xs">
+                    <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold rounded-lg text-xs">
                       Phòng {r.room}
                     </span>
-                    <span className="font-mono text-sm font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700">
+                    <span className="font-mono text-sm font-bold text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-800 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-neutral-700">
                       {r.plate}
                     </span>
                   </div>
-                  <p className="font-bold text-sm text-slate-800 dark:text-white">{r.name || r.tenant || 'Chưa cập nhật tên'}</p>
-                  <p className="text-xs text-slate-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                  <p className="font-bold text-sm text-neutral-800 dark:text-white">{r.name || r.tenant || 'Chưa cập nhật tên'}</p>
+                  <p className="text-xs text-neutral-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                 </div>
               ))}
             </div>
@@ -2452,14 +2452,14 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <FileText size={15} className="text-blue-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                <FileText size={15} className="text-neutral-600" />
                 <span>Hợp đồng & Mẫu CT01</span>
               </div>
             </div>
@@ -2473,7 +2473,7 @@ export function AdminPortal() {
                     onClick={() => setContractDocType('ct01')}
                     className={cn(
                       "px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
-                      contractDocType === 'ct01' ? "bg-slate-900 text-white" : "soft-button"
+                      contractDocType === 'ct01' ? "bg-neutral-900 text-white" : "soft-button"
                     )}
                   >
                     Mẫu CT01 (Tờ khai cư trú)
@@ -2482,7 +2482,7 @@ export function AdminPortal() {
                     onClick={() => setContractDocType('contract')}
                     className={cn(
                       "px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
-                      contractDocType === 'contract' ? "bg-slate-900 text-white" : "soft-button"
+                      contractDocType === 'contract' ? "bg-neutral-900 text-white" : "soft-button"
                     )}
                   >
                     Hợp đồng thuê phòng trọ
@@ -2494,10 +2494,10 @@ export function AdminPortal() {
                 <select
                   value={contractHouse}
                   onChange={e => setContractHouse(e.target.value as any)}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-slate-700 outline-none cursor-pointer"
+                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
-                  <option value="TRUNG_KIM" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Nhà trọ Trung Kim (116/32)</option>
-                  <option value="LVC" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
+                  <option value="TRUNG_KIM" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ Trung Kim (116/32)</option>
+                  <option value="LVC" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
                 </select>
                 <button
                   onClick={() => window.print()}
@@ -2512,7 +2512,7 @@ export function AdminPortal() {
             {/* A4 Document Container */}
             <div 
               style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
-              className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-slate-200 shadow-sm max-w-3xl mx-auto text-slate-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
+              className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-neutral-200 shadow-sm max-w-3xl mx-auto text-neutral-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
             >
               {contractDocType === 'ct01' ? (
                 /* =========================================================================
@@ -2552,26 +2552,26 @@ export function AdminPortal() {
                     <p><b>10. Nội dung đề nghị<sup>(3)</sup>:</b> Đăng ký tạm trú cho công dân tại địa chỉ: {activeHouse.address}</p>
                     <p><b>11. Những thành viên trong hộ gia đình cùng thay đổi:</b></p>
 
-                    <table className="w-full border-collapse border border-slate-800 text-[11px] mt-2 mb-4">
+                    <table className="w-full border-collapse border border-neutral-800 text-[11px] mt-2 mb-4">
                       <thead>
-                        <tr className="bg-slate-100">
-                          <th className="border border-slate-800 p-1 text-center w-8">TT</th>
-                          <th className="border border-slate-800 p-1 text-center">Họ, chữ đệm và tên</th>
-                          <th className="border border-slate-800 p-1 text-center w-20">Ngày sinh</th>
-                          <th className="border border-slate-800 p-1 text-center w-16">Giới tính</th>
-                          <th className="border border-slate-800 p-1 text-center w-28">Số ĐDCN</th>
-                          <th className="border border-slate-800 p-1 text-center">Mối quan hệ với chủ hộ</th>
+                        <tr className="bg-neutral-100">
+                          <th className="border border-neutral-800 p-1 text-center w-8">TT</th>
+                          <th className="border border-neutral-800 p-1 text-center">Họ, chữ đệm và tên</th>
+                          <th className="border border-neutral-800 p-1 text-center w-20">Ngày sinh</th>
+                          <th className="border border-neutral-800 p-1 text-center w-16">Giới tính</th>
+                          <th className="border border-neutral-800 p-1 text-center w-28">Số ĐDCN</th>
+                          <th className="border border-neutral-800 p-1 text-center">Mối quan hệ với chủ hộ</th>
                         </tr>
                       </thead>
                       <tbody>
                         {[1, 2, 3, 4].map(idx => (
                           <tr key={idx} className="h-6">
-                            <td className="border border-slate-800 p-1 text-center">{idx}</td>
-                            <td className="border border-slate-800 p-1">{idx === 1 ? contractForm.partyAName : ''}</td>
-                            <td className="border border-slate-800 p-1 text-center">{idx === 1 ? contractForm.partyADob : ''}</td>
-                            <td className="border border-slate-800 p-1 text-center">{idx === 1 ? 'Nam' : ''}</td>
-                            <td className="border border-slate-800 p-1 text-center font-mono">{idx === 1 ? contractForm.partyACccd : ''}</td>
-                            <td className="border border-slate-800 p-1">{idx === 1 ? 'Thuê phòng' : ''}</td>
+                            <td className="border border-neutral-800 p-1 text-center">{idx}</td>
+                            <td className="border border-neutral-800 p-1">{idx === 1 ? contractForm.partyAName : ''}</td>
+                            <td className="border border-neutral-800 p-1 text-center">{idx === 1 ? contractForm.partyADob : ''}</td>
+                            <td className="border border-neutral-800 p-1 text-center">{idx === 1 ? 'Nam' : ''}</td>
+                            <td className="border border-neutral-800 p-1 text-center font-mono">{idx === 1 ? contractForm.partyACccd : ''}</td>
+                            <td className="border border-neutral-800 p-1">{idx === 1 ? 'Thuê phòng' : ''}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2601,9 +2601,9 @@ export function AdminPortal() {
                   </div>
 
                   {/* Page 2: Notes */}
-                  <div className="pt-8 border-t border-dashed border-slate-300 mt-6 print:break-before-page">
+                  <div className="pt-8 border-t border-dashed border-neutral-300 mt-6 print:break-before-page">
                     <p className="font-bold text-xs mb-2">Chú thích:</p>
-                    <div className="text-[10.5px] leading-relaxed text-slate-700 space-y-1 text-justify">
+                    <div className="text-[10.5px] leading-relaxed text-neutral-700 space-y-1 text-justify">
                       <p>(1) Cơ quan đăng ký cư trú.</p>
                       <p>(2) Trường hợp đăng ký thường trú, đăng ký tạm trú, tách hộ ghi thông tin chủ hộ gia đình mới.</p>
                       <p>(3) Ghi rõ ràng, cụ thể nội dung đề nghị đăng ký tạm trú tại địa chỉ hợp pháp.</p>
@@ -2615,7 +2615,7 @@ export function AdminPortal() {
                 /* =========================================================================
                    HỢP ĐỒNG THUÊ PHÒNG TRỌ CHUẨN PHÁP LÝ
                    ========================================================================= */
-                <div className="space-y-4 text-xs sm:text-[13px] leading-relaxed text-slate-900">
+                <div className="space-y-4 text-xs sm:text-[13px] leading-relaxed text-neutral-900">
                   <div className="text-center space-y-1">
                     <p className="font-bold uppercase text-xs sm:text-sm">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
                     <p className="font-bold text-xs sm:text-sm">Độc lập – Tự do – Hạnh phúc</p>
@@ -2691,21 +2691,21 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <Zap size={15} className="text-slate-900 dark:text-white" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                <Zap size={15} className="text-neutral-900 dark:text-white" />
                 <span>Nhập chỉ số điện nước</span>
               </div>
             </div>
 
             <div className="soft-card p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
+                <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
                 <button
                   type="button"
                   onClick={saveBatchMeters}
@@ -2720,7 +2720,7 @@ export function AdminPortal() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-400 font-bold uppercase">
+                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-400 dark:text-neutral-400 font-bold uppercase">
                       <th className="p-3">Phòng</th>
                       <th className="p-3">Điện cũ</th>
                       <th className="p-3">Điện mới</th>
@@ -2728,21 +2728,21 @@ export function AdminPortal() {
                       <th className="p-3">Nước mới</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                     {roomsList.map((r) => {
                       const currentDienCu = batchMeters[r.room]?.dienCu !== undefined ? batchMeters[r.room]?.dienCu : (r.dienCu ?? '');
                       const currentDienMoi = batchMeters[r.room]?.dienMoi !== undefined ? batchMeters[r.room]?.dienMoi : (r.dienMoi ?? '');
                       const currentNuocCu = batchMeters[r.room]?.nuocCu !== undefined ? batchMeters[r.room]?.nuocCu : (r.nuocCu ?? '');
                       const currentNuocMoi = batchMeters[r.room]?.nuocMoi !== undefined ? batchMeters[r.room]?.nuocMoi : (r.nuocMoi ?? '');
                       return (
-                        <tr key={r.room} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="p-3 font-bold text-slate-900 dark:text-white">{r.room}</td>
+                        <tr key={r.room} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition-colors">
+                          <td className="p-3 font-bold text-neutral-900 dark:text-white">{r.room}</td>
                           <td className="p-2">
                             <input 
                               type="number" 
                               value={currentDienCu} 
                               onChange={e => handleBatchMeterChange(r.room, 'dienCu', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                              className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
                           <td className="p-2">
@@ -2750,7 +2750,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentDienMoi} 
                               onChange={e => handleBatchMeterChange(r.room, 'dienMoi', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                              className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
                           <td className="p-2">
@@ -2758,7 +2758,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentNuocCu} 
                               onChange={e => handleBatchMeterChange(r.room, 'nuocCu', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                              className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
                           <td className="p-2">
@@ -2766,7 +2766,7 @@ export function AdminPortal() {
                               type="number" 
                               value={currentNuocMoi} 
                               onChange={e => handleBatchMeterChange(r.room, 'nuocMoi', Number(e.target.value) || 0)}
-                              className="w-24 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white" 
+                              className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
                         </tr>
@@ -2792,99 +2792,99 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <Settings size={15} className="text-blue-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                <Settings size={15} className="text-neutral-600" />
                 <span>Cài đặt đơn giá phí</span>
               </div>
             </div>
 
             <div className="soft-card p-6 sm:p-8 space-y-6">
               <div>
-                <h3 className="type-h3 font-bold text-slate-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Đồng bộ trực tiếp các ô <span className="font-semibold text-blue-600 dark:text-blue-400">H5</span> (Điện), <span className="font-semibold text-blue-600 dark:text-blue-400">I5</span> (Nước), <span className="font-semibold text-blue-600 dark:text-blue-400">K5</span> (Rác), <span className="font-semibold text-blue-600 dark:text-blue-400">L5</span> (Internet), <span className="font-semibold text-blue-600 dark:text-blue-400">M5</span> (Xe) trên Google Sheet.
+                <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  Đồng bộ trực tiếp các ô <span className="font-semibold text-neutral-600 dark:text-neutral-400">H5</span> (Điện), <span className="font-semibold text-neutral-600 dark:text-neutral-400">I5</span> (Nước), <span className="font-semibold text-neutral-600 dark:text-neutral-400">K5</span> (Rác), <span className="font-semibold text-neutral-600 dark:text-neutral-400">L5</span> (Internet), <span className="font-semibold text-neutral-600 dark:text-neutral-400">M5</span> (Xe) trên Google Sheet.
                 </p>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Điện (1 kW)</label>
+                <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
+                  <label className="text-xs font-bold text-neutral-400 uppercase">Điện (1 kW)</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={unitConfig.dien ? fmt(unitConfig.dien) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, dien: parseCurrency(e.target.value) })}
-                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Nước (1 m³)</label>
+                <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
+                  <label className="text-xs font-bold text-neutral-400 uppercase">Nước (1 m³)</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={unitConfig.nuoc ? fmt(unitConfig.nuoc) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, nuoc: parseCurrency(e.target.value) })}
-                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Tiền Rác</label>
+                <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
+                  <label className="text-xs font-bold text-neutral-400 uppercase">Tiền Rác</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={unitConfig.rac ? fmt(unitConfig.rac) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, rac: parseCurrency(e.target.value) })}
-                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Internet / người</label>
+                <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
+                  <label className="text-xs font-bold text-neutral-400 uppercase">Internet / người</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={unitConfig.net ? fmt(unitConfig.net) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, net: parseCurrency(e.target.value) })}
-                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Xe máy / chiếc</label>
+                <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
+                  <label className="text-xs font-bold text-neutral-400 uppercase">Xe máy / chiếc</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={unitConfig.xe ? fmt(unitConfig.xe) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, xe: parseCurrency(e.target.value) })}
-                      className="w-full bg-white dark:bg-slate-900 pl-3 pr-8 py-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm font-num text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-slate-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                 <button
                   onClick={saveConfig}
                   className="primary-button py-3 px-8 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs"
@@ -2911,14 +2911,14 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-                <BookOpen size={15} className="text-blue-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                <BookOpen size={15} className="text-neutral-600" />
                 <span>Kỳ kê khai doanh thu (S1a-HKD)</span>
               </div>
             </div>
@@ -2933,10 +2933,10 @@ export function AdminPortal() {
                     setDeclarationHouse(h);
                     loadDeclaration(selectedMonth, h);
                   }}
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-slate-700 outline-none cursor-pointer"
+                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
-                  <option value="TRUNG_KIM" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Hộ KD Trung Kim (116/32)</option>
-                  <option value="LVC" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
+                  <option value="TRUNG_KIM" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Hộ KD Trung Kim (116/32)</option>
+                  <option value="LVC" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
                 </select>
               </div>
 
@@ -2967,9 +2967,9 @@ export function AdminPortal() {
             {/* Mẫu S1a-HKD Container */}
             <div 
               style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
-              className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-slate-200 shadow-sm max-w-4xl mx-auto text-slate-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
+              className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-neutral-200 shadow-sm max-w-4xl mx-auto text-neutral-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
             >
-              <div className="flex justify-between items-start text-xs sm:text-sm mb-6 border-b border-slate-200 pb-4">
+              <div className="flex justify-between items-start text-xs sm:text-sm mb-6 border-b border-neutral-200 pb-4">
                 <div>
                   <p className="font-bold underline">{declarationData?.headerLeft3 || 'HỘ CÁ NHÂN KD: NHÀ TRỌ TRUNG KIM'}</p>
                   <p>{declarationData?.headerLeft4 || 'Địa chỉ: 116/32 Đường 17, P. Linh Xuân, TP. Thủ Đức'}</p>
@@ -2977,7 +2977,7 @@ export function AdminPortal() {
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{declarationData?.headerRight3 || 'Mẫu số S1a-HKD'}</p>
-                  <p className="italic text-[11px] text-slate-500">
+                  <p className="italic text-[11px] text-neutral-500">
                     (Kèm theo Thông tư số 152/2025/TT-BTC)
                   </p>
                 </div>
@@ -2992,18 +2992,18 @@ export function AdminPortal() {
               </div>
 
               {/* Table */}
-              <table className="w-full border-collapse border border-slate-800 text-xs sm:text-sm mb-6">
+              <table className="w-full border-collapse border border-neutral-800 text-xs sm:text-sm mb-6">
                 <thead>
-                  <tr className="bg-slate-100 border-b border-slate-800">
-                    <th className="border border-slate-800 p-2 text-center w-28">Ngày tháng</th>
-                    <th className="border border-slate-800 p-2 text-center">Diễn giải (Người đóng / Phòng)</th>
-                    <th className="border border-slate-800 p-2 text-center w-36">Số tiền (VNĐ)</th>
+                  <tr className="bg-neutral-100 border-b border-neutral-800">
+                    <th className="border border-neutral-800 p-2 text-center w-28">Ngày tháng</th>
+                    <th className="border border-neutral-800 p-2 text-center">Diễn giải (Người đóng / Phòng)</th>
+                    <th className="border border-neutral-800 p-2 text-center w-36">Số tiền (VNĐ)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {declarationRows.map((row, idx) => (
-                    <tr key={idx} className="border-b border-slate-800">
-                      <td className="border border-slate-800 p-2 text-center">
+                    <tr key={idx} className="border-b border-neutral-800">
+                      <td className="border border-neutral-800 p-2 text-center">
                         <input
                           type="text"
                           value={row.date || ''}
@@ -3016,7 +3016,7 @@ export function AdminPortal() {
                           className="w-full text-center bg-transparent border-none outline-none font-serif text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="border border-slate-800 p-2">
+                      <td className="border border-neutral-800 p-2">
                         <input
                           type="text"
                           value={row.person || ''}
@@ -3029,7 +3029,7 @@ export function AdminPortal() {
                           className="w-full bg-transparent border-none outline-none font-serif text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="border border-slate-800 p-2 text-right">
+                      <td className="border border-neutral-800 p-2 text-right">
                         <input
                           type="number"
                           value={row.amount || ''}
@@ -3046,11 +3046,11 @@ export function AdminPortal() {
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-slate-50 font-bold border-t-2 border-slate-800">
-                    <td colSpan={2} className="border border-slate-800 p-2.5 text-right uppercase">
+                  <tr className="bg-neutral-50 font-bold border-t-2 border-neutral-800">
+                    <td colSpan={2} className="border border-neutral-800 p-2.5 text-right uppercase">
                       Tổng cộng doanh thu:
                     </td>
-                    <td className="border border-slate-800 p-2.5 text-right font-bold text-sm font-num">
+                    <td className="border border-neutral-800 p-2.5 text-right font-bold text-sm font-num">
                       {fmt(declarationRows.reduce((a, b) => a + (Number(b.amount) || 0), 0))} đ
                     </td>
                   </tr>
@@ -3070,7 +3070,7 @@ export function AdminPortal() {
                   <p className="font-bold uppercase text-[11px] sm:text-xs">
                     NGƯỜI ĐẠI DIỆN HỘ KINH DOANH
                   </p>
-                  <p className="text-[10px] italic text-slate-500">(Ký ghi rõ họ tên)</p>
+                  <p className="text-[10px] italic text-neutral-500">(Ký ghi rõ họ tên)</p>
                   <div className="h-16" />
                   <p className="font-bold text-sm">{declarationData?.ownerName || activeHouse.landlord}</p>
                 </div>
@@ -3093,13 +3093,13 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
                 <IconNotification3D size={22} />
                 <span>Mẫu gửi thông báo cư dân</span>
               </div>
@@ -3107,12 +3107,12 @@ export function AdminPortal() {
 
             {/* Notification Template Form Card */}
             <div className="soft-surface p-6 sm:p-8 space-y-7 relative overflow-hidden">
-              <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-                <h2 className="type-h2 font-bold text-slate-900 dark:text-white flex items-center gap-3">
+              <div className="border-b border-neutral-200 dark:border-neutral-800 pb-4">
+                <h2 className="type-h2 font-bold text-neutral-900 dark:text-white flex items-center gap-3">
                   <IconNotification3D size={44} />
                   <span>Tạo Thông Báo Mới</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1">
                   Soạn nội dung và gửi thông báo, lời nhắc nhở hoặc yêu cầu thanh toán đến toàn bộ cư dân hoặc từng căn hộ.
                 </p>
               </div>
@@ -3139,7 +3139,7 @@ export function AdminPortal() {
                 
                 {/* 1. MỤC PHÒNG */}
                 <div className="space-y-3">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
                     1. Phòng nhận thông báo <span className="text-rose-500">*</span>
                   </label>
                   
@@ -3154,17 +3154,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'ALL'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">1. Tất cả</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'ALL' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifTarget === 'ALL' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'ALL' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifTarget === 'ALL' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">Toàn bộ cư dân 2 khu</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Toàn bộ cư dân 2 khu</span>
                     </button>
 
                     {/* Option 2: Căn bên Lê Văn Chí */}
@@ -3177,17 +3177,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'LVC'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">2. Lê Văn Chí (LVC)</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'LVC' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifTarget === 'LVC' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'LVC' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifTarget === 'LVC' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">109/6 Lê Văn Chí</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">109/6 Lê Văn Chí</span>
                     </button>
 
                     {/* Option 3: Căn bên Trung Kim */}
@@ -3200,17 +3200,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'TRUNG_KIM'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">3. Trung Kim (TK)</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'TRUNG_KIM' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifTarget === 'TRUNG_KIM' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'TRUNG_KIM' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifTarget === 'TRUNG_KIM' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">Khu nhà Trung Kim</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Khu nhà Trung Kim</span>
                     </button>
 
                     {/* Option 4: Các phòng tùy chọn (có sẵn) */}
@@ -3223,17 +3223,17 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifTarget === 'CUSTOM'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold">4. Phòng tùy chọn</span>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'CUSTOM' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifTarget === 'CUSTOM' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifTarget === 'CUSTOM' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifTarget === 'CUSTOM' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
                         {selectedCustomRooms.length > 0 ? `Đã chọn ${selectedCustomRooms.length} phòng` : 'Chọn danh sách có sẵn'}
                       </span>
                     </button>
@@ -3241,24 +3241,24 @@ export function AdminPortal() {
 
                   {/* Danh sách phòng có sẵn khi chọn tùy chọn */}
                   {notifTarget === 'CUSTOM' && (
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3 animate-in fade-in duration-200">
+                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-3 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
                           Bấm chọn các phòng cần gửi thông báo:
                         </span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setSelectedCustomRooms(availableRoomNumbers)}
-                            className="text-[11px] font-bold text-slate-900 dark:text-white hover:underline cursor-pointer"
+                            className="text-[11px] font-bold text-neutral-900 dark:text-white hover:underline cursor-pointer"
                           >
                             Chọn tất cả
                           </button>
-                          <span className="text-slate-300">|</span>
+                          <span className="text-neutral-300">|</span>
                           <button
                             type="button"
                             onClick={() => setSelectedCustomRooms([])}
-                            className="text-[11px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
+                            className="text-[11px] font-bold text-neutral-400 hover:text-neutral-600 cursor-pointer"
                           >
                             Bỏ chọn
                           </button>
@@ -3281,8 +3281,8 @@ export function AdminPortal() {
                               className={cn(
                                 "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 font-num",
                                 isSelected
-                                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-400"
+                                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
+                                  : "bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400"
                               )}
                             >
                               {isSelected && <Check size={12} className="stroke-[3]" />}
@@ -3297,7 +3297,7 @@ export function AdminPortal() {
 
                 {/* 2. MỤC LOẠI THÔNG BÁO */}
                 <div className="space-y-3">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
                     2. Loại thông báo <span className="text-rose-500">*</span>
                   </label>
 
@@ -3312,8 +3312,8 @@ export function AdminPortal() {
                       className={cn(
                         "p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifType === 'thong_bao'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
@@ -3321,11 +3321,11 @@ export function AdminPortal() {
                           <IconNotification3D size={26} />
                           <span className="text-xs font-bold">Thông báo</span>
                         </div>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thong_bao' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifType === 'thong_bao' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thong_bao' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifType === 'thong_bao' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Bảo trì, sửa chữa, thông tin chung</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Bảo trì, sửa chữa, thông tin chung</span>
                     </button>
 
                     {/* Loại 2: Nhắc nhở */}
@@ -3338,8 +3338,8 @@ export function AdminPortal() {
                       className={cn(
                         "p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifType === 'nhac_nho'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
@@ -3347,11 +3347,11 @@ export function AdminPortal() {
                           <IconAlert3D size={26} />
                           <span className="text-xs font-bold">Nhắc nhở</span>
                         </div>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'nhac_nho' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifType === 'nhac_nho' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'nhac_nho' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifType === 'nhac_nho' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Trật tự, khóa cổng, giữ gìn vệ sinh</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Trật tự, khóa cổng, giữ gìn vệ sinh</span>
                     </button>
 
                     {/* Loại 3: Thanh toán */}
@@ -3364,8 +3364,8 @@ export function AdminPortal() {
                       className={cn(
                         "p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
                         notifType === 'thanh_toan'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div className="flex items-center justify-between">
@@ -3373,17 +3373,17 @@ export function AdminPortal() {
                           <IconWallet3D size={26} />
                           <span className="text-xs font-bold">Thanh toán</span>
                         </div>
-                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thanh_toan' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                          {notifType === 'thanh_toan' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thanh_toan' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                          {notifType === 'thanh_toan' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Hệ thống tự động báo cú pháp VietQR</span>
+                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Hệ thống tự động báo cú pháp VietQR</span>
                     </button>
                   </div>
 
                   {/* Banner tự động báo của Thanh toán */}
                   {notifType === 'thanh_toan' && (
-                    <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center gap-3 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in duration-200">
+                    <div className="p-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center gap-3 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in duration-200">
                       <IconWallet3D size={26} className="shrink-0" />
                       <div>
                         <span className="font-bold">Hệ thống tự động kích hoạt:</span> Cư dân khi nhận thông báo này sẽ có nút liên kết quét mã VietQR tự động kèm số tiền và đúng cú pháp chuyển khoản của phòng họ.
@@ -3395,7 +3395,7 @@ export function AdminPortal() {
                 {/* 3. MỤC NỘI DUNG */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1.5">
                       Tiêu đề thông báo <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -3403,12 +3403,12 @@ export function AdminPortal() {
                       value={notifTitle}
                       onChange={e => setNotifTitle(e.target.value)}
                       placeholder="Nhập tiêu đề thông báo..."
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-white"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-sm font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1.5">
                       Nội dung chi tiết <span className="text-rose-500">*</span>
                     </label>
                     <textarea
@@ -3416,14 +3416,14 @@ export function AdminPortal() {
                       value={notifContent}
                       onChange={e => setNotifContent(e.target.value)}
                       placeholder="Nhập toàn bộ nội dung muốn truyền tải đến cư dân..."
-                      className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-white leading-relaxed"
+                      className="w-full p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white leading-relaxed"
                     />
                   </div>
                 </div>
 
                 {/* 4. MỤC ĐẶT HẸN (NẾU CẦN) */}
                 <div className="space-y-3">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
                     4. Đặt hẹn gửi (Nếu cần)
                   </label>
 
@@ -3437,16 +3437,16 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between",
                         notifScheduleMode === 'none'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div>
                         <div className="text-xs font-bold">Không (Mặc định)</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Gửi ngay tức thì</div>
+                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">Gửi ngay tức thì</div>
                       </div>
-                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'none' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                        {notifScheduleMode === 'none' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'none' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                        {notifScheduleMode === 'none' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                       </div>
                     </button>
 
@@ -3459,45 +3459,45 @@ export function AdminPortal() {
                       className={cn(
                         "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between",
                         notifScheduleMode === 'scheduled'
-                          ? "bg-slate-100 dark:bg-slate-800/90 border-slate-900 dark:border-white text-slate-950 dark:text-white font-bold shadow-xs"
-                          : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-700 dark:text-slate-300"
+                          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
                       )}
                     >
                       <div>
                         <div className="text-xs font-bold">Đặt lịch hẹn gửi</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Chọn ngày giờ phát thông báo</div>
+                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">Chọn ngày giờ phát thông báo</div>
                       </div>
-                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'scheduled' ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white" : "border-slate-300 dark:border-slate-600")}>
-                        {notifScheduleMode === 'scheduled' && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-900 rounded-full" />}
+                      <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'scheduled' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+                        {notifScheduleMode === 'scheduled' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                       </div>
                     </button>
                   </div>
 
                   {notifScheduleMode === 'scheduled' && (
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in duration-200">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Clock size={14} className="text-slate-900 dark:text-white" />
+                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-2 animate-in fade-in duration-200">
+                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                        <Clock size={14} className="text-neutral-900 dark:text-white" />
                         <span>Thời gian kích hoạt gửi:</span>
                       </span>
                       <input
                         type="datetime-local"
                         value={notifScheduledDate}
                         onChange={e => setNotifScheduledDate(e.target.value)}
-                        className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-white cursor-pointer"
+                        className="px-4 py-2.5 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white cursor-pointer"
                       />
                     </div>
                   )}
                 </div>
 
                 {/* 5. ACTION BUTTONS */}
-                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-3">
+                <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       playSound('click');
                       setActiveMenu('utilities');
                     }}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-2xl text-xs font-bold text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                   >
                     Hủy bỏ
                   </button>
@@ -3506,7 +3506,7 @@ export function AdminPortal() {
                     type="button"
                     disabled={isSendingNotif}
                     onClick={handleSendNotification}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isSendingNotif ? (
                       <RefreshCw size={15} className="animate-spin" />
@@ -3537,14 +3537,14 @@ export function AdminPortal() {
                   playSound('click');
                   setActiveMenu('utilities');
                 }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
               >
                 <ArrowLeft size={16} />
                 <span>Quay lại Tiện ích</span>
               </button>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>LaundryFlow Server Engine Active</span>
                 </span>
@@ -3552,7 +3552,7 @@ export function AdminPortal() {
                   type="button"
                   onClick={handleAdminSyncSheet}
                   disabled={laundryLoading}
-                  className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60"
+                  className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-neutral-600 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-800/60"
                   title="Đồng bộ danh sách máy và giá từ tab Machines trên Google Sheet"
                 >
                   <FileSpreadsheet size={14} className={cn(laundryLoading && "animate-spin")} />
@@ -3564,7 +3564,7 @@ export function AdminPortal() {
                   disabled={laundryLoading}
                   className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
-                  <RefreshCw size={14} className={cn(laundryLoading && "animate-spin text-sky-600")} />
+                  <RefreshCw size={14} className={cn(laundryLoading && "animate-spin text-neutral-600")} />
                   <span className="hidden sm:inline">Cập nhật</span>
                 </button>
               </div>
@@ -3572,7 +3572,7 @@ export function AdminPortal() {
 
             {/* Action Flash Message */}
             {laundryActionMsg && (
-              <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-bold flex items-center gap-2">
+              <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-800 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800 text-xs font-bold flex items-center gap-2">
                 <CheckCircle2 size={16} />
                 <span>{laundryActionMsg}</span>
               </div>
@@ -3581,25 +3581,25 @@ export function AdminPortal() {
             {/* Overview Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Doanh thu hôm nay</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Doanh thu hôm nay</span>
                 <span className="text-xl font-bold font-num text-emerald-600 dark:text-emerald-400">
                   {(laundryStats.todayRevenue || 0).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Tổng doanh thu</span>
-                <span className="text-xl font-bold font-num text-slate-900 dark:text-white">
+                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Tổng doanh thu</span>
+                <span className="text-xl font-bold font-num text-neutral-900 dark:text-white">
                   {(laundryStats.totalRevenue || 0).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Phiên giặt hôm nay</span>
-                <span className="text-xl font-bold font-num text-sky-600 dark:text-sky-400">
+                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Phiên giặt hôm nay</span>
+                <span className="text-xl font-bold font-num text-neutral-600 dark:text-neutral-400">
                   {laundryStats.todaySessions || 0} lượt
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Lịch cọc đang giữ</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Lịch cọc đang giữ</span>
                 <span className="text-xl font-bold font-num text-amber-600 dark:text-amber-400">
                   {laundryStats.activeBookings || 0} slot
                 </span>
@@ -3608,8 +3608,8 @@ export function AdminPortal() {
 
             {/* Machine Management Grid */}
             <div className="space-y-3">
-              <h3 className="type-h3 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <WashingMachine size={20} className="text-sky-600" />
+              <h3 className="type-h3 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <WashingMachine size={20} className="text-neutral-600" />
                 <span>Điều Khiển Máy Giặt & Máy Sấy Trực Tuyến</span>
               </h3>
 
@@ -3624,21 +3624,21 @@ export function AdminPortal() {
                   return (
                     <div 
                       key={m.machineId}
-                      className="soft-card p-5 space-y-4 border border-slate-200/80 dark:border-slate-800"
+                      className="soft-card p-5 space-y-4 border border-neutral-200/80 dark:border-neutral-800"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           {isWasher ? <IconLaundry3D size={42} /> : <IconDryer3D size={42} />}
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
                                 {m.machineId}
                               </span>
-                              <span className="text-xs font-semibold text-slate-400">
+                              <span className="text-xs font-semibold text-neutral-400">
                                 {isWasher ? 'Máy giặt' : 'Máy sấy'} • {m.cycleMinutes}p
                               </span>
                             </div>
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                            <h4 className="text-sm font-bold text-neutral-900 dark:text-white mt-0.5">
                               {m.name}
                             </h4>
                           </div>
@@ -3659,14 +3659,14 @@ export function AdminPortal() {
                       </div>
 
                       {/* Power Switch & Price Bar */}
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-xs">
+                      <div className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-slate-500 dark:text-slate-400 font-medium">Ổ điện thông minh:</span>
+                          <span className="text-neutral-500 dark:text-neutral-400 font-medium">Ổ điện thông minh:</span>
                           <span className={cn(
                             "font-bold text-[11px] px-2 py-0.5 rounded uppercase font-num",
                             m.plugState === 'ON'
                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                              : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                              : "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300"
                           )}>
                             {m.plugState || 'OFF'}
                           </span>
@@ -3677,15 +3677,15 @@ export function AdminPortal() {
                           onClick={() => handleAdminTogglePlug(m.machineId)}
                           className="soft-button px-3 py-1 text-xs font-bold flex items-center gap-1 cursor-pointer"
                         >
-                          <Power size={13} className={m.plugState === 'ON' ? "text-emerald-600" : "text-slate-400"} />
+                          <Power size={13} className={m.plugState === 'ON' ? "text-emerald-600" : "text-neutral-400"} />
                           <span>Đổi nguồn</span>
                         </button>
                       </div>
 
                       {/* Admin Actions */}
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-slate-400">Giá:</span>
+                          <span className="text-xs text-neutral-400">Giá:</span>
                           <input
                             type="number"
                             defaultValue={m.price}
@@ -3693,9 +3693,9 @@ export function AdminPortal() {
                               const val = Number(e.target.value);
                               if (val && val !== m.price) handleAdminUpdatePrice(m.machineId, val);
                             }}
-                            className="w-20 px-2 py-1 rounded-lg text-xs font-bold font-num bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none"
+                            className="w-20 px-2 py-1 rounded-lg text-xs font-bold font-num bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none"
                           />
-                          <span className="text-xs font-bold text-slate-500">₫</span>
+                          <span className="text-xs font-bold text-neutral-500">₫</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -3728,26 +3728,26 @@ export function AdminPortal() {
 
             {/* Recent Bookings in Admin */}
             <div className="soft-card p-5 space-y-3">
-              <h4 className="type-h4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <CalendarClock size={18} className="text-sky-600" />
+              <h4 className="type-h4 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <CalendarClock size={18} className="text-neutral-600" />
                 <span>Lịch Đặt Chỗ Gần Đây Của Cư Dân</span>
               </h4>
 
               {laundryBookings.length === 0 ? (
-                <p className="text-xs text-slate-400">Chưa có lịch đặt chỗ nào.</p>
+                <p className="text-xs text-neutral-400">Chưa có lịch đặt chỗ nào.</p>
               ) : (
                 <div className="space-y-2">
                   {laundryBookings.slice(0, 8).map((b: any) => (
-                    <div key={b.bookingId} className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-xs">
+                    <div key={b.bookingId} className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl flex items-center justify-between text-xs">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-neutral-100 text-neutral-800 dark:bg-neutral-950/60 dark:text-neutral-300">
                             {b.machineId}
                           </span>
-                          <span className="font-bold text-slate-900 dark:text-white">
+                          <span className="font-bold text-neutral-900 dark:text-white">
                             {b.tenantName} {b.roomNumber ? `(P.${b.roomNumber})` : ''}
                           </span>
-                          <span className="text-slate-400">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
+                          <span className="text-neutral-400">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
                         </div>
                       </div>
 
@@ -3773,7 +3773,7 @@ export function AdminPortal() {
       {/* =========================================================================
           MOBILE BOTTOM NAVIGATION (Fixed bottom on mobile)
          ========================================================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-slate-200 dark:border-slate-800 px-3 py-2 flex items-center justify-around shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 px-3 py-2 flex items-center justify-around shadow-lg">
         {[
           { key: 'dashboard', icon: Home, label: 'Tổng quan' },
           { key: 'rooms', icon: Users, label: 'Phòng' },
@@ -3791,7 +3791,7 @@ export function AdminPortal() {
               }}
               className={cn(
                 "flex flex-col items-center justify-center p-2 rounded-2xl transition-all cursor-pointer",
-                isActive ? "text-slate-900 dark:text-white font-bold" : "text-slate-400 dark:text-slate-500 font-medium"
+                isActive ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-400 dark:text-neutral-500 font-medium"
               )}
             >
               <Icon size={20} />

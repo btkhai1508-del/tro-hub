@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Bike, ChevronRight, ContactRound, Edit3, FileText, House, KeyRound, LogOut, Moon, Settings2, Sun, Sunrise, UserRound } from 'lucide-react';
+import { IconProfile3D, IconHome3D, IconVehicle3D, IconSupport3D, IconSettings3D, IconContract3D, IconKey3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
@@ -8,8 +9,8 @@ import { cn } from '../lib/utils';
 function ProfileField({ label, value }: { label: string; value?: string }) {
   return (
     <div className="min-w-0 py-3.5">
-      <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</dt>
-      <dd className={cn('mt-1.5 break-words text-sm leading-relaxed', value?.trim() ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500')}>
+      <dt className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{label}</dt>
+      <dd className={cn('mt-1.5 break-words text-sm leading-relaxed', value?.trim() ? 'font-medium text-neutral-900 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500')}>
         {value?.trim() || 'Chưa cập nhật'}
       </dd>
     </div>
@@ -19,9 +20,9 @@ function ProfileField({ label, value }: { label: string; value?: string }) {
 function ProfileSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; children: React.ReactNode }) {
   return (
     <section className="liquid-panel px-5 py-2 sm:px-6">
-      <div className="flex items-center gap-2.5 border-b border-slate-200/50 py-4 dark:border-white/10">
-        <span className="glass-icon h-9 w-9 text-blue-600 dark:text-blue-400"><Icon size={18} strokeWidth={1.8} /></span>
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h2>
+      <div className="flex items-center gap-2.5 border-b border-neutral-200/50 py-4 dark:border-white/10">
+        <span className="glass-icon h-9 w-9 text-neutral-600 dark:text-neutral-400"><Icon size={44} /></span>
+        <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">{title}</h2>
       </div>
       <dl className="grid grid-cols-1 gap-x-6 pb-2 sm:grid-cols-2">{children}</dl>
     </section>
@@ -39,32 +40,32 @@ export function Profile() {
     <div className="mx-auto max-w-5xl space-y-7 pb-6">
       <header>
         <span className="liquid-eyebrow">KHÔNG GIAN CÁ NHÂN</span>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Hồ sơ của bạn</h1>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Thông tin cư trú và những tùy chỉnh dành riêng cho bạn.</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">Hồ sơ của bạn</h1>
+        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Thông tin cư trú và những tùy chỉnh dành riêng cho bạn.</p>
       </header>
 
       <section data-tutorial="profile-id-card" aria-label="Hồ sơ cư dân" className="liquid-panel relative overflow-hidden p-6 sm:p-8">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-neutral-400/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4 sm:gap-5">
             {profile.avatar && !profile.avatar.includes('unsplash.com') ? (
               <img src={profile.avatar} alt={profile.name || 'Ảnh đại diện'} className="h-20 w-20 shrink-0 rounded-[26px] object-cover ring-4 ring-white/60 shadow-lg dark:ring-white/10" />
             ) : (
-              <div aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-gradient-to-br from-blue-400 to-blue-600 text-2xl font-semibold tracking-tight text-white shadow-lg shadow-blue-500/20 ring-4 ring-white/60 dark:ring-white/10">{initials}</div>
+              <div aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-white/50 dark:bg-white/5 text-2xl font-semibold tracking-tight shadow-sm ring-4 ring-white/60 dark:ring-white/10"><IconProfile3D size={76} /></div>
             )}
             <div className="min-w-0">
-              <span className="liquid-chip mb-2 inline-flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300"><House size={12} />Cư dân Trọ-Hub</span>
-              <h2 className="break-words text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">{profile.name || 'Hồ sơ cư dân'}</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{roomLabel}{profile.room.building ? ` · ${profile.room.building}` : ''}</p>
+              <span className="liquid-chip mb-2 inline-flex items-center gap-1.5 text-xs text-neutral-700 dark:text-neutral-300"><House size={12} />Cư dân Trọ-Hub</span>
+              <h2 className="break-words text-xl font-semibold tracking-tight text-neutral-900 dark:text-white sm:text-2xl">{profile.name || 'Hồ sơ cư dân'}</h2>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{roomLabel}{profile.room.building ? ` · ${profile.room.building}` : ''}</p>
             </div>
           </div>
-          <button type="button" onClick={openProfileEditModal} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 text-sm text-blue-600 dark:text-blue-400 sm:self-center"><Edit3 size={16} />Chỉnh sửa hồ sơ</button>
+          <button type="button" onClick={openProfileEditModal} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400 sm:self-center"><Edit3 size={16} />Chỉnh sửa hồ sơ</button>
         </div>
       </section>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-5">
-          <ProfileSection icon={UserRound} title="Thông tin cá nhân">
+          <ProfileSection icon={IconProfile3D} title="Thông tin cá nhân">
             <ProfileField label="Họ và tên" value={profile.name} />
             <ProfileField label="Số điện thoại" value={profile.phone} />
             <ProfileField label="Email" value={profile.email} />
@@ -72,17 +73,17 @@ export function Profile() {
             <ProfileField label="Ngày sinh" value={profile.dob} />
             <ProfileField label="Địa chỉ thường trú" value={profile.address} />
           </ProfileSection>
-          <ProfileSection icon={House} title="Không gian sống">
+          <ProfileSection icon={IconHome3D} title="Không gian sống">
             <ProfileField label="Phòng đang thuê" value={profile.room.roomNumber ? roomLabel : ''} />
             <ProfileField label="Khu nhà" value={profile.room.building} />
             <ProfileField label="Ngày bắt đầu thuê" value={profile.room.startDate} />
             <ProfileField label="Tầng" value={profile.room.floor} />
           </ProfileSection>
-          <ProfileSection icon={Bike} title="Phương tiện đã đăng ký">
+          <ProfileSection icon={IconVehicle3D} title="Phương tiện đã đăng ký">
             <ProfileField label="Biển số xe" value={profile.vehicle.plateNumber} />
             <ProfileField label="Loại phương tiện" value={profile.vehicle.type} />
           </ProfileSection>
-          <ProfileSection icon={ContactRound} title="Liên hệ khẩn cấp">
+          <ProfileSection icon={IconSupport3D} title="Liên hệ khẩn cấp">
             <ProfileField label="Họ và tên" value={profile.emergencyContact.name} />
             <ProfileField label="Mối quan hệ" value={profile.emergencyContact.relationship} />
             <ProfileField label="Số điện thoại" value={profile.emergencyContact.phone} />
@@ -92,24 +93,24 @@ export function Profile() {
         <div className="space-y-5">
           <section className="liquid-panel p-5">
             <div className="mb-4 flex items-center gap-2.5">
-              <span className="glass-icon h-9 w-9 text-blue-600 dark:text-blue-400"><Settings2 size={18} /></span>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Giao diện</h2>
+              <span className="glass-icon h-9 w-9 text-neutral-600 dark:text-neutral-400"><IconSettings3D size={44} /></span>
+              <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">Giao diện</h2>
             </div>
-            <div role="group" aria-label="Chế độ giao diện" className="flex gap-1 rounded-[20px] border border-slate-200/50 bg-slate-200/40 p-1 dark:border-white/5 dark:bg-black/20">
+            <div role="group" aria-label="Chế độ giao diện" className="flex gap-1 rounded-[20px] border border-neutral-200/50 bg-neutral-200/40 p-1 dark:border-white/5 dark:bg-black/20">
               {([{ value: 'light', label: 'Sáng', icon: Sun }, { value: 'dark', label: 'Tối', icon: Moon }, { value: 'auto', label: 'Tự động', icon: Sunrise }] as const).map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 py-2 text-xs font-medium transition-colors', mode === value ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700/80 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200')}><Icon size={18} strokeWidth={1.7} />{label}</button>
+                <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl px-1 py-2 text-xs font-medium transition-colors', mode === value ? 'bg-white text-neutral-600 shadow-sm dark:bg-neutral-700/80 dark:text-neutral-300' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200')}><Icon size={18} strokeWidth={1.7} />{label}</button>
               ))}
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
+            <p className="mt-3 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
           </section>
 
           <section className="liquid-panel overflow-hidden p-2" aria-label="Tài khoản và tài liệu">
-            <button type="button" onClick={openContractModal} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-blue-500/5">
-              <span className="glass-icon h-9 w-9 shrink-0 text-blue-600 dark:text-blue-400"><FileText size={17} /></span><span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-200">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-slate-400" />
+            <button type="button" onClick={openContractModal} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
+              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-600 dark:text-neutral-400"><IconContract3D size={40} /></span><span className="flex-1 text-sm font-medium text-neutral-800 dark:text-neutral-200">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-neutral-400" />
             </button>
-            <div className="mx-3 border-t border-slate-200/50 dark:border-white/10" />
-            <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-blue-500/5">
-              <span className="glass-icon h-9 w-9 shrink-0 text-blue-600 dark:text-blue-400"><KeyRound size={17} /></span><span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-200">Đổi mật khẩu</span><ChevronRight size={16} className="text-slate-400" />
+            <div className="mx-3 border-t border-neutral-200/50 dark:border-white/10" />
+            <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
+              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-600 dark:text-neutral-400"><IconKey3D size={40} /></span><span className="flex-1 text-sm font-medium text-neutral-800 dark:text-neutral-200">Đổi mật khẩu</span><ChevronRight size={16} className="text-neutral-400" />
             </button>
           </section>
           <button type="button" onClick={logoutUser} className="liquid-panel-subtle flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-500/5 dark:text-rose-400"><LogOut size={17} />Đăng xuất</button>
