@@ -14,9 +14,9 @@ export function Utilities() {
   const [activeModalType, setActiveModalType] = useState<UtilityModalType>(null);
   const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
   const utilitiesList = [
-    { id: 'invoices', title: 'Hóa đơn & thanh toán', desc: unpaidCount > 0 ? `${unpaidCount} hóa đơn cần thanh toán` : 'Theo dõi chi phí và lịch sử thanh toán', Icon: IconWallet3D, color: 'bg-neutral-500/10 text-neutral-700 dark:text-neutral-300', action: () => navigate('/invoices') },
-    { id: 'contract', title: 'Hợp đồng thuê phòng', desc: 'Văn bản và thông tin lưu trú', Icon: IconContract3D, color: 'bg-neutral-500/10 text-neutral-700 dark:text-neutral-300', action: openContractModal },
-    { id: 'profile', title: 'Thông tin cá nhân', desc: 'Hồ sơ, phương tiện và liên hệ', Icon: IconProfile3D, color: 'bg-neutral-500/10 text-neutral-700 dark:text-neutral-300', action: openProfileEditModal },
+    { id: 'invoices', title: 'Hóa đơn & thanh toán', desc: unpaidCount > 0 ? `${unpaidCount} hóa đơn cần thanh toán` : 'Theo dõi chi phí và lịch sử thanh toán', Icon: IconWallet3D, color: 'bg-neutral-500/10 kit-text-secondary', action: () => navigate('/invoices') },
+    { id: 'contract', title: 'Hợp đồng thuê phòng', desc: 'Văn bản và thông tin lưu trú', Icon: IconContract3D, color: 'bg-neutral-500/10 kit-text-secondary', action: openContractModal },
+    { id: 'profile', title: 'Thông tin cá nhân', desc: 'Hồ sơ, phương tiện và liên hệ', Icon: IconProfile3D, color: 'bg-neutral-500/10 kit-text-secondary', action: openProfileEditModal },
     { id: 'account_guide', title: 'Tài khoản & trợ giúp', desc: 'Mật khẩu và hướng dẫn sử dụng', Icon: IconGuide3D, color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300', action: () => setIsAccountGuideOpen(true) },
   ];
 
@@ -28,41 +28,41 @@ export function Utilities() {
           <h1 className="kit-page-title">Tiện ích</h1>
           <p className="kit-page-description">Giặt sấy, hồ sơ và trợ giúp trong một nơi.</p>
         </div>
-        <div className="kit-inset rounded-full hidden sm:flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-neutral-700 dark:text-neutral-200"><House size={16} strokeWidth={1.7} />{profile.room.roomNumber || 'Phòng của bạn'}</div>
+        <div className="kit-inset rounded-full hidden sm:flex items-center gap-2 px-4 py-2.5 apple-body font-medium kit-text-secondary"><House size={16} strokeWidth={1.7} />{profile.room.roomNumber || 'Phòng của bạn'}</div>
       </header>
 
       <section data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
         <button type="button" onClick={() => navigate('/laundry')} className="lg:col-span-2 liquid-panel p-5 sm:p-7 relative overflow-hidden text-left group flex flex-col justify-between min-h-[270px]">
 
           <div className="relative mt-3 mb-6 flex items-center gap-4">
-            <div className="glass-icon h-20 w-20 rounded-[27px] text-neutral-700 dark:text-neutral-300 shrink-0"><IconLaundry3D size={80} /></div>
-            <div><p className="text-xs font-medium text-neutral-700 dark:text-neutral-200 mb-1.5">Tiện ích trong khu nhà</p><h2 className="text-[25px] leading-tight font-semibold tracking-[-0.035em] text-neutral-900 dark:text-white">Giặt & sấy</h2></div>
+            <div className="glass-icon h-20 w-20 rounded-[27px] kit-text-secondary shrink-0"><IconLaundry3D size={80} /></div>
+            <div><p className="apple-callout font-medium kit-text-secondary mb-1.5">Tiện ích trong khu nhà</p><h2 className="apple-title1 leading-tight font-semibold tracking-[-0.035em] kit-text-primary">Giặt & sấy</h2></div>
           </div>
-          <div className="relative"><p className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed">Xem máy giặt, máy sấy và đặt lịch ngay trong ứng dụng.</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300">Khám phá giặt sấy <ChevronRight size={16} /></span></div>
+          <div className="relative"><p className="apple-body kit-text-secondary leading-relaxed">Xem máy giặt, máy sấy và đặt lịch ngay trong ứng dụng.</p><span className="mt-5 inline-flex items-center gap-2 apple-body font-semibold kit-text-secondary">Khám phá giặt sấy <ChevronRight size={16} /></span></div>
         </button>
 
         <div className="lg:col-span-3 liquid-panel p-2 sm:p-3">
           <div className="px-4 pt-3 pb-3"><h2 className="kit-card-heading">Phòng thuê & tài khoản</h2></div>
           {utilitiesList.map(({ id, title, desc, Icon, color, action }) => <button key={id} type="button" onClick={action} className="kit-list-row w-full flex items-center gap-3 sm:gap-4 p-4 rounded-[18px] text-left hover:bg-white/55 dark:hover:bg-white/5 transition-colors group">
             <span className={`h-14 w-14 flex items-center justify-center shrink-0`}><Icon size={56} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100">{title}</span><span className="block mt-1 text-xs leading-relaxed text-neutral-700 dark:text-neutral-200">{desc}</span></span>
+            <span className="min-w-0 flex-1"><span className="block apple-body font-semibold kit-text-primary">{title}</span><span className="block mt-1 apple-callout leading-relaxed kit-text-secondary">{desc}</span></span>
             <ChevronRight size={17} className="text-neutral-600 shrink-0 group-hover:translate-x-0.5 transition-transform dark:text-neutral-300" />
           </button>)}
         </div>
       </section>
 
       <button type="button" onClick={openTourGuide} className="kit-inset rounded-[24px] p-5 w-full flex items-center gap-4 text-left group">
-        <span className="glass-icon h-11 w-11 rounded-2xl shrink-0 text-neutral-700 dark:text-neutral-300"><IconGuide3D size={48} /></span>
-        <span className="flex-1"><span className="block text-sm font-semibold text-neutral-800 dark:text-neutral-100">Lần đầu dùng Trọ-Hub?</span><span className="block mt-1 text-xs text-neutral-700 dark:text-neutral-200">Khám phá nhanh các tính năng dành cho bạn.</span></span>
+        <span className="glass-icon h-11 w-11 rounded-2xl shrink-0 kit-text-secondary"><IconGuide3D size={48} /></span>
+        <span className="flex-1"><span className="block apple-body font-semibold text-neutral-800 dark:text-neutral-100">Lần đầu dùng Trọ-Hub?</span><span className="block mt-1 apple-callout kit-text-secondary">Khám phá nhanh các tính năng dành cho bạn.</span></span>
         <ArrowUpRight size={18} className="text-neutral-600 shrink-0 group-hover:text-neutral-900 transition-colors dark:text-neutral-300 dark:hover:text-white dark:group-hover:text-white" />
       </button>
 
       {isAccountGuideOpen && <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-neutral-950/30" onClick={() => setIsAccountGuideOpen(false)}>
         <div role="dialog" aria-modal="true" aria-labelledby="account-guide-title" className="kit-dialog w-full max-w-md p-5 sm:p-7 space-y-5" onClick={e => e.stopPropagation()}>
-          <div className="flex items-start justify-between gap-4"><div><span className="liquid-eyebrow">DÀNH RIÊNG CHO BẠN</span><h2 id="account-guide-title" className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white mt-2">Tài khoản & trợ giúp</h2></div><button autoFocus type="button" aria-label="Đóng" onClick={() => setIsAccountGuideOpen(false)} className="soft-button h-10 w-10 flex items-center justify-center shrink-0"><X size={18} /></button></div>
+          <div className="flex items-start justify-between gap-4"><div><span className="apple-callout kit-text-secondary">Tài khoản cư dân</span><h2 id="account-guide-title" className="apple-title1 font-semibold tracking-tight kit-text-primary mt-2">Tài khoản & trợ giúp</h2></div><button autoFocus type="button" aria-label="Đóng" onClick={() => setIsAccountGuideOpen(false)} className="soft-button h-11 w-11 flex items-center justify-center shrink-0"><X size={18} /></button></div>
           <div className="space-y-2">
-            <button type="button" onClick={() => { setIsAccountGuideOpen(false); setIsPasswordModalOpen(true); }} className="liquid-panel-subtle rounded-[20px] p-4 w-full flex items-center gap-3 text-left"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-amber-500/10 text-amber-600 dark:text-amber-300 shrink-0"><IconKey3D size={40} /></span><span className="flex-1"><span className="text-sm font-semibold text-neutral-900 dark:text-white block">Đổi mật khẩu</span><span className="text-xs text-neutral-700 dark:text-neutral-200 block mt-1">Quản lý mật khẩu tài khoản</span></span><ChevronRight size={17} className="text-neutral-600 dark:text-neutral-300" /></button>
-            <button type="button" onClick={() => { setIsAccountGuideOpen(false); openTourGuide(); }} className="liquid-panel-subtle rounded-[20px] p-4 w-full flex items-center gap-3 text-left"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-neutral-500/10 text-neutral-700 dark:text-neutral-300 shrink-0"><IconGuide3D size={40} /></span><span className="flex-1"><span className="text-sm font-semibold text-neutral-900 dark:text-white block">Hướng dẫn sử dụng</span><span className="text-xs text-neutral-700 dark:text-neutral-200 block mt-1">Làm quen với không gian cư dân</span></span><ChevronRight size={17} className="text-neutral-600 dark:text-neutral-300" /></button>
+            <button type="button" onClick={() => { setIsAccountGuideOpen(false); setIsPasswordModalOpen(true); }} className="liquid-panel-subtle rounded-[20px] p-4 w-full flex items-center gap-3 text-left"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-amber-500/10 text-amber-600 dark:text-amber-300 shrink-0"><IconKey3D size={40} /></span><span className="flex-1"><span className="apple-body font-semibold kit-text-primary block">Đổi mật khẩu</span><span className="apple-callout kit-text-secondary block mt-1">Quản lý mật khẩu tài khoản</span></span><ChevronRight size={17} className="kit-text-secondary" /></button>
+            <button type="button" onClick={() => { setIsAccountGuideOpen(false); openTourGuide(); }} className="liquid-panel-subtle rounded-[20px] p-4 w-full flex items-center gap-3 text-left"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-neutral-500/10 kit-text-secondary shrink-0"><IconGuide3D size={40} /></span><span className="flex-1"><span className="apple-body font-semibold kit-text-primary block">Hướng dẫn sử dụng</span><span className="apple-callout kit-text-secondary block mt-1">Làm quen với không gian cư dân</span></span><ChevronRight size={17} className="kit-text-secondary" /></button>
           </div>
         </div>
       </div>}

@@ -154,17 +154,17 @@ export function LoginPage() {
             <IconHome3D size={56} />
           </span>
           <div className="min-w-0">
-            <span className="block text-[17px] font-semibold tracking-[-0.025em] text-neutral-950 dark:text-white">Trọ-Hub</span>
-            <span className="block text-[13px] text-neutral-600 dark:text-neutral-300">Nhà trọ Phong Lan</span>
+            <span className="block apple-title2 apple-strong kit-text-primary">Trọ-Hub</span>
+            <span className="block apple-callout kit-text-secondary">Nhà trọ Phong Lan</span>
           </div>
         </div>
 
         <div className="px-5 pb-7 pt-6 sm:px-7 sm:pb-8 sm:pt-7">
           <div className="mb-6">
-            <h1 className="text-[26px] leading-[1.2] font-semibold tracking-[-0.035em] text-neutral-950 dark:text-white">
+            <h1 className="apple-large-title apple-strong kit-text-primary">
               {mode === 'register' ? 'Bắt đầu với Trọ-Hub' : mode === 'forgot' ? 'Lấy lại quyền truy cập' : mode === 'pending_approval' ? 'Chào mừng bạn' : 'Chào bạn trở lại.'}
             </h1>
-            <p className="mt-2 text-[15px] leading-[1.5] text-neutral-600 dark:text-neutral-300">
+            <p className="mt-2 apple-body kit-text-secondary">
               {mode === 'register' ? 'Tạo tài khoản để kết nối với nơi bạn đang sống.' : mode === 'forgot' ? 'Chúng mình sẽ giúp bạn trở lại không gian của mình.' : mode === 'pending_approval' ? 'Thông tin đăng ký của bạn đã được ghi nhận.' : 'Đăng nhập để xem hóa đơn và quản lý tiện ích.'}
             </p>
           </div>
@@ -179,7 +179,7 @@ export function LoginPage() {
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`kit-segment min-h-11 px-3 text-[15px] font-medium ${mode === 'login' ? 'kit-segment-active' : ''}`}
+                className={`kit-segment min-h-11 px-3 apple-body font-medium ${mode === 'login' ? 'kit-segment-active' : ''}`}
               >
                 Đăng nhập
               </button>
@@ -191,7 +191,7 @@ export function LoginPage() {
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`kit-segment min-h-11 px-3 text-[15px] font-medium ${mode === 'register' ? 'kit-segment-active' : ''}`}
+                className={`kit-segment min-h-11 px-3 apple-body font-medium ${mode === 'register' ? 'kit-segment-active' : ''}`}
               >
                 Đăng ký mới
               </button>
@@ -219,7 +219,7 @@ export function LoginPage() {
                 onClick={handleZaloLogin}
                 disabled={isLoading}
                 aria-busy={isLoading}
-                className="soft-button group flex min-h-14 w-full items-center justify-center gap-2 px-4 sm:gap-3 py-2 text-[17px] font-medium disabled:cursor-wait"
+                className="soft-button group flex min-h-14 w-full items-center justify-center gap-2 px-4 sm:gap-3 py-2 apple-control font-medium disabled:cursor-wait"
               >
                 <img src="/brand/zalo-logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
                 <span>{isLoading ? 'Đang kết nối với Zalo…' : 'Đăng nhập với Zalo'}</span>
@@ -228,13 +228,13 @@ export function LoginPage() {
 
               <div className="flex items-center justify-center gap-3 py-1" aria-hidden="true">
                 <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
-                <span className="shrink-0 text-[13px] text-neutral-600 dark:text-neutral-300">hoặc số điện thoại</span>
+                <span className="shrink-0 apple-callout kit-text-secondary">hoặc số điện thoại</span>
                 <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="login-phone" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số điện thoại</label>
+                  <label htmlFor="login-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
                   <div className="relative flex items-center">
                     <Phone aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
                     <input
@@ -252,7 +252,7 @@ export function LoginPage() {
 
                 <div>
                   <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3">
-                    <label htmlFor="login-password" className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Mật khẩu</label>
+                    <label htmlFor="login-password" className="apple-headline kit-text-primary">Mật khẩu</label>
                     <button
                       type="button"
                       onClick={() => setMode('forgot')}
@@ -289,7 +289,7 @@ export function LoginPage() {
                   <AppleCheckbox checked={rememberMe} onChange={setRememberMe} label="Ghi nhớ đăng nhập" color="black" />
                 </div>
 
-                <button type="submit" disabled={isLoading} className="primary-button mt-1 min-h-12 w-full px-4 text-[17px]">
+                <button type="submit" disabled={isLoading} className="primary-button mt-1 min-h-12 w-full px-4 apple-control">
                   {isLoading && <span aria-hidden="true" className="ui-spinner h-4 w-4" />}
                   <span>{isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}</span>
                   {!isLoading && <ArrowRight aria-hidden="true" size={18} />}
@@ -306,7 +306,7 @@ export function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="register-name" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Họ và tên cư dân</label>
+                <label htmlFor="register-name" className="mb-2 block apple-headline kit-text-primary">Họ và tên cư dân</label>
                 <div className="relative flex items-center">
                   <User aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
                   <input id="register-name" type="text" autoComplete="name" required placeholder="Họ và tên của bạn" value={regName} onChange={(e) => setRegName(e.target.value)} className="kit-field min-h-12 w-full pl-11 pr-3.5" />
@@ -315,32 +315,32 @@ export function LoginPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
-                  <label htmlFor="register-phone" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số điện thoại</label>
+                  <label htmlFor="register-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
                   <input id="register-phone" type="tel" autoComplete="tel" required placeholder="09xx xxx xxx" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
                 </div>
                 <div className="min-w-0">
-                  <label htmlFor="register-room" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số phòng thuê</label>
+                  <label htmlFor="register-room" className="mb-2 block apple-headline kit-text-primary">Số phòng thuê</label>
                   <input id="register-room" type="text" required placeholder="P. 203" value={regRoom} onChange={(e) => setRegRoom(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="register-email" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Email liên hệ (tùy chọn)</label>
+                <label htmlFor="register-email" className="mb-2 block apple-headline kit-text-primary">Email liên hệ (tùy chọn)</label>
                 <input id="register-email" type="email" autoComplete="email" placeholder="ban@example.com" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
-                  <label htmlFor="register-password" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Mật khẩu</label>
+                  <label htmlFor="register-password" className="mb-2 block apple-headline kit-text-primary">Mật khẩu</label>
                   <input id="register-password" type="password" autoComplete="new-password" required placeholder="Ít nhất 6 ký tự" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
                 <div className="min-w-0">
-                  <label htmlFor="register-confirm" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Nhập lại mật khẩu</label>
+                  <label htmlFor="register-confirm" className="mb-2 block apple-headline kit-text-primary">Nhập lại mật khẩu</label>
                   <input id="register-confirm" type="password" autoComplete="new-password" required placeholder="Nhập lại mật khẩu" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
               </div>
 
-              <button type="submit" disabled={isLoading} className="primary-button min-h-12 w-full px-4 py-3 text-[15px]">
+              <button type="submit" disabled={isLoading} className="primary-button min-h-12 w-full px-4 py-3 apple-control">
                 {isLoading && <span aria-hidden="true" className="ui-spinner h-4 w-4 shrink-0" />}
                 <span>{isLoading ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu đăng ký cho Chủ trọ'}</span>
                 {!isLoading && <ArrowRight aria-hidden="true" size={17} className="shrink-0" />}
@@ -355,18 +355,18 @@ export function LoginPage() {
               </div>
               <div>
                 <span className="mb-2 inline-block rounded-full bg-amber-100/80 px-3 py-1 text-[13px] font-medium text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">Đang chờ chủ trọ xác nhận</span>
-                <h3 className="text-[17px] font-semibold text-neutral-950 dark:text-white">Yêu cầu đăng ký đã được gửi!</h3>
+                <h3 className="apple-title2 apple-strong kit-text-primary">Yêu cầu đăng ký đã được gửi!</h3>
               </div>
 
               {registeredData && (
-                <dl className="liquid-panel-subtle space-y-3 rounded-2xl p-4 text-left text-[15px]">
+                <dl className="liquid-panel-subtle space-y-3 rounded-2xl p-4 text-left apple-body">
                   <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-neutral-600 dark:text-neutral-300">Họ và tên</dt><dd className="break-all font-medium text-neutral-950 dark:text-white">{registeredData.name}</dd></div>
                   <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-neutral-600 dark:text-neutral-300">Số điện thoại</dt><dd className="font-num font-medium text-neutral-950 dark:text-white">{registeredData.phone}</dd></div>
                   <div className="flex flex-wrap justify-between gap-x-4 gap-y-1"><dt className="text-neutral-600 dark:text-neutral-300">Số phòng đăng ký</dt><dd className="break-all font-num font-medium text-neutral-950 dark:text-white">{registeredData.roomNumber}</dd></div>
                 </dl>
               )}
 
-              <p className="text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300">Chủ trọ sẽ đối chiếu hợp đồng thuê phòng và kích hoạt tài khoản của bạn. Sau khi được duyệt, bạn có thể đăng nhập bằng số điện thoại này.</p>
+              <p className="apple-callout kit-text-secondary">Chủ trọ sẽ đối chiếu hợp đồng thuê phòng và kích hoạt tài khoản của bạn. Sau khi được duyệt, bạn có thể đăng nhập bằng số điện thoại này.</p>
 
               <div className="space-y-3">
                 <a href="tel:0902371800" className="soft-button min-h-12 w-full px-4 py-3 text-[13px]">
@@ -376,7 +376,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
-                  className="primary-button min-h-12 w-full px-4 py-3 text-[15px]"
+                  className="primary-button min-h-12 w-full px-4 py-3 apple-control"
                 >
                   Quay lại màn hình đăng nhập
                 </button>
@@ -388,11 +388,11 @@ export function LoginPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2.5 text-neutral-800 dark:text-neutral-100">
                 <KeyRound aria-hidden="true" size={20} className="text-amber-600 dark:text-amber-300" />
-                <h3 className="text-[17px] font-semibold">Khôi phục mật khẩu tài khoản</h3>
+                <h3 className="apple-title2 apple-strong">Khôi phục mật khẩu tài khoản</h3>
               </div>
-              <p className="text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300">Nhập số điện thoại đã đăng ký với Ban Quản Lý Nhà Trọ Phong Lan. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.</p>
+              <p className="apple-callout kit-text-secondary">Nhập số điện thoại đã đăng ký với Ban Quản Lý Nhà Trọ Phong Lan. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.</p>
               <div>
-                <label htmlFor="forgot-phone" className="mb-2 block text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Số điện thoại</label>
+                <label htmlFor="forgot-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
                 <input id="forgot-phone" type="tel" autoComplete="tel" placeholder="Ví dụ: 0902 371 800" value={forgotInput} onChange={(e) => setForgotInput(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
               </div>
               <button
@@ -401,11 +401,11 @@ export function LoginPage() {
                   setSuccessMsg('Đã gửi mã khôi phục tới số điện thoại của bạn. Vui lòng kiểm tra tin nhắn SMS.');
                   setTimeout(() => setMode('login'), 2500);
                 }}
-                className="primary-button min-h-12 w-full px-4 text-[17px]"
+                className="primary-button min-h-12 w-full px-4 apple-control"
               >
                 Gửi mã xác nhận OTP
               </button>
-              <button type="button" onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} className="soft-button min-h-11 w-full px-4 text-[15px]">Quay lại đăng nhập</button>
+              <button type="button" onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} className="soft-button min-h-11 w-full px-4 apple-control">Quay lại đăng nhập</button>
             </div>
           )}
         </div>
@@ -414,7 +414,7 @@ export function LoginPage() {
           <a href="tel:0902371800" className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-[13px] font-medium text-neutral-700 underline-offset-4 hover:underline dark:text-neutral-200">
             <PhoneCall aria-hidden="true" size={15} /> Cần hỗ trợ? Liên hệ quản lý
           </a>
-          <span className="pb-1 text-[11px] text-neutral-500 dark:text-neutral-400">Trọ-Hub · Một nơi cho mọi điều ở nhà.</span>
+          <span className="pb-1 apple-subheadline kit-text-secondary">Trọ-Hub · Một nơi cho mọi điều ở nhà.</span>
         </div>
       </div>
     </div>

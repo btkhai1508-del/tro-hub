@@ -1,0 +1,81 @@
+/* Type roles read from the supplied macOS 26 typography reference.
+   Small-screen body sizes are adapted for readable Vietnamese and touch UI.
+   Fields retain the independent 17px control size to avoid iOS focus zoom. */
+:root {
+  --apple-large-title: 26px;
+  --apple-large-title-leading: 32px;
+  --apple-title1: 22px;
+  --apple-title1-leading: 26px;
+  --apple-title2: 17px;
+  --apple-title2-leading: 22px;
+  --apple-title3: 15px;
+  --apple-title3-leading: 20px;
+  --apple-headline: 13px;
+  --apple-headline-leading: 18px;
+  --apple-body: 13px;
+  --apple-body-leading: 18px;
+  --apple-callout: 12px;
+  --apple-callout-leading: 16px;
+  --apple-subheadline: 11px;
+  --apple-subheadline-leading: 15px;
+  --apple-footnote: 10px;
+  --apple-footnote-leading: 14px;
+  --apple-caption: 10px;
+  --apple-caption-leading: 14px;
+  --apple-caption1: 10px;
+  --apple-caption2: 10px;
+  --apple-control: 17px;
+  --apple-control-leading: 22px;
+}
+.apple-large-title, .apple-title1, .apple-title2, .apple-title3 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.apple-large-title { font-size: var(--apple-large-title); line-height: var(--apple-large-title-leading); }
+.apple-title1 { font-size: var(--apple-title1); line-height: var(--apple-title1-leading); }
+.apple-title2 { font-size: var(--apple-title2); line-height: var(--apple-title2-leading); }
+.apple-title3 { font-size: var(--apple-title3); line-height: var(--apple-title3-leading); }
+.apple-headline { font-size: var(--apple-headline); line-height: var(--apple-headline-leading); letter-spacing: -0.01em; font-weight: 600; }
+.apple-body { font-size: var(--apple-body); line-height: var(--apple-body-leading); letter-spacing: -0.008em; }
+.apple-callout { font-size: var(--apple-callout); line-height: var(--apple-callout-leading); letter-spacing: 0; }
+.apple-subheadline { font-size: var(--apple-subheadline); line-height: var(--apple-subheadline-leading); letter-spacing: 0; }
+.apple-footnote { font-size: var(--apple-footnote); line-height: var(--apple-footnote-leading); letter-spacing: 0; }
+.apple-caption { font-size: var(--apple-caption); line-height: var(--apple-caption-leading); letter-spacing: 0; }
+.apple-caption1 { font-size: var(--apple-caption1); line-height: var(--apple-caption-leading); letter-spacing: 0; }
+.apple-caption2 { font-size: var(--apple-caption2); line-height: var(--apple-caption-leading); letter-spacing: 0; font-weight: 500; }
+.apple-control { font-size: var(--apple-control); line-height: var(--apple-control-leading); letter-spacing: -0.012em; }
+.apple-regular { font-weight: 400; }
+.apple-strong { font-weight: 600; }
+.apple-bold { font-weight: 700; }
+.apple-heavy { font-weight: 800; }
+.apple-amount {
+  font-size: clamp(38px, 4vw, 44px);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.kit-text-primary { color: var(--text-primary); }
+.kit-text-secondary { color: var(--text-secondary); }
+/* Reserve tertiary text for optional context; labels and financial data use
+   primary/secondary so they remain legible over the supplied wallpaper. */
+.kit-text-tertiary { color: var(--text-tertiary); }
+@media (max-width: 1023px) {
+  :root {
+    --apple-headline: 14px;
+    --apple-headline-leading: 20px;
+    --apple-body: 15px;
+    --apple-body-leading: 22px;
+    --apple-callout: 13px;
+    --apple-callout-leading: 18px;
+    --apple-subheadline: 12px;
+    --apple-subheadline-leading: 17px;
+    --apple-footnote: 11px;
+    --apple-footnote-leading: 16px;
+    --apple-caption: 11px;
+    --apple-caption1: 11px;
+    --apple-caption2: 11px;
+    --apple-caption-leading: 16px;
+  }
+}

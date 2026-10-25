@@ -2,20 +2,20 @@
 
 ## Nền do người dùng cung cấp
 
-- Mẫu chọn: **Gradient Background #4**.
-- Sáng: `public/backgrounds/gradient-04-light.svg` — file gốc `Gradient Background #4.svg`.
-- Tối: `public/backgrounds/gradient-04-dark.svg` — file gốc `Gradient Background #4-1.svg`.
-- Cả hai giữ `opacity: 0.90`. CSS phóng nhẹ để cắt khung trình bày của SVG, dùng gradient tràn màn hình.
-- Đổi ảnh theo class `.dark` của ứng dụng, kể cả khi người dùng đổi chế độ thủ công.
+- Nền hiện tại: wallpaper gốc nhúng trong **Materials - Light.svg / Materials - Dark.svg** người dùng gửi, thay bộ Gradient #4 trước đó.
+- File phát hành: `public/backgrounds/macos26-light.webp` (170.874 byte) và `macos26-dark.webp` (158.144 byte), giữ kích thước 3024×1964.
+- Hai ảnh tổng 0,329 MB; chỉ tải theme đang dùng khi mở trang. [Nguồn và quá trình tối ưu](../public/backgrounds/README.md).
+- Giữ `opacity: 0.90`; `object-fit: cover`, căn giữa, không phóng/cắt khung SVG cũ hoặc áp filter màu.
+- Đổi ảnh theo `ThemeContext`, kể cả chế độ tự động; áp theme sớm trên trình duyệt để hạn chế lóe sáng.
 
 ## Vật liệu và nội dung
 
 - Áp dụng vật liệu và template từ **macOS 26 Community UI kit** người dùng cung cấp; [bảng đối chiếu thông số và cách áp dụng](design/macos26-kit.md).
 - Kính có năm mức Ultra Thin → Ultra Thick, sáng từ 36–84% và tối từ 10–50%, dùng `backdrop-filter: blur(15px)` theo export.
 - Lớp phụ/ô nhập/nút không có blur riêng; viền phản sáng mảnh và bóng theo kit. Không dùng filter xám hoặc opacity trên toàn trang/nội dung.
-- Chữ chính đen/trắng, chữ phụ tương phản cao; nút chính vẫn đen/trắng.
+- Chữ chính đen/trắng, chữ phụ tương phản cao; nút chính vẫn đen/trắng. Lớp đọc Light68%/Dark50% nằm dưới các vật liệu để chữ rõ trên wallpaper nhiều vùng sáng/tối; không filter lên nội dung.
 - Giữ nguyên hình và màu bộ icon 3D. Màu cảnh báo/trạng thái có ý nghĩa được giữ riêng.
-- Font hệ thống Apple trên thiết bị Apple, có fallback hệ thống trên thiết bị khác. Chữ nội dung 15px, trường nhập 17px; tiêu đề trang 26–32px, nhãn 13px.
+- Font hệ thống Apple trên thiết bị Apple, có fallback hệ thống trên thiết bị khác. Hệ chữ LargeTitle26/Title122/Title217/Title315; Body13px desktop/15px mobile, trường nhập17px. [Bảng role và khoảng dòng](design/macos26-kit.md#typography-từ-bảng-tham-chiếu).
 - Desktop dùng khung cửa sổ bo 34px, sidebar tích hợp và toolbar; mobile dùng toolbar gọn và dock nổi. Các nhóm nội dung con bo 20px.
 - Form đăng nhập, danh sách hóa đơn, trang tiện ích/hồ sơ/hợp đồng/thanh toán/giặt sấy và các dialog cư dân dùng chung các kiểu template.
 - Bỏ cột quảng bá “Về nhà. Thật nhẹ nhàng.” và hai thẻ giới thiệu; form đăng nhập căn giữa.
@@ -26,12 +26,12 @@
 - Bảng chi tiết hóa đơn là nền trắng đặc, chữ tối ở cả chế độ sáng và tối.
 - Bỏ hàng thống kê Tất cả / Đã thanh toán / Chờ xác nhận.
 - Trang được tách thành các gói tải theo nhu cầu; thư viện PDF/ảnh chụp chỉ tải khi bấm xuất.
-- Không dịch chuyển cả trang khi đổi mục; chỉ giữ hiệu ứng nút và mở bảng 200ms, có spinner/skeleton và tôn trọng giảm chuyển động.
+- Không dịch chuyển cả trang khi đổi mục; chỉ giữ hiệu ứng nút và mở bảng 200ms, có spinner/skeleton; cả CSS và transition trạng thái thanh toán/giặt sấy tôn trọng giảm chuyển động.
 - Khi chuyển trang chậm, giữ header/menu và hiển thị trạng thái tải.
 
 ## Dung lượng đo trên bản build
 
-- Tổng file frontend phát hành: khoảng **3,50 MB** (không tính manifest dùng để đo).
+- Tổng file frontend phát hành: khoảng **3,83 MB** (không tính manifest dùng để đo).
 - JavaScript mở trang chủ: khoảng **0,72 MB**, so với gói ban đầu **1,79 MB**, giảm khoảng **60%**.
 - JavaScript trang chủ sau nén gzip: khoảng **0,20–0,21 MB**; số truyền thực tế phụ thuộc cấu hình nén của hosting.
 - Đây là số đo file build; thời gian phản hồi API/Google Sheets hoặc khởi động Render cần đo riêng.

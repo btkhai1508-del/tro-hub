@@ -51,18 +51,18 @@ export function Contract() {
 
       <div className="print:hidden liquid-panel p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex flex-wrap items-center gap-2"><span className="badge-paid">✓ Đang hiệu lực</span><span className="text-xs text-neutral-700 dark:text-neutral-200">01/06/2026 — 01/12/2028</span></div>
-          <span className="text-xs text-neutral-700 dark:text-neutral-200 break-all">Mã: {contractCode}</span>
+          <div className="flex flex-wrap items-center gap-2"><span className="badge-paid">✓ Đang hiệu lực</span><span className="apple-callout kit-text-secondary">01/06/2026 — 01/12/2028</span></div>
+          <span className="apple-callout kit-text-secondary break-all">Mã: {contractCode}</span>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div role="group" aria-label="Loại tài liệu" className="kit-segmented flex w-full max-w-lg items-stretch gap-1">
             <button type="button" aria-pressed={activeTab === 'contract'} onClick={() => setActiveTab('contract')}
-              className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 text-xs sm:text-sm ${activeTab === 'contract' ? 'kit-segment-active' : ''}`}>
+              className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body ${activeTab === 'contract' ? 'kit-segment-active' : ''}`}>
               <IconContract3D size={25} />
               <span>Hợp đồng thuê phòng</span>
             </button>
             <button type="button" aria-pressed={activeTab === 'ct01'} onClick={() => setActiveTab('ct01')}
-              className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 text-xs sm:text-sm ${activeTab === 'ct01' ? 'kit-segment-active' : ''}`}>
+              className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body ${activeTab === 'ct01' ? 'kit-segment-active' : ''}`}>
               <IconDeclaration3D size={25} />
               <span>Tờ khai cư trú (CT01)</span>
             </button>
@@ -72,7 +72,7 @@ export function Contract() {
               className="soft-button h-11 w-11" aria-label="Thu nhỏ tài liệu" title="Thu nhỏ">
               <ZoomOut size={16} />
             </button>
-            <span className="font-num min-w-11 text-center text-xs font-medium text-neutral-800 dark:text-neutral-100">{zoomLevel}%</span>
+            <span className="font-num min-w-11 text-center apple-callout font-medium text-neutral-800 dark:text-neutral-100">{zoomLevel}%</span>
             <button type="button" onClick={() => setZoomLevel(prev => Math.min(125, prev + 10))} disabled={zoomLevel >= 125}
               className="soft-button h-11 w-11" aria-label="Phóng to tài liệu" title="Phóng to">
               <ZoomIn size={16} />

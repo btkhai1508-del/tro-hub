@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/macos-kit.css";
+@import "./styles/apple-typography.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -8,20 +9,20 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
     --text-display: clamp(2rem, 4vw, 3.5rem);
-    --text-h1: clamp(1.625rem, 2.4vw, 2rem);
-    --text-h2: 1.375rem;
-    --text-h3: 1.0625rem;
-    --text-h4: 1rem;
+    --text-h1: var(--apple-large-title);
+    --text-h2: var(--apple-title1);
+    --text-h3: var(--apple-title2);
+    --text-h4: var(--apple-title3);
     --text-body-lg: 1rem;
-    --text-body: 0.9375rem;
+    --text-body: var(--apple-body);
     --text-body-sm: 0.875rem;
     --text-caption: 0.8125rem;
     --text-label: 0.6875rem;
     --text-button: 1.0625rem;
     --text-nav: 0.875rem;
     --text-primary: #1d1d1f;
-    --text-secondary: #4d4d4d;
-    --text-tertiary: #57575b;
+    --text-secondary: #3a3a3c;
+    --text-tertiary: #636366;
     --text-muted: #636366;
     --text-disabled: #aaaaaa;
     --radius-surface: 34px;
@@ -35,18 +36,21 @@
     --material-thick: rgba(246, 246, 246, 0.72);
     --material-ultrathick: rgba(246, 246, 246, 0.84);
     --material-blur: 15px;
+    --workspace-fill: rgba(246, 246, 246, 0.68);
+    --auth-fill: var(--material-thick);
+    --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0.08));
     --material-inset: rgba(255, 255, 255, 0.42);
     --control-fill: rgba(255, 255, 255, 0.72);
     --control-hover: rgba(255, 255, 255, 0.9);
-    --control-selected: #ffffff;
+    --control-selected: rgba(255, 255, 255, 0.78);
     --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
     --liquid-fill: var(--material-medium);
     --liquid-fill-subtle: var(--material-ultrathin);
-    --liquid-edge: rgba(255, 255, 255, 0.72);
+    --liquid-edge: rgba(255, 255, 255, 0.55);
     --liquid-stroke: var(--separator);
-    --liquid-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    --liquid-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.85), inset 0 -1px 1px rgba(0, 0, 0, 0.04);
     --liquid-ease: cubic-bezier(0.22, 1, 0.36, 1);
     color-scheme: light;
   }
@@ -54,7 +58,7 @@
   .dark {
     --text-primary: #ffffff;
     --text-secondary: #e5e5e7;
-    --text-tertiary: #d1d1d6;
+    --text-tertiary: #b8b8bf;
     --text-muted: #c0c0c6;
     --text-disabled: #7f7f7f;
     --liquid-accent: #fafafa;
@@ -65,14 +69,17 @@
     --material-medium: rgba(0, 0, 0, 0.29);
     --material-thick: rgba(0, 0, 0, 0.40);
     --material-ultrathick: rgba(0, 0, 0, 0.50);
+    --workspace-fill: rgba(0, 0, 0, 0.50);
+    --auth-fill: var(--material-ultrathick);
+    --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0.015));
     --material-inset: rgba(255, 255, 255, 0.055);
     --control-fill: rgba(255, 255, 255, 0.09);
     --control-hover: rgba(255, 255, 255, 0.15);
     --control-selected: rgba(255, 255, 255, 0.18);
     --separator: rgba(255, 255, 255, 0.14);
-    --liquid-edge: rgba(255, 255, 255, 0.20);
+    --liquid-edge: rgba(255, 255, 255, 0.18);
     --liquid-stroke: rgba(255, 255, 255, 0.16);
-    --liquid-shadow: 0 8px 40px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    --liquid-shadow: 0 8px 40px rgba(0, 0, 0, 0.20), inset 0 1px 1px rgba(255, 255, 255, 0.20), inset 0 -1px 1px rgba(0, 0, 0, 0.18);
     color-scheme: dark;
   }
 
@@ -137,7 +144,7 @@
 
   /* Shared material: translucent fill, a bright rim, and a quiet contact shadow. */
   .soft-surface, .soft-card, .glass-card-3d, .liquid-panel, .liquid-panel-subtle, .apple-grouped-list {
-    background: var(--liquid-fill);
+    background: var(--glass-sheen), var(--liquid-fill);
     border: 1px solid var(--liquid-edge);
     border-radius: var(--radius-surface);
     box-shadow: var(--liquid-shadow);
@@ -188,9 +195,9 @@
   }
   .soft-button {
     color: var(--text-primary);
-    background: var(--liquid-fill);
+    background: var(--glass-sheen), var(--control-fill);
     border: 1px solid var(--liquid-edge);
-    box-shadow: 0 3px 10px -6px rgba(77, 77, 77, 0.2), inset 0 1px 0 var(--liquid-edge);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07), inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -1px 1px rgba(0, 0, 0, 0.05);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -227,7 +234,7 @@
 }
 
 
-/* Reference: the supplied Gradient Background #4 / #4-1 at 90%. No global color filter. */
+/* Exact artwork embedded in the supplied Materials light/dark SVGs at 90%. */
 .app-wallpaper { background: #fafafa; }
 .dark .app-wallpaper { background: #050505; }
 .wallpaper-art {
@@ -236,15 +243,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: right top;
-  /* Crop the presentation frame in the supplied SVG; keep its gradient artwork. */
-  transform: scale(1.08);
+  object-position: center;
   opacity: 0.90;
   user-select: none;
 }
-.wallpaper-art-dark { display: none; }
-.dark .wallpaper-art-light { display: none; }
-.dark .wallpaper-art-dark { display: block; }
 
 
 /* Reading surfaces stay opaque white, independently of the global theme. */
@@ -298,13 +300,13 @@
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root { --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; }
-  .dark { --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
+  :root { --workspace-fill: #f3f3f3; --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; }
+  .dark { --workspace-fill: #242424; --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  :root { --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; --material-blur: 0px; }
-  .dark { --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
+  :root { --workspace-fill: #f3f3f3; --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; --material-blur: 0px; }
+  .dark { --workspace-fill: #242424; --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
 }
 
 /* =========================================================================

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { saveQrToDevice } from '../lib/qrHelper';
@@ -8,6 +8,7 @@ import { soundFx } from '../lib/soundFx';
 import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from 'lucide-react';
 
 export function PaymentPage() {
+  const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const invoiceIdParam = searchParams.get('invoiceId');
@@ -246,9 +247,9 @@ export function PaymentPage() {
     return (
       <div className="w-full flex items-center justify-center p-4">
         <div className="soft-card max-w-md p-8 text-center space-y-4">
-          <h1 className="text-lg font-bold text-neutral-900 dark:text-white">Chưa có hóa đơn để thanh toán</h1>
-          <p className="text-sm text-neutral-700 dark:text-neutral-200">Hóa đơn của bạn sẽ xuất hiện tại đây khi được phát hành.</p>
-          <button type="button" onClick={() => navigate('/invoices')} className="primary-button px-4 py-2 text-sm inline-flex items-center gap-2">
+          <h1 className="apple-title2 font-semibold kit-text-primary">Chưa có hóa đơn để thanh toán</h1>
+          <p className="apple-body kit-text-secondary">Hóa đơn của bạn sẽ xuất hiện tại đây khi được phát hành.</p>
+          <button type="button" onClick={() => navigate('/invoices')} className="primary-button px-4 py-2 apple-control inline-flex items-center gap-2">
             <ChevronLeft size={16} />
             <span>Quay lại hóa đơn</span>
           </button>
@@ -260,13 +261,13 @@ export function PaymentPage() {
   return (
     <div className="w-full space-y-5 pb-4">
       <header className="kit-page-header kit-payment-header mx-auto flex w-full max-w-5xl items-center gap-3">
-        <button type="button" onClick={() => navigate('/invoices')} aria-label="Quay lại hóa đơn" className="soft-button flex h-11 w-11 shrink-0 items-center justify-center text-neutral-600 dark:text-neutral-200"><ChevronLeft size={22} /></button>
+        <button type="button" onClick={() => navigate('/invoices')} aria-label="Quay lại hóa đơn" className="soft-button flex h-11 w-11 shrink-0 items-center justify-center kit-text-secondary"><ChevronLeft size={22} /></button>
         <div>
           <h1 className="kit-page-title">Thanh toán</h1>
           <p className="kit-page-description">Hóa đơn tháng {targetInvoice.month}</p>
         </div>
       </header>
-      {pdfError && <p role="alert" className="mx-auto max-w-5xl text-sm text-red-700 dark:text-red-300">{pdfError}</p>}
+      {pdfError && <p role="alert" className="mx-auto max-w-5xl apple-body text-red-700 dark:text-red-300">{pdfError}</p>}
       <AnimatePresence mode="wait">
         {paymentMode === 'processing' ? (
           /* =========================================================================
@@ -274,10 +275,10 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="processing-mode"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[500px] p-8 sm:p-10 flex flex-col items-center text-center transition-colors">
@@ -285,29 +286,29 @@ export function PaymentPage() {
                 <CheckCircle2 size={36} />
               </div>
 
-              <h2 className="text-[24px] font-bold text-neutral-900 dark:text-white mb-2">
+              <h2 className="apple-title1 font-semibold kit-text-primary mb-2">
                 Đã ghi nhận chuyển khoản
               </h2>
 
-              <p className="text-sm text-neutral-700 dark:text-neutral-200 max-w-sm mb-6">
+              <p className="apple-body kit-text-secondary max-w-sm mb-6">
                 Hệ thống ngân hàng đã nhận giao dịch của bạn. Đang cập nhật trạng thái hóa đơn...
               </p>
 
-              <div className="w-full kit-inset kit-group rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-2 text-xs mb-6">
+              <div className="w-full kit-inset kit-group rounded-xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-2 apple-callout mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-neutral-600 dark:text-neutral-300">Kỳ hóa đơn:</span>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">Tháng {targetInvoice.month}</span>
+                  <span className="kit-text-secondary">Kỳ hóa đơn:</span>
+                  <span className="font-semibold kit-text-primary">Tháng {targetInvoice.month}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-neutral-600 dark:text-neutral-300">Số tiền:</span>
-                  <span className="font-bold text-neutral-900 dark:text-white font-num">{formatCurrency(targetInvoice.total)} ₫</span>
+                  <span className="kit-text-secondary">Số tiền:</span>
+                  <span className="font-semibold kit-text-primary font-num">{formatCurrency(targetInvoice.total)} ₫</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setPaymentMode('success')}
-                className="w-full primary-button py-3 text-sm font-semibold cursor-pointer"
+                className="w-full primary-button py-3 apple-control font-semibold cursor-pointer"
               >
                 Xem biên lai chi tiết
               </button>
@@ -319,10 +320,10 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="success-mode"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
@@ -334,45 +335,45 @@ export function PaymentPage() {
 
               {/* Title */}
               <div className="text-center mb-6">
-                <h2 className="text-[28px] sm:text-[32px] leading-tight font-bold text-neutral-900 dark:text-white tracking-tight">
-                  Hoàn Tất Thanh Toán!
+                <h2 className="apple-large-title font-semibold kit-text-primary tracking-tight">
+                  Thanh toán hoàn tất
                 </h2>
               </div>
 
               {/* Amount Display Centerpiece */}
               <div className="w-full py-4 px-6 flex flex-col items-center justify-center mb-6">
-                <span className="text-xs uppercase tracking-wider text-neutral-700 dark:text-neutral-200 font-semibold mb-2">
-                  SỐ TIỀN ĐÃ THANH TOÁN
+                <span className="apple-headline kit-text-secondary mb-2">
+                  Số tiền đã thanh toán
                 </span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[36px] sm:text-[42px] leading-none font-bold tracking-tight font-num text-emerald-600 dark:text-emerald-400">
+                  <span className="text-[36px] sm:text-[40px] leading-none font-semibold tracking-tight font-num text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(targetInvoice.total)}
                   </span>
-                  <span className="text-sm uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="apple-callout font-semibold text-emerald-600 dark:text-emerald-400">
                     VNĐ
                   </span>
                 </div>
               </div>
 
               {/* Transaction Details Table */}
-              <div className="kit-inset kit-group w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 px-4 text-[14px]">
+              <div className="kit-inset kit-group w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 px-4 apple-body">
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Phòng</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">{profile.room?.roomNumber || '—'}</span>
+                  <span className="kit-text-secondary">Phòng</span>
+                  <span className="font-semibold kit-text-primary">{profile.room?.roomNumber || '—'}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Kỳ hóa đơn</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">Tháng {targetInvoice.month}</span>
+                  <span className="kit-text-secondary">Kỳ hóa đơn</span>
+                  <span className="font-semibold kit-text-primary">Tháng {targetInvoice.month}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Phương thức</span>
-                  <span className="font-semibold text-neutral-900 dark:text-white">
+                  <span className="kit-text-secondary">Phương thức</span>
+                  <span className="font-semibold kit-text-primary">
                     Chuyển khoản / VietQR
                   </span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Trạng thái</span>
-                  <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="kit-text-secondary">Trạng thái</span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 size={16} />
                     <span>Đã thanh toán</span>
                   </span>
@@ -409,10 +410,10 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="gate-closed-mode"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[540px] p-6 sm:p-8 flex flex-col items-center text-center transition-colors">
@@ -422,39 +423,39 @@ export function PaymentPage() {
                 className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 drop-shadow-[0_10px_25px_rgba(239,68,68,0.22)] select-none pointer-events-none" 
               />
 
-              <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white mb-2">
+              <h2 className="apple-title1 font-semibold kit-text-primary mb-2">
                 Cổng thanh toán đang tạm đóng
               </h2>
 
-              <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 max-w-md mb-6 leading-relaxed">
+              <p className="apple-body kit-text-secondary max-w-md mb-6 leading-relaxed">
                 Ban Quản Lý đang tạm dừng nhận thanh toán trực tuyến qua mã VietQR cho kỳ Tháng {targetInvoice.month}. Quý cư dân vui lòng không chuyển khoản trong thời gian này.
               </p>
 
               {/* Manager Contact Box */}
               <div className="w-full kit-inset kit-group rounded-2xl p-4 border border-neutral-100 dark:border-neutral-800 text-left space-y-3 mb-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200">Ban Quản Lý:</span>
-                  <span className="text-xs font-bold text-neutral-900 dark:text-white">Bùi Trung Khải</span>
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                  <span className="apple-callout kit-text-secondary">Ban Quản Lý:</span>
+                  <span className="apple-callout font-semibold kit-text-primary">Bùi Trung Khải</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200">Hotline hỗ trợ:</span>
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                  <span className="apple-callout kit-text-secondary">Hotline hỗ trợ:</span>
                   <button
                     type="button"
                     onClick={() => handleCopy('0902371800', 'gate-bql-phone')}
-                    className="text-xs font-bold font-num text-neutral-900 dark:text-neutral-100 hover:text-neutral-600 dark:hover:text-neutral-400 flex items-center gap-1.5 cursor-pointer"
+                    className="apple-callout font-semibold font-num kit-text-primary hover:text-neutral-600 dark:hover:text-neutral-400 flex items-center gap-1.5 cursor-pointer"
                     title="Bấm để sao chép số điện thoại"
                   >
                     <span>0902 371 800</span>
                     {copiedKey === 'gate-bql-phone' ? (
-                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">Đã chép</span>
+                      <span className="apple-caption text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">Đã chép</span>
                     ) : (
-                      <Copy size={13} className="text-neutral-600 dark:text-neutral-300" />
+                      <Copy size={13} className="kit-text-secondary" />
                     )}
                   </button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200">Tòa nhà:</span>
-                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                  <span className="apple-callout kit-text-secondary">Tòa nhà:</span>
+                  <span className="apple-callout font-semibold kit-text-secondary">
                     {profile.room?.building || 'Trung Kim'} - Phòng {profile.room?.roomNumber}
                   </span>
                 </div>
@@ -486,10 +487,10 @@ export function PaymentPage() {
              ========================================================================= */
           <motion.div
             key="qr-mode"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
@@ -500,7 +501,7 @@ export function PaymentPage() {
                   type="button"
                   aria-label="Quay lại" 
                   onClick={() => navigate('/invoices')}
-                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-200 active:scale-95 transition-all cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:scale-95 transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
@@ -511,10 +512,10 @@ export function PaymentPage() {
                 {/* Left Column: Title, Subtitles, Straight Square Pure QR Code */}
                 <div className="col-span-6 flex flex-col items-center text-center">
                   <div className="mb-3">
-                    <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
+                    <h2 className="apple-title1 font-semibold kit-text-primary">
                       QR Thanh toán
                     </h2>
-                    <p className="text-[14px] text-neutral-700 dark:text-neutral-200 font-normal mt-1 leading-relaxed">
+                    <p className="apple-body kit-text-secondary font-normal mt-1 leading-relaxed">
                       Quét mã để thanh toán tự động
                     </p>
                   </div>
@@ -528,7 +529,7 @@ export function PaymentPage() {
                         className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
                       />
                     ) : (
-                      <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
+                      <div className="w-[280px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
                         Đang tạo mã QR...
                       </div>
                     )}
@@ -539,7 +540,7 @@ export function PaymentPage() {
                       type="button"
                       onClick={handleSaveQR}
                       disabled={isSavingQR}
-                      className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="primary-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
@@ -551,48 +552,48 @@ export function PaymentPage() {
                 <div className="col-span-6 flex flex-col justify-center pl-6 border-l border-[#ebebed] dark:border-neutral-800 space-y-4">
                   {/* Transaction Information List */}
                   <div>
-                    <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
+                    <h2 className="apple-title2 font-semibold kit-text-primary tracking-tight mb-3">
                       Chi tiết giao dịch
                     </h2>
                     <div className="kit-inset kit-group p-4 sm:p-5 space-y-4">
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Người nhận</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Người nhận</span>
                         <span 
                           onClick={() => handleCopy(recipientName, 'd-recipient')}
-                          className="font-bold text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {recipientName}
-                          {copiedKey === 'd-recipient' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-recipient' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Ngân hàng</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Ngân hàng</span>
                         <span 
                           onClick={() => handleCopy(bankName, 'd-bank')}
-                          className="font-medium text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {bankName}
-                          {copiedKey === 'd-bank' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-bank' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Số tài khoản</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Số tài khoản</span>
                         <span 
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="font-bold text-black dark:text-white tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
-                          {copiedKey === 'd-acc' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-acc' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Nội dung CK</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Nội dung CK</span>
                         <span 
                           onClick={() => handleCopy(transferContent, 'd-content')}
-                          className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-xs cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {transferContent}
-                          {copiedKey === 'd-content' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-content' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
                     </div>
@@ -603,8 +604,8 @@ export function PaymentPage() {
 
                   {/* Total Amount */}
                   <div className="flex items-baseline justify-between py-1">
-                    <span className="text-[15px] font-medium text-neutral-700 dark:text-neutral-200">Tổng tiền</span>
-                    <span className="text-[32px] font-bold text-black dark:text-white tracking-tight leading-none font-num">
+                    <span className="text-[15px] font-medium kit-text-secondary">Tổng tiền</span>
+                    <span className="text-[32px] font-semibold kit-text-primary tracking-tight leading-none font-num">
                       {formatCurrency(targetInvoice.total)} ₫
                     </span>
                   </div>
@@ -620,13 +621,13 @@ export function PaymentPage() {
                   type="button"
                   aria-label="Quay lại" 
                   onClick={() => navigate('/invoices')}
-                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-200 active:opacity-60 transition-opacity cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:opacity-60 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
                 
                 <div className="text-center">
-                  <h2 className="text-[17px] font-bold text-black dark:text-white leading-tight">
+                  <h2 className="apple-title2 font-semibold kit-text-primary leading-tight">
                     QR Thanh toán
                   </h2>
                 </div>
@@ -644,7 +645,7 @@ export function PaymentPage() {
                       className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
                   ) : (
-                    <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
+                    <div className="w-[240px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
                       Đang tạo mã QR...
                     </div>
                   )}
@@ -655,7 +656,7 @@ export function PaymentPage() {
                     type="button"
                     onClick={handleSaveQR}
                     disabled={isSavingQR}
-                    className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
+                    className="primary-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ImageDown size={14} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
@@ -664,54 +665,54 @@ export function PaymentPage() {
               </section>
 
               {/* Mobile Payment Details */}
-              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
+              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 apple-body">
                 <div className="kit-inset kit-group p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Người nhận</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Người nhận</span>
                     <span 
                       onClick={() => handleCopy(recipientName, 'm-rec')}
-                      className="font-bold text-black dark:text-white tracking-tight cursor-pointer"
+                      className="font-semibold kit-text-primary tracking-tight cursor-pointer"
                     >
                       {recipientName}
-                      {copiedKey === 'm-rec' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-rec' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Ngân hàng</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Ngân hàng</span>
                     <span 
                       onClick={() => handleCopy(bankName, 'm-bank')}
-                      className="font-medium text-black dark:text-white truncate max-w-[200px] text-right cursor-pointer"
+                      className="font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
                     >
                       {bankName}
-                      {copiedKey === 'm-bank' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-bank' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Số TK</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Số TK</span>
                     <span 
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="font-bold text-black dark:text-white font-num cursor-pointer"
+                      className="font-semibold kit-text-primary font-num cursor-pointer"
                     >
                       {accountNumber}
-                      {copiedKey === 'm-acc' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-acc' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Nội dung CK</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Nội dung CK</span>
                     <span 
                       onClick={() => handleCopy(transferContent, 'm-content')}
-                      className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-[11px] cursor-pointer"
+                      className="font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
                     >
                       {transferContent}
-                      {copiedKey === 'm-content' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-content' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
                 </div>
 
                 {/* Total Line */}
                 <div className="flex items-center justify-between px-1 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                  <span className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Tổng tiền</span>
-                  <span className="text-2xl font-semibold text-neutral-900 dark:text-white tracking-tight font-num">
+                  <span className="apple-body font-medium kit-text-secondary">Tổng tiền</span>
+                  <span className="text-2xl font-semibold kit-text-primary tracking-tight font-num">
                     {formatCurrency(targetInvoice.total)} ₫
                   </span>
                 </div>

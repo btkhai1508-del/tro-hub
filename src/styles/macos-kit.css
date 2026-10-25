@@ -2,6 +2,17 @@
    Material levels and blur are defined in index.css; controls inherit the
    parent material rather than stacking their own backdrop filters. */
 .kit-window-shell { min-height: 100svh; }
+.kit-admin-reading-plane { background: var(--workspace-fill); }
+/* The photographed wallpaper needs a reading plane even on mobile. The
+   material samples above it keep their source opacities without tinting text. */
+.kit-window-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--workspace-fill);
+}
 .kit-main { position: relative; min-height: 100svh; }
 .kit-page-content { padding: 20px 16px 0; }
 .kit-payment-content { padding-top: 20px; }
@@ -17,23 +28,23 @@
 }
 .kit-toolbar-control:active, .kit-nav-item:active { background: var(--control-fill); }
 .kit-nav-active {
-  background: var(--control-selected);
+  background: var(--glass-sheen), var(--control-selected);
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), inset 0 0 0 1px var(--liquid-edge);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07), inset 0 1px 1px var(--liquid-edge), inset 0 -1px 1px rgba(0, 0, 0, 0.06);
 }
 .kit-dock {
   padding: 6px;
   border: 1px solid var(--liquid-edge);
   border-radius: 28px;
-  background: var(--material-thin);
+  background: var(--glass-sheen), var(--material-thin);
   box-shadow: var(--liquid-shadow);
   -webkit-backdrop-filter: blur(var(--material-blur));
   backdrop-filter: blur(var(--material-blur));
 }
 .kit-dock .kit-nav-item { border-radius: 22px; }
 .kit-popover, .kit-dialog {
-  background: var(--material-ultrathick);
+  background: var(--glass-sheen), var(--material-ultrathick);
   border: 1px solid var(--liquid-edge);
   border-radius: var(--radius-surface);
   box-shadow: var(--liquid-shadow);
@@ -44,10 +55,10 @@
 .kit-page { display: flex; flex-direction: column; gap: 24px; }
 .kit-page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
 .kit-payment-header { justify-content: flex-start; }
-.kit-page-title { color: var(--text-primary); font-size: var(--text-h1); font-weight: 700; line-height: 1.2; letter-spacing: -0.025em; }
-.kit-page-description { margin-top: 6px; color: var(--text-secondary); font-size: 15px; line-height: 1.5; letter-spacing: -0.01em; }
-.kit-page-kicker { margin-bottom: 5px; color: var(--text-secondary); font-size: 13px; font-weight: 500; line-height: 1.3; letter-spacing: 0; text-transform: none; }
-.kit-card-heading { color: var(--text-primary); font-size: 17px; font-weight: 600; line-height: 1.3; letter-spacing: -0.015em; }
+.kit-page-title { color: var(--text-primary); font-size: var(--apple-large-title); font-weight: 600; line-height: var(--apple-large-title-leading); letter-spacing: -0.02em; }
+.kit-page-description { margin-top: 6px; color: var(--text-secondary); font-size: var(--apple-body); line-height: var(--apple-body-leading); letter-spacing: -0.008em; }
+.kit-page-kicker { margin-bottom: 5px; color: var(--text-secondary); font-size: var(--apple-callout); font-weight: 500; line-height: var(--apple-callout-leading); letter-spacing: 0; text-transform: none; }
+.kit-card-heading { color: var(--text-primary); font-size: var(--apple-title2); font-weight: 600; line-height: var(--apple-title2-leading); letter-spacing: -0.02em; }
 .kit-inset {
   border: 1px solid var(--separator);
   border-radius: var(--radius-card);
@@ -83,7 +94,7 @@
   transition: background-color 140ms ease, color 140ms ease;
 }
 .kit-segment-active {
-  background: var(--control-selected);
+  background: var(--glass-sheen), var(--control-selected);
   border-color: var(--liquid-edge);
   color: var(--text-primary);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
@@ -111,7 +122,7 @@
   outline-offset: 2px;
 }
 .kit-field::placeholder { color: var(--text-muted); opacity: 1; font-size: 15px; }
-.kit-login-window { border-radius: 34px; background: var(--material-thick); }
+.kit-login-window { border-radius: 34px; background: var(--glass-sheen), var(--auth-fill); }
 .kit-window-toolbar { background: var(--material-ultrathin); border-bottom: 1px solid var(--separator); }
 .kit-login-footer, .kit-dialog-footer { background: var(--material-ultrathin); border-top: 1px solid var(--separator); }
 .kit-dialog-body { padding: 20px; }
@@ -141,12 +152,7 @@
 @media (min-width: 1024px) {
   .kit-window-shell { margin: 16px; min-height: calc(100svh - 32px); }
   .kit-window-shell::before {
-    content: "";
-    position: fixed;
     inset: 16px;
-    z-index: 0;
-    pointer-events: none;
-    background: var(--material-ultrathin);
     border: 1px solid var(--liquid-edge);
     border-radius: 34px;
     box-shadow: 0 16px 64px -16px rgba(0, 0, 0, 0.22), inset 0 1px 0 var(--liquid-edge);
@@ -154,7 +160,7 @@
   .kit-sidebar {
     border-right: 1px solid var(--separator);
     border-radius: 34px 0 0 34px;
-    background: var(--material-thin);
+    background: var(--glass-sheen), var(--material-thin);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -172,7 +178,7 @@
   .kit-quick-action:hover { background: var(--control-hover); }
 }
 @media print {
-  .kit-sidebar, .kit-toolbar, .kit-dock, .kit-window-shell::before { display: none !important; }
+  .kit-sidebar, .kit-toolbar, .kit-dock, .kit-window-shell::before, .kit-admin-reading-plane { display: none !important; }
   .kit-window-shell, .kit-main { margin: 0; min-height: 0; }
   .kit-page-content { padding: 0; }
 }

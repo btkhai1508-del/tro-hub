@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   ArrowLeft, 
   ChevronLeft,
@@ -60,6 +60,7 @@ interface Booking {
 }
 
 export function LaundryPage() {
+  const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const { profile } = useApp();
 
@@ -262,10 +263,10 @@ export function LaundryPage() {
         {viewMode === 'success' && selectedMachine ? (
           <motion.div
             key="laundry-success-view"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-4"
           >
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
@@ -277,50 +278,50 @@ export function LaundryPage() {
 
               {/* Title */}
               <div className="text-center mb-6">
-                <h1 className="text-[28px] sm:text-[32px] leading-tight font-bold text-neutral-900 dark:text-white tracking-tight">
+                <h1 className="apple-large-title font-semibold kit-text-primary tracking-tight">
                   Kích Hoạt Thành Công!
                 </h1>
-                <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">
+                <p className="apple-callout kit-text-secondary mt-1">
                   Máy đã được đóng nguồn điện tự động và bắt đầu chu kỳ hoạt động.
                 </p>
               </div>
 
               {/* Amount Display Centerpiece */}
               <div className="w-full py-4 px-6 flex flex-col items-center justify-center mb-6 bg-white/15 dark:bg-white/5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                <span className="text-xs uppercase tracking-wider text-neutral-700 dark:text-neutral-200 font-semibold mb-1.5">
-                  SỐ TIỀN ĐÃ THANH TOÁN
+                <span className="apple-headline kit-text-secondary mb-1.5">
+                  Số tiền đã thanh toán
                 </span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[36px] sm:text-[42px] leading-none font-bold tracking-tight font-num text-emerald-600 dark:text-emerald-400">
+                  <span className="text-[36px] sm:text-[40px] leading-none font-semibold tracking-tight font-num text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(selectedMachine.price)}
                   </span>
-                  <span className="text-sm uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="apple-callout font-semibold text-emerald-600 dark:text-emerald-400">
                     VNĐ
                   </span>
                 </div>
               </div>
 
               {/* Transaction Details Table */}
-              <div className="w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 text-[14px]">
+              <div className="w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 apple-body">
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Thiết bị</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">{selectedMachine.name}</span>
+                  <span className="kit-text-secondary">Thiết bị</span>
+                  <span className="font-semibold kit-text-primary">{selectedMachine.name}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Mã thiết bị</span>
-                  <span className="font-bold font-num text-neutral-600 dark:text-neutral-200">{selectedMachine.machineId}</span>
+                  <span className="kit-text-secondary">Mã thiết bị</span>
+                  <span className="font-semibold font-num kit-text-secondary">{selectedMachine.machineId}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Cư dân kích hoạt</span>
-                  <span className="font-bold text-neutral-900 dark:text-white">{profile.name} (P.{profile.room?.roomNumber})</span>
+                  <span className="kit-text-secondary">Cư dân kích hoạt</span>
+                  <span className="font-semibold kit-text-primary">{profile.name} (P.{profile.room?.roomNumber})</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Thời gian chu kỳ</span>
-                  <span className="font-semibold text-neutral-900 dark:text-white font-num">{selectedMachine.cycleMinutes} phút</span>
+                  <span className="kit-text-secondary">Thời gian chu kỳ</span>
+                  <span className="font-semibold kit-text-primary font-num">{selectedMachine.cycleMinutes} phút</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-neutral-700 dark:text-neutral-200">Trạng thái</span>
-                  <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="kit-text-secondary">Trạng thái</span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 size={16} />
                     <span>Đã cấp điện nguồn</span>
                   </span>
@@ -335,7 +336,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('timer');
                   }}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold apple-body flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
                 >
                   <Timer size={18} />
                   <span>Xem đồng hồ đếm ngược</span>
@@ -347,7 +348,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-900 dark:text-white border border-gray-200 dark:border-neutral-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 kit-text-primary border border-gray-200 dark:border-neutral-700 font-semibold apple-body flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
                 >
                   <Home size={18} />
                   <span>Danh sách máy</span>
@@ -363,10 +364,10 @@ export function LaundryPage() {
         ) : viewMode === 'activate' && selectedMachine ? (
           <motion.div
             key="laundry-qr-view"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
@@ -381,12 +382,12 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-200 active:scale-95 transition-all cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:scale-95 transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
 
-                <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                <div className="flex items-center gap-2 apple-callout font-semibold kit-text-secondary">
                   <span>Phòng {profile.room?.roomNumber}</span>
                   <span aria-hidden="true">·</span>
                   <span>{selectedMachine.name}</span>
@@ -398,10 +399,10 @@ export function LaundryPage() {
                 {/* Left Column: Title, Subtitles, Straight Square Pure QR Code */}
                 <div className="col-span-6 flex flex-col items-center text-center">
                   <div className="mb-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
+                    <h1 className="apple-title1 font-semibold kit-text-primary">
                       QR Kích hoạt {selectedMachine.type === 'WASHER' ? 'máy giặt' : 'máy sấy'}
                     </h1>
-                    <p className="text-[14px] text-neutral-700 dark:text-neutral-200 font-normal mt-1 leading-relaxed">
+                    <p className="apple-body kit-text-secondary font-normal mt-1 leading-relaxed">
                       Quét mã để kích hoạt tự động · Máy {selectedMachine.machineId}
                     </p>
                   </div>
@@ -415,7 +416,7 @@ export function LaundryPage() {
                         className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
                       />
                     ) : (
-                      <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
+                      <div className="w-[280px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
                         Đang tạo mã QR...
                       </div>
                     )}
@@ -426,7 +427,7 @@ export function LaundryPage() {
                       type="button"
                       onClick={handleSaveQR}
                       disabled={isSavingQR}
-                      className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="primary-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
@@ -437,60 +438,60 @@ export function LaundryPage() {
                 {/* Right Column: Transaction Details, Total Amount */}
                 <div className="col-span-6 flex flex-col justify-center pl-6 border-l border-[#ebebed] dark:border-neutral-800 space-y-4">
                   <div>
-                    <h2 className="text-[16px] font-semibold text-black dark:text-white tracking-tight mb-3">
+                    <h2 className="apple-title2 font-semibold kit-text-primary tracking-tight mb-3">
                       Chi tiết giao dịch
                     </h2>
                     <div className="kit-inset p-4 sm:p-5 space-y-4">
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Thiết bị</span>
-                        <span className="font-bold text-black dark:text-white">
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Thiết bị</span>
+                        <span className="font-semibold kit-text-primary">
                           {selectedMachine.name}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Người nhận</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Người nhận</span>
                         <span 
                           onClick={() => handleCopy(recipientName, 'd-recipient')}
-                          className="font-bold text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {recipientName}
-                          {copiedKey === 'd-recipient' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-recipient' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Ngân hàng</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Ngân hàng</span>
                         <span 
                           onClick={() => handleCopy(bankName, 'd-bank')}
-                          className="font-medium text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {bankName}
-                          {copiedKey === 'd-bank' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-bank' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Số tài khoản</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Số tài khoản</span>
                         <span 
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="font-bold text-black dark:text-white tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
-                          {copiedKey === 'd-acc' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-acc' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Nội dung CK</span>
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Nội dung CK</span>
                         <span 
                           onClick={() => handleCopy(selectedMachine.machineId, 'd-content')}
-                          className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-xs cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
                           title="Bắt buộc giữ nguyên mã máy"
                         >
                           {selectedMachine.machineId}
-                          {copiedKey === 'd-content' && <span className="text-xs text-emerald-600 font-bold">✓</span>}
+                          {copiedKey === 'd-content' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Thời lượng chu kỳ</span>
-                        <span className="font-semibold text-black dark:text-white font-num">
+                      <div className="flex items-center justify-between apple-body">
+                        <span className="kit-text-secondary font-normal">Thời lượng chu kỳ</span>
+                        <span className="font-semibold kit-text-primary font-num">
                           {selectedMachine.cycleMinutes} phút / lần
                         </span>
                       </div>
@@ -502,14 +503,14 @@ export function LaundryPage() {
 
                   {/* Total Amount */}
                   <div className="flex items-baseline justify-between py-1">
-                    <span className="text-[15px] font-medium text-neutral-700 dark:text-neutral-200">Tổng tiền</span>
-                    <span className="text-[32px] font-bold text-black dark:text-white tracking-tight leading-none font-num">
+                    <span className="text-[15px] font-medium kit-text-secondary">Tổng tiền</span>
+                    <span className="text-[32px] font-semibold kit-text-primary tracking-tight leading-none font-num">
                       {formatCurrency(selectedMachine.price)} ₫
                     </span>
                   </div>
 
                   {/* Live sync notice box */}
-                  <div className="p-3 bg-neutral-50 dark:bg-neutral-950/30 rounded-xl text-center text-xs text-neutral-700 dark:text-neutral-300 font-medium flex items-center justify-center gap-2 border border-neutral-100 dark:border-neutral-900/40">
+                  <div className="p-3 bg-neutral-50 dark:bg-neutral-950/30 rounded-xl text-center apple-callout kit-text-secondary font-medium flex items-center justify-center gap-2 border border-neutral-100 dark:border-neutral-900/40">
                     <RefreshCw size={13} className="animate-spin shrink-0" />
                     <span>Hệ thống tự động kích hoạt sau khi nhận được tiền (3–5 giây)...</span>
                   </div>
@@ -528,13 +529,13 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-200 active:opacity-60 transition-opacity cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:opacity-60 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
                 
                 <div className="text-center">
-                  <h1 className="text-[17px] font-bold text-black dark:text-white leading-tight">
+                  <h1 className="apple-title2 font-semibold kit-text-primary leading-tight">
                     QR Kích hoạt ({selectedMachine.machineId})
                   </h1>
                 </div>
@@ -552,7 +553,7 @@ export function LaundryPage() {
                       className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
                   ) : (
-                    <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
+                    <div className="w-[240px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
                       Đang tạo mã QR...
                     </div>
                   )}
@@ -563,7 +564,7 @@ export function LaundryPage() {
                     type="button"
                     onClick={handleSaveQR}
                     disabled={isSavingQR}
-                    className="primary-button min-h-11 w-full py-3 px-4 text-sm flex items-center justify-center gap-2 cursor-pointer"
+                    className="primary-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ImageDown size={14} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
@@ -572,67 +573,67 @@ export function LaundryPage() {
               </section>
 
               {/* Mobile Payment Details */}
-              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
+              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 apple-body">
                 <div className="kit-inset p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Thiết bị</span>
-                    <span className="font-bold text-black dark:text-white truncate max-w-[200px]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Thiết bị</span>
+                    <span className="font-semibold kit-text-primary truncate max-w-[200px]">
                       {selectedMachine.name}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Người nhận</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Người nhận</span>
                     <span 
                       onClick={() => handleCopy(recipientName, 'm-rec')}
-                      className="font-bold text-black dark:text-white tracking-tight cursor-pointer"
+                      className="font-semibold kit-text-primary tracking-tight cursor-pointer"
                     >
                       {recipientName}
-                      {copiedKey === 'm-rec' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-rec' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Ngân hàng</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Ngân hàng</span>
                     <span 
                       onClick={() => handleCopy(bankName, 'm-bank')}
-                      className="font-medium text-black dark:text-white truncate max-w-[200px] text-right cursor-pointer"
+                      className="font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
                     >
                       {bankName}
-                      {copiedKey === 'm-bank' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-bank' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Số TK</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Số TK</span>
                     <span 
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="font-bold text-black dark:text-white font-num cursor-pointer"
+                      className="font-semibold kit-text-primary font-num cursor-pointer"
                     >
                       {accountNumber}
-                      {copiedKey === 'm-acc' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-acc' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-700 dark:text-neutral-200">Nội dung CK</span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <span className="kit-text-secondary">Nội dung CK</span>
                     <span 
                       onClick={() => handleCopy(selectedMachine.machineId, 'm-content')}
-                      className="font-bold text-neutral-600 dark:text-neutral-200 font-num text-[11px] cursor-pointer"
+                      className="font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
                     >
                       {selectedMachine.machineId}
-                      {copiedKey === 'm-content' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
+                      {copiedKey === 'm-content' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </span>
                   </div>
                 </div>
 
                 {/* Total Line */}
                 <div className="flex items-center justify-between px-1 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                  <span className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Tổng tiền</span>
-                  <span className="text-2xl font-semibold text-neutral-900 dark:text-white tracking-tight font-num">
+                  <span className="apple-body font-medium kit-text-secondary">Tổng tiền</span>
+                  <span className="text-2xl font-semibold kit-text-primary tracking-tight font-num">
                     {formatCurrency(selectedMachine.price)} ₫
                   </span>
                 </div>
               </section>
 
               {/* Status footer */}
-              <div className="mt-1 p-2 bg-neutral-50 dark:bg-neutral-950/30 rounded-xl text-center text-[11px] text-neutral-700 dark:text-neutral-300 font-medium flex items-center justify-center gap-1.5">
+              <div className="mt-1 p-2 bg-neutral-50 dark:bg-neutral-950/30 rounded-xl text-center apple-subheadline kit-text-secondary font-medium flex items-center justify-center gap-1.5">
                 <RefreshCw size={12} className="animate-spin shrink-0" />
                 <span>Hệ thống tự động kích hoạt sau khi nhận được tiền...</span>
               </div>
@@ -645,10 +646,10 @@ export function LaundryPage() {
         ) : viewMode === 'timer' && selectedMachine ? (
           <motion.div
             key="laundry-timer-view"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-4"
           >
             <main className="w-full max-w-[500px] liquid-panel rounded-[34px] border border-neutral-200/90 dark:border-neutral-800 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
@@ -661,17 +662,17 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-10 h-10 flex items-center justify-center text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 rounded-full transition-all cursor-pointer -ml-2"
+                  className="w-10 h-10 flex items-center justify-center kit-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 rounded-full transition-all cursor-pointer -ml-2"
                   title="Quay lại danh sách"
                 >
                   <ChevronLeft size={24} strokeWidth={2.2} />
                 </button>
 
                 <div className="text-center">
-                  <h3 className="type-h3 font-bold text-neutral-900 dark:text-white leading-tight">
+                  <h3 className="type-h3 font-semibold kit-text-primary leading-tight">
                     {selectedMachine.name}
                   </h3>
-                  <span className="text-xs text-neutral-600 dark:text-neutral-300">Đang hoạt động · Mã {selectedMachine.machineId}</span>
+                  <span className="apple-callout kit-text-secondary">Đang hoạt động · Mã {selectedMachine.machineId}</span>
                 </div>
 
                 <div className="w-10" />
@@ -693,7 +694,7 @@ export function LaundryPage() {
 
                 return (
                   <div className="w-full flex flex-col items-center justify-center space-y-6 py-4">
-                    <div className="relative w-64 h-64 flex items-center justify-center select-none">
+                    <div className="relative w-full max-w-64 aspect-square flex items-center justify-center select-none">
                       
                       {/* Outer Rim */}
                       <div className="absolute inset-0 rounded-full bg-neutral-100 dark:bg-neutral-900/60 shadow-[inset_0_4px_10px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.08)] border border-neutral-200/70 dark:border-neutral-800" />
@@ -730,17 +731,17 @@ export function LaundryPage() {
 
                       {/* Center Display */}
                       <div className="relative z-20 flex flex-col items-center justify-center text-center p-4">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
+                        <span className="apple-callout font-medium kit-text-secondary mb-1">
                           Thời gian còn lại
                         </span>
 
-                        <span className="text-4xl sm:text-5xl font-black font-num tracking-tight text-neutral-900 dark:text-white block leading-none my-1">
+                        <span className="text-4xl sm:text-5xl font-semibold font-num tracking-tight kit-text-primary block leading-none my-1">
                           {formatSeconds(rem)}
                         </span>
 
                         {isRunning ? (
                           <div className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mt-2",
+                            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-subheadline font-semibold mt-2",
                             isWasher
                               ? "bg-neutral-50 text-neutral-700 dark:bg-neutral-950/60 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800/60"
                               : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60"
@@ -752,7 +753,7 @@ export function LaundryPage() {
                             <span>{isWasher ? "Đang giặt đồ" : "Đang sấy đồ"}</span>
                           </div>
                         ) : (
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 mt-2">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-subheadline font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 mt-2">
                             <CheckCircle2 size={12} />
                             <span>Đã hoàn tất chu kỳ</span>
                           </div>
@@ -762,28 +763,28 @@ export function LaundryPage() {
                     </div>
 
                     {/* Summary Info Cards */}
-                    <div className="w-full p-4 bg-white/15 dark:bg-white/5 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 flex items-center justify-around text-xs font-semibold">
+                    <div className="w-full p-4 bg-white/15 dark:bg-white/5 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 flex items-center justify-around apple-callout font-semibold">
                       <div className="text-center">
-                        <span className="text-neutral-600 dark:text-neutral-300 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                        <span className="kit-text-secondary block apple-callout font-medium mb-0.5">
                           Dự kiến hoàn thành
                         </span>
-                        <span className="font-bold font-num text-neutral-900 dark:text-white text-base">
+                        <span className="font-semibold font-num kit-text-primary apple-title3">
                           {completionTime}
                         </span>
                       </div>
                       <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-700/60" />
                       <div className="text-center">
-                        <span className="text-neutral-600 dark:text-neutral-300 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                        <span className="kit-text-secondary block apple-callout font-medium mb-0.5">
                           Trạng thái ổ điện
                         </span>
                         <span className={cn(
-                          "font-bold text-xs flex items-center justify-center gap-1",
+                          "font-semibold apple-callout flex items-center justify-center gap-1",
                           selectedMachine.plugState === 'ON' || isRunning
                             ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-neutral-600 dark:text-neutral-300"
+                            : "kit-text-secondary"
                         )}>
                           <Power size={13} />
-                          {selectedMachine.plugState === 'ON' || isRunning ? 'BẬT NGUỒN' : 'TẮT NGUỒN'}
+                          {selectedMachine.plugState === 'ON' || isRunning ? 'Bật nguồn' : 'Tắt nguồn'}
                         </span>
                       </div>
                     </div>
@@ -794,7 +795,7 @@ export function LaundryPage() {
                         soundFx.click();
                         setViewMode('list');
                       }}
-                      className="w-full soft-button py-3 text-xs font-semibold cursor-pointer"
+                      className="w-full soft-button py-3 apple-control font-semibold cursor-pointer"
                     >
                       Quay lại danh sách máy
                     </button>
@@ -811,22 +812,22 @@ export function LaundryPage() {
         ) : (
           <motion.div
             key="laundry-list-view"
-            initial={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: reduceMotion ? 0 : 0.15 }}
             className="w-full space-y-6"
           >
             <header className="kit-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-11 w-11 items-center justify-center text-neutral-600 dark:text-neutral-200"><ArrowLeft size={16} /></button>
+                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-11 w-11 items-center justify-center kit-text-secondary"><ArrowLeft size={16} /></button>
                   <span className="liquid-eyebrow">DỊCH VỤ CƯ DÂN</span>
                 </div>
                 <h1 className="kit-page-title">Giặt sấy</h1>
                 <p className="kit-page-description">Chọn máy, quét mã và theo dõi chu kỳ ngay tại đây.</p>
               </div>
-              <div className="liquid-chip inline-flex items-center gap-2 self-start px-3 py-2 text-xs text-neutral-600 dark:text-neutral-300">
+              <div className="liquid-chip inline-flex items-center gap-2 self-start px-3 py-2 apple-callout kit-text-secondary">
                 <Home size={14} className="text-neutral-700" /><span>{profile.room.roomNumber || 'Phòng của bạn'}</span><span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">/</span><span>Tự phục vụ 24/7</span>
               </div>
             </header>
@@ -838,39 +839,39 @@ export function LaundryPage() {
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
+                  <span className="apple-callout kit-text-secondary font-medium block">
                     Máy sẵn sàng
                   </span>
-                  <span className="text-xl sm:text-2xl font-bold font-num text-neutral-900 dark:text-white block mt-0.5">
-                    {availableCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
+                  <span className="text-[24px] font-semibold font-num kit-text-primary block mt-0.5">
+                    {availableCount} <span className="apple-body font-normal kit-text-secondary">máy</span>
                   </span>
                 </div>
               </div>
 
               <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
-                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-200 flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 kit-text-secondary flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40">
                   <Clock size={23} strokeWidth={1.7} />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
+                  <span className="apple-callout kit-text-secondary font-medium block">
                     Đang hoạt động
                   </span>
-                  <span className="text-xl sm:text-2xl font-bold font-num text-neutral-600 dark:text-neutral-200 block mt-0.5">
-                    {runningCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
+                  <span className="text-[24px] font-semibold font-num kit-text-secondary block mt-0.5">
+                    {runningCount} <span className="apple-body font-normal kit-text-secondary">máy</span>
                   </span>
                 </div>
               </div>
 
               <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50/70 dark:bg-neutral-950/30 flex items-center justify-center shrink-0 border border-neutral-100/60 dark:border-neutral-800/30">
-                  <WashingMachine size={23} strokeWidth={1.7} className="text-neutral-700 dark:text-neutral-200" />
+                  <WashingMachine size={23} strokeWidth={1.7} className="kit-text-secondary" />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
+                  <span className="apple-callout kit-text-secondary font-medium block">
                     Máy giặt cửa trước
                   </span>
-                  <span className="text-xl sm:text-2xl font-bold font-num text-neutral-900 dark:text-white block mt-0.5">
-                    {washerCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
+                  <span className="text-[24px] font-semibold font-num kit-text-primary block mt-0.5">
+                    {washerCount} <span className="apple-body font-normal kit-text-secondary">máy</span>
                   </span>
                 </div>
               </div>
@@ -880,11 +881,11 @@ export function LaundryPage() {
                   <Sparkles size={23} strokeWidth={1.7} className="text-amber-500" />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
+                  <span className="apple-callout kit-text-secondary font-medium block">
                     Máy sấy thông hơi
                   </span>
-                  <span className="text-xl sm:text-2xl font-bold font-num text-neutral-900 dark:text-white block mt-0.5">
-                    {dryerCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
+                  <span className="text-[24px] font-semibold font-num kit-text-primary block mt-0.5">
+                    {dryerCount} <span className="apple-body font-normal kit-text-secondary">máy</span>
                   </span>
                 </div>
               </div>
@@ -928,10 +929,10 @@ export function LaundryPage() {
                   fetchLaundryData();
                 }}
                 disabled={isLoading}
-                className="soft-button px-3.5 py-2 flex items-center gap-2 cursor-pointer text-xs font-semibold text-neutral-600 dark:text-neutral-300 self-end sm:self-auto"
+                className="soft-button px-3.5 py-2 flex items-center gap-2 cursor-pointer apple-control font-semibold kit-text-secondary self-end sm:self-auto"
                 title="Cập nhật trạng thái"
               >
-                <RefreshCw size={13} className={cn(isLoading && "animate-spin text-neutral-600 dark:text-neutral-300")} />
+                <RefreshCw size={13} className={cn(isLoading && "animate-spin kit-text-secondary")} />
                 <span>Làm mới trạng thái</span>
               </button>
             </div>
@@ -939,7 +940,7 @@ export function LaundryPage() {
             {/* Tab 1: Machine Grid */}
             {activeTab === 'machines' && (
               <div className="space-y-5 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                   <div className="kit-segmented flex flex-wrap items-center gap-1 p-1" aria-label="Loại máy">
                     {[
                       { key: 'ALL', label: 'Tất cả máy' },
@@ -955,7 +956,7 @@ export function LaundryPage() {
                           setActiveFilter(f.key as any);
                         }}
                         className={cn(
-                          "kit-segment min-h-11 px-3.5 py-2 text-xs cursor-pointer",
+                          "kit-segment min-h-11 px-3.5 py-2 apple-callout cursor-pointer",
                           activeFilter === f.key && "kit-segment-active"
                         )}
                       >
@@ -964,7 +965,7 @@ export function LaundryPage() {
                     ))}
                   </div>
 
-                  <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                  <div className="hidden sm:flex items-center gap-2 apple-callout kit-text-secondary">
                     <Info size={14} />
                     <span>Chạm vào thẻ máy để mở màn hình quét mã VietQR</span>
                   </div>
@@ -1004,8 +1005,8 @@ export function LaundryPage() {
                             </div>
 
                             <div>
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-600 dark:text-neutral-300">
-                                <span className="font-bold font-num text-neutral-900 dark:text-neutral-100">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 apple-callout kit-text-secondary">
+                                <span className="font-semibold font-num kit-text-primary">
                                   {m.machineId}
                                 </span>
                                 <span aria-hidden="true">·</span>
@@ -1014,7 +1015,7 @@ export function LaundryPage() {
                                 <span>Tầng trệt</span>
                               </div>
 
-                              <h3 className="type-h3 text-neutral-900 dark:text-white font-bold mt-1 group-hover:text-neutral-600 dark:group-hover:text-neutral-400 transition-colors">
+                              <h3 className="type-h3 kit-text-primary font-semibold mt-1 group-hover:text-neutral-600 dark:group-hover:text-neutral-400 transition-colors">
                                 {m.name}
                               </h3>
                             </div>
@@ -1022,12 +1023,12 @@ export function LaundryPage() {
 
                           <div>
                             {isRunning ? (
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800">
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-callout font-semibold bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800">
                                 <span className="w-2 h-2 rounded-full bg-neutral-500 animate-ping" />
                                 <span className="font-num">Còn {minsLeft} phút</span>
                               </div>
                             ) : (
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-callout font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 <span>Sẵn sàng</span>
                               </div>
@@ -1037,12 +1038,12 @@ export function LaundryPage() {
 
                         {isRunning && (
                           <div className="my-4 p-3.5 rounded-2xl bg-neutral-50/70 dark:bg-neutral-950/30 border border-neutral-100 dark:border-neutral-900/40 space-y-2">
-                            <div className="flex justify-between text-xs font-semibold">
-                              <span className="text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                            <div className="flex justify-between apple-callout font-semibold">
+                              <span className="kit-text-secondary flex items-center gap-1.5">
                                 <Clock size={13} />
                                 <span>Đang thực hiện chu kỳ</span>
                               </span>
-                              <span className="font-num text-neutral-800 dark:text-neutral-200 font-bold">
+                              <span className="font-num kit-text-primary font-semibold">
                                 {formatSeconds(remaining)}
                               </span>
                             </div>
@@ -1059,14 +1060,14 @@ export function LaundryPage() {
 
                         <div className="mt-4 pt-4 border-t border-neutral-900/5 dark:border-white/10 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] text-neutral-600 dark:text-neutral-300 uppercase font-semibold block tracking-wider">
+                            <span className="apple-callout kit-text-secondary font-medium block">
                               Giá cước
                             </span>
                             <div className="flex items-baseline gap-1 mt-0.5">
-                              <span className="text-xl font-bold font-num text-neutral-900 dark:text-neutral-100">
+                              <span className="apple-title1 font-semibold font-num kit-text-primary">
                                 {formatMoney(m.price)}
                               </span>
-                              <span className="text-xs text-neutral-600 dark:text-neutral-300">/ {m.cycleMinutes}p</span>
+                              <span className="apple-callout kit-text-secondary">/ {m.cycleMinutes}p</span>
                             </div>
                           </div>
 
@@ -1074,9 +1075,9 @@ export function LaundryPage() {
                             <button
                               type="button"
                               className={cn(
-                                "py-2 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all",
+                                "py-2 px-4 rounded-xl apple-callout font-semibold flex items-center gap-1.5 cursor-pointer transition-all",
                                 isRunning
-                                  ? "soft-button text-neutral-600 dark:text-neutral-200"
+                                  ? "soft-button kit-text-secondary"
                                   : "primary-button shadow-xs"
                               )}
                             >
@@ -1108,14 +1109,14 @@ export function LaundryPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[34px] border border-white/80 dark:border-white/10 space-y-5">
                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900/5 dark:border-white/10">
-                      <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-200 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 kit-text-secondary flex items-center justify-center shrink-0">
                         <CalendarClock size={22} />
                       </div>
                       <div>
-                        <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">
+                        <h3 className="type-h3 font-semibold kit-text-primary">
                           Đặt lịch giặt sấy trước
                         </h3>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-0.5">
+                        <p className="apple-callout kit-text-secondary mt-0.5">
                           Chủ động chọn khung giờ thuận tiện mà không lo hết máy trống.
                         </p>
                       </div>
@@ -1123,7 +1124,7 @@ export function LaundryPage() {
 
                     {bookingMsg && (
                       <div className={cn(
-                        "p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2.5 animate-in fade-in",
+                        "p-3.5 rounded-2xl apple-callout font-semibold flex items-center gap-2.5 animate-in fade-in",
                         bookingMsg.isError
                           ? "bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
                           : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
@@ -1135,7 +1136,7 @@ export function LaundryPage() {
 
                     <form onSubmit={handleCreateBooking} className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1.5">
+                        <label className="apple-callout font-semibold kit-text-secondary block mb-1.5">
                           1. Chọn máy giặt / sấy:
                         </label>
                         <select
@@ -1151,9 +1152,9 @@ export function LaundryPage() {
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                          <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1.5">
+                          <label className="apple-callout font-semibold kit-text-secondary block mb-1.5">
                             2. Giờ giặt:
                           </label>
                           <input
@@ -1166,7 +1167,7 @@ export function LaundryPage() {
                         </div>
 
                         <div>
-                          <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1.5">
+                          <label className="apple-callout font-semibold kit-text-secondary block mb-1.5">
                             3. Ngày giặt:
                           </label>
                           <input
@@ -1179,25 +1180,25 @@ export function LaundryPage() {
                         </div>
                       </div>
 
-                      <div className="p-3.5 bg-white/15 dark:bg-white/5 rounded-2xl space-y-2 text-xs border border-neutral-100 dark:border-neutral-800">
+                      <div className="p-3.5 bg-white/15 dark:bg-white/5 rounded-2xl space-y-2 apple-callout border border-neutral-100 dark:border-neutral-800">
                         <div className="flex justify-between items-center">
-                          <span className="text-neutral-600 dark:text-neutral-300">Cư dân đăng ký:</span>
-                          <span className="font-bold text-neutral-900 dark:text-white">{profile.name}</span>
+                          <span className="kit-text-secondary">Cư dân đăng ký:</span>
+                          <span className="font-semibold kit-text-primary">{profile.name}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-neutral-600 dark:text-neutral-300">Phòng ở:</span>
-                          <span className="font-bold text-neutral-900 dark:text-white font-num">{profile.room.roomNumber}</span>
+                          <span className="kit-text-secondary">Phòng ở:</span>
+                          <span className="font-semibold kit-text-primary font-num">{profile.room.roomNumber}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-neutral-600 dark:text-neutral-300">Phí giữ chỗ ưu tiên:</span>
-                          <span className="font-bold font-num text-neutral-600 dark:text-neutral-200">5.000 đ</span>
+                          <span className="kit-text-secondary">Phí giữ chỗ ưu tiên:</span>
+                          <span className="font-semibold font-num kit-text-secondary">5.000 đ</span>
                         </div>
                       </div>
 
                       <button
                         type="submit"
                         disabled={isSubmittingBooking}
-                        className="w-full primary-button py-3 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                        className="w-full primary-button py-3 apple-control font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                       >
                         {isSubmittingBooking ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
                         <span>Xác nhận đặt giữ chỗ ưu tiên</span>
@@ -1206,12 +1207,12 @@ export function LaundryPage() {
                   </div>
 
                   <div className="lg:col-span-6 space-y-3.5">
-                    <h4 className="type-h4 font-bold text-neutral-900 dark:text-white">
+                    <h4 className="type-h4 font-semibold kit-text-primary">
                       Lịch hẹn đặt máy gần đây
                     </h4>
 
                     {bookings.length === 0 ? (
-                      <div className="soft-card p-8 text-center text-xs text-neutral-600 dark:text-neutral-300">
+                      <div className="soft-card p-8 text-center apple-callout kit-text-secondary">
                         Chưa có lượt đặt trước nào trong ngày hôm nay.
                       </div>
                     ) : (
@@ -1220,25 +1221,25 @@ export function LaundryPage() {
                           <div key={b.bookingId} className="soft-card p-4 flex items-center justify-between gap-3">
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-bold font-num text-xs px-2 py-0.5 rounded bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300">
+                                <span className="font-semibold font-num apple-callout px-2 py-0.5 rounded bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300">
                                   {b.machineId}
                                 </span>
-                                <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">
+                                <span className="apple-callout font-semibold kit-text-primary font-num">
                                   Hẹn lúc {b.bookingTime} ({b.bookingDate})
                                 </span>
                               </div>
-                              <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-1">
+                              <p className="apple-subheadline kit-text-secondary mt-1">
                                 Cư dân: <b>{b.tenantName}</b> {b.roomNumber ? `(P.${b.roomNumber})` : ''}
                               </p>
                             </div>
 
                             <span className={cn(
-                              "text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase",
+                              "apple-callout font-semibold px-2.5 py-0.5 rounded-full",
                               b.depositStatus === 'PAID'
                                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200"
                                 : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200"
                             )}>
-                              {b.depositStatus === 'PAID' ? 'Đã Cọc' : 'Chờ Cọc'}
+                              {b.depositStatus === 'PAID' ? 'Đã cọc' : 'Chờ cọc'}
                             </span>
                           </div>
                         ))}
@@ -1253,11 +1254,11 @@ export function LaundryPage() {
             {activeTab === 'rules' && (
               <div className="space-y-4 max-w-3xl animate-in fade-in duration-200">
                 <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
-                  <h4 className="type-h3 font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 text-xs flex items-center justify-center font-bold">1</span>
+                  <h4 className="type-h3 font-semibold kit-text-primary flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 apple-callout flex items-center justify-center font-semibold">1</span>
                     <span>Thời gian hoạt động & Kích hoạt qua VietQR</span>
                   </h4>
-                  <ul className="text-xs text-neutral-600 dark:text-neutral-300 space-y-2.5 pl-3">
+                  <ul className="apple-body kit-text-secondary space-y-2.5 pl-3">
                     <li>• Máy hoạt động liên tục 24/7 tại khu vực giặt sấy tầng trệt.</li>
                     <li>• Thanh toán hoàn toàn tự động bằng cách mở bất kỳ ứng dụng ngân hàng nào và quét mã <b>VietQR</b>.</li>
                     <li>• <b>Quan trọng:</b> Giữ nguyên mã nội dung chuyển khoản (VD: <b>MG01</b>, <b>MS01</b>) để hệ thống tự động nhận diện và đóng điện nguồn trong vòng 3–5 giây.</li>
@@ -1265,11 +1266,11 @@ export function LaundryPage() {
                 </div>
 
                 <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
-                  <h4 className="type-h3 font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs flex items-center justify-center font-bold">2</span>
+                  <h4 className="type-h3 font-semibold kit-text-primary flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 apple-callout flex items-center justify-center font-semibold">2</span>
                     <span>Quy định nếp sống văn minh</span>
                   </h4>
-                  <ul className="text-xs text-neutral-600 dark:text-neutral-300 space-y-2.5 pl-3">
+                  <ul className="apple-body kit-text-secondary space-y-2.5 pl-3">
                     <li>• Không giặt quá tải trọng: Máy giặt tối đa 9kg đồ khô, máy sấy tối đa 8kg.</li>
                     <li>• <b>Nghiêm cấm:</b> Giặt giày dép đế kim loại nặng, thảm chùi chân dính bùn đất cát hoặc vật liệu dính hóa chất dễ cháy.</li>
                     <li>• Vui lòng lấy quần áo ra khỏi máy trong vòng <b>15–30 phút</b> sau khi máy báo xong để nhường lượt cho cư dân kế tiếp.</li>
@@ -1277,11 +1278,11 @@ export function LaundryPage() {
                 </div>
 
                 <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
-                  <h4 className="type-h3 font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-full bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200 text-xs flex items-center justify-center font-bold">3</span>
+                  <h4 className="type-h3 font-semibold kit-text-primary flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200 apple-callout flex items-center justify-center font-semibold">3</span>
                     <span>Hỗ trợ sự cố & Hotline kỹ thuật</span>
                   </h4>
-                  <p className="text-xs text-neutral-700 dark:text-neutral-200">
+                  <p className="apple-callout kit-text-secondary">
                     Trường hợp chuyển khoản thành công nhưng máy chưa vào điện hoặc gặp sự cố kỹ thuật, quý cư dân liên hệ ngay Ban Quản Lý:
                   </p>
                   <div className="pt-2">
@@ -1289,7 +1290,7 @@ export function LaundryPage() {
                       href="https://zalo.me/0902371800"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 font-bold text-xs hover:underline"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 font-semibold apple-callout hover:underline"
                     >
                       <PhoneCall size={15} />
                       <span>Hotline / Zalo: 0902371800 (Bùi Trung Khải)</span>

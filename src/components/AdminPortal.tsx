@@ -1105,6 +1105,7 @@ export function AdminPortal() {
     <div className="min-h-screen relative isolate text-neutral-800 dark:text-neutral-100 flex flex-col lg:flex-row antialiased">
       <OfflineBanner />
       <Background />
+      <div aria-hidden="true" className="kit-admin-reading-plane pointer-events-none fixed inset-0 z-0" />
       
       {portalToast && (
         <div 
@@ -1456,15 +1457,15 @@ export function AdminPortal() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="type-label text-neutral-600">Không gian quản lý chủ trọ</span>
+              <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
               <span className="px-2 py-0.5 rounded-md bg-neutral-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
                 Admin
               </span>
             </div>
-            <h1 className="type-h1 text-neutral-900 dark:text-white font-bold">
+            <h1 className="apple-large-title apple-strong kit-text-primary">
               Bảng Quản Lý Chủ Trọ
             </h1>
-            <p className="type-body text-neutral-700 mt-0.5 text-xs sm:text-sm">
+            <p className="apple-body kit-text-secondary mt-0.5">
               Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
             </p>
           </div>
