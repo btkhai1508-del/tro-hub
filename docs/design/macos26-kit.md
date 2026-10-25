@@ -79,7 +79,8 @@ Mô hình kiểm tra lấy **92.988 mẫu pixel mỗi ảnh WebP** (bước 8px)
 
 ## Template, khả năng dùng và hiệu năng
 
-- Desktop giữ khung cửa sổ 16px khoảng thở, sidebar 232/80px, toolbar 84px. Mobile toolbar 76px, dock năm mục; không sao chép các tọa độ tuyệt đối của Figma.
+- Desktop dùng bố cục mở, không còn khung cửa sổ/viền/bóng bo quanh toàn bộ trang. Sidebar nổi riêng cách mép 16px, rộng 260/105px như admin; nút tròn chevron ở giữa cạnh phải, không cuộn theo nội dung và không bị panel cắt. Toolbar căn cùng nội dung, không tạo thanh tiêu đề cửa sổ. Mobile giữ dock năm mục; không sao chép tọa độ tuyệt đối từ Figma.
+- Form đăng nhập hiển thị phone/password và nút Đăng nhập trước; Zalo đặt phía dưới, ngoài form để không kích hoạt submit thường.
 - Checkbox/switch có vùng bấm ít nhất 44px, bề mặt gọn theo kit. Checkbox nhận tên từ nhãn, hỗ trợ click nhãn và Space.
 - Popover thông báo cuộn theo chiều cao màn hình; nút đóng/đọc tất cả 44px. Thứ tự lớp: dock 30, toolbar 40, dialog 50.
 - Đồng hồ máy giặt co theo khung, form ngày/giờ xếp dọc khi cần ở 320px; QR/placeholder giữ nền trắng, chữ tối.

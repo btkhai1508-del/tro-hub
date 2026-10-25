@@ -1,26 +1,13 @@
 /* Responsive templates derived from the user's macOS 26 Community kit.
    Material levels and blur are defined in index.css; controls inherit the
    parent material rather than stacking their own backdrop filters. */
-.kit-window-shell { min-height: 100svh; }
-.kit-admin-reading-plane { background: var(--workspace-fill); }
-/* The photographed wallpaper needs a reading plane even on mobile. The
-   material samples above it keep their source opacities without tinting text. */
-.kit-window-shell::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: var(--workspace-fill);
-}
-.kit-main { position: relative; min-height: 100svh; }
+.kit-admin-reading-plane, .kit-resident-reading-plane { background: var(--workspace-fill); }
+.kit-main { position: relative; min-height: 100svh; padding-top: 12px; }
 .kit-page-content { padding: 20px 16px 0; }
 .kit-payment-content { padding-top: 20px; }
 .kit-toolbar {
-  min-height: 76px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--separator);
-  background: var(--material-ultrathin);
+  min-height: 52px;
+  padding: 0 16px;
 }
 .kit-toolbar-control, .kit-nav-item {
   color: var(--text-secondary);
@@ -145,32 +132,27 @@
   backdrop-filter: none;
 }
 @media (min-width: 640px) {
-  .kit-toolbar { padding: 14px 24px; }
+  .kit-toolbar { padding: 0 24px; }
   .kit-page-content { padding: 24px 24px 0; }
   .kit-dialog-body { padding: 24px; }
 }
 @media (min-width: 1024px) {
-  .kit-window-shell { margin: 16px; min-height: calc(100svh - 32px); }
-  .kit-window-shell::before {
-    inset: 16px;
-    border: 1px solid var(--liquid-edge);
-    border-radius: 34px;
-    box-shadow: 0 16px 64px -16px rgba(0, 0, 0, 0.22), inset 0 1px 0 var(--liquid-edge);
-  }
   .kit-sidebar {
-    border-right: 1px solid var(--separator);
-    border-radius: 34px 0 0 34px;
+    transition: width 220ms var(--liquid-ease);
+  }
+  .kit-sidebar-panel {
+    border: 1px solid var(--liquid-edge);
+    border-radius: var(--radius-surface);
     background: var(--glass-sheen), var(--material-thin);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
+    box-shadow: var(--liquid-shadow);
     -webkit-backdrop-filter: blur(var(--material-blur));
     backdrop-filter: blur(var(--material-blur));
   }
-  .kit-main { margin-left: 232px; min-height: calc(100svh - 32px); }
-  .kit-desktop-collapsed .kit-main { margin-left: 80px; }
-  .kit-toolbar { min-height: 84px; padding: 16px 28px; border-radius: 0 34px 0 0; }
-  .kit-page-content { padding: 28px 28px 0; }
+  .kit-sidebar-scroll { scrollbar-width: thin; border-radius: inherit; }
+  .kit-main { margin-left: 292px; padding-top: 24px; transition: margin-left 220ms var(--liquid-ease); }
+  .kit-resident-collapsed .kit-main { margin-left: 137px; }
+  .kit-toolbar { padding: 0 28px; }
+  .kit-page-content { padding: 24px 28px 0; }
   .kit-payment-content { padding-top: 28px; }
 }
 @media (hover: hover) {
@@ -178,7 +160,7 @@
   .kit-quick-action:hover { background: var(--control-hover); }
 }
 @media print {
-  .kit-sidebar, .kit-toolbar, .kit-dock, .kit-window-shell::before, .kit-admin-reading-plane { display: none !important; }
-  .kit-window-shell, .kit-main { margin: 0; min-height: 0; }
+  .kit-sidebar, .kit-toolbar, .kit-dock, .kit-resident-reading-plane, .kit-admin-reading-plane { display: none !important; }
+  .kit-main { margin: 0; min-height: 0; padding-top: 0; }
   .kit-page-content { padding: 0; }
 }

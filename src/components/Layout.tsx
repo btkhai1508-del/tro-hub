@@ -46,24 +46,25 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen relative isolate">
+    <div className={cn('kit-resident-layout min-h-screen relative isolate', isSidebarCollapsed && 'kit-resident-collapsed')}>
       <OfflineBanner />
       <Background />
+      <div aria-hidden="true" className="kit-resident-reading-plane pointer-events-none fixed inset-0 z-0" />
       
-      <div className={cn('kit-window-shell relative', isSidebarCollapsed && 'kit-desktop-collapsed')}>
-        <Sidebar />
-        <main className="kit-main min-w-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] lg:pb-8">
+      <Sidebar />
+      <main className="kit-main min-w-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] lg:pb-8">
+        <div className="mx-auto w-full max-w-[1280px]">
           {/* The payment flow already includes its own back control. */}
           {!isPaymentPage && <TopHeader />}
-          <div className={cn('kit-page-content mx-auto w-full max-w-[1180px]', isPaymentPage && 'kit-payment-content')}>
+          <div className={cn('kit-page-content w-full', isPaymentPage && 'kit-payment-content')}>
             <Suspense key={location.pathname} fallback={<PageLoading />}>
               <div className="route-content">
                 <Outlet />
               </div>
             </Suspense>
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
 
       {/* Pop-up Modals for quick views */}
       <NotificationModal />

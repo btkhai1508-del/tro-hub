@@ -16,8 +16,9 @@
 - Chữ chính đen/trắng, chữ phụ tương phản cao; nút chính vẫn đen/trắng. Lớp đọc Light68%/Dark50% nằm dưới các vật liệu để chữ rõ trên wallpaper nhiều vùng sáng/tối; không filter lên nội dung.
 - Giữ nguyên hình và màu bộ icon 3D. Màu cảnh báo/trạng thái có ý nghĩa được giữ riêng.
 - Font hệ thống Apple trên thiết bị Apple, có fallback hệ thống trên thiết bị khác. Hệ chữ LargeTitle26/Title122/Title217/Title315; Body13px desktop/15px mobile, trường nhập17px. [Bảng role và khoảng dòng](design/macos26-kit.md#typography-từ-bảng-tham-chiếu).
-- Desktop dùng khung cửa sổ bo 34px, sidebar tích hợp và toolbar; mobile dùng toolbar gọn và dock nổi. Các nhóm nội dung con bo 20px.
+- Desktop dùng bố cục mở, bỏ khung cửa sổ bao ngoài. Sidebar nổi riêng rộng 260/105px, nút tròn chevron ở giữa cạnh phải giống admin; toolbar và nội dung căn cùng lề. Mobile giữ dock nổi. Panel nội dung vẫn dùng kính, nhóm con bo 20px.
 - Form đăng nhập, danh sách hóa đơn, trang tiện ích/hồ sơ/hợp đồng/thanh toán/giặt sấy và các dialog cư dân dùng chung các kiểu template.
+- Đăng nhập bằng số điện thoại/mật khẩu trước; nút Zalo nằm dưới nút Đăng nhập, ngoài form và giữ logo gốc.
 - Bỏ cột quảng bá “Về nhà. Thật nhẹ nhàng.” và hai thẻ giới thiệu; form đăng nhập căn giữa.
 - Có vật liệu đặc thay thế khi trình duyệt không hỗ trợ blur hoặc người dùng yêu cầu giảm độ trong suốt; văn bản pháp lý/QR giữ nền dễ đọc, dễ quét.
 

@@ -214,24 +214,6 @@ export function LoginPage() {
 
           {mode === 'login' && (
             <div className="space-y-4">
-              <button
-                type="button"
-                onClick={handleZaloLogin}
-                disabled={isLoading}
-                aria-busy={isLoading}
-                className="soft-button group flex min-h-14 w-full items-center justify-center gap-2 px-4 sm:gap-3 py-2 apple-control font-medium disabled:cursor-wait"
-              >
-                <img src="/brand/zalo-logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
-                <span>{isLoading ? 'Đang kết nối với Zalo…' : 'Đăng nhập với Zalo'}</span>
-                {isLoading ? <span aria-hidden="true" className="ui-spinner h-4 w-4 shrink-0" /> : <ArrowRight aria-hidden="true" size={17} className="hidden shrink-0 text-neutral-500 dark:text-neutral-400 sm:block" />}
-              </button>
-
-              <div className="flex items-center justify-center gap-3 py-1" aria-hidden="true">
-                <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
-                <span className="shrink-0 apple-callout kit-text-secondary">hoặc số điện thoại</span>
-                <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
-              </div>
-
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="login-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
@@ -295,6 +277,24 @@ export function LoginPage() {
                   {!isLoading && <ArrowRight aria-hidden="true" size={18} />}
                 </button>
               </form>
+
+              <div className="flex items-center justify-center gap-3 py-1" aria-hidden="true">
+                <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
+                <span className="shrink-0 apple-callout kit-text-secondary">hoặc tiếp tục với</span>
+                <div className="h-px flex-1 bg-black/10 dark:bg-white/15" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleZaloLogin}
+                disabled={isLoading}
+                aria-busy={isLoading}
+                className="soft-button group flex min-h-14 w-full items-center justify-center gap-2 px-4 sm:gap-3 py-2 apple-control font-medium disabled:cursor-wait"
+              >
+                <img src="/brand/zalo-logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
+                <span>{isLoading ? 'Đang kết nối với Zalo…' : 'Đăng nhập với Zalo'}</span>
+                {isLoading ? <span aria-hidden="true" className="ui-spinner h-4 w-4 shrink-0" /> : <ArrowRight aria-hidden="true" size={17} className="hidden shrink-0 text-neutral-500 dark:text-neutral-400 sm:block" />}
+              </button>
             </div>
           )}
 
