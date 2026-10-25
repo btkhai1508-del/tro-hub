@@ -277,14 +277,14 @@ export function LaundryPage() {
                 <h1 className="text-[28px] sm:text-[32px] leading-tight font-bold text-neutral-900 dark:text-white tracking-tight">
                   Kích Hoạt Thành Công!
                 </h1>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">
                   Máy đã được đóng nguồn điện tự động và bắt đầu chu kỳ hoạt động.
                 </p>
               </div>
 
               {/* Amount Display Centerpiece */}
-              <div className="w-full py-4 px-6 flex flex-col items-center justify-center mb-6 bg-neutral-50 dark:bg-neutral-900/60 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                <span className="text-xs uppercase tracking-wider text-gray-500 dark:text-neutral-400 font-semibold mb-1.5">
+              <div className="w-full py-4 px-6 flex flex-col items-center justify-center mb-6 bg-white/15 dark:bg-white/5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                <span className="text-xs uppercase tracking-wider text-neutral-700 dark:text-neutral-200 font-semibold mb-1.5">
                   SỐ TIỀN ĐÃ THANH TOÁN
                 </span>
                 <div className="flex items-baseline gap-1.5">
@@ -300,23 +300,23 @@ export function LaundryPage() {
               {/* Transaction Details Table */}
               <div className="w-full divide-y divide-gray-100 dark:divide-neutral-800 mb-6 text-[14px]">
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-neutral-400">Thiết bị</span>
+                  <span className="text-neutral-700 dark:text-neutral-200">Thiết bị</span>
                   <span className="font-bold text-neutral-900 dark:text-white">{selectedMachine.name}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-neutral-400">Mã thiết bị</span>
-                  <span className="font-bold font-mono text-neutral-600 dark:text-neutral-400">{selectedMachine.machineId}</span>
+                  <span className="text-neutral-700 dark:text-neutral-200">Mã thiết bị</span>
+                  <span className="font-bold font-mono text-neutral-600 dark:text-neutral-200">{selectedMachine.machineId}</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-neutral-400">Cư dân kích hoạt</span>
+                  <span className="text-neutral-700 dark:text-neutral-200">Cư dân kích hoạt</span>
                   <span className="font-bold text-neutral-900 dark:text-white">{profile.name} (P.{profile.room?.roomNumber})</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-neutral-400">Thời gian chu kỳ</span>
+                  <span className="text-neutral-700 dark:text-neutral-200">Thời gian chu kỳ</span>
                   <span className="font-semibold text-neutral-900 dark:text-white font-num">{selectedMachine.cycleMinutes} phút</span>
                 </div>
                 <div className="py-3 flex items-center justify-between">
-                  <span className="text-gray-500 dark:text-neutral-400">Trạng thái</span>
+                  <span className="text-neutral-700 dark:text-neutral-200">Trạng thái</span>
                   <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 size={16} />
                     <span>Đã cấp điện nguồn</span>
@@ -344,7 +344,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-gray-200 dark:border-neutral-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-900 dark:text-white border border-gray-200 dark:border-neutral-700 font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
                 >
                   <Home size={18} />
                   <span>Danh sách máy</span>
@@ -378,12 +378,12 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-400 active:scale-95 transition-all cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-200 active:scale-95 transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
 
-                <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+                <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                   <span>Phòng {profile.room?.roomNumber}</span>
                   <span aria-hidden="true">·</span>
                   <span>{selectedMachine.name}</span>
@@ -398,7 +398,7 @@ export function LaundryPage() {
                     <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
                       QR Kích hoạt {selectedMachine.type === 'WASHER' ? 'máy giặt' : 'máy sấy'}
                     </h1>
-                    <p className="text-[14px] text-neutral-500 dark:text-neutral-400 font-normal mt-1 leading-relaxed">
+                    <p className="text-[14px] text-neutral-700 dark:text-neutral-200 font-normal mt-1 leading-relaxed">
                       Quét mã để kích hoạt tự động · Máy {selectedMachine.machineId}
                     </p>
                   </div>
@@ -412,7 +412,7 @@ export function LaundryPage() {
                         className="w-[280px] h-[280px] object-contain rounded-none select-none"
                       />
                     ) : (
-                      <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-neutral-500">
+                      <div className="w-[280px] h-[280px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
                         Đang tạo mã QR...
                       </div>
                     )}
@@ -439,13 +439,13 @@ export function LaundryPage() {
                     </h2>
                     <div className="liquid-panel-subtle p-4 sm:p-5 space-y-4">
                       <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-normal">Thiết bị</span>
+                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Thiết bị</span>
                         <span className="font-bold text-black dark:text-white">
                           {selectedMachine.name}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-normal">Người nhận</span>
+                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Người nhận</span>
                         <span 
                           onClick={() => handleCopy(recipientName, 'd-recipient')}
                           className="font-bold text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
@@ -455,7 +455,7 @@ export function LaundryPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-normal">Ngân hàng</span>
+                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Ngân hàng</span>
                         <span 
                           onClick={() => handleCopy(bankName, 'd-bank')}
                           className="font-medium text-black dark:text-white cursor-pointer hover:underline flex items-center gap-1"
@@ -465,7 +465,7 @@ export function LaundryPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-normal">Số tài khoản</span>
+                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Số tài khoản</span>
                         <span 
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
                           className="font-bold text-black dark:text-white tracking-wider font-mono cursor-pointer hover:underline flex items-center gap-1"
@@ -475,10 +475,10 @@ export function LaundryPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-normal">Nội dung CK</span>
+                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Nội dung CK</span>
                         <span 
                           onClick={() => handleCopy(selectedMachine.machineId, 'd-content')}
-                          className="font-bold text-neutral-600 dark:text-neutral-400 font-mono text-xs cursor-pointer hover:underline flex items-center gap-1"
+                          className="font-bold text-neutral-600 dark:text-neutral-200 font-mono text-xs cursor-pointer hover:underline flex items-center gap-1"
                           title="Bắt buộc giữ nguyên mã máy"
                         >
                           {selectedMachine.machineId}
@@ -486,7 +486,7 @@ export function LaundryPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[14px]">
-                        <span className="text-neutral-500 dark:text-neutral-400 font-normal">Thời lượng chu kỳ</span>
+                        <span className="text-neutral-700 dark:text-neutral-200 font-normal">Thời lượng chu kỳ</span>
                         <span className="font-semibold text-black dark:text-white font-num">
                           {selectedMachine.cycleMinutes} phút / lần
                         </span>
@@ -499,7 +499,7 @@ export function LaundryPage() {
 
                   {/* Total Amount */}
                   <div className="flex items-baseline justify-between py-1">
-                    <span className="text-[15px] font-medium text-neutral-500 dark:text-neutral-400">Tổng tiền</span>
+                    <span className="text-[15px] font-medium text-neutral-700 dark:text-neutral-200">Tổng tiền</span>
                     <span className="text-[32px] font-bold text-black dark:text-white tracking-tight leading-none font-num">
                       {formatCurrency(selectedMachine.price)} ₫
                     </span>
@@ -525,7 +525,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-400 active:opacity-60 transition-opacity cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center text-neutral-600 dark:text-neutral-200 active:opacity-60 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
@@ -549,7 +549,7 @@ export function LaundryPage() {
                       className="w-[240px] h-[240px] object-contain rounded-none select-none"
                     />
                   ) : (
-                    <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-neutral-500">
+                    <div className="w-[240px] h-[240px] flex items-center justify-center text-xs text-neutral-700 dark:text-neutral-200">
                       Đang tạo mã QR...
                     </div>
                   )}
@@ -572,13 +572,13 @@ export function LaundryPage() {
               <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 text-sm">
                 <div className="liquid-panel-subtle p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500 dark:text-neutral-400">Thiết bị</span>
+                    <span className="text-neutral-700 dark:text-neutral-200">Thiết bị</span>
                     <span className="font-bold text-black dark:text-white truncate max-w-[200px]">
                       {selectedMachine.name}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500 dark:text-neutral-400">Người nhận</span>
+                    <span className="text-neutral-700 dark:text-neutral-200">Người nhận</span>
                     <span 
                       onClick={() => handleCopy(recipientName, 'm-rec')}
                       className="font-bold text-black dark:text-white tracking-tight cursor-pointer"
@@ -588,7 +588,7 @@ export function LaundryPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500 dark:text-neutral-400">Ngân hàng</span>
+                    <span className="text-neutral-700 dark:text-neutral-200">Ngân hàng</span>
                     <span 
                       onClick={() => handleCopy(bankName, 'm-bank')}
                       className="font-medium text-black dark:text-white truncate max-w-[200px] text-right cursor-pointer"
@@ -598,7 +598,7 @@ export function LaundryPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500 dark:text-neutral-400">Số TK</span>
+                    <span className="text-neutral-700 dark:text-neutral-200">Số TK</span>
                     <span 
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
                       className="font-bold text-black dark:text-white font-mono cursor-pointer"
@@ -608,10 +608,10 @@ export function LaundryPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500 dark:text-neutral-400">Nội dung CK</span>
+                    <span className="text-neutral-700 dark:text-neutral-200">Nội dung CK</span>
                     <span 
                       onClick={() => handleCopy(selectedMachine.machineId, 'm-content')}
-                      className="font-bold text-neutral-600 dark:text-neutral-400 font-mono text-[11px] cursor-pointer"
+                      className="font-bold text-neutral-600 dark:text-neutral-200 font-mono text-[11px] cursor-pointer"
                     >
                       {selectedMachine.machineId}
                       {copiedKey === 'm-content' && <span className="ml-1 text-[10px] text-emerald-600 font-bold">✓</span>}
@@ -621,7 +621,7 @@ export function LaundryPage() {
 
                 {/* Total Line */}
                 <div className="flex items-center justify-between px-1 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                  <span className="text-[13px] font-medium text-neutral-500 dark:text-neutral-400">Tổng tiền</span>
+                  <span className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">Tổng tiền</span>
                   <span className="text-2xl font-semibold text-neutral-900 dark:text-white tracking-tight font-num">
                     {formatCurrency(selectedMachine.price)} ₫
                   </span>
@@ -648,7 +648,7 @@ export function LaundryPage() {
             transition={{ duration: 0.2 }}
             className="w-full flex justify-center py-4"
           >
-            <main className="w-full max-w-[500px] bg-white dark:bg-[#101726] rounded-[28px] border border-neutral-200/90 dark:border-neutral-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
+            <main className="w-full max-w-[500px] liquid-panel rounded-[28px] border border-neutral-200/90 dark:border-neutral-800 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
               
               {/* Header with back button */}
               <div className="w-full flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-2">
@@ -668,7 +668,7 @@ export function LaundryPage() {
                   <h3 className="type-h3 font-bold text-neutral-900 dark:text-white leading-tight">
                     {selectedMachine.name}
                   </h3>
-                  <span className="text-xs text-neutral-400">Đang hoạt động · Mã {selectedMachine.machineId}</span>
+                  <span className="text-xs text-neutral-600 dark:text-neutral-300">Đang hoạt động · Mã {selectedMachine.machineId}</span>
                 </div>
 
                 <div className="w-10" />
@@ -727,7 +727,7 @@ export function LaundryPage() {
 
                       {/* Center Display */}
                       <div className="relative z-20 flex flex-col items-center justify-center text-center p-4">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                           Thời gian còn lại
                         </span>
 
@@ -759,9 +759,9 @@ export function LaundryPage() {
                     </div>
 
                     {/* Summary Info Cards */}
-                    <div className="w-full p-4 bg-neutral-50 dark:bg-neutral-900/60 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 flex items-center justify-around text-xs font-semibold">
+                    <div className="w-full p-4 bg-white/15 dark:bg-white/5 rounded-2xl border border-neutral-100 dark:border-neutral-800/80 flex items-center justify-around text-xs font-semibold">
                       <div className="text-center">
-                        <span className="text-neutral-400 dark:text-neutral-500 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                        <span className="text-neutral-600 dark:text-neutral-300 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
                           Dự kiến hoàn thành
                         </span>
                         <span className="font-bold font-num text-neutral-900 dark:text-white text-base">
@@ -770,14 +770,14 @@ export function LaundryPage() {
                       </div>
                       <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-700/60" />
                       <div className="text-center">
-                        <span className="text-neutral-400 dark:text-neutral-500 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
+                        <span className="text-neutral-600 dark:text-neutral-300 block text-[10px] uppercase font-bold tracking-wider mb-0.5">
                           Trạng thái ổ điện
                         </span>
                         <span className={cn(
                           "font-bold text-xs flex items-center justify-center gap-1",
                           selectedMachine.plugState === 'ON' || isRunning
                             ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-neutral-400 dark:text-neutral-500"
+                            : "text-neutral-600 dark:text-neutral-300"
                         )}>
                           <Power size={13} />
                           {selectedMachine.plugState === 'ON' || isRunning ? 'BẬT NGUỒN' : 'TẮT NGUỒN'}
@@ -817,14 +817,14 @@ export function LaundryPage() {
             <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="mb-3 flex items-center gap-2">
-                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-9 w-9 items-center justify-center text-neutral-600 dark:text-neutral-400"><ArrowLeft size={16} /></button>
+                  <button type="button" onClick={() => { soundFx.click(); navigate(-1); }} aria-label="Quay lại" className="soft-button flex h-9 w-9 items-center justify-center text-neutral-600 dark:text-neutral-200"><ArrowLeft size={16} /></button>
                   <span className="liquid-eyebrow">DỊCH VỤ CƯ DÂN</span>
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">Giặt sấy, thật nhẹ nhàng.</h1>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">Chọn máy, quét mã và dành thời gian cho điều bạn thích.</p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">Chọn máy, quét mã và dành thời gian cho điều bạn thích.</p>
               </div>
               <div className="liquid-chip inline-flex items-center gap-2 self-start px-3 py-2 text-xs text-neutral-600 dark:text-neutral-300">
-                <Home size={14} className="text-neutral-500" /><span>{profile.room.roomNumber || 'Phòng của bạn'}</span><span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">/</span><span>Tự phục vụ 24/7</span>
+                <Home size={14} className="text-neutral-700" /><span>{profile.room.roomNumber || 'Phòng của bạn'}</span><span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">/</span><span>Tự phục vụ 24/7</span>
               </div>
             </header>
 
@@ -835,39 +835,39 @@ export function LaundryPage() {
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium block">
+                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
                     Máy sẵn sàng
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-neutral-900 dark:text-white block mt-0.5">
-                    {availableCount} <span className="text-sm font-normal text-neutral-500">máy</span>
+                    {availableCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
                   </span>
                 </div>
               </div>
 
               <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
-                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-400 flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-200 flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40">
                   <Clock size={23} strokeWidth={1.7} />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium block">
+                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
                     Đang hoạt động
                   </span>
-                  <span className="text-xl sm:text-2xl font-bold font-num text-neutral-600 dark:text-neutral-400 block mt-0.5">
-                    {runningCount} <span className="text-sm font-normal text-neutral-500">máy</span>
+                  <span className="text-xl sm:text-2xl font-bold font-num text-neutral-600 dark:text-neutral-200 block mt-0.5">
+                    {runningCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
                   </span>
                 </div>
               </div>
 
               <div className="liquid-panel-subtle p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
                 <div className="w-12 h-12 rounded-2xl bg-neutral-50/70 dark:bg-neutral-950/30 flex items-center justify-center shrink-0 border border-neutral-100/60 dark:border-neutral-800/30">
-                  <WashingMachine size={23} strokeWidth={1.7} className="text-neutral-500" />
+                  <WashingMachine size={23} strokeWidth={1.7} className="text-neutral-700 dark:text-neutral-200" />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium block">
+                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
                     Máy giặt cửa trước
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-neutral-900 dark:text-white block mt-0.5">
-                    {washerCount} <span className="text-sm font-normal text-neutral-500">máy</span>
+                    {washerCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
                   </span>
                 </div>
               </div>
@@ -877,11 +877,11 @@ export function LaundryPage() {
                   <Sparkles size={23} strokeWidth={1.7} className="text-amber-500" />
                 </div>
                 <div>
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium block">
+                  <span className="text-xs text-neutral-700 dark:text-neutral-200 font-medium block">
                     Máy sấy thông hơi
                   </span>
                   <span className="text-xl sm:text-2xl font-bold font-num text-neutral-900 dark:text-white block mt-0.5">
-                    {dryerCount} <span className="text-sm font-normal text-neutral-500">máy</span>
+                    {dryerCount} <span className="text-sm font-normal text-neutral-700 dark:text-neutral-200">máy</span>
                   </span>
                 </div>
               </div>
@@ -910,7 +910,7 @@ export function LaundryPage() {
                         "min-h-11 flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-medium flex justify-center items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap",
                         isActive
                           ? "bg-white dark:bg-neutral-700/80 text-neutral-600 dark:text-neutral-300 shadow-sm"
-                          : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                          : "text-neutral-600 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white"
                       )}
                     >
                       <Icon size={15} />
@@ -930,7 +930,7 @@ export function LaundryPage() {
                 className="soft-button px-3.5 py-2 flex items-center gap-2 cursor-pointer text-xs font-semibold text-neutral-600 dark:text-neutral-300 self-end sm:self-auto"
                 title="Cập nhật trạng thái"
               >
-                <RefreshCw size={13} className={cn(isLoading && "animate-spin text-neutral-600")} />
+                <RefreshCw size={13} className={cn(isLoading && "animate-spin text-neutral-600 dark:text-neutral-300")} />
                 <span>Làm mới trạng thái</span>
               </button>
             </div>
@@ -957,7 +957,7 @@ export function LaundryPage() {
                           "min-h-10 px-3.5 py-2 rounded-full text-xs font-medium cursor-pointer transition-all",
                           activeFilter === f.key
                             ? "bg-neutral-600 text-white dark:bg-neutral-500 shadow-sm shadow-neutral-500/20"
-                            : "soft-button text-neutral-600 dark:text-neutral-400"
+                            : "soft-button text-neutral-600 dark:text-neutral-200"
                         )}
                       >
                         {f.label}
@@ -965,7 +965,7 @@ export function LaundryPage() {
                     ))}
                   </div>
 
-                  <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-400">
+                  <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
                     <Info size={14} />
                     <span>Chạm vào thẻ máy để mở màn hình quét mã VietQR</span>
                   </div>
@@ -1005,7 +1005,7 @@ export function LaundryPage() {
                             </div>
 
                             <div>
-                              <div className="flex items-center gap-2 text-xs text-neutral-400">
+                              <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
                                 <span className="font-bold font-num text-neutral-900 dark:text-neutral-100">
                                   {m.machineId}
                                 </span>
@@ -1060,14 +1060,14 @@ export function LaundryPage() {
 
                         <div className="mt-4 pt-4 border-t border-neutral-900/5 dark:border-white/10 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] text-neutral-400 uppercase font-semibold block tracking-wider">
+                            <span className="text-[10px] text-neutral-600 dark:text-neutral-300 uppercase font-semibold block tracking-wider">
                               Giá cước
                             </span>
                             <div className="flex items-baseline gap-1 mt-0.5">
                               <span className="text-xl font-bold font-num text-neutral-900 dark:text-neutral-100">
                                 {formatMoney(m.price)}
                               </span>
-                              <span className="text-xs text-neutral-400">/ {m.cycleMinutes}p</span>
+                              <span className="text-xs text-neutral-600 dark:text-neutral-300">/ {m.cycleMinutes}p</span>
                             </div>
                           </div>
 
@@ -1077,7 +1077,7 @@ export function LaundryPage() {
                               className={cn(
                                 "py-2 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all",
                                 isRunning
-                                  ? "soft-button text-neutral-600 dark:text-neutral-400"
+                                  ? "soft-button text-neutral-600 dark:text-neutral-200"
                                   : "primary-button shadow-xs"
                               )}
                             >
@@ -1109,14 +1109,14 @@ export function LaundryPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[28px] border border-white/80 dark:border-white/10 space-y-5">
                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900/5 dark:border-white/10">
-                      <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-400 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 text-neutral-600 dark:text-neutral-200 flex items-center justify-center shrink-0">
                         <CalendarClock size={22} />
                       </div>
                       <div>
                         <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">
                           Đặt lịch giặt sấy trước
                         </h3>
-                        <p className="text-xs text-neutral-400 mt-0.5">
+                        <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-0.5">
                           Chủ động chọn khung giờ thuận tiện mà không lo hết máy trống.
                         </p>
                       </div>
@@ -1180,18 +1180,18 @@ export function LaundryPage() {
                         </div>
                       </div>
 
-                      <div className="p-3.5 bg-neutral-50 dark:bg-neutral-900/60 rounded-2xl space-y-2 text-xs border border-neutral-100 dark:border-neutral-800">
+                      <div className="p-3.5 bg-white/15 dark:bg-white/5 rounded-2xl space-y-2 text-xs border border-neutral-100 dark:border-neutral-800">
                         <div className="flex justify-between items-center">
-                          <span className="text-neutral-400">Cư dân đăng ký:</span>
+                          <span className="text-neutral-600 dark:text-neutral-300">Cư dân đăng ký:</span>
                           <span className="font-bold text-neutral-900 dark:text-white">{profile.name}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-neutral-400">Phòng ở:</span>
+                          <span className="text-neutral-600 dark:text-neutral-300">Phòng ở:</span>
                           <span className="font-bold text-neutral-900 dark:text-white font-num">{profile.room.roomNumber}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-neutral-400">Phí giữ chỗ ưu tiên:</span>
-                          <span className="font-bold font-num text-neutral-600 dark:text-neutral-400">5.000 đ</span>
+                          <span className="text-neutral-600 dark:text-neutral-300">Phí giữ chỗ ưu tiên:</span>
+                          <span className="font-bold font-num text-neutral-600 dark:text-neutral-200">5.000 đ</span>
                         </div>
                       </div>
 
@@ -1212,7 +1212,7 @@ export function LaundryPage() {
                     </h4>
 
                     {bookings.length === 0 ? (
-                      <div className="soft-card p-8 text-center text-xs text-neutral-400">
+                      <div className="soft-card p-8 text-center text-xs text-neutral-600 dark:text-neutral-300">
                         Chưa có lượt đặt trước nào trong ngày hôm nay.
                       </div>
                     ) : (
@@ -1228,7 +1228,7 @@ export function LaundryPage() {
                                   Hẹn lúc {b.bookingTime} ({b.bookingDate})
                                 </span>
                               </div>
-                              <p className="text-[11px] text-neutral-400 mt-1">
+                              <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-1">
                                 Cư dân: <b>{b.tenantName}</b> {b.roomNumber ? `(P.${b.roomNumber})` : ''}
                               </p>
                             </div>
@@ -1282,7 +1282,7 @@ export function LaundryPage() {
                     <span className="w-7 h-7 rounded-full bg-neutral-200 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-200 text-xs flex items-center justify-center font-bold">3</span>
                     <span>Hỗ trợ sự cố & Hotline kỹ thuật</span>
                   </h4>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  <p className="text-xs text-neutral-700 dark:text-neutral-200">
                     Trường hợp chuyển khoản thành công nhưng máy chưa vào điện hoặc gặp sự cố kỹ thuật, quý cư dân liên hệ ngay Ban Quản Lý:
                   </p>
                   <div className="pt-2">

@@ -1174,7 +1174,7 @@ export function AdminPortal() {
                       Admin
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-400 font-medium truncate">
+                  <p className="text-[11px] text-neutral-600 font-medium truncate">
                     Quản lý chủ trọ
                   </p>
                 </div>
@@ -1210,7 +1210,7 @@ export function AdminPortal() {
                         : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
                       isActive 
                         ? "bg-neutral-500/10 text-neutral-700 dark:bg-neutral-400/15 dark:text-neutral-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] font-semibold"
-                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 font-medium"
+                        : "text-neutral-600 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 font-medium"
                     )}
                     title={item.label}
                   >
@@ -1219,7 +1219,7 @@ export function AdminPortal() {
                         size={20} 
                         className={cn(
                           "transition-all duration-200 shrink-0", 
-                          isActive ? "text-neutral-600 dark:text-neutral-300 scale-105" : "text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white group-hover:scale-105"
+                          isActive ? "text-neutral-600 dark:text-neutral-300 scale-105" : "text-neutral-600 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white group-hover:scale-105"
                         )} 
                       />
                       {!isSidebarCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
@@ -1242,7 +1242,7 @@ export function AdminPortal() {
                     <div className="flex items-center gap-2 min-w-0 flex-1 relative cursor-pointer">
                       <Calendar size={18} className="text-neutral-900 dark:text-white shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <span className="text-[9px] text-neutral-400 dark:text-neutral-400 uppercase tracking-wider block font-bold leading-none mb-0.5">
+                        <span className="text-[9px] text-neutral-600 dark:text-neutral-200 uppercase tracking-wider block font-bold leading-none mb-0.5">
                           Kỳ tháng
                         </span>
                         <div className="flex items-center gap-1">
@@ -1308,7 +1308,7 @@ export function AdminPortal() {
                     {mode === 'light' ? (
                       <Sun size={15} className="text-amber-500 shrink-0 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                     ) : mode === 'dark' ? (
-                      <Moon size={15} className="text-neutral-400 shrink-0 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
+                      <Moon size={15} className="text-neutral-600 shrink-0 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
                     ) : (
                       <IconClock3D size={18} className="shrink-0" />
                     )}
@@ -1333,7 +1333,7 @@ export function AdminPortal() {
                 <div className="soft-surface p-3 rounded-2xl relative overflow-hidden flex items-center justify-between">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                   <div>
-                    <p className="text-[10px] text-neutral-400 dark:text-neutral-400 font-bold uppercase tracking-wider">Cổng thanh toán</p>
+                    <p className="text-[10px] text-neutral-600 dark:text-neutral-200 font-bold uppercase tracking-wider">Cổng thanh toán</p>
                     <p className={cn("text-xs font-black uppercase font-num mt-0.5", paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                       {paymentGate === 'START' ? 'Mở' : 'Tắt'}
                     </p>
@@ -1359,7 +1359,7 @@ export function AdminPortal() {
                   title="Đăng xuất khỏi hệ thống quản lý"
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                  <LogOut size={15} className="text-neutral-400 dark:text-neutral-400 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
+                  <LogOut size={15} className="text-neutral-600 dark:text-neutral-200 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
                   <span>Đăng xuất Admin</span>
                 </button>
               </div>
@@ -1396,7 +1396,7 @@ export function AdminPortal() {
                   {mode === 'light' ? (
                     <Sun size={18} className="text-amber-500 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                   ) : mode === 'dark' ? (
-                    <Moon size={18} className="text-neutral-400 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
+                    <Moon size={18} className="text-neutral-600 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
                   ) : (
                     <IconClock3D size={20} />
                   )}
@@ -1432,7 +1432,7 @@ export function AdminPortal() {
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-neutral-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-neutral-600 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
                   title="Đăng xuất Admin"
                 >
                   <LogOut size={16} />
@@ -1456,7 +1456,7 @@ export function AdminPortal() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="type-label text-neutral-400">Không gian quản lý chủ trọ</span>
+              <span className="type-label text-neutral-600">Không gian quản lý chủ trọ</span>
               <span className="px-2 py-0.5 rounded-md bg-neutral-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
                 Admin
               </span>
@@ -1464,7 +1464,7 @@ export function AdminPortal() {
             <h1 className="type-h1 text-neutral-900 dark:text-white font-bold">
               Bảng Quản Lý Chủ Trọ
             </h1>
-            <p className="type-body text-neutral-500 mt-0.5 text-xs sm:text-sm">
+            <p className="type-body text-neutral-700 mt-0.5 text-xs sm:text-sm">
               Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
             </p>
           </div>
@@ -1487,7 +1487,7 @@ export function AdminPortal() {
               <div className="relative flex items-center gap-1.5 px-1 cursor-pointer">
                 <Calendar size={15} className="text-neutral-900 dark:text-white shrink-0" />
                 <div>
-                  <span className="text-[9px] text-neutral-400 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
+                  <span className="text-[9px] text-neutral-600 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
                   <div className="flex items-center gap-0.5">
                     <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Tháng {selectedMonth}</span>
                     <ChevronDown size={11} className="text-neutral-900 dark:text-white shrink-0" />
@@ -1533,7 +1533,7 @@ export function AdminPortal() {
               {mode === 'light' ? (
                 <Sun size={15} className="text-amber-500" />
               ) : mode === 'dark' ? (
-                <Moon size={15} className="text-neutral-400" />
+                <Moon size={15} className="text-neutral-600" />
               ) : (
                 <IconClock3D size={18} />
               )}
@@ -1649,7 +1649,7 @@ export function AdminPortal() {
                     </div>
 
                     <div className="text-left sm:text-right">
-                      <span className="text-[10px] text-neutral-400 block uppercase font-medium">Tiến độ thu</span>
+                      <span className="text-[10px] text-neutral-600 block uppercase font-medium">Tiến độ thu</span>
                       <span className="type-button font-num text-emerald-600 block mt-0.5 font-bold">
                         {paidRoomsCount} / {totalRoomsCount} Phòng
                       </span>
@@ -1658,12 +1658,12 @@ export function AdminPortal() {
 
                   {/* Middle row: Big Amount */}
                   <div>
-                    <p className="type-label text-neutral-400 mb-1">
+                    <p className="type-label text-neutral-600 mb-1">
                       Tổng tiền đã hạch toán cột P
                     </p>
                     <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
                       {fmt(dashboardData?.doanhThu ?? 0)}
-                      <span className="text-2xl font-normal text-neutral-400">₫</span>
+                      <span className="text-2xl font-normal text-neutral-600">₫</span>
                     </div>
                   </div>
 
@@ -1693,7 +1693,7 @@ export function AdminPortal() {
                       <IconElectricity3D size={42} className="shrink-0" />
                       <div>
                         <h3 className="type-h4 text-neutral-900 dark:text-white font-bold">Điện tiêu thụ</h3>
-                        <p className="text-[11px] text-neutral-400 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
+                        <p className="text-[11px] text-neutral-600 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">{fmt(dashboardData?.tienDien ?? 0)} đ</span>
@@ -1707,7 +1707,7 @@ export function AdminPortal() {
                       <IconWater3D size={42} className="shrink-0" />
                       <div>
                         <h3 className="type-h4 text-neutral-900 dark:text-white font-bold">Nước tiêu thụ</h3>
-                        <p className="text-[11px] text-neutral-400 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
+                        <p className="text-[11px] text-neutral-600 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">{fmt(dashboardData?.tienNuoc ?? 0)} đ</span>
@@ -1720,7 +1720,7 @@ export function AdminPortal() {
                     <IconProfile3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soNguoi ?? 0} Cư dân</p>
-                      <p className="text-[10px] text-neutral-400">Đang lưu trú</p>
+                      <p className="text-[10px] text-neutral-600">Đang lưu trú</p>
                     </div>
                   </div>
 
@@ -1728,7 +1728,7 @@ export function AdminPortal() {
                     <IconLocation3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soXe ?? 0} Xe máy</p>
-                      <p className="text-[10px] text-neutral-400">Đăng ký giữ xe</p>
+                      <p className="text-[10px] text-neutral-600">Đăng ký giữ xe</p>
                     </div>
                   </div>
                 </div>
@@ -1785,7 +1785,7 @@ export function AdminPortal() {
                         />
                         <span className={cn(
                           "text-[11px] font-bold min-w-14 text-right transition-colors",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
                         )}>
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
@@ -1794,7 +1794,7 @@ export function AdminPortal() {
 
                     <div className="space-y-1">
                       <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{r.name}</h4>
-                      <p className="text-xs text-neutral-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                      <p className="text-xs text-neutral-600 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
                 );
@@ -1819,7 +1819,7 @@ export function AdminPortal() {
               </button>
 
               <div className="flex items-center gap-3 bg-neutral-50/90 dark:bg-neutral-800/80 px-3.5 py-1.5 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 shadow-2xs">
-                <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400">Trạng thái:</span>
+                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">Trạng thái:</span>
                 <div className="flex items-center gap-2">
                   <AppleSwitch
                     checked={currentRoomData.paymentStatus === 'paid'}
@@ -1830,7 +1830,7 @@ export function AdminPortal() {
                   />
                   <span className={cn(
                     "text-xs font-bold min-w-16 transition-colors",
-                    currentRoomData.paymentStatus === 'paid' ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
+                    currentRoomData.paymentStatus === 'paid' ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
                   )}>
                     {currentRoomData.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'}
                   </span>
@@ -1849,7 +1849,7 @@ export function AdminPortal() {
               {[1, 2, 3].map(slot => (
                 <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Họ tên người {slot}</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Họ tên người {slot}</label>
                     <input
                       type="text"
                       value={currentRoomData[`nguoi${slot}`] || ''}
@@ -1874,7 +1874,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Số CCCD</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Số CCCD</label>
                     <input
                       type="text"
                       value={currentRoomData[`cccd${slot}`] || ''}
@@ -1884,7 +1884,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Số điện thoại</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Số điện thoại</label>
                     <input
                       type="text"
                       value={currentRoomData[`sdt${slot}`] || ''}
@@ -1894,7 +1894,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Biển số xe</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Biển số xe</label>
                     <input
                       type="text"
                       value={currentRoomData[`xe${slot}`] || ''}
@@ -1928,12 +1928,12 @@ export function AdminPortal() {
                   <IconElectricity3D size={40} className="shrink-0" />
                   <div>
                     <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
-                    <p className="text-[11px] text-neutral-400">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
+                    <p className="text-[11px] text-neutral-600">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Điện cũ</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Điện cũ</label>
                     <input 
                       type="number" 
                       value={currentRoomData.dienCu || ''} 
@@ -1954,7 +1954,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Điện mới</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Điện mới</label>
                     <input 
                       type="number" 
                       value={currentRoomData.dienMoi || ''} 
@@ -1986,12 +1986,12 @@ export function AdminPortal() {
                   <IconWater3D size={40} className="shrink-0" />
                   <div>
                     <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
-                    <p className="text-[11px] text-neutral-400">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
+                    <p className="text-[11px] text-neutral-600">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Nước cũ</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Nước cũ</label>
                     <input 
                       type="number" 
                       value={currentRoomData.nuocCu || ''} 
@@ -2012,7 +2012,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Nước mới</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Nước mới</label>
                     <input 
                       type="number" 
                       value={currentRoomData.nuocMoi || ''} 
@@ -2047,12 +2047,12 @@ export function AdminPortal() {
                   <IconWallet3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
                     <h4 className="font-bold text-neutral-900 dark:text-white text-base">Chi Phí Dịch Vụ & Hóa Đơn Chi Tiết</h4>
-                    <p className="text-xs text-neutral-400">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
+                    <p className="text-xs text-neutral-600">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
                   </div>
                 </div>
                 
                 <div className="text-left sm:text-right">
-                  <span className="text-[10px] text-neutral-400 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
+                  <span className="text-[10px] text-neutral-600 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
                   <span className="text-lg font-black font-num text-neutral-900 dark:text-white px-2.5 py-1 rounded-xl transition-all inline-block">
                     {fmt(currentRoomData.tongTien)} đ
                   </span>
@@ -2061,7 +2061,7 @@ export function AdminPortal() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền phòng (Cột J)</label>
+                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền phòng (Cột J)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2077,12 +2077,12 @@ export function AdminPortal() {
                       }}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền rác (Cột K)</label>
+                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền rác (Cột K)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2098,12 +2098,12 @@ export function AdminPortal() {
                       }}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
+                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền Internet / Net (Cột L)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2119,12 +2119,12 @@ export function AdminPortal() {
                       }}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
+                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền giữ xe (Cột M)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2140,14 +2140,14 @@ export function AdminPortal() {
                       }}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase">Chi phí khác (Cột N)</label>
-                    <span className="text-[9px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-tight">Cố định</span>
+                    <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase">Chi phí khác (Cột N)</label>
+                    <span className="text-[9px] font-semibold text-neutral-600 dark:text-neutral-300 uppercase tracking-tight">Cố định</span>
                   </div>
                   <div className="relative">
                     <input
@@ -2155,14 +2155,14 @@ export function AdminPortal() {
                       readOnly
                       disabled
                       value={currentRoomData.tienKhac ? fmt(currentRoomData.tienKhac) : '0'}
-                      className="w-full bg-neutral-100/70 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700/50 text-neutral-500 dark:text-neutral-400 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono cursor-not-allowed select-none"
+                      className="w-full bg-neutral-100/70 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700/50 text-neutral-700 dark:text-neutral-200 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono cursor-not-allowed select-none"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
+                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2171,7 +2171,7 @@ export function AdminPortal() {
                       onChange={e => setCurrentRoomData({ ...currentRoomData, tienCoc: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
               </div>
@@ -2180,7 +2180,7 @@ export function AdminPortal() {
             {/* Card Tổng cộng */}
             <div className="soft-card p-5 sm:p-6 flex items-center justify-between">
               <span className="text-base sm:text-lg font-bold text-neutral-700 dark:text-neutral-200">Tổng cộng:</span>
-              <span className="text-2xl sm:text-3xl font-black font-num text-neutral-600 dark:text-neutral-400">
+              <span className="text-2xl sm:text-3xl font-black font-num text-neutral-600 dark:text-neutral-200">
                 {fmt(currentRoomData.tongTien)} đ
               </span>
             </div>
@@ -2265,7 +2265,7 @@ export function AdminPortal() {
                         />
                         <span className={cn(
                           "text-[11px] font-semibold min-w-14 text-right transition-colors font-apple",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
+                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
                         )}>
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
@@ -2275,34 +2275,34 @@ export function AdminPortal() {
                     {/* Service breakdown in 3 columns without scrolling */}
                     <div className="grid grid-cols-3 gap-2 bg-neutral-50 dark:bg-neutral-800/50 p-2.5 rounded-xl border border-neutral-100 dark:border-neutral-700/50 text-[11px] font-apple">
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Phòng</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Phòng</span>
                         <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienPhong)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Điện</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Điện</span>
                         <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Nước</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Nước</span>
                         <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienNuoc)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Rác</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Rác</span>
                         <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienRac)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Net</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Net</span>
                         <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienNet)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-400 uppercase font-semibold block font-apple">Xe</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Xe</span>
                         <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienXe)} đ</span>
                       </div>
                     </div>
 
                     {/* Total Row */}
                     <div className="flex items-center justify-between pt-0.5 font-apple">
-                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 font-apple">Tổng cộng:</span>
+                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 font-apple">Tổng cộng:</span>
                       <span className="text-sm font-semibold font-apple text-neutral-900 dark:text-white">
                         {fmt(item.tongTien)} đ
                       </span>
@@ -2317,7 +2317,7 @@ export function AdminPortal() {
               <div className="overflow-x-auto font-apple">
                 <table className="w-full text-left text-xs font-apple">
                   <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-400 dark:text-neutral-400 uppercase tracking-wider font-apple">
+                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">Phòng</th>
                       <th className="p-4 font-semibold font-apple">Khách thuê</th>
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
@@ -2357,7 +2357,7 @@ export function AdminPortal() {
                               />
                               <span className={cn(
                                 "text-xs font-semibold min-w-16 text-left transition-colors font-apple",
-                                isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"
+                                isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
                               )}>
                                 {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                               </span>
@@ -2392,7 +2392,7 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
                 <Search size={15} className="text-neutral-600" />
                 <span>Tra cứu biển số xe</span>
               </div>
@@ -2402,11 +2402,11 @@ export function AdminPortal() {
               <IconLocation3D size={52} className="mx-auto drop-shadow-xs mb-1" />
               <div className="text-center max-w-md mx-auto space-y-1 mb-4">
                 <h3 className="type-h2 font-bold text-neutral-900 dark:text-white">Tra Cứu Biển Số Xe</h3>
-                <p className="text-xs text-neutral-400">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
+                <p className="text-xs text-neutral-600">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
               </div>
 
               <div className="relative max-w-xl mx-auto">
-                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" />
                 <input
                   type="text"
                   value={plateQuery}
@@ -2432,7 +2432,7 @@ export function AdminPortal() {
                     </span>
                   </div>
                   <p className="font-bold text-sm text-neutral-800 dark:text-white">{r.name || r.tenant || 'Chưa cập nhật tên'}</p>
-                  <p className="text-xs text-neutral-400 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                  <p className="text-xs text-neutral-600 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                 </div>
               ))}
             </div>
@@ -2458,7 +2458,7 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
                 <FileText size={15} className="text-neutral-600" />
                 <span>Hợp đồng & Mẫu CT01</span>
               </div>
@@ -2697,7 +2697,7 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
                 <Zap size={15} className="text-neutral-900 dark:text-white" />
                 <span>Nhập chỉ số điện nước</span>
               </div>
@@ -2720,7 +2720,7 @@ export function AdminPortal() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-400 dark:text-neutral-400 font-bold uppercase">
+                    <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-200 font-bold uppercase">
                       <th className="p-3">Phòng</th>
                       <th className="p-3">Điện cũ</th>
                       <th className="p-3">Điện mới</th>
@@ -2798,7 +2798,7 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
                 <Settings size={15} className="text-neutral-600" />
                 <span>Cài đặt đơn giá phí</span>
               </div>
@@ -2807,14 +2807,14 @@ export function AdminPortal() {
             <div className="soft-card p-6 sm:p-8 space-y-6">
               <div>
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                  Đồng bộ trực tiếp các ô <span className="font-semibold text-neutral-600 dark:text-neutral-400">H5</span> (Điện), <span className="font-semibold text-neutral-600 dark:text-neutral-400">I5</span> (Nước), <span className="font-semibold text-neutral-600 dark:text-neutral-400">K5</span> (Rác), <span className="font-semibold text-neutral-600 dark:text-neutral-400">L5</span> (Internet), <span className="font-semibold text-neutral-600 dark:text-neutral-400">M5</span> (Xe) trên Google Sheet.
+                <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">
+                  Đồng bộ trực tiếp các ô <span className="font-semibold text-neutral-600 dark:text-neutral-200">H5</span> (Điện), <span className="font-semibold text-neutral-600 dark:text-neutral-200">I5</span> (Nước), <span className="font-semibold text-neutral-600 dark:text-neutral-200">K5</span> (Rác), <span className="font-semibold text-neutral-600 dark:text-neutral-200">L5</span> (Internet), <span className="font-semibold text-neutral-600 dark:text-neutral-200">M5</span> (Xe) trên Google Sheet.
                 </p>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-400 uppercase">Điện (1 kW)</label>
+                  <label className="text-xs font-bold text-neutral-600 uppercase">Điện (1 kW)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2823,12 +2823,12 @@ export function AdminPortal() {
                       onChange={e => setUnitConfig({ ...unitConfig, dien: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-400 uppercase">Nước (1 m³)</label>
+                  <label className="text-xs font-bold text-neutral-600 uppercase">Nước (1 m³)</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2837,12 +2837,12 @@ export function AdminPortal() {
                       onChange={e => setUnitConfig({ ...unitConfig, nuoc: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-400 uppercase">Tiền Rác</label>
+                  <label className="text-xs font-bold text-neutral-600 uppercase">Tiền Rác</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2851,12 +2851,12 @@ export function AdminPortal() {
                       onChange={e => setUnitConfig({ ...unitConfig, rac: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-400 uppercase">Internet / người</label>
+                  <label className="text-xs font-bold text-neutral-600 uppercase">Internet / người</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2865,12 +2865,12 @@ export function AdminPortal() {
                       onChange={e => setUnitConfig({ ...unitConfig, net: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-400 uppercase">Xe máy / chiếc</label>
+                  <label className="text-xs font-bold text-neutral-600 uppercase">Xe máy / chiếc</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2879,7 +2879,7 @@ export function AdminPortal() {
                       onChange={e => setUnitConfig({ ...unitConfig, xe: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 pl-3 pr-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm font-num text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500"
                     />
-                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 dark:text-neutral-500 pointer-events-none">đ</span>
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
               </div>
@@ -2917,7 +2917,7 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
                 <BookOpen size={15} className="text-neutral-600" />
                 <span>Kỳ kê khai doanh thu (S1a-HKD)</span>
               </div>
@@ -2977,7 +2977,7 @@ export function AdminPortal() {
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{declarationData?.headerRight3 || 'Mẫu số S1a-HKD'}</p>
-                  <p className="italic text-[11px] text-neutral-500">
+                  <p className="italic text-[11px] text-neutral-700">
                     (Kèm theo Thông tư số 152/2025/TT-BTC)
                   </p>
                 </div>
@@ -3070,7 +3070,7 @@ export function AdminPortal() {
                   <p className="font-bold uppercase text-[11px] sm:text-xs">
                     NGƯỜI ĐẠI DIỆN HỘ KINH DOANH
                   </p>
-                  <p className="text-[10px] italic text-neutral-500">(Ký ghi rõ họ tên)</p>
+                  <p className="text-[10px] italic text-neutral-700">(Ký ghi rõ họ tên)</p>
                   <div className="h-16" />
                   <p className="font-bold text-sm">{declarationData?.ownerName || activeHouse.landlord}</p>
                 </div>
@@ -3099,7 +3099,7 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200">
                 <IconNotification3D size={22} />
                 <span>Mẫu gửi thông báo cư dân</span>
               </div>
@@ -3112,7 +3112,7 @@ export function AdminPortal() {
                   <IconNotification3D size={44} />
                   <span>Tạo Thông Báo Mới</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 mt-1">
                   Soạn nội dung và gửi thông báo, lời nhắc nhở hoặc yêu cầu thanh toán đến toàn bộ cư dân hoặc từng căn hộ.
                 </p>
               </div>
@@ -3164,7 +3164,7 @@ export function AdminPortal() {
                           {notifTarget === 'ALL' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Toàn bộ cư dân 2 khu</span>
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200 leading-tight">Toàn bộ cư dân 2 khu</span>
                     </button>
 
                     {/* Option 2: Căn bên Lê Văn Chí */}
@@ -3187,7 +3187,7 @@ export function AdminPortal() {
                           {notifTarget === 'LVC' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">109/6 Lê Văn Chí</span>
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200 leading-tight">109/6 Lê Văn Chí</span>
                     </button>
 
                     {/* Option 3: Căn bên Trung Kim */}
@@ -3210,7 +3210,7 @@ export function AdminPortal() {
                           {notifTarget === 'TRUNG_KIM' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Khu nhà Trung Kim</span>
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200 leading-tight">Khu nhà Trung Kim</span>
                     </button>
 
                     {/* Option 4: Các phòng tùy chọn (có sẵn) */}
@@ -3233,7 +3233,7 @@ export function AdminPortal() {
                           {notifTarget === 'CUSTOM' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200 leading-tight">
                         {selectedCustomRooms.length > 0 ? `Đã chọn ${selectedCustomRooms.length} phòng` : 'Chọn danh sách có sẵn'}
                       </span>
                     </button>
@@ -3258,7 +3258,7 @@ export function AdminPortal() {
                           <button
                             type="button"
                             onClick={() => setSelectedCustomRooms([])}
-                            className="text-[11px] font-bold text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                            className="text-[11px] font-bold text-neutral-600 hover:text-neutral-600 cursor-pointer"
                           >
                             Bỏ chọn
                           </button>
@@ -3325,7 +3325,7 @@ export function AdminPortal() {
                           {notifType === 'thong_bao' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Bảo trì, sửa chữa, thông tin chung</span>
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200">Bảo trì, sửa chữa, thông tin chung</span>
                     </button>
 
                     {/* Loại 2: Nhắc nhở */}
@@ -3351,7 +3351,7 @@ export function AdminPortal() {
                           {notifType === 'nhac_nho' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Trật tự, khóa cổng, giữ gìn vệ sinh</span>
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200">Trật tự, khóa cổng, giữ gìn vệ sinh</span>
                     </button>
 
                     {/* Loại 3: Thanh toán */}
@@ -3377,7 +3377,7 @@ export function AdminPortal() {
                           {notifType === 'thanh_toan' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Hệ thống tự động báo cú pháp VietQR</span>
+                      <span className="text-[11px] text-neutral-700 dark:text-neutral-200">Hệ thống tự động báo cú pháp VietQR</span>
                     </button>
                   </div>
 
@@ -3443,7 +3443,7 @@ export function AdminPortal() {
                     >
                       <div>
                         <div className="text-xs font-bold">Không (Mặc định)</div>
-                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">Gửi ngay tức thì</div>
+                        <div className="text-[11px] text-neutral-700 dark:text-neutral-200 mt-0.5">Gửi ngay tức thì</div>
                       </div>
                       <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'none' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
                         {notifScheduleMode === 'none' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
@@ -3465,7 +3465,7 @@ export function AdminPortal() {
                     >
                       <div>
                         <div className="text-xs font-bold">Đặt lịch hẹn gửi</div>
-                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">Chọn ngày giờ phát thông báo</div>
+                        <div className="text-[11px] text-neutral-700 dark:text-neutral-200 mt-0.5">Chọn ngày giờ phát thông báo</div>
                       </div>
                       <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifScheduleMode === 'scheduled' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
                         {notifScheduleMode === 'scheduled' && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
@@ -3497,7 +3497,7 @@ export function AdminPortal() {
                       playSound('click');
                       setActiveMenu('utilities');
                     }}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-2xl text-xs font-bold text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-2xl text-xs font-bold text-neutral-700 hover:text-neutral-800 dark:text-neutral-200 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                   >
                     Hủy bỏ
                   </button>
@@ -3544,7 +3544,7 @@ export function AdminPortal() {
               </button>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>LaundryFlow Server Engine Active</span>
                 </span>
@@ -3552,7 +3552,7 @@ export function AdminPortal() {
                   type="button"
                   onClick={handleAdminSyncSheet}
                   disabled={laundryLoading}
-                  className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-neutral-600 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-800/60"
+                  className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-neutral-600 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-800/60"
                   title="Đồng bộ danh sách máy và giá từ tab Machines trên Google Sheet"
                 >
                   <FileSpreadsheet size={14} className={cn(laundryLoading && "animate-spin")} />
@@ -3581,25 +3581,25 @@ export function AdminPortal() {
             {/* Overview Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Doanh thu hôm nay</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Doanh thu hôm nay</span>
                 <span className="text-xl font-bold font-num text-emerald-600 dark:text-emerald-400">
                   {(laundryStats.todayRevenue || 0).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Tổng doanh thu</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Tổng doanh thu</span>
                 <span className="text-xl font-bold font-num text-neutral-900 dark:text-white">
                   {(laundryStats.totalRevenue || 0).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Phiên giặt hôm nay</span>
-                <span className="text-xl font-bold font-num text-neutral-600 dark:text-neutral-400">
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Phiên giặt hôm nay</span>
+                <span className="text-xl font-bold font-num text-neutral-600 dark:text-neutral-200">
                   {laundryStats.todaySessions || 0} lượt
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Lịch cọc đang giữ</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Lịch cọc đang giữ</span>
                 <span className="text-xl font-bold font-num text-amber-600 dark:text-amber-400">
                   {laundryStats.activeBookings || 0} slot
                 </span>
@@ -3634,7 +3634,7 @@ export function AdminPortal() {
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
                                 {m.machineId}
                               </span>
-                              <span className="text-xs font-semibold text-neutral-400">
+                              <span className="text-xs font-semibold text-neutral-600">
                                 {isWasher ? 'Máy giặt' : 'Máy sấy'} • {m.cycleMinutes}p
                               </span>
                             </div>
@@ -3661,7 +3661,7 @@ export function AdminPortal() {
                       {/* Power Switch & Price Bar */}
                       <div className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-neutral-500 dark:text-neutral-400 font-medium">Ổ điện thông minh:</span>
+                          <span className="text-neutral-700 dark:text-neutral-200 font-medium">Ổ điện thông minh:</span>
                           <span className={cn(
                             "font-bold text-[11px] px-2 py-0.5 rounded uppercase font-num",
                             m.plugState === 'ON'
@@ -3677,7 +3677,7 @@ export function AdminPortal() {
                           onClick={() => handleAdminTogglePlug(m.machineId)}
                           className="soft-button px-3 py-1 text-xs font-bold flex items-center gap-1 cursor-pointer"
                         >
-                          <Power size={13} className={m.plugState === 'ON' ? "text-emerald-600" : "text-neutral-400"} />
+                          <Power size={13} className={m.plugState === 'ON' ? "text-emerald-600" : "text-neutral-600"} />
                           <span>Đổi nguồn</span>
                         </button>
                       </div>
@@ -3685,7 +3685,7 @@ export function AdminPortal() {
                       {/* Admin Actions */}
                       <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-neutral-400">Giá:</span>
+                          <span className="text-xs text-neutral-600">Giá:</span>
                           <input
                             type="number"
                             defaultValue={m.price}
@@ -3695,7 +3695,7 @@ export function AdminPortal() {
                             }}
                             className="w-20 px-2 py-1 rounded-lg text-xs font-bold font-num bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 outline-none"
                           />
-                          <span className="text-xs font-bold text-neutral-500">₫</span>
+                          <span className="text-xs font-bold text-neutral-700">₫</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -3734,7 +3734,7 @@ export function AdminPortal() {
               </h4>
 
               {laundryBookings.length === 0 ? (
-                <p className="text-xs text-neutral-400">Chưa có lịch đặt chỗ nào.</p>
+                <p className="text-xs text-neutral-600">Chưa có lịch đặt chỗ nào.</p>
               ) : (
                 <div className="space-y-2">
                   {laundryBookings.slice(0, 8).map((b: any) => (
@@ -3747,7 +3747,7 @@ export function AdminPortal() {
                           <span className="font-bold text-neutral-900 dark:text-white">
                             {b.tenantName} {b.roomNumber ? `(P.${b.roomNumber})` : ''}
                           </span>
-                          <span className="text-neutral-400">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
+                          <span className="text-neutral-600">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
                         </div>
                       </div>
 
@@ -3791,7 +3791,7 @@ export function AdminPortal() {
               }}
               className={cn(
                 "flex flex-col items-center justify-center p-2 rounded-2xl transition-all cursor-pointer",
-                isActive ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-400 dark:text-neutral-500 font-medium"
+                isActive ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-600 dark:text-neutral-300 font-medium"
               )}
             >
               <Icon size={20} />

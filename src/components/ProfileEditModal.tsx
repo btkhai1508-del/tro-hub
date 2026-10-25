@@ -205,21 +205,21 @@ export function ProfileEditModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
       onClick={closeProfileEditModal}
     >
       <div 
-        className="w-full max-w-lg bg-white dark:bg-[#101726] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        className="w-full max-w-lg liquid-panel rounded-3xl flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Header */}
-        <div className="shrink-0 flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-[#101726]/95 backdrop-blur-md">
+        <div className="shrink-0 flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/10 dark:bg-white/[0.025] backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center">
               <User size={18} />
             </div>
             <div>
-              <span className="type-label text-slate-400 dark:text-slate-400 block text-[10px]">Cài đặt tài khoản</span>
+              <span className="type-label text-neutral-600 dark:text-neutral-200 block text-[10px]">Cài đặt tài khoản</span>
               <h3 className="type-h4 text-slate-900 dark:text-slate-100 font-bold">Chỉnh sửa thông tin cư dân</h3>
             </div>
           </div>
@@ -227,7 +227,7 @@ export function ProfileEditModal() {
           <button 
             type="button"
             onClick={closeProfileEditModal}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -276,8 +276,8 @@ export function ProfileEditModal() {
             </div>
 
             {showAvatarPicker && (
-              <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2.5 animate-in fade-in duration-150">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Chọn ảnh mẫu hoặc tải ảnh lên:</span>
+              <div className="mt-3 p-3 bg-white/25 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-2.5 animate-in fade-in duration-150">
+                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Chọn ảnh mẫu hoặc tải ảnh lên:</span>
                 <div className="flex items-center gap-2">
                   {sampleAvatars.map((url, idx) => (
                     <img 
@@ -291,7 +291,7 @@ export function ProfileEditModal() {
                       className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-300 dark:ring-slate-600 hover:scale-105 cursor-pointer transition-transform"
                     />
                   ))}
-                  <label className="w-9 h-9 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-500 cursor-pointer text-xs">
+                  <label className="w-9 h-9 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-500 cursor-pointer text-xs">
                     +
                     <input type="file" accept="image/*" onChange={handleCustomAvatarUpload} className="hidden" />
                   </label>
@@ -302,7 +302,7 @@ export function ProfileEditModal() {
 
           {/* Section 1: Thông tin cơ bản */}
           <div className="space-y-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Thông tin cơ bản (Ghi Cột A - E)</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-200">Thông tin cơ bản (Ghi Cột A - E)</span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -313,7 +313,7 @@ export function ProfileEditModal() {
                   placeholder="Ví dụ: Bùi Trung Khải"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -325,7 +325,7 @@ export function ProfileEditModal() {
                   placeholder="0902371800"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -336,7 +336,7 @@ export function ProfileEditModal() {
                   placeholder="Nhập số CCCD"
                   value={formData.cccd}
                   onChange={(e) => setFormData({ ...formData, cccd: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -347,7 +347,7 @@ export function ProfileEditModal() {
                   placeholder="name@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -358,7 +358,7 @@ export function ProfileEditModal() {
                   placeholder="DD/MM/YYYY"
                   value={formData.dob}
                   onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -369,7 +369,7 @@ export function ProfileEditModal() {
                   placeholder="Ví dụ: 203 hoặc P. 203"
                   value={formData.roomNumber}
                   onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs font-num font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
             </div>
@@ -381,7 +381,7 @@ export function ProfileEditModal() {
                 placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/TP"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none resize-none"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none resize-none"
               />
             </div>
           </div>
@@ -390,7 +390,7 @@ export function ProfileEditModal() {
           <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <Bike size={15} className="text-indigo-500" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Phương tiện (Cột G & H)</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-200">Phương tiện (Cột G & H)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -401,7 +401,7 @@ export function ProfileEditModal() {
                   placeholder="Ví dụ: 59-X1 123.45"
                   value={formData.plateNumber}
                   onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num font-bold uppercase rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs font-num font-bold uppercase rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -412,7 +412,7 @@ export function ProfileEditModal() {
                   placeholder="Xe máy / Vision / AirBlade"
                   value={formData.vehicleType}
                   onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
             </div>
@@ -422,7 +422,7 @@ export function ProfileEditModal() {
           <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <ShieldAlert size={15} className="text-rose-500" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">Người liên hệ khẩn cấp (Cột J - L)</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-200">Người liên hệ khẩn cấp (Cột J - L)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -433,7 +433,7 @@ export function ProfileEditModal() {
                   placeholder="Người thân"
                   value={formData.emergencyName}
                   onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -444,7 +444,7 @@ export function ProfileEditModal() {
                   placeholder="Bố / Mẹ / Anh"
                   value={formData.emergencyRelation}
                   onChange={(e) => setFormData({ ...formData, emergencyRelation: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
 
@@ -455,7 +455,7 @@ export function ProfileEditModal() {
                   placeholder="090..."
                   value={formData.emergencyPhone}
                   onChange={(e) => setFormData({ ...formData, emergencyPhone: e.target.value })}
-                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs font-num rounded-xl border border-slate-200 dark:border-slate-700 bg-white/25 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
                 />
               </div>
             </div>

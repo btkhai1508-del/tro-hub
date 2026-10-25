@@ -33,7 +33,7 @@ const getCategoryIcon = (type: string) => {
     case 'parking':
       return <Bike size={16} className="text-indigo-500 dark:text-indigo-400" />;
     default:
-      return <ReceiptText size={16} className="text-slate-500 dark:text-slate-400" />;
+      return <ReceiptText size={16} className="text-neutral-700 dark:text-neutral-200" />;
   }
 };
 
@@ -134,27 +134,27 @@ export function InvoiceDetailModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
       onClick={closeInvoiceDetailModal}
     >
       <div 
-        className="w-full max-w-lg bg-white dark:bg-[#101726] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] flex flex-col max-h-[76vh] sm:max-h-[82vh] mb-14 sm:mb-0 overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        className="w-full max-w-lg liquid-panel rounded-3xl flex flex-col max-h-[76vh] sm:max-h-[82vh] mb-14 sm:mb-0 overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-[#101726]/95 backdrop-blur-md">
+        <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800 bg-white/10 dark:bg-white/[0.025] backdrop-blur-md">
           <div className="flex items-center gap-3">
             <IconWallet3D size={42} className="shrink-0" />
             <div>
               <h3 className="type-h3 text-slate-900 dark:text-white font-bold">Hóa đơn Tháng {viewingInvoice.month}</h3>
-              <p className="type-caption text-slate-400 font-num">Mã số: {viewingInvoice.id}</p>
+              <p className="type-caption text-neutral-600 dark:text-neutral-300 font-num">Mã số: {viewingInvoice.id}</p>
             </div>
           </div>
 
           <button 
             type="button"
             onClick={closeInvoiceDetailModal}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -165,24 +165,24 @@ export function InvoiceDetailModal() {
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
           
           {/* Summary Box */}
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#162032] border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="p-3.5 sm:p-4 rounded-2xl liquid-panel-subtle border border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Tổng tiền</span>
+              <span className="text-[10px] uppercase font-bold text-neutral-600 dark:text-neutral-300 block">Tổng tiền</span>
               <span className="type-h2 font-num font-bold text-slate-900 dark:text-white">
                 {formatCurrency(viewingInvoice.total)} ₫
               </span>
             </div>
             <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Hạn thanh toán</span>
+              <span className="text-[10px] uppercase font-bold text-neutral-600 dark:text-neutral-300 block">Hạn thanh toán</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 font-num">{viewingInvoice.dueDate}</span>
             </div>
           </div>
 
           {/* Details breakdown */}
           <div className="space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Chi tiết khoản phí</span>
+            <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider block">Chi tiết khoản phí</span>
             
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-[#162032]">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden liquid-panel-subtle">
               {viewingInvoice.details.map((detail, idx) => {
                 return (
                   <div key={idx} className="p-2.5 sm:p-3 flex items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
@@ -193,7 +193,7 @@ export function InvoiceDetailModal() {
                       <div className="min-w-0">
                         <p className="font-bold text-slate-900 dark:text-slate-100 truncate leading-tight">{detail.name}</p>
                         {detail.metric && (
-                          <p className="text-[10px] text-slate-400 font-num mt-0.5">{detail.metric}</p>
+                          <p className="text-[10px] text-neutral-600 dark:text-neutral-300 font-num mt-0.5">{detail.metric}</p>
                         )}
                       </div>
                     </div>
@@ -210,7 +210,7 @@ export function InvoiceDetailModal() {
           </div>
 
           {/* Note */}
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#162032] border border-transparent dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="p-3 rounded-xl liquid-panel-subtle border border-transparent dark:border-slate-800 text-[11px] text-neutral-700 dark:text-neutral-200">
             {isPaid && (
               <p className="text-emerald-700 dark:text-emerald-400 font-medium">✓ Đã thanh toán đầy đủ ({viewingInvoice.paidAt || 'Đã ghi nhận trên Google Sheet'}).</p>
             )}
@@ -224,7 +224,7 @@ export function InvoiceDetailModal() {
         </div>
 
         {/* Footer Actions */}
-        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#101726] flex items-center justify-between gap-2.5 sm:gap-3">
+        <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-3.5 border-t border-slate-100 dark:border-slate-800 bg-white/10 dark:bg-white/[0.025] flex items-center justify-between gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={handleDownloadInvoicePDF}

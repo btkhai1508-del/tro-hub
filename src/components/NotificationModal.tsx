@@ -27,11 +27,11 @@ export function NotificationModal() {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200"
       onClick={closeNotificationModal}
     >
       <div 
-        className="w-full max-w-md bg-white dark:bg-[#101726] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.3)] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        className="w-full max-w-md liquid-panel rounded-3xl overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Darker Bar & Clear Close X Button */}
@@ -48,7 +48,7 @@ export function NotificationModal() {
           <button 
             type="button"
             onClick={closeNotificationModal}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Đóng thông báo"
           >
             <X size={18} />
@@ -72,7 +72,7 @@ export function NotificationModal() {
               <h3 className="type-h3 text-slate-900 dark:text-slate-100 leading-snug font-bold">
                 {activeNotification.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1 text-xs text-slate-400 font-num">
+              <div className="flex items-center gap-2 mt-1 text-xs text-neutral-600 dark:text-neutral-300 font-num">
                 <span>{activeNotification.sender || 'Ban Quản Lý Nhà Trọ Phong Lan'}</span>
                 <span>•</span>
                 <span>{activeNotification.time}</span>
@@ -80,7 +80,7 @@ export function NotificationModal() {
             </div>
           </div>
 
-          <div className="bg-slate-50/90 dark:bg-slate-800/80 rounded-2xl p-4 border border-slate-100/90 dark:border-slate-700/80">
+          <div className="bg-white/15 dark:bg-white/5 rounded-2xl p-4 border border-slate-100/90 dark:border-slate-700/80">
             <p className="type-body text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
               {activeNotification.desc}
             </p>

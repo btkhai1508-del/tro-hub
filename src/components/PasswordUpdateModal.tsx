@@ -92,11 +92,11 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/25 dark:bg-black/40 backdrop-blur-md animate-in fade-in duration-200 select-none"
       onClick={handlePostpone}
     >
       <div 
-        className="w-full max-w-md bg-white dark:bg-[#101726] rounded-[32px] border border-white/80 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.45)] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+        className="w-full max-w-md liquid-panel rounded-[32px] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
         onClick={e => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5 relative z-10">
@@ -108,7 +108,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
               <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Cập nhật mật khẩu
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1 leading-relaxed">
                 Bạn đang sử dụng mật khẩu mặc định. Bạn có muốn cập nhật mật khẩu mới để bảo mật tài khoản hơn không?
               </p>
             </div>
@@ -134,7 +134,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
             
             {/* Field 1: Mật khẩu hiện tại */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-200 mb-1">
                 Mật khẩu hiện tại
               </label>
               <div className="relative">
@@ -143,13 +143,13 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                   value={curPass}
                   onChange={e => setCurPass(e.target.value)}
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
                   placeholder="Mật khẩu hiện tại (1)"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurPass(!showCurPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   {showCurPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -158,7 +158,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
             {/* Field 2: Mật khẩu mới */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-200 mb-1">
                 Mật khẩu mới
               </label>
               <div className="relative">
@@ -168,12 +168,12 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                   onChange={e => setNewPass(e.target.value)}
                   required
                   placeholder="Nhập ít nhất 6 ký tự"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPass(!showNewPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   {showNewPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -182,7 +182,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
             {/* Field 3: Xác nhận mật khẩu mới */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-200 mb-1">
                 Xác nhận mật khẩu mới
               </label>
               <div className="relative">
@@ -192,12 +192,12 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                   onChange={e => setConfirmPass(e.target.value)}
                   required
                   placeholder="Nhập lại mật khẩu mới"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/25 dark:bg-white/5 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-neutral-700 dark:focus:ring-white pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPass(!showConfirmPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                   {showConfirmPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
