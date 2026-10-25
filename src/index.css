@@ -117,12 +117,12 @@
     border: 1px solid var(--liquid-edge);
     border-radius: var(--radius-surface);
     box-shadow: var(--liquid-shadow);
-    -webkit-backdrop-filter: blur(20px) saturate(125%);
-    backdrop-filter: blur(20px) saturate(125%);
+    -webkit-backdrop-filter: blur(12px) saturate(125%);
+    backdrop-filter: blur(12px) saturate(125%);
     background-clip: padding-box;
   }
   .soft-card, .glass-card-3d, .apple-grouped-list { border-radius: var(--radius-card); }
-  .liquid-panel-subtle { background: var(--liquid-fill-subtle); box-shadow: inset 0 1px 0 var(--liquid-edge), 0 6px 24px -18px rgba(0, 0, 0, 0.14); }
+  .liquid-panel-subtle { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--liquid-fill-subtle); box-shadow: inset 0 1px 0 var(--liquid-edge), 0 6px 24px -18px rgba(0, 0, 0, 0.14); }
   :where(.glass-icon) {
     display: inline-flex;
     align-items: center;
@@ -167,8 +167,8 @@
     background: var(--liquid-fill);
     border: 1px solid var(--liquid-edge);
     box-shadow: 0 3px 10px -6px rgba(77, 77, 77, 0.2), inset 0 1px 0 var(--liquid-edge);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
   .primary-button {
     background: linear-gradient(180deg, #292929 0%, #101010 100%);
@@ -231,7 +231,7 @@
 .invoice-paper .soft-button:hover { background: #f5f5f5; }
 .invoice-paper .primary-button:hover { background: #262626; }
 
-.ui-page-enter { animation: ui-page-appear 240ms var(--liquid-ease) backwards; }
+.route-content { min-width: 0; }
 .ui-spinner {
   display: inline-block;
   width: 1.5rem;
@@ -257,7 +257,6 @@
 .fade-in { --ui-enter-opacity: 0; }
 .zoom-in-95 { --ui-enter-scale: 0.95; }
 .slide-in-from-top-2 { --ui-enter-y: -8px; }
-@keyframes ui-page-appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes ui-enter { from { opacity: var(--ui-enter-opacity); transform: translateY(var(--ui-enter-y)) scale(var(--ui-enter-scale)); } to { opacity: 1; transform: none; } }
 @keyframes ui-spin { to { transform: rotate(360deg); } }
 @keyframes ui-shimmer { to { background-position: -200% 0; } }

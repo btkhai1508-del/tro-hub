@@ -227,12 +227,13 @@ export function LoginPage() {
                 type="button"
                 onClick={handleZaloLogin}
                 disabled={isLoading}
-                className="w-full min-h-12 bg-neutral-50/80 dark:bg-neutral-500/10 border border-neutral-200/70 dark:border-neutral-400/20 text-neutral-700 dark:text-neutral-200 font-semibold text-sm rounded-2xl flex items-center justify-center gap-2.5 hover:bg-neutral-100/80 dark:hover:bg-neutral-500/20 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                aria-busy={isLoading}
+                className="group flex min-h-14 w-full items-center justify-center gap-3 rounded-[20px] border border-white/90 bg-white/55 px-4 py-2.5 text-sm font-semibold text-neutral-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_4px_12px_-8px_rgba(0,0,0,0.16)] transition-[background-color,box-shadow] duration-150 hover:bg-white/80 active:bg-white/90 disabled:cursor-wait disabled:opacity-65 dark:border-white/20 dark:bg-white/[0.08] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] dark:hover:bg-white/[0.14] dark:active:bg-white/[0.18]"
               >
-                <div className="w-6 h-6 rounded-lg bg-neutral-600 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold tracking-tighter">Z</span>
-                </div>
-                <span>{isLoading ? 'Đang xác thực Zalo...' : 'Đăng nhập nhanh với Zalo'}</span>
+                {/* Original Zalo artwork, served locally rather than a generic letter tile. */}
+                <img src="/brand/zalo-logo.png" alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
+                <span>{isLoading ? 'Đang kết nối với Zalo…' : 'Đăng nhập với Zalo'}</span>
+                {isLoading ? <span aria-hidden="true" className="ui-spinner ml-1 shrink-0" /> : <ArrowRight aria-hidden="true" size={16} className="ml-1 shrink-0 text-neutral-600 dark:text-neutral-300" />}
               </button>
 
               {/* Divider */}

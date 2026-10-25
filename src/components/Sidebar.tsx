@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { Home, Receipt, FileText, User, Building2, PhoneCall, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut, LayoutGrid, Copy, Check, ArrowUpRight } from 'lucide-react';
 import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
+import { preloadRoute } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 
 const navItems = [
@@ -40,7 +41,7 @@ export function Sidebar() {
         </div>
         <nav className="space-y-1.5" aria-label="Các trang cư dân">
           {navItems.map(({ name, path, icon: Icon, tutorial }) => (
-            <NavLink key={path} to={path} end={path === '/'} data-tutorial={tutorial} title={isSidebarCollapsed ? name : undefined} aria-label={isSidebarCollapsed ? name : undefined} className={({ isActive }) => cn('group relative flex min-h-12 items-center gap-3 rounded-[18px] px-3 transition-all duration-200', isSidebarCollapsed && 'justify-center px-0', isActive ? 'bg-white/45 font-semibold text-neutral-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:bg-white/12 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]' : 'font-medium text-neutral-700 hover:bg-white/55 hover:text-neutral-900 dark:text-neutral-200 dark:hover:bg-white/5 dark:hover:text-white')}>
+            <NavLink key={path} to={path} onPointerEnter={() => preloadRoute(path)} onFocus={() => preloadRoute(path)} onPointerDown={() => preloadRoute(path)} end={path === '/'} data-tutorial={tutorial} title={isSidebarCollapsed ? name : undefined} aria-label={isSidebarCollapsed ? name : undefined} className={({ isActive }) => cn('group relative flex min-h-12 items-center gap-3 rounded-[18px] px-3 transition-all duration-200', isSidebarCollapsed && 'justify-center px-0', isActive ? 'bg-white/45 font-semibold text-neutral-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:bg-white/12 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]' : 'font-medium text-neutral-700 hover:bg-white/55 hover:text-neutral-900 dark:text-neutral-200 dark:hover:bg-white/5 dark:hover:text-white')}>
               {({ isActive }) => <><Icon size={20} strokeWidth={isActive ? 2.1 : 1.7} className="shrink-0" />{!isSidebarCollapsed && <span className="flex-1 text-[14px]">{name}</span>}{path === '/invoices' && unpaidCount > 0 && <span className={cn('flex h-5 min-w-5 items-center justify-center rounded-full bg-neutral-600 px-1 text-[10px] font-semibold text-white', isSidebarCollapsed && 'absolute right-0 top-0')}>{unpaidCount > 99 ? '99+' : unpaidCount}</span>}</>}
             </NavLink>
           ))}

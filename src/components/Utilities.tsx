@@ -33,7 +33,7 @@ export function Utilities() {
 
       <section data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
         <button type="button" onClick={() => navigate('/laundry')} className="lg:col-span-2 liquid-panel p-6 sm:p-8 relative overflow-hidden text-left group flex flex-col justify-between min-h-[290px]">
-          <div className="relative flex items-center justify-between"><span className="liquid-chip inline-flex items-center gap-1.5 text-xs text-neutral-700 dark:text-neutral-300"><span className="w-1.5 h-1.5 rounded-full bg-neutral-500" />Dịch vụ cư dân</span><ArrowUpRight size={20} className="text-neutral-600 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform dark:text-neutral-300" /></div>
+
           <div className="relative mt-8 mb-7 flex items-center gap-5">
             <div className="glass-icon h-20 w-20 rounded-[27px] text-neutral-700 dark:text-neutral-300 shrink-0"><IconLaundry3D size={80} /></div>
             <div><h2 className="text-[27px] font-semibold tracking-[-0.04em] text-neutral-900 dark:text-white">Giặt sạch.<br />Sống nhẹ.</h2></div>

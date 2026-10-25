@@ -209,9 +209,6 @@ export function InteractiveOnboardingTutorial() {
 
   const handleDismiss = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (location.pathname !== '/') {
-      navigate('/');
-    }
     setStepIndex(0);
     closeTourGuide();
   };

@@ -142,12 +142,15 @@ export function LaundryPage() {
     return () => clearInterval(interval);
   }, [fetchLaundryData]);
 
-  // Local seconds ticker for countdown animation
+  const needsCountdown = machines.some(machine => machine.status === 'RUNNING');
+
+  // Tick only when a live machine needs a countdown.
   const [, setTicker] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setTicker(prev => prev + 1), 1000);
+    if (!needsCountdown) return;
+    const t = setInterval(() => { if (document.visibilityState === 'visible') setTicker(prev => prev + 1); }, 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [needsCountdown]);
 
   const getRemainingSeconds = (m: Machine | null): number => {
     if (!m || m.status !== 'RUNNING' || !m.expectedEndTime) return 0;

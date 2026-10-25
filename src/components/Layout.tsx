@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
@@ -12,6 +12,7 @@ import { GoogleSheetModal } from './GoogleSheetModal';
 import { InteractiveOnboardingTutorial } from './InteractiveOnboardingTutorial';
 import { OfflineBanner } from './OfflineBanner';
 import { useApp } from '../context/AppContext';
+import { warmResidentRoutes } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 
 function PageLoading() {
@@ -35,6 +36,10 @@ export function Layout() {
   const location = useLocation();
   const isPaymentPage = location.pathname.startsWith('/payment');
 
+  useEffect(() => {
+    if (!profile.isAdmin) return warmResidentRoutes();
+  }, [profile.isAdmin]);
+
   // Admin users are strictly redirected to /admin with zero resident UI exposure
   if (profile.isAdmin) {
     return <Navigate to="/admin" replace />;
@@ -57,7 +62,7 @@ export function Layout() {
         <div className="mx-auto w-full max-w-[1180px]">
           {!isPaymentPage && <TopHeader />}
           <Suspense key={location.pathname} fallback={<PageLoading />}>
-            <div className="ui-page-enter">
+            <div className="route-content">
               <Outlet />
             </div>
           </Suspense>

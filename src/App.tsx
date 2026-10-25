@@ -2,18 +2,19 @@ import React, { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { routeLoaders } from './lib/routePreload';
 import { Layout } from './components/Layout';
 import { Icons3DDefs } from './components/Icons3D';
 
-const Home = lazy(() => import('./components/Home').then(module => ({ default: module.Home })));
-const Utilities = lazy(() => import('./components/Utilities').then(module => ({ default: module.Utilities })));
-const InvoicesAndPayment = lazy(() => import('./components/InvoicesAndPayment').then(module => ({ default: module.InvoicesAndPayment })));
-const Contract = lazy(() => import('./components/Contract').then(module => ({ default: module.Contract })));
-const Profile = lazy(() => import('./components/Profile').then(module => ({ default: module.Profile })));
-const PaymentPage = lazy(() => import('./components/PaymentPage').then(module => ({ default: module.PaymentPage })));
-const LaundryPage = lazy(() => import('./components/LaundryPage').then(module => ({ default: module.LaundryPage })));
-const LoginPage = lazy(() => import('./components/LoginPage').then(module => ({ default: module.LoginPage })));
-const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
+const Home = lazy(() => routeLoaders.home().then(module => ({ default: module.Home })));
+const Utilities = lazy(() => routeLoaders.utilities().then(module => ({ default: module.Utilities })));
+const InvoicesAndPayment = lazy(() => routeLoaders.invoices().then(module => ({ default: module.InvoicesAndPayment })));
+const Contract = lazy(() => routeLoaders.contract().then(module => ({ default: module.Contract })));
+const Profile = lazy(() => routeLoaders.profile().then(module => ({ default: module.Profile })));
+const PaymentPage = lazy(() => routeLoaders.payment().then(module => ({ default: module.PaymentPage })));
+const LaundryPage = lazy(() => routeLoaders.laundry().then(module => ({ default: module.LaundryPage })));
+const LoginPage = lazy(() => routeLoaders.login().then(module => ({ default: module.LoginPage })));
+const AdminPortal = lazy(() => routeLoaders.admin().then(module => ({ default: module.AdminPortal })));
 
 
 function AppLoading() {

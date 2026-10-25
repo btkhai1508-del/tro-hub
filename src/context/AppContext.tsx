@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
 import { getAccessToken } from '../lib/googleAuth';
 import { authService, PersonType, AuthErrorCode } from '../services/authService';
@@ -221,6 +221,27 @@ const initialEmptyProfile: UserProfile = {
 
 const initialNotifications: NotificationItem[] = [];
 
+// Passive polls may return fresh objects whose contents have not changed.
+const sameData = (left: unknown, right: unknown): boolean =>
+  left === right || JSON.stringify(left) === JSON.stringify(right);
+
+function singleFlight<T>(requests: Map<string, Promise<unknown>>, key: string, run: () => Promise<T>): Promise<T> {
+  const pending = requests.get(key);
+  if (pending) return pending as Promise<T>;
+  const task = Promise.resolve().then(run).finally(() => {
+    if (requests.get(key) === task) requests.delete(key);
+  });
+  requests.set(key, task);
+  return task;
+}
+
+// Used only in memory to discard responses from a session that has since changed.
+const sessionIdentity = () => JSON.stringify([
+  storage.getItem(STORAGE_KEYS.AUTH),
+  storage.getItem(STORAGE_KEYS.USER_PHONE),
+  storage.getItem(STORAGE_KEYS.TOKEN)
+]);
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -304,13 +325,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return defaultVal;
   });
 
-  const updateSheetConfig = (updated: Partial<typeof sheetConfig>) => {
+  const requestsRef = useRef(new Map<string, Promise<unknown>>());
+  const lastSyncedRef = useRef<string | undefined>(sheetConfig.lastSynced);
+  const sheetConfigRef = useRef(sheetConfig);
+  sheetConfigRef.current = { ...sheetConfig, lastSynced: lastSyncedRef.current ?? sheetConfig.lastSynced };
+  const sheetModalOpenRef = useRef(isGoogleSheetModalOpen);
+  sheetModalOpenRef.current = isGoogleSheetModalOpen;
+  const profileEditOpenRef = useRef(isProfileEditModalOpen);
+  profileEditOpenRef.current = isProfileEditModalOpen;
+
+  const updateSheetConfig = useCallback((updated: Partial<typeof sheetConfig>) => {
+    if ('lastSynced' in updated) lastSyncedRef.current = updated.lastSynced;
     setSheetConfig((prev: any) => {
-      const next = { ...prev, ...updated };
+      const next = { ...prev, lastSynced: lastSyncedRef.current ?? prev.lastSynced, ...updated };
+      if (sameData(prev, next)) return prev;
+      sheetConfigRef.current = next;
       storage.setItem('ecostay_sheet_config', JSON.stringify(next));
       return next;
     });
-  };
+  }, []);
+
+  const recordSheetSync = useCallback(() => {
+    const lastSynced = new Date().toLocaleTimeString('vi-VN');
+    lastSyncedRef.current = lastSynced;
+    if (sheetModalOpenRef.current) {
+      updateSheetConfig({ lastSynced });
+    } else {
+      // The timestamp is only displayed in the sheet modal. Persist it without
+      // rerendering every resident screen after an otherwise unchanged poll.
+      const next = { ...sheetConfigRef.current, lastSynced };
+      sheetConfigRef.current = next;
+      storage.setItem('ecostay_sheet_config', JSON.stringify(next));
+    }
+  }, [updateSheetConfig]);
 
   const [isSyncingWithSheet, setIsSyncingWithSheet] = useState(false);
 
@@ -324,6 +371,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!silent) setIsSyncingWithSheet(true);
+    const session = sessionIdentity();
+    const requestKey = JSON.stringify(['tenant', session, sheetConfig.spreadsheetId, sheetConfig.monthlyTab, cleanPhone, profile.room?.roomNumber, profile.name]);
+    try {
+      await singleFlight(requestsRef.current, requestKey, async () => {
     try {
       const sheetId = sheetConfig.spreadsheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
       const cleanRoom = profile.room?.roomNumber || '';
@@ -339,9 +390,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Not JSON (static hosting)');
         }
         const data = await res.json();
+        if (sessionIdentity() !== session) return;
         if (data.success) {
           // 1. Live Profile Update (Only if user is not currently editing in modal)
-          if (data.profile && !isProfileEditModalOpen) {
+          if (data.profile && !profileEditOpenRef.current) {
             setProfile(prev => {
               const updated = {
                 ...prev,
@@ -370,6 +422,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 depositAmount: data.profile.depositAmount || prev.depositAmount,
                 totalMonthlyAmount: data.profile.totalMonthlyAmount || prev.totalMonthlyAmount
               };
+              if (sameData(prev, updated)) return prev;
               storage.setItem(STORAGE_KEYS.PROFILE_SYNCED, JSON.stringify(updated));
               return updated;
             });
@@ -378,6 +431,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // 2. Live Invoice Status & Breakdown Update
           if (data.invoices && data.invoices.length > 0) {
             setInvoices(prevInvoices => {
+              if (sameData(prevInvoices, data.invoices)) return prevInvoices;
               // Check if any invoice changed status to paid in sheet
               data.invoices.forEach((freshInv: Invoice) => {
                 const existing = prevInvoices.find(i => i.id === freshInv.id || i.month === freshInv.month);
@@ -405,10 +459,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             });
           }
 
-          updateSheetConfig({ lastSynced: new Date().toLocaleTimeString('vi-VN') });
+          recordSheetSync();
         }
       }
     } catch (err) {
+      if (sessionIdentity() !== session) return;
       // Direct Sheet fallback for static Firebase Hosting
       try {
         const sheetId = sheetConfig.spreadsheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
@@ -416,18 +471,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const cleanName = profile.name || '';
         if (cleanRoom && !profile.isAdmin) {
           const directInvoice = await fetchMonthlyInvoicesFromSheet(sheetId, sheetConfig.monthlyTab || '10/2026', null, cleanRoom, profile.phone || cleanName);
-          if (directInvoice) {
+          if (directInvoice && sessionIdentity() === session) {
             setInvoices(prevInvoices => {
               const others = prevInvoices.filter(i => i.month !== directInvoice.month && i.id !== directInvoice.id);
-              return [directInvoice, ...others];
+              const next = [directInvoice, ...others];
+              return sameData(prevInvoices, next) ? prevInvoices : next;
             });
           }
         }
       } catch {}
+    }
+      });
     } finally {
       if (!silent) setIsSyncingWithSheet(false);
     }
-  }, [sheetConfig.spreadsheetId, sheetConfig.monthlyTab, profile.phone, profile.room?.roomNumber, profile.name, profile.isAdmin, isProfileEditModalOpen]);
+  }, [sheetConfig.spreadsheetId, sheetConfig.monthlyTab, profile.phone, profile.room?.roomNumber, profile.name, profile.isAdmin, recordSheetSync]);
 
   // Live Payment Status from Google Sheet Column P (Source of Truth)
   const fetchPaymentStatus = useCallback(async (targetRoom?: string, targetMonth?: string) => {
@@ -435,25 +493,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!room) return null;
     const currentSheetId = sheetConfig.spreadsheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
     const month = targetMonth || sheetConfig.monthlyTab || '10/2026';
+    const session = sessionIdentity();
+    return singleFlight(requestsRef.current, JSON.stringify(['payment', session, room, currentSheetId, month]), async () => {
     try {
       const res = await apiFetch(`/api/payment/status?room=${encodeURIComponent(room)}&sheetId=${encodeURIComponent(currentSheetId)}&month=${encodeURIComponent(month)}&t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.success) {
+        if (data && data.success && sessionIdentity() === session) {
           // Sync invoice in local state to ensure UI consistency after refresh
           setInvoices(prev => {
             if (!prev || prev.length === 0) return prev;
-            return prev.map((inv, idx) => {
-              if (idx === 0) {
-                return {
-                  ...inv,
-                  status: data.paymentStatus,
-                  paymentMethod: data.paymentMethod === 'cash' ? ('cash' as const) : (data.paymentStatus === 'paid' ? ('qr' as const) : inv.paymentMethod),
-                  paidAt: data.paymentStatus === 'paid' ? (inv.paidAt || data.label) : undefined
-                };
-              }
-              return inv;
-            });
+            const inv = prev[0];
+            const paymentMethod = data.paymentMethod === 'cash' ? ('cash' as const) : (data.paymentStatus === 'paid' ? ('qr' as const) : inv.paymentMethod);
+            const paidAt = data.paymentStatus === 'paid' ? (inv.paidAt || data.label) : undefined;
+            if (inv.status === data.paymentStatus && inv.paymentMethod === paymentMethod && inv.paidAt === paidAt) return prev;
+            return [{ ...inv, status: data.paymentStatus, paymentMethod, paidAt }, ...prev.slice(1)];
           });
           return data;
         }
@@ -462,14 +516,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.warn('[AppContext] fetchPaymentStatus error:', err);
     }
     return null;
+    });
   }, [profile.room?.roomNumber, sheetConfig.spreadsheetId, sheetConfig.monthlyTab]);
 
   // Live Payment Gate State from server (Admin controls this gate directly)
   const [paymentGateStatus, setPaymentGateStatus] = useState<'START' | 'STOP'>('STOP');
 
   const fetchPaymentGateStatus = useCallback(async (targetMonth?: string): Promise<'START' | 'STOP'> => {
+    const month = targetMonth || sheetConfig.monthlyTab || getCurrentMonthStr();
+    return singleFlight(requestsRef.current, JSON.stringify(['gate', month]), async () => {
     try {
-      const month = targetMonth || sheetConfig.monthlyTab || getCurrentMonthStr();
       const res = await apiFetch(`/api/payment/gate?month=${encodeURIComponent(month)}&t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
@@ -483,6 +539,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.warn('[AppContext] fetchPaymentGateStatus error:', err);
     }
     return 'STOP';
+    });
   }, [sheetConfig.monthlyTab]);
 
   // Real-time Background Auto-Sync Loop (Every 5 seconds & on tab visibility)
@@ -494,6 +551,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Continuous polling every 5 seconds for real-time sheet reflection
     const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       refreshTenantDataFromSheet(true);
       fetchPaymentStatus();
       fetchPaymentGateStatus();
@@ -501,6 +559,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // Window focus / visibility change listeners
     const handleFocus = () => {
+      if (document.visibilityState === 'hidden') return;
       refreshTenantDataFromSheet(true);
       fetchPaymentStatus();
       fetchPaymentGateStatus();
@@ -522,7 +581,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshTenantDataFromSheet, fetchPaymentStatus, fetchPaymentGateStatus]);
 
-  const openGoogleSheetModal = () => setIsGoogleSheetModalOpen(true);
+  const openGoogleSheetModal = () => {
+    if (lastSyncedRef.current) updateSheetConfig({ lastSynced: lastSyncedRef.current });
+    setIsGoogleSheetModalOpen(true);
+  };
   const closeGoogleSheetModal = () => setIsGoogleSheetModalOpen(false);
 
   // Authentication state
@@ -763,7 +825,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (liveInv && !isCancelled) {
           setInvoices(prev => {
             const others = prev.filter(i => i.month !== liveInv.month && i.id !== liveInv.id);
-            return [liveInv, ...others];
+            const next = [liveInv, ...others];
+            return sameData(prev, next) ? prev : next;
           });
           fetchPaymentStatus(targetRoom);
         }
@@ -936,12 +999,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshNotifications = useCallback(async () => {
+    const room = profile.room?.roomNumber || '';
+    const building = profile.room?.building || '';
+    const session = sessionIdentity();
+    return singleFlight(requestsRef.current, JSON.stringify(['notifications', session, room, building]), async () => {
     try {
-      const room = profile.room?.roomNumber || '';
-      const building = profile.room?.building || '';
       const res = await apiFetch(`/api/notifications?room=${encodeURIComponent(room)}&building=${encodeURIComponent(building)}`);
       const data = await res.json();
-      if (data.success && Array.isArray(data.notifications)) {
+      if (data.success && Array.isArray(data.notifications) && sessionIdentity() === session) {
         setNotifications(prev => {
           // Strictly exclude any washing machine notifications per user request ("đừng để nó lên nữa")
           const serverNotifs: NotificationItem[] = (data.notifications as NotificationItem[]).filter((n: NotificationItem) => !isLaundryNotification(n));
@@ -958,6 +1023,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           });
 
           const combined = [...mergedServer, ...localOnly];
+          if (sameData(prev, combined)) return prev;
           storage.setItem('ecostay_notifications', JSON.stringify(combined));
           return combined;
         });
@@ -965,23 +1031,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       // silent fallback
     }
+    });
   }, [profile.room?.roomNumber, profile.room?.building]);
 
   // Periodic notification polling (every 8s)
   useEffect(() => {
     refreshNotifications();
-    const interval = setInterval(refreshNotifications, 8000);
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'hidden') refreshNotifications();
+    }, 8000);
     return () => clearInterval(interval);
   }, [refreshNotifications]);
 
-  // Default to launching tour guide every time for residents as requested
+  // Auto-introduce the guide once per resident; manual help remains available.
   useEffect(() => {
     if (profile.isAdmin) {
       setIsTourGuideOpen(false);
       return;
     }
     if (isAuthenticated && !profile.isAdmin && profile.phone) {
+      const seenKey = `ecostay_tour_seen:${profile.phone}`;
+      if (storage.getItem(seenKey) === 'true') return;
       const timer = setTimeout(() => {
+        storage.setItem(seenKey, 'true');
         setIsTourGuideOpen(true);
       }, 600);
       return () => clearTimeout(timer);
