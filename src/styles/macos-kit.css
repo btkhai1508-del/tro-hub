@@ -1,7 +1,25 @@
 /* Responsive templates derived from the user's macOS 26 Community kit.
    Material levels and blur are defined in index.css; controls inherit the
    parent material rather than stacking their own backdrop filters. */
-.kit-admin-reading-plane, .kit-resident-reading-plane { background: var(--workspace-fill); }
+.kit-admin-reading-plane, .kit-resident-reading-plane { display: none; }
+/* Keep the wallpaper unobscured between surfaces. Readable backing belongs
+   to content and controls instead of a full-screen veil. */
+.kit-page-header > div:first-child {
+  background: var(--material-ultrathick);
+  border-radius: 20px;
+  padding: 12px 16px;
+}
+.kit-toolbar > div {
+  background: var(--material-ultrathick);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+.kit-page > section > div > .liquid-section-title,
+.kit-page > section > div > a {
+  background: var(--material-ultrathick);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
 .kit-main { position: relative; min-height: 100svh; padding-top: 12px; }
 .kit-page-content { padding: 20px 16px 0; }
 .kit-payment-content { padding-top: 20px; }
@@ -24,7 +42,7 @@
   padding: 6px;
   border: 1px solid var(--liquid-edge);
   border-radius: 28px;
-  background: var(--glass-sheen), var(--material-thin);
+  background: var(--glass-sheen), var(--material-ultrathick);
   box-shadow: var(--liquid-shadow);
   -webkit-backdrop-filter: blur(var(--material-blur));
   backdrop-filter: blur(var(--material-blur));
@@ -143,7 +161,7 @@
   .kit-sidebar-panel {
     border: 1px solid var(--liquid-edge);
     border-radius: var(--radius-surface);
-    background: var(--glass-sheen), var(--material-thin);
+    background: var(--glass-sheen), var(--material-ultrathick);
     box-shadow: var(--liquid-shadow);
     -webkit-backdrop-filter: blur(var(--material-blur));
     backdrop-filter: blur(var(--material-blur));

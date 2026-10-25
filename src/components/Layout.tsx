@@ -49,7 +49,6 @@ export function Layout() {
     <div className={cn('kit-resident-layout min-h-screen relative isolate', isSidebarCollapsed && 'kit-resident-collapsed')}>
       <OfflineBanner />
       <Background />
-      <div aria-hidden="true" className="kit-resident-reading-plane pointer-events-none fixed inset-0 z-0" />
       
       <Sidebar />
       <main className="kit-main min-w-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] lg:pb-8">

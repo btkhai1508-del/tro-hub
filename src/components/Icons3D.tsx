@@ -7,25 +7,10 @@ export interface Icon3DProps {
 }
 
 // =========================================================================
-// 1. HOME ICON (Figma 3D Glassmorphic House - Peach/Orange Roof, Frosted Body)
+// 1. HOME ICON — original artwork supplied by the user.
 // =========================================================================
-export function IconHome3D({ size = 48, className = '', style }: Icon3DProps) {
-  const iconId = React.useId().replace(/:/g, "");
-  return (
-    <div className={`inline-flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size, ...style }}>
-      <svg width={size} height={size} viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_6px_12px_rgba(223,107,0,0.2)]">
-        <defs>
-          <linearGradient id={`${iconId}-fg_home_roof`} x1="60" y1="56" x2="160" y2="112" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FBA47F" />
-            <stop offset="1" stopColor="#DF6B00" />
-          </linearGradient>
-        </defs>
-        <path d="M78.25 50.36C83.2 45.08 85.68 42.44 88.59 41.51C90.94 40.75 93.46 40.75 95.81 41.51C98.72 42.44 101.2 45.08 106.15 50.36L128.44 74.12C138.18 84.5 143.05 89.69 143.2 94.14C143.31 97.67 141.84 101.07 139.19 103.4C135.84 106.34 128.73 106.34 114.49 106.34H69.91C55.67 106.34 48.56 106.34 45.21 103.4C42.56 101.07 41.08 97.67 41.2 94.14C41.35 89.69 46.22 84.5 55.96 74.12L78.25 50.36Z" fill={`url(#${iconId}-fg_home_roof)`} />
-        <rect x="50" y="80.3" width="83.39" height="64.39" rx="19.28" fill="#F8B77B" fillOpacity="0.75" stroke="white" strokeWidth="1.5" />
-        <rect x="80.3" y="103.9" width="23.12" height="17.22" rx="8.61" fill="white" fillOpacity="0.95" />
-      </svg>
-    </div>
-  );
+export function IconHome3D({ size = 48, className = '', style }: Icon3DProps & { strokeWidth?: number }) {
+  return <img src="/icons/home.svg" alt="" aria-hidden="true" draggable={false} width={size} height={size} className={`inline-block shrink-0 object-contain ${className}`} style={{ width: size, height: size, ...style }} />;
 }
 
 // =========================================================================

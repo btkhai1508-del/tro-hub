@@ -1105,7 +1105,6 @@ export function AdminPortal() {
     <div className="min-h-screen relative isolate text-neutral-800 dark:text-neutral-100 flex flex-col lg:flex-row antialiased">
       <OfflineBanner />
       <Background />
-      <div aria-hidden="true" className="kit-admin-reading-plane pointer-events-none fixed inset-0 z-0" />
       
       {portalToast && (
         <div 
@@ -1188,7 +1187,7 @@ export function AdminPortal() {
               isSidebarCollapsed ? "flex flex-col items-center space-y-3" : "space-y-1.5"
             )}>
               {[
-                { key: 'dashboard', label: 'Tổng quan', icon: Home },
+                { key: 'dashboard', label: 'Tổng quan', icon: IconHome3D },
                 { key: 'rooms', label: 'Phòng & Khách', icon: Users },
                 { key: 'billing', label: 'Thu tiền tháng', icon: Receipt },
                 { key: 'utilities', label: 'Tiện ích', icon: LayoutGrid }
@@ -3776,7 +3775,7 @@ export function AdminPortal() {
          ========================================================================= */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 px-3 py-2 flex items-center justify-around shadow-lg">
         {[
-          { key: 'dashboard', icon: Home, label: 'Tổng quan' },
+          { key: 'dashboard', icon: IconHome3D, label: 'Tổng quan' },
           { key: 'rooms', icon: Users, label: 'Phòng' },
           { key: 'billing', icon: Receipt, label: 'Thu tiền' },
           { key: 'utilities', icon: LayoutGrid, label: 'Tiện ích' }

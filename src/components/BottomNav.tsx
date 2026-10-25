@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutGrid, Receipt, FileText, User } from 'lucide-react';
+import { LayoutGrid, Receipt, FileText, User } from 'lucide-react';
+import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { preloadRoute } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 
 const navItems = [
-  { name: 'Trang chủ', path: '/', Icon: Home, tutorial: 'nav-dashboard-mobile' },
+  { name: 'Trang chủ', path: '/', Icon: IconHome3D, tutorial: 'nav-dashboard-mobile' },
   { name: 'Tiện ích', path: '/utilities', Icon: LayoutGrid, tutorial: 'nav-utilities-mobile' },
   { name: 'Hóa đơn', path: '/invoices', Icon: Receipt, tutorial: 'nav-invoices-mobile' },
   { name: 'Hợp đồng', path: '/contract', Icon: FileText, tutorial: 'nav-contract-mobile' },

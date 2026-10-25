@@ -46,7 +46,7 @@
     --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
-    --liquid-fill: var(--material-medium);
+    --liquid-fill: var(--material-thick);
     --liquid-fill-subtle: var(--material-ultrathin);
     --liquid-edge: rgba(255, 255, 255, 0.55);
     --liquid-stroke: var(--separator);
@@ -56,6 +56,7 @@
   }
 
   .dark {
+    --liquid-fill: var(--material-ultrathick);
     --text-primary: #ffffff;
     --text-secondary: #e5e5e7;
     --text-tertiary: #b8b8bf;

@@ -13,8 +13,8 @@
 - Áp dụng vật liệu và template từ **macOS 26 Community UI kit** người dùng cung cấp; [bảng đối chiếu thông số và cách áp dụng](design/macos26-kit.md).
 - Kính có năm mức Ultra Thin → Ultra Thick, sáng từ 36–84% và tối từ 10–50%, dùng `backdrop-filter: blur(15px)` theo export.
 - Lớp phụ/ô nhập/nút không có blur riêng; viền phản sáng mảnh và bóng theo kit. Không dùng filter xám hoặc opacity trên toàn trang/nội dung.
-- Chữ chính đen/trắng, chữ phụ tương phản cao; nút chính vẫn đen/trắng. Lớp đọc Light68%/Dark50% nằm dưới các vật liệu để chữ rõ trên wallpaper nhiều vùng sáng/tối; không filter lên nội dung.
-- Giữ nguyên hình và màu bộ icon 3D. Màu cảnh báo/trạng thái có ý nghĩa được giữ riêng.
+- Chữ chính đen/trắng, chữ phụ tương phản cao; nút chính vẫn đen/trắng. Đã bỏ lớp phủ toàn màn hình để wallpaper hiện rõ; chỉ thẻ nội dung, tiêu đề và điều khiển có nền kính cục bộ để giữ chữ dễ đọc.
+- Icon Home dùng file `public/icons/home.svg` do người dùng gửi, giữ nguyên SVG gốc; các icon 3D khác giữ nguyên. Màu cảnh báo/trạng thái có ý nghĩa được giữ riêng.
 - Font hệ thống Apple trên thiết bị Apple, có fallback hệ thống trên thiết bị khác. Hệ chữ LargeTitle26/Title122/Title217/Title315; Body13px desktop/15px mobile, trường nhập17px. [Bảng role và khoảng dòng](design/macos26-kit.md#typography-từ-bảng-tham-chiếu).
 - Desktop dùng bố cục mở, bỏ khung cửa sổ bao ngoài. Sidebar nổi riêng rộng 260/105px, nút tròn chevron ở giữa cạnh phải giống admin; toolbar và nội dung căn cùng lề. Mobile giữ dock nổi. Panel nội dung vẫn dùng kính, nhóm con bo 20px.
 - Form đăng nhập, danh sách hóa đơn, trang tiện ích/hồ sơ/hợp đồng/thanh toán/giặt sấy và các dialog cư dân dùng chung các kiểu template.
