@@ -39,7 +39,7 @@ export function PaymentModal() {
 
   const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || '10/2026');
   const bankAccount = '0902371800';
-  const bankName = 'MB Bank (Ngân hàng TMCP Quân Đội)';
+  const bankName = 'MB BANK';
   const accountHolder = 'Bùi Trung Khải';
   const qrUrl = `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${activeInvoice.total}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountHolder)}`;
 

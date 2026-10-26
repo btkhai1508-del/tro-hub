@@ -5,14 +5,14 @@ import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download,
 import { IconWallet3D } from './Icons3D';
 import { useApp, type Invoice } from '../context/AppContext';
 import { PaymentHistoryExportModal } from './PaymentHistoryExportModal';
+import { cn } from '../lib/utils';
 
 export function InvoicesAndPayment() {
   const navigate = useNavigate();
   const { invoices, openInvoiceDetailModal, paymentGateStatus } = useApp();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | Invoice['status']>('all');
   const [visibleCount, setVisibleCount] = useState(6);
-  const filteredInvoices = invoices.filter(invoice => statusFilter === 'all' || invoice.status === statusFilter);
+  const filteredInvoices = invoices;
   const unpaidInvoices = invoices.filter(invoice => invoice.status === 'unpaid');
   const totalUnpaidAmount = unpaidInvoices.reduce((total, invoice) => total + invoice.total, 0);
   const currency = (amount: number) => amount.toLocaleString('vi-VN');
@@ -62,25 +62,15 @@ export function InvoicesAndPayment() {
       </section>
 
       <section aria-labelledby="invoice-list-heading" className="liquid-panel overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.07] px-4 py-4 dark:border-white/10 sm:px-6">
+        <div className="flex items-center justify-between border-b border-black/[0.07] px-4 py-3.5 dark:border-white/10 sm:px-6">
           <h2 id="invoice-list-heading" className="kit-card-heading">Hóa đơn theo kỳ</h2>
-          <label className="resident-invoice-filter flex min-h-11 items-center gap-2 apple-callout kit-text-secondary">
-            <span className="sr-only">Lọc hóa đơn</span>
-            <select aria-label="Lọc hóa đơn" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as typeof statusFilter); setVisibleCount(6); }} className="kit-field min-h-11 max-w-full px-3 py-2 apple-callout">
-              <option value="all">Tất cả kỳ</option><option value="unpaid">Chưa thanh toán</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã thanh toán</option>
-            </select>
-          </label>
+          <span className="apple-callout kit-text-secondary">{invoices.length} kỳ hóa đơn</span>
         </div>
         {invoices.length === 0 ? (
           <div className="flex flex-col items-center px-6 py-12 text-center">
             <span className="glass-icon mb-5 h-16 w-16 text-neutral-700 icon-plate"><IconWallet3D size={64} /></span>
             <h3 className="apple-title2 font-semibold kit-text-primary">Chưa có hóa đơn</h3>
             <p className="mt-2 max-w-xs apple-body leading-relaxed kit-text-secondary">Khi có khoản phí mới, bạn có thể xem chi tiết và theo dõi thanh toán tại đây.</p>
-          </div>
-        ) : filteredInvoices.length === 0 ? (
-          <div role="status" className="px-5 py-9 text-center">
-            <p className="apple-body font-medium kit-text-primary">Không có hóa đơn ở trạng thái này.</p>
-            <button type="button" onClick={() => setStatusFilter('all')} className="soft-button mt-4 min-h-11 px-4">Xem tất cả kỳ</button>
           </div>
         ) : filteredInvoices.slice(0, visibleCount).map(invoice => (
           <article key={invoice.id} className="kit-list-row group flex flex-col gap-3 px-4 py-4 sm:px-6 md:flex-row md:items-center">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/resident-tahoe.css';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, ChevronRight, Compass, FileText, House, KeyRound, ReceiptText, ShieldCheck, UserRound, WashingMachine, X } from './AppIcons';
+import { ChevronRight, Compass, FileText, House, KeyRound, ReceiptText, ShieldCheck, UserRound, WashingMachine, X } from './AppIcons';
 import { IconWallet3D, IconContract3D, IconProfile3D, IconGuide3D, IconLaundry3D, IconHome3D, IconKey3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
@@ -54,11 +54,6 @@ export function Utilities() {
         </div>
       </section>
 
-      <button type="button" onClick={openTourGuide} className="kit-inset rounded-[24px] p-5 w-full flex items-center gap-4 text-left group">
-        <span className="glass-icon h-11 w-11 rounded-2xl shrink-0 kit-text-secondary icon-plate"><IconGuide3D size={48} /></span>
-        <span className="flex-1"><span className="block apple-body font-semibold text-neutral-800 dark:text-neutral-100">Lần đầu dùng Trọ-Hub?</span><span className="block mt-1 apple-callout kit-text-secondary">Khám phá nhanh các tính năng dành cho bạn.</span></span>
-        <ArrowUpRight size={18} className="text-neutral-600 shrink-0 group-hover:text-neutral-900 transition-colors dark:text-neutral-300 dark:hover:text-white dark:group-hover:text-white" />
-      </button>
 
       {isAccountGuideOpen && <div className="tahoe-dialog-overlay fixed inset-0 z-[70] flex items-center justify-center p-4 bg-neutral-950/30" onClick={() => setIsAccountGuideOpen(false)}>
         <div ref={accountGuideRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="account-guide-title" className="tahoe-dialog kit-dialog w-full max-w-md overflow-y-auto overscroll-contain p-5 sm:p-7 space-y-5" onClick={e => e.stopPropagation()}>

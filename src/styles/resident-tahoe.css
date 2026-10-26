@@ -13,9 +13,8 @@
 .resident-document-scroll { overscroll-behavior-inline: contain; }
 @media (max-width: 639px) {
   .resident-home { gap: 18px; }
-  .resident-home .apple-amount { font-size: clamp(30px, 9.5vw, 40px); overflow-wrap: anywhere; }
-  .resident-home .kit-quick-action .apple-callout { display: none; }
-  .resident-laundry-icon .kit-asset-icon { width: 60px !important; height: 60px !important; }
+  .resident-home .apple-amount { font-size: clamp(28px, 9vw, 38px); overflow-wrap: anywhere; }
+  .resident-laundry-icon .kit-asset-icon { width: 56px !important; height: 56px !important; }
   .resident-room-panel { align-self: start; }
   .resident-document-scroll { justify-content: flex-start; }
   .resident-document-scroll .contract-document-a4 { min-width: 650px; padding: 32px; }

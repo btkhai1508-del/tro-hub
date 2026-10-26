@@ -226,7 +226,7 @@ export function PaymentPage() {
   };
 
   const recipientName = 'Bùi Trung Khải';
-  const bankName = 'MB Bank (Ngân hàng Quân Đội)';
+  const bankName = 'MB BANK';
   const accountNumber = '0902371800';
 
   // Format transfer syntax: Room with LVC -> LVC{room}-T{m}-{y}, Room without LVC -> {room}-T{m}-{y}
@@ -263,16 +263,9 @@ export function PaymentPage() {
   }
 
   return (
-    <div className="w-full space-y-5 pb-4">
+    <div className="w-full space-y-4 pb-4">
       {copiedKey && <span role="status" className="sr-only">Đã sao chép.</span>}
       {copyError && <p role="alert" className="kit-feedback mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{copyError}</p>}
-      <header className="kit-page-header kit-payment-header mx-auto flex w-full max-w-5xl items-center gap-3">
-        <button type="button" onClick={() => navigate('/invoices')} aria-label="Quay lại hóa đơn" className="soft-button flex h-11 w-11 shrink-0 items-center justify-center kit-text-secondary"><ChevronLeft size={22} /></button>
-        <div>
-          <h1 className="kit-page-title">Thanh toán</h1>
-          <p className="kit-page-description">Hóa đơn tháng {targetInvoice.month}</p>
-        </div>
-      </header>
       {pdfError && <p role="alert" className="mx-auto max-w-5xl apple-body text-red-700 dark:text-red-300">{pdfError}</p>}
       <>
         {paymentMode === 'processing' ? (
@@ -422,7 +415,7 @@ export function PaymentPage() {
               </h2>
 
               <p className="apple-body kit-text-secondary max-w-md mb-6 leading-relaxed">
-                Ban Quản Lý đang tạm dừng nhận thanh toán trực tuyến qua mã VietQR cho kỳ Tháng {targetInvoice.month}. Quý cư dân vui lòng không chuyển khoản trong thời gian này.
+                Ban Quản Lý đang tạm dừng nhận thanh toán trực tuyến, xin cảm ơn
               </p>
 
               {/* Manager Contact Box */}
@@ -525,7 +518,7 @@ export function PaymentPage() {
                     )}
                   </div>
 
-                  <div className="w-full max-w-[285px] flex flex-col gap-2">
+                  <div className="w-full max-w-[285px] flex flex-col gap-2 mt-4 sm:mt-5">
                     <button
                       type="button"
                       onClick={handleSaveQR}
@@ -550,40 +543,56 @@ export function PaymentPage() {
                         <span className="kit-text-secondary font-normal">Người nhận</span>
                         <button type="button" aria-label="Sao chép người nhận"
                           onClick={() => handleCopy(recipientName, 'd-recipient')}
-                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
+                          className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
                         >
-                          {recipientName}
-                          {copiedKey === 'd-recipient' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          <span className="font-semibold kit-text-primary">{recipientName}</span>
+                          {copiedKey === 'd-recipient' ? (
+                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          ) : (
+                            <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                          )}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Ngân hàng</span>
                         <button type="button" aria-label="Sao chép tên ngân hàng"
                           onClick={() => handleCopy(bankName, 'd-bank')}
-                          className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
+                          className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
                         >
-                          {bankName}
-                          {copiedKey === 'd-bank' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          <span className="font-medium kit-text-primary">{bankName}</span>
+                          {copiedKey === 'd-bank' ? (
+                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          ) : (
+                            <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                          )}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Số tài khoản</span>
                         <button type="button" aria-label="Sao chép số tài khoản"
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
+                          className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
                         >
-                          {accountNumber}
-                          {copiedKey === 'd-acc' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          <span className="font-semibold kit-text-primary tracking-wider font-num">{accountNumber}</span>
+                          {copiedKey === 'd-acc' ? (
+                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          ) : (
+                            <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                          )}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Nội dung CK</span>
                         <button type="button" aria-label="Sao chép nội dung chuyển khoản"
                           onClick={() => handleCopy(transferContent, 'd-content')}
-                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
+                          className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
                         >
-                          {transferContent}
-                          {copiedKey === 'd-content' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
+                          {copiedKey === 'd-content' ? (
+                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          ) : (
+                            <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -603,109 +612,145 @@ export function PaymentPage() {
               </div>
             </main>
 
-            {/* 2. MOBILE VIEW (under lg): Compact, Straight Pure QR Code */}
-            <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col justify-between px-5 pt-4 pb-5 relative">
-              {/* Mobile Top Navigation */}
-              <header className="w-full flex items-center justify-between mb-1.5">
-                <button
-                  type="button"
-                  aria-label="Quay lại"
-                  onClick={() => navigate('/invoices')}
-                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:opacity-60 transition-opacity cursor-pointer"
-                >
-                  <ChevronLeft size={22} strokeWidth={2.2} />
-                </button>
+            {/* Mobile Fixed Floating Back Button - Always follows user screen on phones */}
+            <div className="fixed top-3 left-3 z-50 lg:hidden">
+              <button
+                type="button"
+                aria-label="Quay lại hóa đơn"
+                onClick={() => navigate('/invoices')}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-100 shadow-lg backdrop-blur-xl border border-white/70 dark:border-white/15 active:scale-90 transition-all cursor-pointer"
+              >
+                <ChevronLeft size={24} strokeWidth={2.4} />
+              </button>
+            </div>
 
-                <div className="text-center">
-                  <h2 className="apple-title2 font-semibold kit-text-primary leading-tight">
-                    QR Thanh toán
-                  </h2>
-                </div>
-
-                <div className="w-8" />
-              </header>
-
-              <div className="kit-payment-summary kit-data-surface mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl p-3.5">
-                <div><p className="apple-callout kit-text-secondary">Phòng {profile.room?.roomNumber} · Tháng {targetInvoice.month}</p><p className="apple-title1 font-semibold font-num kit-text-primary mt-1">{formatCurrency(targetInvoice.total)} ₫</p></div>
-                <span className="apple-callout kit-text-secondary">Hạn: {targetInvoice.dueDate || 'Chưa cập nhật'}</span>
+            {/* 2. MOBILE VIEW (under lg): Matches desktop layout identically */}
+            <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col p-4 sm:p-5 relative">
+              {/* Header Title & Subtitle */}
+              <div className="w-full text-center mb-3">
+                <h2 className="apple-title1 font-semibold kit-text-primary">
+                  QR Thanh toán
+                </h2>
+                <p className="apple-body kit-text-secondary font-normal mt-1 leading-relaxed">
+                  Quét mã để thanh toán tự động
+                </p>
               </div>
-              {/* Mobile Straight Pure QR Code Section */}
-              <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
+
+              {/* Straight Square Pure QR Container */}
+              <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center">
                 <div className="bg-white p-3 rounded-2xl shadow-sm inline-block max-w-full">
                   {qrUrl ? (
                     <img
                       src={qrUrl}
                       alt="VietQR Matrix"
-                      className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
+                      className="w-[200px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
                   ) : (
-                    <div className="w-[240px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
+                    <div className="w-[200px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
                       Đang tạo mã QR...
                     </div>
                   )}
                 </div>
 
-                <div className="w-full max-w-[260px] flex flex-col gap-2 mt-1 mb-2">
+                {/* Spacing between QR image and save button */}
+                <div className="w-full max-w-[240px] flex flex-col gap-2 mt-4 mb-4">
                   <button
                     type="button"
                     onClick={handleSaveQR}
                     disabled={isSavingQR}
-                    className="primary-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer"
+                    className="primary-button min-h-11 w-full py-2.5 px-4 apple-control flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer"
                   >
-                    <ImageDown size={14} />
+                    <ImageDown size={15} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
                   </button>
                 </div>
               </section>
 
-              {/* Mobile Payment Details */}
-              <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 apple-body">
-                <details className="kit-data-surface kit-disclosure rounded-2xl"><summary className="kit-disclosure-summary apple-headline kit-text-primary">Thông tin chuyển khoản<span aria-hidden="true" className="kit-disclosure-chevron">⌄</span></summary><div className="px-3.5 pb-3.5 space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-                    <span className="kit-text-secondary">Người nhận</span>
-                    <button type="button" aria-label="Sao chép người nhận"
-                      onClick={() => handleCopy(recipientName, 'm-rec')}
-                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-tight cursor-pointer"
-                    >
-                      {recipientName}
-                      {copiedKey === 'm-rec' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </button>
+              {/* Transaction Details - Exactly matching desktop template */}
+              <div className="space-y-4 pt-1">
+                <div>
+                  <h3 className="apple-title2 font-semibold kit-text-primary tracking-tight mb-2.5">
+                    Chi tiết giao dịch
+                  </h3>
+                  <div className="kit-inset kit-group p-3.5 sm:p-4 space-y-3.5">
+                    <div className="flex items-center justify-between apple-body text-xs sm:text-sm">
+                      <span className="kit-text-secondary font-normal">Người nhận</span>
+                      <button
+                        type="button"
+                        aria-label="Sao chép người nhận"
+                        onClick={() => handleCopy(recipientName, 'm-rec')}
+                        className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
+                      >
+                        <span className="font-semibold kit-text-primary break-words">{recipientName}</span>
+                        {copiedKey === 'm-rec' ? (
+                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between apple-body text-xs sm:text-sm">
+                      <span className="kit-text-secondary font-normal">Ngân hàng</span>
+                      <button
+                        type="button"
+                        aria-label="Sao chép tên ngân hàng"
+                        onClick={() => handleCopy(bankName, 'm-bank')}
+                        className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
+                      >
+                        <span className="font-semibold kit-text-primary">{bankName}</span>
+                        {copiedKey === 'm-bank' ? (
+                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between apple-body text-xs sm:text-sm">
+                      <span className="kit-text-secondary font-normal">Số tài khoản</span>
+                      <button
+                        type="button"
+                        aria-label="Sao chép số tài khoản"
+                        onClick={() => handleCopy(accountNumber, 'm-acc')}
+                        className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
+                      >
+                        <span className="font-semibold kit-text-primary tracking-wider font-num">{accountNumber}</span>
+                        {copiedKey === 'm-acc' ? (
+                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between apple-body text-xs sm:text-sm">
+                      <span className="kit-text-secondary font-normal">Nội dung CK</span>
+                      <button
+                        type="button"
+                        aria-label="Sao chép nội dung chuyển khoản"
+                        onClick={() => handleCopy(transferContent, 'm-content')}
+                        className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
+                      >
+                        <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
+                        {copiedKey === 'm-content' ? (
+                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-                    <span className="kit-text-secondary">Ngân hàng</span>
-                    <button type="button" aria-label="Sao chép tên ngân hàng"
-                      onClick={() => handleCopy(bankName, 'm-bank')}
-                      className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
-                    >
-                      {bankName}
-                      {copiedKey === 'm-bank' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-                    <span className="kit-text-secondary">Số TK</span>
-                    <button type="button" aria-label="Sao chép số tài khoản"
-                      onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary font-num cursor-pointer"
-                    >
-                      {accountNumber}
-                      {copiedKey === 'm-acc' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
-                    <span className="kit-text-secondary">Nội dung CK</span>
-                    <button type="button" aria-label="Sao chép nội dung chuyển khoản"
-                      onClick={() => handleCopy(transferContent, 'm-content')}
-                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
-                    >
-                      {transferContent}
-                      {copiedKey === 'm-content' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </button>
-                  </div>
-                </div></details>
+                </div>
 
-                {/* Amount stays visible above the QR code. */}
+                {/* Subtle Divider */}
+                <hr className="border-t border-[#ebebed] dark:border-neutral-800 w-full" />
 
-              </section>
+                {/* Total Amount - Exactly like desktop with large font */}
+                <div className="flex items-baseline justify-between py-1">
+                  <span className="text-[15px] font-medium kit-text-secondary">Tổng tiền</span>
+                  <span className="text-[28px] sm:text-[32px] font-semibold kit-text-primary tracking-tight leading-none font-num">
+                    {formatCurrency(targetInvoice.total)} ₫
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}

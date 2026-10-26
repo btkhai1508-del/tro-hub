@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Receipt, FileText, User, PhoneCall, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut, LayoutGrid, Copy, Check, ArrowUpRight } from 'lucide-react';
+import { Home, Receipt, FileText, User, PhoneCall, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut, LayoutGrid, Copy, Check, ArrowUpRight } from 'lucide-react';
 import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { preloadRoute } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 
-function NavigationHome({ size = 21, className = '' }: { size?: number; strokeWidth?: number; className?: string }) { return <img src="/icons/home.svg" alt="" aria-hidden="true" width={size} height={size} className={className} />; }
-
 const navItems = [
-  { name: 'Trang chủ', path: '/', icon: NavigationHome, tutorial: 'nav-dashboard' },
+  { name: 'Trang chủ', path: '/', icon: Home, tutorial: 'nav-dashboard' },
   { name: 'Tiện ích', path: '/utilities', icon: LayoutGrid, tutorial: 'nav-utilities' },
   { name: 'Hóa đơn', path: '/invoices', icon: Receipt, tutorial: 'nav-invoices' },
   { name: 'Hợp đồng', path: '/contract', icon: FileText, tutorial: 'nav-contract' },
@@ -69,10 +67,21 @@ export function Sidebar() {
               </NavLink>
               {!isSidebarCollapsed && <button type="button" onClick={openProfileEditModal} aria-label="Chỉnh sửa hồ sơ" title="Chỉnh sửa hồ sơ" className="kit-toolbar-control flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--text-secondary)]"><SlidersHorizontal size={16} strokeWidth={1.7} /></button>}
             </div>
-            <div className={cn('flex items-center', isSidebarCollapsed ? 'flex-col gap-1' : 'justify-between px-1')}>
+            <div className={cn('flex items-center pt-1', isSidebarCollapsed ? 'flex-col gap-1 w-full' : 'w-full')}>
               {isSidebarCollapsed && <button type="button" onClick={openProfileEditModal} aria-label="Chỉnh sửa hồ sơ" title="Chỉnh sửa hồ sơ" className="kit-toolbar-control flex h-11 w-11 items-center justify-center rounded-xl text-[var(--text-secondary)]"><SlidersHorizontal size={17} strokeWidth={1.7} /></button>}
-              <button type="button" onClick={logoutUser} aria-label="Đăng xuất" title="Đăng xuất" className={cn('kit-toolbar-control flex min-h-11 items-center justify-center gap-2 rounded-xl text-[var(--text-secondary)]', isSidebarCollapsed ? 'w-11' : 'px-2 apple-callout')}><LogOut size={16} strokeWidth={1.7} />{!isSidebarCollapsed && <span>Đăng xuất</span>}</button>
-              {!isSidebarCollapsed && <span className="apple-caption kit-text-tertiary">Trọ-Hub</span>}
+              <button
+                type="button"
+                onClick={logoutUser}
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+                className={cn(
+                  'flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-300/80 dark:border-rose-900/60 bg-rose-50/60 hover:bg-rose-100/80 dark:bg-rose-950/25 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold transition-all cursor-pointer shadow-xs active:scale-95',
+                  isSidebarCollapsed ? 'w-11 h-11 p-0' : 'w-full px-4 text-sm'
+                )}
+              >
+                <LogOut size={16} strokeWidth={1.8} />
+                {!isSidebarCollapsed && <span>Đăng xuất</span>}
+              </button>
             </div>
           </div>
         </div>

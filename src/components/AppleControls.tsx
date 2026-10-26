@@ -117,10 +117,10 @@ export interface AppleCheckboxProps {
   label?: React.ReactNode;
   className?: string;
   ariaLabel?: string;
-  color?: 'black' | 'blue' | 'theme';
+  color?: 'black' | 'blue' | 'emerald' | 'theme';
 }
 
-/** A quiet material checkbox; the visible label also supplies its name. */
+/** A quiet material checkbox with filled check state when active. */
 export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
   checked,
   onChange,
@@ -129,30 +129,44 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
   label,
   className,
   ariaLabel,
-  color = 'black',
+  color = 'emerald',
 }) => {
   const sizeConfig = {
     sm: {
-      box: 'w-4 h-4 rounded-md',
+      box: 'w-4 h-4 rounded-[5px]',
       icon: 11,
-      text: 'apple-callout',
+      text: 'text-xs',
     },
     md: {
-      box: 'w-5 h-5 rounded-[7px]',
+      box: 'w-5 h-5 rounded-[6px]',
       icon: 13,
-      text: 'apple-callout',
+      text: 'text-xs sm:text-sm',
     },
     lg: {
-      box: 'w-6 h-6 rounded-lg',
+      box: 'w-6 h-6 rounded-[7px]',
       icon: 15,
-      text: 'apple-body',
+      text: 'text-sm sm:text-base',
     },
   }[size];
+
+  const getCheckedClass = () => {
+    switch (color) {
+      case 'emerald':
+        return 'bg-emerald-500 border-emerald-600 text-white shadow-xs';
+      case 'blue':
+        return 'bg-blue-500 border-blue-600 text-white shadow-xs';
+      case 'black':
+        return 'bg-neutral-900 border-neutral-950 text-white dark:bg-white dark:border-neutral-200 dark:text-neutral-950 shadow-xs';
+      case 'theme':
+      default:
+        return 'bg-neutral-900 border-neutral-950 text-white dark:bg-white dark:border-neutral-200 dark:text-neutral-950 shadow-xs';
+    }
+  };
 
   return (
     <label
       className={cn(
-        'inline-flex min-h-11 items-center gap-1 cursor-pointer select-none group',
+        'inline-flex min-h-11 items-center gap-2 cursor-pointer select-none group',
         disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
@@ -180,16 +194,14 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
         <span
           aria-hidden="true"
           className={cn(
-            'flex items-center justify-center border transition-colors duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.30)]',
+            'flex items-center justify-center border transition-all duration-150',
             sizeConfig.box,
             checked
-              ? color === 'blue'
-                ? 'border-transparent bg-transparent'
-                : 'border-transparent bg-transparent'
-              : 'border-[var(--separator)] bg-[var(--control-fill)]'
+              ? getCheckedClass()
+              : 'border-neutral-300 dark:border-neutral-600 bg-white/70 dark:bg-neutral-850 text-transparent hover:border-neutral-400 dark:hover:border-neutral-500 shadow-2xs'
           )}
         >
-          {checked && <Check size={sizeConfig.icon + 14} strokeWidth={2.6} />}
+          {checked && <Check size={sizeConfig.icon} strokeWidth={3} className="shrink-0" />}
         </span>
       </button>
 

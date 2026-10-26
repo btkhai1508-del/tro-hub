@@ -1,4 +1,5 @@
 import React from 'react';
+import { Clock as LucideClock } from 'lucide-react';
 import { KitIcon } from './KitIcons';
 
 export interface Icon3DProps {
@@ -91,7 +92,10 @@ export function IconSuitcase3D({ size = 48, className = '', style }: Icon3DProps
 export function IconTrash3D({ size = 48, className = '', style }: Icon3DProps) { return <KitIcon name="ServiceTrash" size={size} className={className} style={style} />; }
 export const IconCleanliness3D = IconTrash3D;
 
-export function IconClock3D({ size = 48, className = '', style }: Icon3DProps & { strokeWidth?: number }) {
+export function IconClock3D({ size = 48, className = '', style, strokeWidth = 1.8 }: Icon3DProps & { strokeWidth?: number }) {
+  if (size <= 28) {
+    return <LucideClock size={size} className={className} style={style} strokeWidth={strokeWidth} />;
+  }
   return <KitIcon name="Clock" size={size} className={className} style={style} />;
 }
 
@@ -145,27 +149,34 @@ export const IconFigmaNotification = IconNotification3D;
 export const IconFigmaCalendar = IconCalendar3D;
 export const IconFigmaMessage = IconMessage3D;
 export const IconFigmaLocations = IconLocation3D;
-export const IconFigmaElectricity = IconElectricity3D;
-export const IconFigmaWater = IconWater3D;
-export const IconFigmaElectricWater = IconMeter3D;
-
+export const IconFigmaCamera = IconCamera3D;
+export const IconFigmaCart = IconCart3D;
+export const IconFigmaFolder = IconFolder3D;
+export const IconFigmaPencil = IconPencil3D;
+export const IconFigmaPicture = IconPicture3D;
+export const IconFigmaSettings = IconSettings3D;
+export const IconFigmaShare = IconShare3D;
+export const IconFigmaSuitcase = IconSuitcase3D;
+export const IconFigmaTrash = IconTrash3D;
+export const IconFigmaClock = IconClock3D;
+export const IconFigmaAlert = IconAlert3D;
+export const IconFigmaDocument = IconContract3D;
 export const GlassIconHome = IconHome3D;
-export const GlassIconInvoice = IconWallet3D;
+export const GlassIconWallet = IconWallet3D;
 export const GlassIconProfile = IconProfile3D;
-export const GlassIconCalendar = IconCalendar3D;
-export const GlassIconDocument = IconContract3D;
-export const GlassIconSecurity = IconSecurity3D;
-export const GlassIconLocation = IconLocation3D;
 export const GlassIconBell = IconNotification3D;
-export const GlassIconElectricWater = IconMeter3D;
-export const GlassIconVehicle = IconVehicle3D;
-export const GlassIconSetting = IconSettings3D;
-export const GlassIconAlert = IconAlert3D;
-export const GlassIconLogout = IconLogout3D;
-export const GlassIconSearchPlate = IconSearchPlate3D;
+export const GlassIconCalendar = IconCalendar3D;
+export const GlassIconMessage = IconMessage3D;
+export const GlassIconLocation = IconLocation3D;
 export const GlassIconClock = IconClock3D;
-
-// Compatibility for older layouts: gradients live inside each external SVG.
-export function Icons3DDefs() {
-  return null;
-}
+export const GlassIconSettings = IconSettings3D;
+export const GlassIconContract = IconContract3D;
+export const GlassIconFolder = IconFolder3D;
+export const GlassIconCamera = IconCamera3D;
+export const GlassIconEdit = IconPencil3D;
+export const GlassIconGallery = IconPicture3D;
+export const GlassIconDanger = IconAlert3D;
+export const GlassIconShield = IconSecurity3D;
+export const GlassIconSend = IconShare3D;
+export const GlassIconSearch = IconMagnifier3D;
+export function Icons3DDefs() { return null; }

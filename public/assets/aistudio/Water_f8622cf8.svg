@@ -10,9 +10,9 @@
       <stop offset="100%" stop-color="#0369A1"/>
     </linearGradient>
     <linearGradient id="wt_frosted_glass" x1="70" y1="60" x2="100" y2="140" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#E0F2FE" stop-opacity="0.85"/>
-      <stop offset="50%" stop-color="#BAE6FD" stop-opacity="0.7"/>
-      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.75"/>
+      <stop offset="0%" stop-color="#E0F2FE" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#BAE6FD" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.85"/>
     </linearGradient>
     <linearGradient id="wt_accent_drop" x1="110" y1="35" x2="145" y2="95" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#7DD3FC"/>
@@ -28,15 +28,15 @@
   <g filter="url(#wt_glow)">
     <path d="M128 36C128 36 148 68 148 84C148 95.0457 139.046 104 128 104C116.954 104 108 95.0457 108 84C108 68 128 36 128 36Z" fill="#0369A1" opacity="0.35" transform="translate(2, 3)"/>
     <path d="M128 36C128 36 148 68 148 84C148 95.0457 139.046 104 128 104C116.954 104 108 95.0457 108 84C108 68 128 36 128 36Z" fill="url(#wt_accent_drop)"/>
-    <path d="M128 42C128 42 144 70 144 83C144 92 137 99 128 99C119 99 112 92 112 83C112 70 128 42 128 42Z" fill="#BAE6FD" fill-opacity="0.65" stroke="white" stroke-width="1.2"/>
-    <ellipse cx="121" cy="74" rx="3" ry="8" transform="rotate(-30 121 74)" fill="white" fill-opacity="0.9"/>
+    <path d="M128 42C128 42 144 70 144 83C144 92 137 99 128 99C119 99 112 92 112 83C112 70 128 42 128 42Z" fill="#BAE6FD" fill-opacity="0.75" stroke="white" stroke-width="1.8"/>
+    <ellipse cx="121" cy="74" rx="3.5" ry="9" transform="rotate(-30 121 74)" fill="white" fill-opacity="0.95"/>
     <path d="M80 50C80 50 116 98 116 120C116 139.882 99.8823 156 80 156C60.1177 156 44 139.882 44 120C44 98 80 50 80 50Z" fill="#0284C7" opacity="0.4" transform="translate(3, 4)"/>
     <path d="M80 50C80 50 116 98 116 120C116 139.882 99.8823 156 80 156C60.1177 156 44 139.882 44 120C44 98 80 50 80 50Z" fill="url(#wt_ocean_base)"/>
-    <path d="M80 52C80 52 114 98 114 119C114 137.778 98.7777 153 80 153C61.2223 153 46 137.778 46 119C46 98 80 52 80 52Z" fill="url(#wt_sky_core)"/>
-    <path d="M80 56C80 56 110 99 110 118C110 134.569 96.5685 148 80 148C63.4315 148 50 134.569 50 118C50 99 80 56 80 56Z" fill="url(#wt_frosted_glass)" stroke="white" stroke-width="1.5"/>
-    <path d="M68 84C62 94 60 106 60 118C60 120 62 120 63 118C67 106 72 96 78 86C79 84 78 82 76 82C73 82 70 83 68 84Z" fill="white" fill-opacity="0.85"/>
-    <ellipse cx="68" cy="100" rx="4.5" ry="14" transform="rotate(-25 68 100)" fill="white" fill-opacity="0.95"/>
-    <ellipse cx="73" cy="80" rx="3" ry="5" transform="rotate(-20 73 80)" fill="white" fill-opacity="0.8"/>
+    <path d="M80 52C80 52 114 98 114 119C114 137.778 98.7777 153 80 153C61.2223 153 46 137.778 46 119C46 98 80 52 80 52Z" fill="url(#fg_wt_core)"/>
+    <path d="M80 56C80 56 110 99 110 118C110 134.569 96.5685 148 80 148C63.4315 148 50 134.569 50 118C50 99 80 56 80 56Z" fill="url(#fg_wt_glass)" stroke="white" stroke-width="2.2"/>
+    <path d="M68 84C62 94 60 106 60 118C60 120 62 120 63 118C67 106 72 96 78 86C79 84 78 82 76 82C73 82 70 83 68 84Z" fill="white" fill-opacity="0.9"/>
+    <ellipse cx="68" cy="100" rx="5" ry="15" transform="rotate(-25 68 100)" fill="white" fill-opacity="0.95"/>
+    <ellipse cx="73" cy="80" rx="3.5" ry="6" transform="rotate(-20 73 80)" fill="white" fill-opacity="0.85"/>
     <path d="M64 136C70 142 90 142 96 136C92 140 78 143 64 136Z" fill="#38BDF8" opacity="0.9"/>
   </g>
 </svg>

@@ -411,10 +411,14 @@ export function LoginPage() {
         </div>
 
         <div className="kit-login-footer flex flex-col items-center gap-1 px-5 py-3 text-center sm:px-7">
-          <a href="tel:0902371800" className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-[13px] font-medium text-neutral-700 underline-offset-4 hover:underline dark:text-neutral-200">
+          <a
+            href="https://zalo.me/0902371800"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[13px] font-semibold text-neutral-800 hover:text-blue-600 underline-offset-4 hover:underline dark:text-neutral-100 dark:hover:text-blue-400 transition-colors"
+          >
             <PhoneCall aria-hidden="true" size={15} /> Cần hỗ trợ? Liên hệ quản lý
           </a>
-          <span className="pb-1 apple-subheadline kit-text-secondary">Trọ-Hub · Một nơi cho mọi điều ở nhà.</span>
         </div>
       </div>
     </div>

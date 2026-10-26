@@ -18,6 +18,7 @@ export function Background() {
         data-theme={isDark ? 'dark' : 'light'}
         className="wallpaper-art"
       />
+      <div className="wallpaper-overlay" />
     </div>
   );
 }

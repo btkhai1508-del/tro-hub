@@ -73,7 +73,7 @@ import {
   IconLaundry3D,
   IconDryer3D
 } from './Icons3D';
-import { AppleSwitch } from './AppleControls';
+import { AppleSwitch, AppleCheckbox } from './AppleControls';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
 
@@ -1111,7 +1111,28 @@ export function AdminPortal() {
   const currentAdminPage = adminPageTitles[activeMenu] || adminPageTitles.dashboard;
   const normalizeAdminSearch = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
   const filterAdminRows = (row: any) => {
-    const matchesSearch = normalizeAdminSearch([row.room, row.name, row.phone].join(' ')).includes(normalizeAdminSearch(adminSearch));
+    const searchableFields = [
+      row.room,
+      row.name,
+      row.phone,
+      row.nguoi1,
+      row.sdt1,
+      row.cccd1,
+      row.xe1,
+      row.nguoi2,
+      row.sdt2,
+      row.cccd2,
+      row.xe2,
+      row.nguoi3,
+      row.sdt3,
+      row.cccd3,
+      row.xe3,
+      row.plate,
+      row.plates,
+      row.cccd,
+      ...(Array.isArray(row.occupants) ? row.occupants.flatMap((o: any) => [o.name, o.phone, o.cccd, o.plate]) : [])
+    ];
+    const matchesSearch = normalizeAdminSearch(searchableFields.filter(Boolean).join(' ')).includes(normalizeAdminSearch(adminSearch));
     const status = row.paymentStatus || row.status || 'unpaid';
     return matchesSearch && (collectionFilter === 'all' || status === collectionFilter);
   };
@@ -1517,9 +1538,20 @@ export function AdminPortal() {
                 Admin
               </span>
             </div>
-            <h1 className="apple-large-title apple-strong kit-text-primary">
-              {currentAdminPage.title}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="apple-large-title apple-strong kit-text-primary">
+                {currentAdminPage.title}
+              </h1>
+              {isLoading && (
+                <span
+                  role="status"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-300 shadow-2xs backdrop-blur-md animate-pulse"
+                >
+                  <span aria-hidden="true" className="ui-spinner h-3.5 w-3.5" />
+                  Đang cập nhật dữ liệu…
+                </span>
+              )}
+            </div>
             <p className="apple-body kit-text-secondary mt-0.5">
               {currentAdminPage.description}
             </p>
@@ -1618,17 +1650,16 @@ export function AdminPortal() {
                 logoutUser();
                 navigate('/login');
               }}
-              className="admin-header-logout soft-button px-3 min-h-11 rounded-2xl flex items-center gap-1 text-rose-600 text-xs font-bold cursor-pointer"
+              className="admin-header-logout flex min-h-11 min-w-[125px] items-center justify-center gap-1.5 rounded-2xl border border-rose-300 bg-rose-50/70 px-4 text-xs font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 active:scale-95 dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
               title="Đăng xuất Admin"
             >
-              <LogOut size={14} />
+              <LogOut size={15} strokeWidth={2} />
               <span>Đăng xuất</span>
             </button>
           </div>
         </header>
 
         {adminLoadError && <div role="alert" className="admin-load-error kit-data-surface rounded-[18px] p-4 mb-4"><div><p className="apple-headline kit-text-primary">Không thể cập nhật dữ liệu</p><p className="apple-callout kit-text-secondary mt-1">{adminLoadError}</p></div><button type="button" className="soft-button min-h-11 px-4" onClick={() => { setAdminLoadError(''); loadTabContent(activeMenu, selectedMonth); }}><RefreshCw size={18} />Thử lại</button></div>}
-        {isLoading && <p role="status" className="admin-loading-status apple-callout kit-text-secondary mb-4"><span aria-hidden="true" className="ui-spinner h-4 w-4" />Đang cập nhật dữ liệu…</p>}
         {(activeMenu === 'rooms' || activeMenu === 'billing') && <div className="admin-list-toolbar kit-data-surface rounded-[20px] p-3 mb-4">
           <label className="admin-search-field"><Search size={21} /><input type="search" value={adminSearch} onChange={event => setAdminSearch(event.target.value)} placeholder="Tìm phòng, tên hoặc số điện thoại" aria-label="Tìm phòng, tên hoặc số điện thoại" /></label>
           <label className="admin-status-filter"><span className="sr-only">Trạng thái thu tiền</span><select value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái thu tiền"><option value="all">Tất cả trạng thái</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></select></label>
@@ -1834,7 +1865,14 @@ export function AdminPortal() {
                     className="admin-room-card soft-card p-5 flex flex-col justify-between hover:border-neutral-500 transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <button type="button" onClick={() => openRoomDetail(r.room)} className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-semibold text-base" aria-label={'Mở chi tiết phòng ' + r.room}>{r.room}<ChevronRight size={18} /></button>
+                      <button
+                        type="button"
+                        onClick={() => openRoomDetail(r.room)}
+                        className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        aria-label={'Mở chi tiết phòng ' + r.room}
+                      >
+                        {r.room}
+                      </button>
                       <div
                         className="flex items-center gap-2"
                         onClick={(e) => e.stopPropagation()}
@@ -1856,8 +1894,8 @@ export function AdminPortal() {
                     </div>
 
                     <div className="space-y-1">
-                      <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{r.name}</h4>
-                      <p className="text-xs text-neutral-600 font-mono dark:text-neutral-300">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                      <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{r.nguoi1 || r.name || 'Trống'}</h4>
+                      <p className="text-xs text-neutral-600 font-mono dark:text-neutral-300">SĐT: {r.sdt1 || r.phone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
                 );

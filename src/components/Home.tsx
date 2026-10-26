@@ -1,31 +1,37 @@
 import React, { useState } from 'react';
 import '../styles/resident-tahoe.css';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ArrowUpRight, ArrowRight, CheckCircle2, ChevronRight, Clock3, CreditCard, LockKeyhole, Sparkles } from './AppIcons';
-import { IconHome3D, IconWallet3D, IconLaundry3D, IconContract3D, IconProfile3D, IconVehicle3D, IconNotification3D } from './Icons3D';
+import { ArrowUpRight, ArrowRight, CheckCircle2, ChevronRight, Clock3, CreditCard, LockKeyhole } from './AppIcons';
+import { IconHome3D, IconWallet3D, IconContract3D, IconVehicle3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 
 export function Home() {
   const navigate = useNavigate();
   const [isRoomOpen, setIsRoomOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
-  const { profile, invoices, openInvoiceDetailModal, openNotificationModal, openContractModal, notifications, paymentGateStatus } = useApp();
+  const { profile, invoices, openInvoiceDetailModal, openContractModal, paymentGateStatus } = useApp();
   const currentInvoice = invoices[0];
   const isPaid = currentInvoice?.status === 'paid';
   const isPending = currentInvoice?.status === 'pending';
   const isUnpaid = currentInvoice?.status === 'unpaid';
   const room = profile.room.roomNumber || 'Chưa cập nhật';
   const firstName = profile.name.trim().split(/\s+/).pop();
-  const quickActions = [
-    { label: 'Hóa đơn', subtitle: 'Chi phí mỗi tháng', Icon: IconWallet3D, onClick: () => navigate('/invoices'), color: '' },
-    { label: 'Giặt sấy', subtitle: 'Chọn máy & đặt lịch', Icon: IconLaundry3D, onClick: () => navigate('/laundry'), color: '' },
-    { label: 'Hợp đồng', subtitle: 'Hồ sơ lưu trú', Icon: IconContract3D, onClick: openContractModal, color: '' },
-    { label: 'Cá nhân', subtitle: 'Thông tin của bạn', Icon: IconProfile3D, onClick: () => navigate('/profile'), color: '' },
-  ];
 
   return (
     <div className="kit-page resident-home">
       <header data-tutorial="resident-welcome" className="kit-page-header">
+        {/* On mobile: "Phòng của bạn" placed ABOVE the "Xin chào" card */}
+        <div className="sm:hidden mb-2 flex items-center justify-start">
+          <div className="kit-inset inline-flex items-center gap-2 px-3 py-1.5 rounded-full">
+            <span className="glass-icon h-5 w-5 rounded-md text-neutral-700 dark:text-neutral-300 icon-plate flex items-center justify-center">
+              <IconHome3D size={22} />
+            </span>
+            <span className="apple-caption font-medium kit-text-secondary">
+              Phòng của bạn: <strong className="kit-text-primary font-bold ml-1">{room}</strong>
+            </span>
+          </div>
+        </div>
+
         <div className="min-w-0">
           <p className="kit-page-kicker">Trang chủ</p>
           <h1 className="kit-page-title apple-large-title apple-strong">
@@ -70,13 +76,13 @@ export function Home() {
               </p>
             </div>
 
-            <div data-tutorial="billing-pay-btn" className="flex flex-wrap items-center gap-3 border-t border-neutral-900/[0.06] dark:border-white/[0.08] pt-5">
-              {isUnpaid && <button type="button" onClick={() => navigate(`/payment?invoiceId=${currentInvoice.id}`)} className="primary-button min-h-11 px-5 flex items-center justify-center gap-2 text-sm">
+            <div data-tutorial="billing-pay-btn" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 border-t border-neutral-900/[0.06] dark:border-white/[0.08] pt-5">
+              {isUnpaid && <button type="button" onClick={() => navigate(`/payment?invoiceId=${currentInvoice.id}`)} className="primary-button min-h-12 px-5 flex items-center justify-center gap-2 text-sm w-full sm:w-auto font-semibold cursor-pointer active:scale-98">
                 {paymentGateStatus === 'STOP' ? <LockKeyhole size={16} /> : <CreditCard size={16} />}
                 {paymentGateStatus === 'STOP' ? 'Thông tin thanh toán' : 'Thanh toán ngay'}
                 <ArrowUpRight size={16} />
               </button>}
-              <button type="button" onClick={() => currentInvoice ? openInvoiceDetailModal(currentInvoice) : navigate('/invoices')} className="soft-button min-h-11 px-5 inline-flex items-center justify-center gap-2 apple-control kit-text-primary">
+              <button type="button" onClick={() => currentInvoice ? openInvoiceDetailModal(currentInvoice) : navigate('/invoices')} className="soft-button min-h-12 px-5 inline-flex items-center justify-center gap-2 apple-control kit-text-primary w-full sm:w-auto font-semibold cursor-pointer active:scale-98">
                 {currentInvoice ? 'Xem hóa đơn' : 'Đến mục hóa đơn'}<ArrowRight size={15} />
               </button>
             </div>
@@ -107,38 +113,6 @@ export function Home() {
             </div>
           </div>
         </details>
-      </section>
-
-      <section aria-labelledby="quick-actions-title">
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h2 id="quick-actions-title" className="liquid-section-title apple-title2 apple-strong">Dành cho bạn</h2>
-          <NavLink to="/utilities" className="resident-inline-link apple-callout font-medium kit-text-secondary inline-flex min-h-11 items-center gap-1">Tất cả tiện ích <ChevronRight size={14} /></NavLink>
-        </div>
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-          {quickActions.map(({ label, subtitle, Icon, onClick, color }) => <button key={label} type="button" onClick={onClick} className="kit-inset kit-quick-action rounded-[20px] p-3 sm:p-4 text-left group flex min-h-20 items-center gap-2.5 sm:gap-3 transition-colors">
-            <span className={cn('h-11 w-11 shrink-0 flex items-center justify-center', color)}><Icon size={48} /></span>
-            <span className="min-w-0 flex-1"><span className="block apple-headline kit-text-primary">{label}</span><span className="block apple-callout mt-1 kit-text-secondary">{subtitle}</span></span>
-            <ChevronRight size={14} className="hidden sm:block shrink-0 text-neutral-600 dark:text-neutral-300" />
-          </button>)}
-        </div>
-      </section>
-
-      <section className="liquid-panel p-4 sm:p-7" aria-labelledby="notifications-title">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="glass-icon h-10 w-10 rounded-[15px] text-neutral-700 dark:text-neutral-300 icon-plate"><IconNotification3D size={44} /></span>
-          <div><h2 id="notifications-title" className="liquid-section-title apple-title2 apple-strong">Thông báo mới nhất</h2><p className="apple-callout kit-text-secondary mt-0.5">Cập nhật từ ban quản lý</p></div>
-          {notifications.some(item => item.unread) && <span className="ml-auto h-2 w-2 rounded-full bg-neutral-500" aria-label="Có thông báo chưa đọc" />}
-        </div>
-        {notifications.length ? <div className="grid md:grid-cols-2 gap-3">
-          {notifications.slice(0, 2).map(item => <button type="button" key={item.id} onClick={() => openNotificationModal(item)} className="kit-inset rounded-[20px] p-4 text-left flex items-start gap-3 group">
-            <span className={cn('mt-1.5 h-1.5 w-1.5 rounded-full shrink-0', item.unread ? 'bg-neutral-500' : 'bg-neutral-300 dark:bg-neutral-600')} />
-            <span className="min-w-0 flex-1"><span className="block apple-headline kit-text-primary line-clamp-2">{item.title}</span><span className="block mt-1.5 apple-callout kit-text-secondary line-clamp-2">{item.desc}</span><span className="block mt-3 apple-subheadline kit-text-secondary">{item.time}</span></span>
-            <ChevronRight size={16} className="mt-1 text-neutral-600 shrink-0 dark:text-neutral-300" />
-          </button>)}
-        </div> : <div className="kit-inset rounded-[20px] px-4 py-4 flex items-center gap-3 text-left">
-          <Sparkles size={23} strokeWidth={1.5} className="text-neutral-600 dark:text-neutral-300" />
-          <div><p className="apple-body font-medium kit-text-primary">Bạn đã cập nhật mọi thứ.</p><p className="apple-callout kit-text-secondary mt-1">Thông báo mới từ ban quản lý sẽ xuất hiện tại đây.</p></div>
-        </div>}
       </section>
     </div>
   );

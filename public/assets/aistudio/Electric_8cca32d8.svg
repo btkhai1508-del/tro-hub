@@ -25,9 +25,9 @@
     <path d="M107 26L113 32L101 88H129L79 164L73 158L123 82H95L107 26Z" fill="#92400E" opacity="0.6"/>
     <path d="M104 28L58 94H86L70 160L120 84H92L104 28Z" fill="url(#el_3d_depth)"/>
     <path d="M101 30L55 96H83L67 162L117 86H89L101 30Z" fill="url(#el_gold_core)"/>
-    <path d="M99 34L59 94H85L71 154L113 88H89L99 34Z" fill="url(#el_glass_sheen)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
-    <path d="M97 38L65 92H83L77 114L93 88H89L97 38Z" fill="white" fill-opacity="0.85"/>
-    <ellipse cx="88" cy="74" rx="3.5" ry="12" transform="rotate(-30 88 74)" fill="white" fill-opacity="0.9"/>
-    <circle cx="73" cy="148" r="2" fill="white" fill-opacity="0.95"/>
+    <path d="M99 34L59 94H85L71 154L113 88H89L99 34Z" fill="url(#el_glass_sheen)" stroke="white" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M97 38L65 92H83L77 114L93 88H89L97 38Z" fill="white" fill-opacity="0.9"/>
+    <ellipse cx="88" cy="74" rx="4" ry="13" transform="rotate(-30 88 74)" fill="white" fill-opacity="0.95"/>
+    <circle cx="73" cy="148" r="2.5" fill="white" fill-opacity="0.95"/>
   </g>
 </svg>

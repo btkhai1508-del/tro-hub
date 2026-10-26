@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/resident-tahoe.css';
 import { Bike, ChevronRight, ContactRound, Edit3, FileText, House, KeyRound, LogOut, Moon, Settings2, Sun, Sunrise, UserRound } from './AppIcons';
-import { IconProfile3D, IconHome3D, IconVehicle3D, IconSupport3D, IconSettings3D, IconContract3D, IconKey3D } from './Icons3D';
+import { IconProfile3D, IconHome3D, IconVehicle3D, IconSupport3D, IconSettings3D, IconKey3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
@@ -33,7 +33,7 @@ function ProfileSection({ icon: Icon, title, summary, children }: { icon: React.
 }
 
 export function Profile() {
-  const { profile, openProfileEditModal, openContractModal, logoutUser } = useApp();
+  const { profile, openProfileEditModal, logoutUser } = useApp();
   const { mode, setMode } = useTheme();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const initials = profile.name.trim().split(/\s+/).slice(-2).map(part => part.charAt(0)).join('').toUpperCase() || 'TH';
@@ -105,19 +105,32 @@ export function Profile() {
             </div>
             <p className="mt-3 hidden apple-callout kit-text-secondary sm:block">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
           </section>
-
-          <section className="liquid-panel overflow-hidden p-2" aria-label="Tài khoản và tài liệu">
-            <button type="button" onClick={openContractModal} className="kit-list-row flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
-              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate"><IconContract3D size={40} /></span><span className="flex-1 apple-body font-medium kit-text-primary">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
-            </button>
-            <div className="mx-3 border-t border-neutral-200/50 dark:border-white/10" />
-            <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="kit-list-row flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
-              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate"><IconKey3D size={40} /></span><span className="flex-1 apple-body font-medium kit-text-primary">Đổi mật khẩu</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
-            </button>
-          </section>
-          <button type="button" onClick={logoutUser} className="liquid-panel-subtle flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-500/5 dark:text-rose-400"><LogOut size={17} />Đăng xuất</button>
         </div>
       </div>
+
+      {/* Bottom Actions: Đổi mật khẩu & Đăng xuất tài khoản */}
+      <div className="mt-6 pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 w-full">
+        <button
+          type="button"
+          onClick={() => setIsPasswordModalOpen(true)}
+          className="soft-button flex min-h-12 w-full sm:w-auto items-center justify-center gap-2.5 rounded-2xl px-6 py-3 text-sm font-bold kit-text-primary active:scale-98 cursor-pointer"
+        >
+          <span className="glass-icon h-7 w-7 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate">
+            <IconKey3D size={30} />
+          </span>
+          <span>Đổi mật khẩu</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={logoutUser}
+          className="flex min-h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-rose-300/80 bg-rose-50/70 px-6 py-3 text-sm font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 hover:shadow-sm active:scale-98 dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
+        >
+          <LogOut size={18} strokeWidth={2} />
+          <span>Đăng xuất tài khoản</span>
+        </button>
+      </div>
+
       <PasswordUpdateModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />
     </div>
   );

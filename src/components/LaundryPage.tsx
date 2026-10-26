@@ -98,7 +98,7 @@ export function LaundryPage() {
   viewModeRef.current = viewMode;
 
   const recipientName = 'Bùi Trung Khải';
-  const bankName = 'MB Bank (Ngân hàng Quân Đội)';
+  const bankName = 'MB BANK';
   const accountNumber = '0902371800';
 
   // Fetch live laundry status from backend Express server
