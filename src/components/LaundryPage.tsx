@@ -453,7 +453,7 @@ export function LaundryPage() {
                           className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {recipientName}
-                          {copiedKey === 'd-recipient' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-recipient' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -463,7 +463,7 @@ export function LaundryPage() {
                           className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {bankName}
-                          {copiedKey === 'd-bank' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-bank' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -473,7 +473,7 @@ export function LaundryPage() {
                           className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
-                          {copiedKey === 'd-acc' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-acc' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -484,7 +484,7 @@ export function LaundryPage() {
                           title="Bắt buộc giữ nguyên mã máy"
                         >
                           {selectedMachine.machineId}
-                          {copiedKey === 'd-content' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-content' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -586,7 +586,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-tight cursor-pointer"
                     >
                       {recipientName}
-                      {copiedKey === 'm-rec' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-rec' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -596,7 +596,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
                     >
                       {bankName}
-                      {copiedKey === 'm-bank' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-bank' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -606,7 +606,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary font-num cursor-pointer"
                     >
                       {accountNumber}
-                      {copiedKey === 'm-acc' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-acc' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -616,7 +616,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
                     >
                       {selectedMachine.machineId}
-                      {copiedKey === 'm-content' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-content' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                 </div>

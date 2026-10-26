@@ -24,9 +24,12 @@ window.addEventListener('error', (event) => {
 
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import { installUiMotion } from './lib/uiMotion';
 import './index.css';
 
 const container = document.getElementById('root') || document.getElementById('app');
 if (container) {
+  const cleanupMotion = installUiMotion(container);
   createRoot(container).render(<App />);
+  if (import.meta.hot) import.meta.hot.dispose(cleanupMotion);
 }

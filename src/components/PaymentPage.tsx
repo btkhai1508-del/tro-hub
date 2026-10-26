@@ -547,7 +547,7 @@ export function PaymentPage() {
                         >
                           <span className="font-semibold kit-text-primary">{recipientName}</span>
                           {copiedKey === 'd-recipient' ? (
-                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -561,7 +561,7 @@ export function PaymentPage() {
                         >
                           <span className="font-medium kit-text-primary">{bankName}</span>
                           {copiedKey === 'd-bank' ? (
-                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -575,7 +575,7 @@ export function PaymentPage() {
                         >
                           <span className="font-semibold kit-text-primary tracking-wider font-num">{accountNumber}</span>
                           {copiedKey === 'd-acc' ? (
-                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -589,7 +589,7 @@ export function PaymentPage() {
                         >
                           <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
                           {copiedKey === 'd-content' ? (
-                            <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -683,7 +683,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-primary break-words">{recipientName}</span>
                         {copiedKey === 'm-rec' ? (
-                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}
@@ -699,7 +699,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-primary">{bankName}</span>
                         {copiedKey === 'm-bank' ? (
-                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}
@@ -715,7 +715,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-primary tracking-wider font-num">{accountNumber}</span>
                         {copiedKey === 'm-acc' ? (
-                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}
@@ -731,7 +731,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
                         {copiedKey === 'm-content' ? (
-                          <Check size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}

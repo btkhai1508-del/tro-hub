@@ -465,3 +465,6 @@
     backdrop-filter: none !important;
   }
 }
+
+/* GSAP owns only temporary text/icon motion; do not stack CSS transitions. */
+[data-gsap-motion] { animation: none !important; transition: none !important; }
