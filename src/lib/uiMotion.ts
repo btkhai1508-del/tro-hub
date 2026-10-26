@@ -7,6 +7,7 @@ export function installUiMotion(root: HTMLElement) {
   const media = matchMedia('(prefers-reduced-motion: reduce)');
   const active = new Map<Element, { tween?: Tween; restore(): void }>();
   const pressed = new Set<Element>();
+  const glints = new Map<HTMLElement, { tween?: Tween; restore(): void }>();
   const pending = new Set<Element>();
   let frame = 0;
   const enabled = () => Boolean(window.gsap && !media.matches && !document.hidden);
@@ -50,6 +51,33 @@ export function installUiMotion(root: HTMLElement) {
     // Headings/text only. Cards, panels and entire routes keep a stable backdrop.
     animate(element, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.16 });
   }
+  function sidebarEntrance(sidebar: Element) {
+    const labels = [...sidebar.querySelectorAll('nav a > span, nav button span')]
+      .filter(element => element.children.length === 0 && element.textContent?.trim() && !element.matches('.sr-only'));
+    labels.forEach((element, index) => animate(element, { opacity: 0, x: -8 }, {
+      opacity: 1, x: 0, duration: 0.22, delay: Math.min(index, 5) * 0.025
+    }));
+  }
+  function glint(event: Event) {
+    if (!enabled()) return;
+    if (event instanceof PointerEvent && event.type === 'pointerover' && event.pointerType !== 'mouse') return;
+    const card = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-tutorial="billing-card"], .resident-room-panel, .kit-quick-action, .admin-revenue-card, .admin-room-card') : null;
+    if (!card || !root.contains(card) || !visible(card)) return;
+    if (event instanceof PointerEvent && event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
+    if (glints.has(card)) return;
+    const previous = card.style.getPropertyValue('--card-glint');
+    const hadClass = card.classList.contains('motion-card-light');
+    const entry: { tween?: Tween; restore(): void } = { restore() {
+      if (previous) card.style.setProperty('--card-glint', previous); else card.style.removeProperty('--card-glint');
+      if (!hadClass) card.classList.remove('motion-card-light');
+      glints.delete(card);
+    } };
+    card.classList.add('motion-card-light');
+    glints.set(card, entry);
+    entry.tween = window.gsap!.fromTo(card, { '--card-glint': '100%' }, {
+      '--card-glint': '0%', duration: 0.55, ease: 'power2.out', overwrite: 'auto', onComplete: entry.restore
+    });
+  }
   function scan(node: Element) {
     const selector = 'h1, [role="dialog"] h2, [role="dialog"] h3, #header-notification-panel h2, [data-ui-motion="reveal"], [data-ui-motion="copied"]';
     const targets = [...(node.matches(selector) ? [node] : []), ...node.querySelectorAll(selector)];
@@ -62,6 +90,7 @@ export function installUiMotion(root: HTMLElement) {
   function flush() {
     frame = 0;
     active.forEach((_, element) => { if (!element.isConnected) stop(element); });
+    glints.forEach((entry, element) => { if (!element.isConnected) { entry.tween?.kill(); entry.restore(); } });
     const roots = [...pending]; pending.clear();
     roots.filter(node => !roots.some(other => other !== node && other.contains(node))).forEach(scan);
   }
@@ -71,7 +100,9 @@ export function installUiMotion(root: HTMLElement) {
   }
   const observer = new MutationObserver(records => {
     records.forEach(record => {
-      if (record.type === 'characterData') {
+      if (record.type === 'attributes' && record.attributeName === 'aria-expanded' && record.target instanceof Element && record.target.getAttribute('aria-expanded') === 'true' && record.target.closest('aside')) {
+        sidebarEntrance(record.target.closest('aside')!);
+      } else if (record.type === 'characterData') {
         const heading = record.target.parentElement;
         if (heading?.matches('h1')) queue(heading);
       } else if (record.type === 'childList') {
@@ -94,6 +125,7 @@ export function installUiMotion(root: HTMLElement) {
   function down(event: PointerEvent | KeyboardEvent) {
     if (event instanceof KeyboardEvent && (event.repeat || !['Enter', ' '].includes(event.key))) return;
     if (event instanceof PointerEvent && event.button !== 0) return;
+    if (event instanceof PointerEvent) glint(event);
     const control = event.target instanceof Element ? event.target.closest('button, a[href], summary') : null;
     if (!control || !root.contains(control) || control.matches(':disabled, [aria-disabled="true"]')) return;
     const content = contentTarget(control);
@@ -108,12 +140,15 @@ export function installUiMotion(root: HTMLElement) {
   }
   function reset() {
     active.forEach((_, element) => stop(element));
+    glints.forEach(entry => { entry.tween?.kill(); entry.restore(); });
     pressed.clear(); pending.clear();
     cancelAnimationFrame(frame); frame = 0;
   }
   function visibility() { if (document.hidden) reset(); }
   function loaded() { queue(root); }
-  observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'aria-pressed', 'aria-current'] });
+  observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'aria-pressed', 'aria-current', 'aria-expanded'] });
+  root.addEventListener('pointerover', glint);
+  root.addEventListener('focusin', glint);
   root.addEventListener('pointerdown', down);
   root.addEventListener('keydown', down);
   window.addEventListener('pointerup', release);
@@ -127,6 +162,7 @@ export function installUiMotion(root: HTMLElement) {
   if (window.gsap) queue(root);
   return () => {
     observer.disconnect(); reset();
+    root.removeEventListener('pointerover', glint); root.removeEventListener('focusin', glint);
     root.removeEventListener('pointerdown', down); root.removeEventListener('keydown', down);
     window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release);
     window.removeEventListener('keyup', release); window.removeEventListener('blur', reset);

@@ -468,3 +468,19 @@
 
 /* GSAP owns only temporary text/icon motion; do not stack CSS transitions. */
 [data-gsap-motion] { animation: none !important; transition: none !important; }
+
+/* A bounded light pass; only the decorative gradient moves, never the glass. */
+.motion-card-light { position: relative; }
+.motion-card-light::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,0.18) 50%, transparent 58%);
+  background-size: 250% 100%;
+  background-position: var(--card-glint, 100%) 0;
+}
+@media (prefers-reduced-motion: reduce), print {
+  .motion-card-light::after { display: none; }
+}

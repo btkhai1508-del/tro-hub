@@ -14,3 +14,9 @@
 - `prefers-reduced-motion: reduce` chặn GSAP và hủy ngay hiệu ứng đang chạy. CDN lỗi/chậm không ẩn nội dung hoặc chặn thao tác. Không đặt opacity0 mặc định trong CSS.
 
 Kiểm tra trên production build bằng Chromium với API giả lập: **58 kiểm tra tương tác/layout/fallback và 11 kiểm tra tick/CDN chậm đều đạt**. TypeScript/build/diff-check; viewport390/1440 sáng/tối, CDN thật được lấy về dùng trong fixture, chặn CDN, nhấn giữ/thả/lặp, đổi mục nhanh, mở dialog, đổi trạng thái giảm chuyển động, so sánh chính xác bounding box và chiều dài trang khi bật/tắt GSAP. Không kiểm tra Safari/iPhone thật hoặc tốc độ CDN trên mạng người dùng.
+
+## Điểm nhấn cho card và sidebar
+
+- Card chi phí/phòng, quick action, doanh thu và phòng admin: dải sáng trắng mảnh lướt550ms khi hover bằng chuột, focus bàn phím hoặc chạm. Chỉ animate biến CSS của gradient trang trí `::after`; không di chuyển card hoặc thay blur. Không chạy nền liên tục, không xử lý pointermove.
+- Mở sidebar user/admin: nhãn menu đi từ trái8px, opacity0→1 trong220ms; lệch nhau25ms, tối đa125ms. Giữ nguyên hiệu ứng độ rộng/layout có sẵn. Mở/đóng liên tiếp hủy tween cũ và khôi phục style.
+- Lớp sáng bỏ qua pointer để không chặn nút. Tắt và dọn ngay khi bật giảm chuyển động, tab bị ẩn hoặc node bị tháo khỏi DOM; không chạy khi CDN chưa sẵn sàng.

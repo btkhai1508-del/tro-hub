@@ -1220,6 +1220,7 @@ export function AdminPortal() {
             }}
             className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 dark:bg-neutral-800 backdrop-blur-md border border-white dark:border-neutral-700 shadow-md hover:scale-105 active:scale-95 text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 flex items-center justify-center transition-all z-50 cursor-pointer"
             title={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+            aria-expanded={!isSidebarCollapsed}
             aria-label={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
           >
             {isSidebarCollapsed ? (
