@@ -1,31 +1,32 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  FileSpreadsheet, 
-  RefreshCw, 
-  Check, 
-  AlertCircle, 
-  ExternalLink, 
-  CheckCircle2, 
-  Table, 
-  UserCheck, 
+import {
+  X,
+  FileSpreadsheet,
+  RefreshCw,
+  Check,
+  AlertCircle,
+  ExternalLink,
+  CheckCircle2,
+  Table,
+  UserCheck,
   HelpCircle,
   Database
-} from 'lucide-react';
+} from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { initAuth, googleSignIn, logout, getAccessToken } from '../lib/googleAuth';
-import { 
-  extractSpreadsheetId, 
-  getSpreadsheetDetails, 
-  fetchResidentProfileFromSheet, 
+import {
+  extractSpreadsheetId,
+  getSpreadsheetDetails,
+  fetchResidentProfileFromSheet,
   fetchMonthlyInvoicesFromSheet,
   syncAllOccupantsToProfileTabInGoogleSheet
 } from '../lib/googleSheetsService';
 
 export function GoogleSheetModal() {
-  const { 
-    isGoogleSheetModalOpen, 
+  const {
+    isGoogleSheetModalOpen,
     closeGoogleSheetModal,
     profile,
     updateProfile,
@@ -112,19 +113,19 @@ function onOpen() {
 
 function chuyenCuDanSangTabCaNhan() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
+
   // Tự động tìm tab tháng hiện tại (vd: 10/2026 hoặc 102026 hoặc tab active)
   var activeSheet = ss.getActiveSheet();
-  var monthSheet = (activeSheet.getName().includes('/') || activeSheet.getName().includes('10')) 
-    ? activeSheet 
+  var monthSheet = (activeSheet.getName().includes('/') || activeSheet.getName().includes('10'))
+    ? activeSheet
     : (ss.getSheetByName('10/2026') || ss.getSheetByName('102026') || ss.getSheets()[1] || ss.getSheets()[0]);
-    
+
   var profileSheet = ss.getSheetByName('THÔNG TIN CÁ NHÂN');
   if (!profileSheet) {
     profileSheet = ss.insertSheet('THÔNG TIN CÁ NHÂN');
     profileSheet.getRange(1, 1, 1, 14).setValues([[
-      'Họ và Tên', 'SĐT', 'CCCD', 'Email Liên Hệ', 'Ngày sinh', 'Địa chỉ thường trú', 
-      'Biển số xe', 'Loại xe dòng xe', 'Phòng số', 'Người liên hệ', 'Mối quan hệ', 
+      'Họ và Tên', 'SĐT', 'CCCD', 'Email Liên Hệ', 'Ngày sinh', 'Địa chỉ thường trú',
+      'Biển số xe', 'Loại xe dòng xe', 'Phòng số', 'Người liên hệ', 'Mối quan hệ',
       'Số điện thoại khẩn', 'Password', 'Hợp đồng'
     ]]);
   }
@@ -135,7 +136,7 @@ function chuyenCuDanSangTabCaNhan() {
     SpreadsheetApp.getUi().alert('⚠️ Không tìm thấy dữ liệu phòng từ dòng 6 trở đi!');
     return;
   }
-  
+
   var data = monthSheet.getRange(6, 1, lastRow - 5, 28).getValues();
   var out = [];
 
@@ -179,7 +180,7 @@ function chuyenCuDanSangTabCaNhan() {
         var isPhoneNumericOnly = /^[0-9](\.0+)?$/.test(rawPhone);
         var phone = (rawPhone && rawPhone !== '' && rawPhone !== '0' && !isPhoneNumericOnly) ? rawPhone : '1';
         var pass = (phone !== '1' && phone.length >= 6) ? phone.slice(-6) : '180505';
-        
+
         out.push([
           tName,
           phone,
@@ -219,8 +220,8 @@ function tuDongDongBoTuLogs() {
   }
 
   var activeSheet = ss.getActiveSheet();
-  var monthSheet = (activeSheet.getName().includes('/') || activeSheet.getName().includes('10')) 
-    ? activeSheet 
+  var monthSheet = (activeSheet.getName().includes('/') || activeSheet.getName().includes('10'))
+    ? activeSheet
     : (ss.getSheetByName('10/2026') || ss.getSheetByName('102026') || ss.getSheets()[1]);
 
   var logsLastRow = logsSheet.getLastRow();
@@ -304,6 +305,8 @@ function markRowPending() {
     return () => unsubscribe();
   }, []);
 
+  const dialogRef = useDialogFocus(isGoogleSheetModalOpen, closeGoogleSheetModal);
+
   if (!isGoogleSheetModalOpen) return null;
 
   const handleGoogleLogin = async () => {
@@ -345,9 +348,9 @@ function markRowPending() {
       let token = await getAccessToken();
 
       if (!token && !currentUser) {
-        setSyncStatus({ 
-          type: 'error', 
-          message: 'Để ghi trực tiếp vào Google Sheet, bạn cần bấm nút "Đăng nhập với Google" ở trên để cấp quyền ghi cho tài khoản Google của bạn.' 
+        setSyncStatus({
+          type: 'error',
+          message: 'Để ghi trực tiếp vào Google Sheet, bạn cần bấm nút "Đăng nhập với Google" ở trên để cấp quyền ghi cho tài khoản Google của bạn.'
         });
         setIsBatchSyncing(false);
         return;
@@ -392,11 +395,11 @@ function markRowPending() {
       setSyncStatus({ type: 'idle', message: '' });
       const details = await getSpreadsheetDetails(rawId, token);
       setAvailableTabs(details.sheets);
-      
+
       // Auto select matching tabs
       const profTab = details.sheets.find(s => s.toLowerCase().includes('thông tin') || s.toLowerCase().includes('cá nhân') || s.toLowerCase().includes('profile')) || details.sheets[0] || '';
       const invTab = details.sheets.find(s => s.includes('10') || s.toLowerCase().includes('tháng') || s.toLowerCase().includes('invoice')) || details.sheets[1] || details.sheets[0] || '';
-      
+
       setSelectedProfileTab(profTab);
       setSelectedInvoiceTab(invTab);
       setSyncStatus({ type: 'success', message: `Đã kết nối "${details.title}" (${details.sheets.length} tab)` });
@@ -470,9 +473,9 @@ function markRowPending() {
       }
 
       if (updatedProfile || updatedInvoice) {
-        setSyncStatus({ 
-          type: 'success', 
-          message: `Đồng bộ thành công! Đã nạp ${updatedProfile ? 'hồ sơ cư dân' : ''} ${updatedProfile && updatedInvoice ? '& ' : ''}${updatedInvoice ? 'hóa đơn tháng từ Sheet' : ''}` 
+        setSyncStatus({
+          type: 'success',
+          message: `Đồng bộ thành công! Đã nạp ${updatedProfile ? 'hồ sơ cư dân' : ''} ${updatedProfile && updatedInvoice ? '& ' : ''}${updatedInvoice ? 'hóa đơn tháng từ Sheet' : ''}`
         });
       } else {
         setSyncStatus({
@@ -488,12 +491,12 @@ function markRowPending() {
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200 select-none"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-md duration-200 select-none"
       onClick={closeGoogleSheetModal}
     >
-      <div 
-        className="w-full max-w-xl bg-white rounded-3xl border border-white/90 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="google-sheet-dialog-title"
+        className="tahoe-dialog w-full max-w-xl bg-white rounded-3xl border border-white/90 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.35)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -506,11 +509,11 @@ function markRowPending() {
               <span className="type-label text-emerald-600 block text-[10px] font-bold uppercase tracking-wider">
                 Google Workspace Integration
               </span>
-              <h3 className="type-h4 text-slate-900 font-bold">Liên kết Google Sheets</h3>
+              <h3 id="google-sheet-dialog-title" className="type-h4 text-slate-900 font-bold">Liên kết Google Sheets</h3>
             </div>
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={closeGoogleSheetModal}
             className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
@@ -537,9 +540,9 @@ function markRowPending() {
             {currentUser ? (
               <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
                 <div className="flex items-center gap-2.5">
-                  <img 
-                    src={currentUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'} 
-                    alt="User" 
+                  <img
+                    src={currentUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'}
+                    alt="User"
                     className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-500/20"
                   />
                   <div>
@@ -583,7 +586,7 @@ function markRowPending() {
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-xs font-bold text-slate-700">Đường dẫn Google Sheet hoặc Spreadsheet ID</label>
-              
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -620,7 +623,7 @@ function markRowPending() {
               <input
                 type="text"
                 placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs... hoặc ID bảng tính"
-                value={sheetInput}
+                aria-label="Liên kết hoặc ID bảng tính Google Sheets" value={sheetInput}
                 onChange={(e) => setSheetInput(e.target.value)}
                 className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
               />
@@ -660,7 +663,7 @@ function markRowPending() {
                   <input
                     type="text"
                     readOnly
-                    value={webhookUrl}
+                    aria-label="Địa chỉ webhook Apps Script" value={webhookUrl}
                     className="flex-1 px-2.5 py-1.5 text-[11px] font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 select-all"
                   />
                   <button
@@ -705,7 +708,7 @@ function markRowPending() {
                 <Database size={15} />
                 <span>Cấu trúc chuẩn đã thiết lập theo yêu cầu của bạn:</span>
               </div>
-              
+
               <div className="space-y-1.5">
                 <div className="font-semibold text-slate-800">1. Tab thông tin cá nhân (12 cột):</div>
                 <p className="text-slate-600 font-mono text-[11px] bg-white p-2 rounded-lg border border-indigo-100">
@@ -748,7 +751,7 @@ function markRowPending() {
                     )}
                   </button>
                 </div>
-                
+
                 <p className="text-slate-600 text-[11px] leading-relaxed">
                   <strong>Hướng dẫn 3 bước:</strong>
                   <br />1. Trong Google Sheets, vào menu <strong>Tiện ích mở rộng (Extensions) $\rightarrow$ Apps Script</strong>.
@@ -771,7 +774,7 @@ function markRowPending() {
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Tab Thông Tin Cư Dân</label>
               {availableTabs.length > 0 ? (
                 <select
-                  value={selectedProfileTab}
+                  aria-label="Trang tính thông tin cá nhân" value={selectedProfileTab}
                   onChange={(e) => setSelectedProfileTab(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 >
@@ -783,7 +786,7 @@ function markRowPending() {
                 <input
                   type="text"
                   placeholder="Thông tin cá nhân"
-                  value={selectedProfileTab}
+                  aria-label="Trang tính thông tin cá nhân" value={selectedProfileTab}
                   onChange={(e) => setSelectedProfileTab(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 />
@@ -794,7 +797,7 @@ function markRowPending() {
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Tab Hóa Đơn Tháng</label>
               {availableTabs.length > 0 ? (
                 <select
-                  value={selectedInvoiceTab}
+                  aria-label="Trang tính hóa đơn" value={selectedInvoiceTab}
                   onChange={(e) => setSelectedInvoiceTab(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 >
@@ -806,7 +809,7 @@ function markRowPending() {
                 <input
                   type="text"
                   placeholder="10/2026 hoặc T10"
-                  value={selectedInvoiceTab}
+                  aria-label="Trang tính hóa đơn" value={selectedInvoiceTab}
                   onChange={(e) => setSelectedInvoiceTab(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                 />
@@ -818,7 +821,7 @@ function markRowPending() {
               <input
                 type="text"
                 placeholder="203"
-                value={targetRoom}
+                aria-label="Phòng cần đồng bộ" value={targetRoom}
                 onChange={(e) => setTargetRoom(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-num focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
               />
@@ -828,8 +831,8 @@ function markRowPending() {
           {/* Sync status indicator */}
           {syncStatus.message && (
             <div className={`p-3 rounded-xl flex items-center gap-2 text-xs ${
-              syncStatus.type === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+              syncStatus.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                 : syncStatus.type === 'error'
                 ? 'bg-rose-50 text-rose-800 border border-rose-200'
                 : 'bg-slate-100 text-slate-700'

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bike, ChevronRight, ContactRound, Edit3, FileText, House, KeyRound, LogOut, Moon, Settings2, Sun, Sunrise, UserRound } from 'lucide-react';
+import '../styles/resident-tahoe.css';
+import { Bike, ChevronRight, ContactRound, Edit3, FileText, House, KeyRound, LogOut, Moon, Settings2, Sun, Sunrise, UserRound } from './AppIcons';
 import { IconProfile3D, IconHome3D, IconVehicle3D, IconSupport3D, IconSettings3D, IconContract3D, IconKey3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,15 +18,17 @@ function ProfileField({ label, value }: { label: string; value?: string }) {
   );
 }
 
-function ProfileSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; children: React.ReactNode }) {
+function ProfileSection({ icon: Icon, title, summary, children }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; summary: string; children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
   return (
-    <section className="liquid-panel px-5 py-2 sm:px-6">
-      <div className="flex items-center gap-2.5 border-b border-neutral-200/50 py-4 dark:border-white/10">
-        <span className="glass-icon h-9 w-9 text-neutral-700 dark:text-neutral-200"><Icon size={44} /></span>
-        <h2 className="kit-card-heading apple-title2 apple-strong">{title}</h2>
-      </div>
-      <dl className="grid grid-cols-1 gap-x-6 pb-2 sm:grid-cols-2">{children}</dl>
-    </section>
+    <details className="resident-disclosure liquid-panel px-4 py-2 sm:px-6" open={isOpen} onToggle={event => setIsOpen(event.currentTarget.open)}>
+      <summary className="resident-disclosure-summary min-h-16 gap-2.5 py-3">
+        <span className="glass-icon h-9 w-9 icon-plate"><Icon size={44} /></span>
+        <span className="min-w-0 flex-1"><span className="kit-card-heading apple-title2 apple-strong block">{title}</span><span className="apple-callout kit-text-secondary mt-1 block break-words lg:hidden">{summary}</span></span>
+        <ChevronRight size={20} className="resident-disclosure-chevron shrink-0" />
+      </summary>
+      <dl className="resident-detail-body grid grid-cols-1 gap-x-6 border-t border-[var(--separator)] pb-2 sm:grid-cols-2">{children}</dl>
+    </details>
   );
 }
 
@@ -50,7 +53,7 @@ export function Profile() {
             {profile.avatar && !profile.avatar.includes('unsplash.com') ? (
               <img src={profile.avatar} alt={profile.name || 'Ảnh đại diện'} className="h-20 w-20 shrink-0 rounded-[26px] object-cover ring-4 ring-white/60 shadow-lg dark:ring-white/10" />
             ) : (
-              <div aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-white/50 dark:bg-white/5 text-2xl font-semibold tracking-tight shadow-sm ring-4 ring-white/60 dark:ring-white/10"><IconProfile3D size={76} /></div>
+              <div aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-white/50 dark:bg-white/5 text-2xl font-semibold tracking-tight shadow-sm ring-4 ring-white/60 dark:ring-white/10 icon-plate"><IconProfile3D size={76} /></div>
             )}
             <div className="min-w-0">
               <span className="liquid-chip mb-2 inline-flex items-center gap-1.5 text-xs text-neutral-700 dark:text-neutral-300"><House size={12} />Cư dân Trọ-Hub</span>
@@ -63,8 +66,8 @@ export function Profile() {
       </section>
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-5">
-          <ProfileSection icon={IconProfile3D} title="Thông tin cá nhân">
+        <div className="order-2 space-y-3 lg:order-1 lg:space-y-5">
+          <ProfileSection icon={IconProfile3D} title="Thông tin cá nhân" summary={profile.phone || 'Họ tên, liên hệ và giấy tờ'}>
             <ProfileField label="Họ và tên" value={profile.name} />
             <ProfileField label="Số điện thoại" value={profile.phone} />
             <ProfileField label="Email" value={profile.email} />
@@ -72,27 +75,27 @@ export function Profile() {
             <ProfileField label="Ngày sinh" value={profile.dob} />
             <ProfileField label="Địa chỉ thường trú" value={profile.address} />
           </ProfileSection>
-          <ProfileSection icon={IconHome3D} title="Không gian sống">
+          <ProfileSection icon={IconHome3D} title="Không gian sống" summary={`${roomLabel}${profile.room.floor ? ` · ${profile.room.floor}` : ''}`}>
             <ProfileField label="Phòng đang thuê" value={profile.room.roomNumber ? roomLabel : ''} />
             <ProfileField label="Khu nhà" value={profile.room.building} />
             <ProfileField label="Ngày bắt đầu thuê" value={profile.room.startDate} />
             <ProfileField label="Tầng" value={profile.room.floor} />
           </ProfileSection>
-          <ProfileSection icon={IconVehicle3D} title="Phương tiện đã đăng ký">
+          <ProfileSection icon={IconVehicle3D} title="Phương tiện đã đăng ký" summary={profile.vehicle.plateNumber || 'Chưa cập nhật biển số xe'}>
             <ProfileField label="Biển số xe" value={profile.vehicle.plateNumber} />
             <ProfileField label="Loại phương tiện" value={profile.vehicle.type} />
           </ProfileSection>
-          <ProfileSection icon={IconSupport3D} title="Liên hệ khẩn cấp">
+          <ProfileSection icon={IconSupport3D} title="Liên hệ khẩn cấp" summary={profile.emergencyContact.name || 'Thêm người liên hệ khi cần'}>
             <ProfileField label="Họ và tên" value={profile.emergencyContact.name} />
             <ProfileField label="Mối quan hệ" value={profile.emergencyContact.relationship} />
             <ProfileField label="Số điện thoại" value={profile.emergencyContact.phone} />
           </ProfileSection>
         </div>
 
-        <div className="space-y-5">
-          <section className="liquid-panel p-5">
+        <div className="order-1 space-y-4 lg:order-2 lg:space-y-5">
+          <section className="liquid-panel p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-2.5">
-              <span className="glass-icon h-9 w-9 text-neutral-700 dark:text-neutral-200"><IconSettings3D size={44} /></span>
+              <span className="glass-icon h-9 w-9 text-neutral-700 dark:text-neutral-200 icon-plate"><IconSettings3D size={44} /></span>
               <h2 className="apple-title2 apple-strong kit-text-primary">Giao diện</h2>
             </div>
             <div role="group" aria-label="Chế độ giao diện" className="kit-segmented flex gap-1">
@@ -100,16 +103,16 @@ export function Profile() {
                 <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('kit-segment min-h-16 min-w-0 flex-1 flex-col gap-1.5 px-1 py-2 text-xs', mode === value && 'kit-segment-active')}><Icon size={18} strokeWidth={1.7} />{label}</button>
               ))}
             </div>
-            <p className="mt-3 apple-callout kit-text-secondary">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
+            <p className="mt-3 hidden apple-callout kit-text-secondary sm:block">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
           </section>
 
           <section className="liquid-panel overflow-hidden p-2" aria-label="Tài khoản và tài liệu">
             <button type="button" onClick={openContractModal} className="kit-list-row flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
-              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200"><IconContract3D size={40} /></span><span className="flex-1 apple-body font-medium kit-text-primary">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
+              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate"><IconContract3D size={40} /></span><span className="flex-1 apple-body font-medium kit-text-primary">Hợp đồng thuê phòng</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
             </button>
             <div className="mx-3 border-t border-neutral-200/50 dark:border-white/10" />
             <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="kit-list-row flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-neutral-500/5">
-              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200"><IconKey3D size={40} /></span><span className="flex-1 apple-body font-medium kit-text-primary">Đổi mật khẩu</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
+              <span className="glass-icon h-9 w-9 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate"><IconKey3D size={40} /></span><span className="flex-1 apple-body font-medium kit-text-primary">Đổi mật khẩu</span><ChevronRight size={16} className="text-neutral-600 dark:text-neutral-300" />
             </button>
           </section>
           <button type="button" onClick={logoutUser} className="liquid-panel-subtle flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-500/5 dark:text-rose-400"><LogOut size={17} />Đăng xuất</button>

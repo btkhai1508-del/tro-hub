@@ -30,23 +30,23 @@
     --radius-control: 12px;
     /* macOS 26 Community kit: Materials / Light. Opacity belongs to the
        material fill only; foreground text and original icons stay opaque. */
-    --material-ultrathin: rgba(246, 246, 246, 0.36);
-    --material-thin: rgba(246, 246, 246, 0.48);
-    --material-medium: rgba(246, 246, 246, 0.60);
-    --material-thick: rgba(246, 246, 246, 0.72);
-    --material-ultrathick: rgba(246, 246, 246, 0.84);
-    --material-blur: 15px;
+    --material-ultrathin: rgba(255, 255, 255, 0.12);
+    --material-thin: rgba(255, 255, 255, 0.18);
+    --material-medium: rgba(255, 255, 255, 0.24);
+    --material-thick: rgba(255, 255, 255, 0.30);
+    --material-ultrathick: rgba(255, 255, 255, 0.52);
+    --material-blur: 12px;
     --workspace-fill: rgba(246, 246, 246, 0.68);
     --auth-fill: var(--material-thick);
     --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0.08));
-    --material-inset: rgba(255, 255, 255, 0.42);
+    --material-inset: rgba(255, 255, 255, 0.14);
     --control-fill: rgba(255, 255, 255, 0.72);
     --control-hover: rgba(255, 255, 255, 0.9);
     --control-selected: rgba(255, 255, 255, 0.78);
     --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
-    --liquid-fill: var(--material-thick);
+    --liquid-fill: var(--material-medium);
     --liquid-fill-subtle: var(--material-ultrathin);
     --liquid-edge: rgba(255, 255, 255, 0.55);
     --liquid-stroke: var(--separator);
@@ -56,7 +56,7 @@
   }
 
   .dark {
-    --liquid-fill: var(--material-ultrathick);
+    --liquid-fill: var(--material-medium);
     --text-primary: #ffffff;
     --text-secondary: #e5e5e7;
     --text-tertiary: #b8b8bf;
@@ -67,8 +67,8 @@
     /* macOS 26 Community kit: Materials / Dark. */
     --material-ultrathin: rgba(0, 0, 0, 0.10);
     --material-thin: rgba(0, 0, 0, 0.20);
-    --material-medium: rgba(0, 0, 0, 0.29);
-    --material-thick: rgba(0, 0, 0, 0.40);
+    --material-medium: rgba(12, 12, 16, 0.24);
+    --material-thick: rgba(12, 12, 16, 0.34);
     --material-ultrathick: rgba(0, 0, 0, 0.50);
     --workspace-fill: rgba(0, 0, 0, 0.50);
     --auth-fill: var(--material-ultrathick);
@@ -229,7 +229,7 @@
   .badge-paid { background: #eaf8f0; color: #177747; border: 1px solid #cfe9d9; }
   .dark .badge-unpaid { background: rgba(224, 117, 68, 0.13); color: #ffb093; border-color: rgba(255, 176, 147, 0.18); }
   .dark .badge-paid { background: rgba(65, 185, 125, 0.12); color: #86dfb0; border-color: rgba(134, 223, 176, 0.18); }
-  .page-transition { animation: liquid-appear 420ms var(--liquid-ease) both; }
+  .page-transition { animation: none; }
   .font-apple-semibold, .font-apple-70bold { font-weight: 600; }
   .font-apple-medium { font-weight: 500; }
 }

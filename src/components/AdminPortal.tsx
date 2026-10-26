@@ -1,25 +1,27 @@
+import * as NavIcons from 'lucide-react';
+import '../styles/admin-tahoe.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  Users, 
-  Receipt, 
-  Search, 
-  FileText, 
-  Zap, 
-  Settings, 
-  BookOpen, 
-  Power, 
-  RefreshCw, 
-  ArrowLeft, 
-  Save, 
-  Printer, 
-  TrendingUp, 
-  Droplet, 
-  Bike, 
-  Calendar, 
-  ChevronRight, 
-  ChevronLeft, 
+import {
+  Home,
+  Users,
+  Receipt,
+  Search,
+  FileText,
+  Zap,
+  Settings,
+  BookOpen,
+  Power,
+  RefreshCw,
+  ArrowLeft,
+  Save,
+  Printer,
+  TrendingUp,
+  Droplet,
+  Bike,
+  Calendar,
+  ChevronRight,
+  ChevronLeft,
   ChevronDown,
   LogOut,
   Building2,
@@ -39,7 +41,7 @@ import {
   RotateCcw,
   CalendarClock,
   FileSpreadsheet
-} from 'lucide-react';
+} from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
@@ -48,15 +50,15 @@ import { apiFetch } from '../lib/api';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { ModernLineGraph } from './ModernLineGraph';
 import { Background } from './Background';
-import { 
-  IconHome3D, 
-  IconWallet3D, 
-  IconSecurity3D, 
-  IconProfile3D, 
-  IconNotification3D, 
-  IconCalendar3D, 
-  IconChat3D, 
-  IconLocation3D, 
+import {
+  IconHome3D,
+  IconWallet3D,
+  IconSecurity3D,
+  IconProfile3D,
+  IconNotification3D,
+  IconCalendar3D,
+  IconChat3D,
+  IconLocation3D,
   IconTick3D,
   IconElectricity3D,
   IconWater3D,
@@ -138,6 +140,29 @@ export const DEFAULT_MONTH_TABS = Array.from(new Set([
   '10/2026',
   currentMonth
 ]));
+
+function NavigationHome({ size = 20, className = '' }: { size?: number; className?: string }) { return <img src="/icons/home.svg" alt="" aria-hidden="true" width={size} height={size} className={className} />; }
+
+
+function AdminDisclosure({ title, description, className = '', children }: { title: string; description: string; className?: string; children: React.ReactNode }) {
+  const [expanded, setExpanded] = useState(false);
+  const contentId = React.useId();
+  return <section className={cn('admin-disclosure', className)}>
+    <button type="button" className="admin-disclosure-trigger" aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded(value => !value)}>
+      <span><span className="apple-headline kit-text-primary block">{title}</span><span className="apple-callout kit-text-secondary block mt-1">{description}</span></span>
+      <ChevronDown size={22} className={cn('admin-disclosure-arrow', expanded && 'is-expanded')} />
+    </button>
+    <div id={contentId} className={cn('admin-disclosure-content', expanded && 'is-expanded')}>{children}</div>
+  </section>;
+}
+
+function AdminEmptyState({ filtered, title }: { filtered: boolean; title: string }) {
+  return <div className="kit-data-surface rounded-[20px] px-5 py-8 text-center" role="status">
+    <Search size={32} className="mx-auto mb-3" />
+    <h2 className="apple-title2 kit-text-primary font-semibold">{filtered ? 'Không có kết quả phù hợp' : title}</h2>
+    <p className="apple-callout kit-text-secondary mt-2">{filtered ? 'Thử tên, số phòng hoặc trạng thái khác.' : 'Bạn có thể đổi kỳ tháng hoặc làm mới dữ liệu.'}</p>
+  </div>;
+}
 
 export function AdminPortal() {
   const navigate = useNavigate();
@@ -251,6 +276,7 @@ export function AdminPortal() {
 
   // Loading
   const [isLoading, setIsLoading] = useState(false);
+  const [adminLoadError, setAdminLoadError] = useState('');
 
 
   // Payment Gate state
@@ -264,6 +290,8 @@ export function AdminPortal() {
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
   const [billingList, setBillingList] = useState<any[]>([]);
   const [plateQuery, setPlateQuery] = useState('');
+  const [adminSearch, setAdminSearch] = useState('');
+  const [collectionFilter, setCollectionFilter] = useState('all');
   const [plateResults, setPlateResults] = useState<any[]>([]);
 
   // Contract state
@@ -460,8 +488,8 @@ export function AdminPortal() {
 
   // List of available rooms for notification custom selector (không trùng lặp, chuẩn format xxx)
   const availableRoomNumbers = useMemo(() => {
-    const rawList = roomsList && roomsList.length > 0 
-      ? roomsList.map(r => formatRoomNumber(r.room)) 
+    const rawList = roomsList && roomsList.length > 0
+      ? roomsList.map(r => formatRoomNumber(r.room))
       : [
           'G01', 'G02', 'G03', 'G04', 'G05', 'G06', 'G07',
           '101', '102', '103', '104', '105', '106', '107', '108',
@@ -470,10 +498,10 @@ export function AdminPortal() {
           'LVC-101', 'LVC-102', 'LVC-103', 'LVC-104',
           'LVC-201', 'LVC-202', 'LVC-203', 'LVC-204'
         ];
-    
+
     // Deduplicate
     const unique = Array.from(new Set(rawList.map(r => formatRoomNumber(r)))).filter(Boolean);
-    
+
     // Sort: G01-G07 -> 101...502 -> LVC-101...
     return unique.sort((a, b) => {
       const isGA = a.startsWith('G');
@@ -622,6 +650,7 @@ export function AdminPortal() {
   };
 
   const loadTabContent = async (menuKey: string, month: string) => {
+    setAdminLoadError('');
     if (menuKey === 'dashboard') {
       setIsLoading(true);
       apiFetch(`/api/admin/dashboard?month=${month}`)
@@ -639,7 +668,7 @@ export function AdminPortal() {
             }));
           }
         })
-        .catch(() => setIsLoading(false));
+        .catch(() => { setIsLoading(false); setAdminLoadError('Chưa tải được tổng quan. Vui lòng thử lại.'); });
       fetchRooms(month);
     } else if (menuKey === 'rooms') {
       fetchRooms(month);
@@ -651,9 +680,10 @@ export function AdminPortal() {
           return res.json();
         })
         .then(d => {
-          if (d.success && d.billing?.length) setBillingList(d.billing);
+          if (d.success && Array.isArray(d.billing)) setBillingList(d.billing);
+          else if (d.success === false) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
         })
-        .catch(() => {});
+        .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
     } else if (menuKey === 'plates') {
       fetchPlates(month, plateQuery);
     } else if (menuKey === 'declaration') {
@@ -668,7 +698,7 @@ export function AdminPortal() {
         .then(d => {
           if (d.success && d.config) setUnitConfig(d.config);
         })
-        .catch(() => {});
+        .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
     } else if (menuKey === 'contract') {
       apiFetch(`/api/admin/contract/history?month=${month}&houseKey=${contractHouse}`)
         .then(res => {
@@ -679,7 +709,7 @@ export function AdminPortal() {
         .then(d => {
           if (d.success) setContractHistory(d.history || []);
         })
-        .catch(() => {});
+        .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
     }
   };
 
@@ -693,14 +723,15 @@ export function AdminPortal() {
       })
       .then(d => {
         setIsLoading(false);
-        if (d.success && d.rooms?.length) {
+        if (d.success && Array.isArray(d.rooms)) {
           setRoomsList(d.rooms);
           setBillingList(d.rooms);
           updateDashboardStats(d.rooms, month);
-        }
+        } else if (d.success === false) setAdminLoadError('Chưa tải được danh sách phòng. Vui lòng thử lại.');
       })
       .catch(() => {
         setIsLoading(false);
+        setAdminLoadError('Chưa tải được danh sách phòng. Vui lòng thử lại.');
       });
   };
 
@@ -1057,10 +1088,35 @@ export function AdminPortal() {
 
   // Rent collection progress stats
   const totalRoomsCount = roomsList.length || dashboardData?.tongPhong || 0;
-  const paidRoomsCount = roomsList.length 
-    ? roomsList.filter(r => r.paymentStatus === 'paid' || r.status === 'paid').length 
+  const paidRoomsCount = roomsList.length
+    ? roomsList.filter(r => r.paymentStatus === 'paid' || r.status === 'paid').length
     : (dashboardData?.daDong ?? 0);
   const collectionPercent = totalRoomsCount > 0 ? Math.round((paidRoomsCount / totalRoomsCount) * 100) : 0;
+
+
+  const adminPageTitles: Record<string, { title: string; description: string }> = {
+    dashboard: { title: 'Tổng quan', description: 'Doanh thu và tình hình nhà trọ trong tháng.' },
+    rooms: { title: 'Phòng & khách thuê', description: 'Tìm phòng, xem cư dân và cập nhật thông tin.' },
+    roomDetail: { title: 'Chi tiết phòng', description: 'Thông tin cư dân, chỉ số và chi phí phòng.' },
+    billing: { title: 'Thu tiền tháng', description: 'Theo dõi từng khoản phí và trạng thái thu tiền.' },
+    utilities: { title: 'Công cụ quản lý', description: 'Chọn công việc bạn cần thực hiện.' },
+    meter: { title: 'Chỉ số điện nước', description: 'Nhập chỉ số từng phòng theo kỳ tháng.' },
+    plates: { title: 'Tra biển số xe', description: 'Tìm xe và phòng đã đăng ký.' },
+    contract: { title: 'Hồ sơ cư trú', description: 'Tờ khai CT01 và hợp đồng thuê phòng.' },
+    declaration: { title: 'Kê khai doanh thu', description: 'Sổ doanh thu theo hộ kinh doanh và kỳ tháng.' },
+    config: { title: 'Đơn giá dịch vụ', description: 'Điều chỉnh đơn giá đang áp dụng trong tháng.' },
+    createNotification: { title: 'Thông báo cư dân', description: 'Soạn nội dung và chọn người nhận.' },
+    laundry: { title: 'Quản lý giặt sấy', description: 'Kiểm tra máy, giá dịch vụ và lịch đặt chỗ.' }
+  };
+  const currentAdminPage = adminPageTitles[activeMenu] || adminPageTitles.dashboard;
+  const normalizeAdminSearch = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  const filterAdminRows = (row: any) => {
+    const matchesSearch = normalizeAdminSearch([row.room, row.name, row.phone].join(' ')).includes(normalizeAdminSearch(adminSearch));
+    const status = row.paymentStatus || row.status || 'unpaid';
+    return matchesSearch && (collectionFilter === 'all' || status === collectionFilter);
+  };
+  const visibleRooms = roomsList.filter(filterAdminRows);
+  const visibleBilling = billingList.filter(filterAdminRows);
 
   // Landlord houses information
   const housesInfo = {
@@ -1088,7 +1144,7 @@ export function AdminPortal() {
   const renderCccdBoxes = (code: string) => {
     const digits = (code || '').replace(/\D/g, '').split('');
     return (
-      <div className="inline-flex items-center gap-1 align-middle ml-2">
+      <div className="admin-cccd-boxes inline-flex items-center gap-1 align-middle ml-2">
         {Array.from({ length: 12 }).map((_, idx) => (
           <span
             key={idx}
@@ -1105,9 +1161,9 @@ export function AdminPortal() {
     <div className="min-h-screen relative isolate text-neutral-800 dark:text-neutral-100 flex flex-col lg:flex-row antialiased">
       <OfflineBanner />
       <Background />
-      
+
       {portalToast && (
-        <div 
+        <div role={portalToast.type === 'error' ? 'alert' : 'status'}
           className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl shadow-xl backdrop-blur-md border flex items-center gap-2.5 text-sm font-semibold transition-all"
           style={{
             backgroundColor: portalToast.type === 'error' ? 'rgba(239, 68, 68, 0.95)' : portalToast.type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(30, 41, 59, 0.95)',
@@ -1123,7 +1179,7 @@ export function AdminPortal() {
       {/* =========================================================================
           DESKTOP FLOATING SIDEBAR (Matching resident page aesthetic)
          ========================================================================= */}
-      <aside 
+      <aside
         className={cn(
           "hidden lg:flex flex-col fixed left-4 top-4 bottom-4 z-40 transition-all duration-300 ease-out select-none",
           isSidebarCollapsed ? "w-[105px]" : "w-[260px]"
@@ -1133,7 +1189,7 @@ export function AdminPortal() {
           "liquid-panel relative w-full h-full flex flex-col justify-between py-6 transition-all duration-300",
           isSidebarCollapsed ? "px-3 items-center" : "px-4"
         )}>
-          
+
           {/* Toggle Arrow Button */}
           <button
             type="button"
@@ -1146,35 +1202,35 @@ export function AdminPortal() {
             aria-label={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
           >
             {isSidebarCollapsed ? (
-              <ChevronRight size={18} className="stroke-[2.5]" />
+              <NavIcons.ChevronRight size={18} className="stroke-[2.5]" />
             ) : (
-              <ChevronLeft size={18} className="stroke-[2.5]" />
+              <NavIcons.ChevronLeft size={18} className="stroke-[2.5]" />
             )}
           </button>
           {/* Top Brand */}
           <div className="w-full">
             {isSidebarCollapsed ? (
               <div className="flex justify-center mb-6 w-full">
-                <div 
-                  className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 cursor-pointer hover:scale-105 transition-transform"
+                <div
+                  className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 cursor-pointer hover:scale-105 transition-transform icon-plate"
                   title="Nhà Trọ Phong Lan - Quản lý chủ trọ"
                 >
-                  <Building2 size={24} className="text-white" />
+                  <IconHome3D size={48} />
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-3 px-1 mb-6">
-                <div className="w-11 h-11 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 shrink-0">
-                  <Building2 size={22} className="text-white" />
+                <div className="w-11 h-11 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 shrink-0 icon-plate">
+                  <IconHome3D size={48} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">Phong Lan</span>
-                    <span className="px-1.5 py-0.2 bg-neutral-50 text-neutral-600 text-[10px] font-bold rounded-md font-num border border-neutral-100 uppercase">
+                    <span className="px-1.5 py-0.2 bg-neutral-50 text-neutral-600 text-[10px] font-bold rounded-md font-num border border-neutral-100 uppercase dark:text-neutral-300">
                       Admin
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-600 font-medium truncate">
+                  <p className="text-[11px] text-neutral-600 font-medium truncate dark:text-neutral-300">
                     Quản lý chủ trọ
                   </p>
                 </div>
@@ -1187,14 +1243,14 @@ export function AdminPortal() {
               isSidebarCollapsed ? "flex flex-col items-center space-y-3" : "space-y-1.5"
             )}>
               {[
-                { key: 'dashboard', label: 'Tổng quan', icon: IconHome3D },
-                { key: 'rooms', label: 'Phòng & Khách', icon: Users },
-                { key: 'billing', label: 'Thu tiền tháng', icon: Receipt },
-                { key: 'utilities', label: 'Tiện ích', icon: LayoutGrid }
+                { key: 'dashboard', label: 'Tổng quan', icon: NavigationHome },
+                { key: 'rooms', label: 'Phòng & Khách', icon: NavIcons.Users },
+                { key: 'billing', label: 'Thu tiền tháng', icon: NavIcons.Receipt },
+                { key: 'utilities', label: 'Tiện ích', icon: NavIcons.LayoutGrid }
               ].map(item => {
                 const Icon = item.icon;
-                const isActive = activeMenu === item.key || 
-                  (item.key === 'rooms' && activeMenu === 'roomDetail') || 
+                const isActive = activeMenu === item.key ||
+                  (item.key === 'rooms' && activeMenu === 'roomDetail') ||
                   (item.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
                 return (
                   <button
@@ -1205,22 +1261,22 @@ export function AdminPortal() {
                     }}
                     className={cn(
                       "group relative transition-all duration-200 select-none cursor-pointer",
-                      isSidebarCollapsed 
-                        ? "w-11 h-11 rounded-2xl flex items-center justify-center mx-auto" 
+                      isSidebarCollapsed
+                        ? "w-11 h-11 rounded-2xl flex items-center justify-center mx-auto"
                         : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
-                      isActive 
+                      isActive
                         ? "bg-neutral-500/10 text-neutral-700 dark:bg-neutral-400/15 dark:text-neutral-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] font-semibold"
                         : "text-neutral-600 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 font-medium"
                     )}
                     title={item.label}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Icon 
-                        size={20} 
+                      <Icon
+                        size={20}
                         className={cn(
-                          "transition-all duration-200 shrink-0", 
+                          "transition-all duration-200 shrink-0",
                           isActive ? "text-neutral-600 dark:text-neutral-300 scale-105" : "text-neutral-600 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white group-hover:scale-105"
-                        )} 
+                        )}
                       />
                       {!isSidebarCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
                     </div>
@@ -1240,7 +1296,7 @@ export function AdminPortal() {
                   <div className="flex items-center justify-between gap-1.5">
                     {/* Clickable Month Label with Dropdown Overlay */}
                     <div className="flex items-center gap-2 min-w-0 flex-1 relative cursor-pointer">
-                      <Calendar size={18} className="text-neutral-900 dark:text-white shrink-0" />
+                      <NavIcons.Calendar size={18} className="text-neutral-900 dark:text-white shrink-0" />
                       <div className="min-w-0 flex-1">
                         <span className="text-[9px] text-neutral-600 dark:text-neutral-200 uppercase tracking-wider block font-bold leading-none mb-0.5">
                           Kỳ tháng
@@ -1249,7 +1305,7 @@ export function AdminPortal() {
                           <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">
                             Tháng {selectedMonth}
                           </span>
-                          <ChevronDown size={13} className="text-neutral-900 dark:text-white shrink-0" />
+                          <NavIcons.ChevronDown size={13} className="text-neutral-900 dark:text-white shrink-0" />
                         </div>
                       </div>
                       {/* Full-coverage select so clicking text or chevron opens native picker */}
@@ -1280,7 +1336,7 @@ export function AdminPortal() {
                         title="Tháng trước"
                         aria-label="Tháng trước"
                       >
-                        <ChevronLeft size={14} className="stroke-[2.5]" />
+                        <NavIcons.ChevronLeft size={14} className="stroke-[2.5]" />
                       </button>
                       <button
                         type="button"
@@ -1290,7 +1346,7 @@ export function AdminPortal() {
                         title="Tháng tiếp theo"
                         aria-label="Tháng tiếp theo"
                       >
-                        <ChevronRight size={14} className="stroke-[2.5]" />
+                        <NavIcons.ChevronRight size={14} className="stroke-[2.5]" />
                       </button>
                     </div>
                   </div>
@@ -1306,9 +1362,9 @@ export function AdminPortal() {
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                     {mode === 'light' ? (
-                      <Sun size={15} className="text-amber-500 shrink-0 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
+                      <NavIcons.Sun size={15} className="text-amber-500 shrink-0 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                     ) : mode === 'dark' ? (
-                      <Moon size={15} className="text-neutral-600 shrink-0 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
+                      <NavIcons.Moon size={15} className="text-neutral-600 shrink-0 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)] dark:text-neutral-300" />
                     ) : (
                       <IconClock3D size={18} className="shrink-0" />
                     )}
@@ -1324,7 +1380,7 @@ export function AdminPortal() {
                     title="Làm mới dữ liệu từ Google Sheets"
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                    <RefreshCw size={14} className={cn("text-neutral-900 dark:text-white shrink-0", isLoading && "animate-spin")} />
+                    <NavIcons.RefreshCw size={14} className={cn("text-neutral-900 dark:text-white shrink-0", isLoading && "animate-spin")} />
                     <span className="truncate text-[11px] font-bold">Làm mới</span>
                   </button>
                 </div>
@@ -1359,7 +1415,7 @@ export function AdminPortal() {
                   title="Đăng xuất khỏi hệ thống quản lý"
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                  <LogOut size={15} className="text-neutral-600 dark:text-neutral-200 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
+                  <NavIcons.LogOut size={15} className="text-neutral-600 dark:text-neutral-200 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
                   <span>Đăng xuất Admin</span>
                 </button>
               </div>
@@ -1367,11 +1423,11 @@ export function AdminPortal() {
               /* Collapsed Controls */
               <div className="flex flex-col items-center gap-2 pt-1 w-full">
                 {/* Month Selector in Collapsed Mode */}
-                <div 
+                <div
                   className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white hover:scale-105 transition-all cursor-pointer group"
                   title={`Kỳ tháng: Tháng ${selectedMonth} (Bấm để chọn tháng)`}
                 >
-                  <Calendar size={18} className="text-neutral-900 dark:text-white" />
+                  <NavIcons.Calendar size={18} className="text-neutral-900 dark:text-white" />
                   <select
                     value={selectedMonth}
                     onChange={e => setSelectedMonth(e.target.value)}
@@ -1394,9 +1450,9 @@ export function AdminPortal() {
                   title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
                 >
                   {mode === 'light' ? (
-                    <Sun size={18} className="text-amber-500 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
+                    <NavIcons.Sun size={18} className="text-amber-500 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
                   ) : mode === 'dark' ? (
-                    <Moon size={18} className="text-neutral-600 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)]" />
+                    <NavIcons.Moon size={18} className="text-neutral-600 drop-shadow-[0_2px_4px_rgba(99,102,241,0.3)] dark:text-neutral-300" />
                   ) : (
                     <IconClock3D size={20} />
                   )}
@@ -1409,7 +1465,7 @@ export function AdminPortal() {
                   className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white hover:scale-105 transition-all cursor-pointer"
                   title="Làm mới dữ liệu từ Google Sheets"
                 >
-                  <RefreshCw size={17} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
+                  <NavIcons.RefreshCw size={17} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
                 </button>
 
                 {/* Payment Gate in Collapsed Mode */}
@@ -1422,7 +1478,7 @@ export function AdminPortal() {
                   )}
                   title={`Cổng thanh toán: ${paymentGate}`}
                 >
-                  <Power size={18} />
+                  <NavIcons.Power size={18} />
                 </button>
 
                 {/* Logout in Collapsed Mode */}
@@ -1432,10 +1488,10 @@ export function AdminPortal() {
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-neutral-600 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-neutral-600 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-950/50 transition-colors cursor-pointer dark:text-neutral-300"
                   title="Đăng xuất Admin"
                 >
-                  <LogOut size={16} />
+                  <NavIcons.LogOut size={16} />
                 </button>
               </div>
             )}
@@ -1448,12 +1504,12 @@ export function AdminPortal() {
           MAIN ADMIN WORKSPACE (Aligning with resident page layout & margin)
           ========================================================================= */}
       <main className={cn(
-        "flex-1 min-w-0 p-4 sm:p-6 md:p-7 pb-[90px] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto page-transition transition-all duration-300 ease-out",
+        "admin-workspace flex-1 min-w-0 p-4 sm:p-6 md:p-7 pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto ",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>
-        
+
         {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+        <header className="admin-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
@@ -1462,34 +1518,34 @@ export function AdminPortal() {
               </span>
             </div>
             <h1 className="apple-large-title apple-strong kit-text-primary">
-              Bảng Quản Lý Chủ Trọ
+              {currentAdminPage.title}
             </h1>
             <p className="apple-body kit-text-secondary mt-0.5">
-              Theo dõi doanh thu, chỉ số điện nước, hồ sơ cư trú và kỳ kê khai thuế.
+              {currentAdminPage.description}
             </p>
           </div>
 
           {/* Action Capsule: Month & Refresh - Only shown on mobile, moved to sidebar on desktop */}
-          <div className="flex lg:hidden flex-wrap items-center gap-2">
+          <div className="admin-mobile-toolbar lg:hidden">
             {/* Month Selector with interactive Previous/Next Arrows */}
-            <div className="soft-card px-2.5 py-1.5 flex items-center gap-1.5">
+            <div className="admin-month-control soft-card flex items-center gap-1">
               <button
                 type="button"
                 onClick={handlePrevMonth}
                 disabled={months.indexOf(selectedMonth) <= 0}
-                className="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                className="w-11 h-11 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                 title="Tháng trước"
                 aria-label="Tháng trước"
               >
                 <ChevronLeft size={13} className="stroke-[2.5]" />
               </button>
 
-              <div className="relative flex items-center gap-1.5 px-1 cursor-pointer">
+              <div className="relative flex min-h-11 min-w-0 flex-1 items-center gap-1.5 px-1 cursor-pointer">
                 <Calendar size={15} className="text-neutral-900 dark:text-white shrink-0" />
                 <div>
-                  <span className="text-[9px] text-neutral-600 uppercase tracking-wider block font-semibold leading-none">Kỳ tháng</span>
+                  <span className="text-[9px] text-neutral-600 uppercase tracking-wider block font-semibold leading-none dark:text-neutral-300">Kỳ tháng</span>
                   <div className="flex items-center gap-0.5">
-                    <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">Tháng {selectedMonth}</span>
+                    <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">{selectedMonth}</span>
                     <ChevronDown size={11} className="text-neutral-900 dark:text-white shrink-0" />
                   </div>
                 </div>
@@ -1499,6 +1555,7 @@ export function AdminPortal() {
                     playSound('click');
                     setSelectedMonth(e.target.value);
                   }}
+                  aria-label="Chọn kỳ tháng quản lý"
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                   title={`Kỳ tháng: Tháng ${selectedMonth}`}
                 >
@@ -1512,7 +1569,7 @@ export function AdminPortal() {
                 type="button"
                 onClick={handleNextMonth}
                 disabled={months.indexOf(selectedMonth) >= months.length - 1}
-                className="w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                className="w-11 h-11 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
                 title="Tháng tiếp theo"
                 aria-label="Tháng tiếp theo"
               >
@@ -1527,13 +1584,13 @@ export function AdminPortal() {
                 playSound('click');
                 toggleTheme();
               }}
-              className="soft-button h-9 px-3 rounded-2xl flex items-center gap-1.5 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer"
+              className="admin-header-theme soft-button min-h-11 px-3 rounded-2xl flex items-center gap-1.5 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer"
               title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
             >
               {mode === 'light' ? (
                 <Sun size={15} className="text-amber-500" />
               ) : mode === 'dark' ? (
-                <Moon size={15} className="text-neutral-600" />
+                <Moon size={15} className="text-neutral-600 dark:text-neutral-300" />
               ) : (
                 <IconClock3D size={18} />
               )}
@@ -1547,7 +1604,7 @@ export function AdminPortal() {
                 playSound('click');
                 loadTabContent(activeMenu, selectedMonth);
               }}
-              className="soft-button w-9 h-9 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white cursor-pointer"
+              className="soft-button w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white cursor-pointer"
               title="Làm mới dữ liệu từ Google Sheets"
             >
               <RefreshCw size={15} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
@@ -1561,17 +1618,25 @@ export function AdminPortal() {
                 logoutUser();
                 navigate('/login');
               }}
-              className="soft-button px-3 h-9 rounded-2xl flex items-center gap-1 text-rose-600 text-xs font-bold cursor-pointer"
+              className="admin-header-logout soft-button px-3 min-h-11 rounded-2xl flex items-center gap-1 text-rose-600 text-xs font-bold cursor-pointer"
               title="Đăng xuất Admin"
             >
               <LogOut size={14} />
               <span>Đăng xuất</span>
             </button>
           </div>
-        </div>
+        </header>
+
+        {adminLoadError && <div role="alert" className="admin-load-error kit-data-surface rounded-[18px] p-4 mb-4"><div><p className="apple-headline kit-text-primary">Không thể cập nhật dữ liệu</p><p className="apple-callout kit-text-secondary mt-1">{adminLoadError}</p></div><button type="button" className="soft-button min-h-11 px-4" onClick={() => { setAdminLoadError(''); loadTabContent(activeMenu, selectedMonth); }}><RefreshCw size={18} />Thử lại</button></div>}
+        {isLoading && <p role="status" className="admin-loading-status apple-callout kit-text-secondary mb-4"><span aria-hidden="true" className="ui-spinner h-4 w-4" />Đang cập nhật dữ liệu…</p>}
+        {(activeMenu === 'rooms' || activeMenu === 'billing') && <div className="admin-list-toolbar kit-data-surface rounded-[20px] p-3 mb-4">
+          <label className="admin-search-field"><Search size={21} /><input type="search" value={adminSearch} onChange={event => setAdminSearch(event.target.value)} placeholder="Tìm phòng, tên hoặc số điện thoại" aria-label="Tìm phòng, tên hoặc số điện thoại" /></label>
+          <label className="admin-status-filter"><span className="sr-only">Trạng thái thu tiền</span><select value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái thu tiền"><option value="all">Tất cả trạng thái</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></select></label>
+          <p role="status" className="admin-result-count apple-callout kit-text-secondary">{activeMenu === 'rooms' ? visibleRooms.length : visibleBilling.length} kết quả</p>
+        </div>}
 
         {activeMenu === 'utilities' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 mb-6 animate-in fade-in duration-300">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 mb-6 ">
             {[
               { key: 'createNotification', label: 'Tạo thông báo', icon: IconNotification3D },
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
@@ -1590,7 +1655,7 @@ export function AdminPortal() {
                     playSound('click');
                     setActiveMenu(item.key as any);
                   }}
-                  className="soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:border-neutral-400/80 transition-all cursor-pointer relative group"
+                  className="admin-utility-card soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:border-neutral-400/80 transition-all cursor-pointer relative group"
                 >
                   <div className="group-hover:scale-105 transition-transform duration-200">
                     <Icon size={42} />
@@ -1608,7 +1673,7 @@ export function AdminPortal() {
                 logoutUser();
                 navigate('/login');
               }}
-              className="soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 hover:border-rose-300 transition-all cursor-pointer group"
+              className="admin-utility-card soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 hover:border-rose-300 transition-all cursor-pointer group"
             >
               <div className="group-hover:scale-105 transition-transform duration-200">
                 <IconLogout3D size={42} />
@@ -1622,13 +1687,13 @@ export function AdminPortal() {
             1. DASHBOARD TAB
            ========================================================================= */}
         {activeMenu === 'dashboard' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            
+          <div className="space-y-4 sm:space-y-6 admin-dashboard">
+            <div className="admin-dashboard-actions"><button type="button" onClick={() => setActiveMenu('billing')} className="primary-button min-h-11 px-4"><Receipt size={20} />Thu tiền</button><button type="button" onClick={() => setActiveMenu('rooms')} className="soft-button min-h-11 px-4"><Users size={20} />Phòng & khách</button></div>
             {/* Grid 12 columns */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-              
+
               {/* Highlight Revenue Card (8 cols) */}
-              <div className="md:col-span-8 soft-surface p-6 sm:p-8 relative overflow-hidden group transition-all">
+              <div className="admin-revenue-card md:col-span-8 soft-surface p-6 sm:p-8 relative overflow-hidden group">
 
                 <div className="relative z-10 flex flex-col justify-between h-full gap-6">
                   {/* Top row */}
@@ -1643,13 +1708,13 @@ export function AdminPortal() {
                           </span>
                         </div>
                         <h2 className="type-h2 text-neutral-900 dark:text-white font-bold">
-                          Tổng Doanh Thu Thực Tế Cả 2 Tòa
+                          Doanh thu cả 2 tòa
                         </h2>
                       </div>
                     </div>
 
                     <div className="text-left sm:text-right">
-                      <span className="text-[10px] text-neutral-600 block uppercase font-medium">Tiến độ thu</span>
+                      <span className="text-[10px] text-neutral-600 block uppercase font-medium dark:text-neutral-300">Tiến độ thu</span>
                       <span className="type-button font-num text-emerald-600 block mt-0.5 font-bold">
                         {paidRoomsCount} / {totalRoomsCount} Phòng
                       </span>
@@ -1658,12 +1723,12 @@ export function AdminPortal() {
 
                   {/* Middle row: Big Amount */}
                   <div>
-                    <p className="type-label text-neutral-600 mb-1">
-                      Tổng tiền đã hạch toán cột P
+                    <p className="type-label text-neutral-600 mb-1 dark:text-neutral-300">
+                      Tổng tiền đã hạch toán · Cột P
                     </p>
                     <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
                       {fmt(dashboardData?.doanhThu ?? 0)}
-                      <span className="text-2xl font-normal text-neutral-600">₫</span>
+                      <span className="text-2xl font-normal text-neutral-600 dark:text-neutral-300">₫</span>
                     </div>
                   </div>
 
@@ -1674,7 +1739,7 @@ export function AdminPortal() {
                       <span className="font-num text-neutral-900 dark:text-white font-bold">{collectionPercent}%</span>
                     </div>
                     <div className="w-full h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-neutral-900 dark:bg-white rounded-full transition-all duration-700"
                         style={{ width: `${collectionPercent}%` }}
                       />
@@ -1684,8 +1749,8 @@ export function AdminPortal() {
               </div>
 
               {/* Right KPI Mini Cards (4 cols) */}
-              <div className="md:col-span-4 space-y-4 flex flex-col justify-between">
-                
+              <AdminDisclosure className="md:col-span-4" title="Điện nước & cư dân" description="Chỉ số sử dụng và thông tin đang lưu trú"><div className="admin-dashboard-metrics space-y-4 flex flex-col justify-between">
+
                 {/* Electricity Card with 3D Icon */}
                 <div className="soft-card p-5 flex-1 flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
@@ -1693,7 +1758,7 @@ export function AdminPortal() {
                       <IconElectricity3D size={42} className="shrink-0" />
                       <div>
                         <h3 className="type-h4 text-neutral-900 dark:text-white font-bold">Điện tiêu thụ</h3>
-                        <p className="text-[11px] text-neutral-600 font-num">{fmt(dashboardData?.dien ?? 0)} kW</p>
+                        <p className="text-[11px] text-neutral-600 font-num dark:text-neutral-300">{fmt(dashboardData?.dien ?? 0)} kW</p>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">{fmt(dashboardData?.tienDien ?? 0)} đ</span>
@@ -1707,7 +1772,7 @@ export function AdminPortal() {
                       <IconWater3D size={42} className="shrink-0" />
                       <div>
                         <h3 className="type-h4 text-neutral-900 dark:text-white font-bold">Nước tiêu thụ</h3>
-                        <p className="text-[11px] text-neutral-600 font-num">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
+                        <p className="text-[11px] text-neutral-600 font-num dark:text-neutral-300">{fmt(dashboardData?.nuoc ?? 0)} m³</p>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-neutral-900 dark:text-white font-num">{fmt(dashboardData?.tienNuoc ?? 0)} đ</span>
@@ -1715,12 +1780,12 @@ export function AdminPortal() {
                 </div>
 
                 {/* Occupants & Bikes Card with 3D Icons */}
-                <div className="soft-card p-4 flex items-center justify-between">
+                <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <IconProfile3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soNguoi ?? 0} Cư dân</p>
-                      <p className="text-[10px] text-neutral-600">Đang lưu trú</p>
+                      <p className="text-[10px] text-neutral-600 dark:text-neutral-300">Đang lưu trú</p>
                     </div>
                   </div>
 
@@ -1728,17 +1793,17 @@ export function AdminPortal() {
                     <IconLocation3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soXe ?? 0} Xe máy</p>
-                      <p className="text-[10px] text-neutral-600">Đăng ký giữ xe</p>
+                      <p className="text-[10px] text-neutral-600 dark:text-neutral-300">Đăng ký giữ xe</p>
                     </div>
                   </div>
                 </div>
 
-              </div>
+              </div></AdminDisclosure>
 
               {/* =========================================================================
                   LINE GRAPH (BIỂU ĐỒ ĐIỆN NƯỚC: 6 THÁNG GẦN NHẤT THIẾT KẾ CHUẨN HIỆN ĐẠI)
                  ========================================================================= */}
-              <div className="md:col-span-12 soft-card p-5 sm:p-7 space-y-4">
+              <AdminDisclosure className="md:col-span-12" title="Xu hướng điện nước" description="Mở biểu đồ và chọn kỳ tháng"><div className="soft-card p-5 sm:p-7 space-y-4">
                 <ModernLineGraph
                   data={dashboardData?.usageTrend || []}
                   selectedMonth={selectedMonth}
@@ -1747,7 +1812,7 @@ export function AdminPortal() {
                     setSelectedMonth(m);
                   }}
                 />
-              </div>
+              </div></AdminDisclosure>
 
             </div>
           </div>
@@ -1757,22 +1822,20 @@ export function AdminPortal() {
             2. ROOMS MANAGEMENT
            ========================================================================= */}
         {activeMenu === 'rooms' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 ">
+            {!isLoading && !adminLoadError && visibleRooms.length === 0 && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all')} title="Chưa có thông tin phòng" />}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {roomsList.map(r => {
-                const isPaid = r.status === 'paid';
-                const isPending = r.status === 'pending';
+              {visibleRooms.map(r => {
+                const isPaid = (r.paymentStatus || r.status) === 'paid';
+                const isPending = (r.paymentStatus || r.status) === 'pending';
                 return (
                   <div
                     key={r.room}
-                    onClick={() => openRoomDetail(r.room)}
-                    className="soft-card p-5 flex flex-col justify-between hover:border-neutral-500 transition-all cursor-pointer group"
+                    className="admin-room-card soft-card p-5 flex flex-col justify-between hover:border-neutral-500 transition-all cursor-pointer group"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base group-hover:bg-neutral-900 dark:group-hover:bg-neutral-600 group-hover:text-white transition-colors">
-                        {r.room}
-                      </span>
-                      <div 
+                      <button type="button" onClick={() => openRoomDetail(r.room)} className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-semibold text-base" aria-label={'Mở chi tiết phòng ' + r.room}>{r.room}<ChevronRight size={18} /></button>
+                      <div
                         className="flex items-center gap-2"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -1794,7 +1857,7 @@ export function AdminPortal() {
 
                     <div className="space-y-1">
                       <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{r.name}</h4>
-                      <p className="text-xs text-neutral-600 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                      <p className="text-xs text-neutral-600 font-mono dark:text-neutral-300">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
                 );
@@ -1805,8 +1868,8 @@ export function AdminPortal() {
 
         {/* Room Detail Editor */}
         {activeMenu === 'roomDetail' && currentRoomData && (
-          <div className="space-y-6 animate-in fade-in duration-300 pb-36 sm:pb-32">
-            <div className="soft-card p-4 flex items-center justify-between">
+          <div className="space-y-6  pb-36 sm:pb-32">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 onClick={() => {
                   playSound('click');
@@ -1849,7 +1912,7 @@ export function AdminPortal() {
               {[1, 2, 3].map(slot => (
                 <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Họ tên người {slot}</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Họ tên người {slot}</label>
                     <input
                       type="text"
                       value={currentRoomData[`nguoi${slot}`] || ''}
@@ -1874,7 +1937,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Số CCCD</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Số CCCD</label>
                     <input
                       type="text"
                       value={currentRoomData[`cccd${slot}`] || ''}
@@ -1884,7 +1947,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Số điện thoại</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Số điện thoại</label>
                     <input
                       type="text"
                       value={currentRoomData[`sdt${slot}`] || ''}
@@ -1894,7 +1957,7 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Biển số xe</label>
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Biển số xe</label>
                     <input
                       type="text"
                       value={currentRoomData[`xe${slot}`] || ''}
@@ -1928,15 +1991,15 @@ export function AdminPortal() {
                   <IconElectricity3D size={40} className="shrink-0" />
                   <div>
                     <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
-                    <p className="text-[11px] text-neutral-600">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
+                    <p className="text-[11px] text-neutral-600 dark:text-neutral-300">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Điện cũ</label>
-                    <input 
-                      type="number" 
-                      value={currentRoomData.dienCu || ''} 
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Điện cũ</label>
+                    <input
+                      type="number"
+                      value={currentRoomData.dienCu || ''}
                       onChange={e => {
                         const dienCu = Number(e.target.value) || 0;
                         const dienMoi = Number(currentRoomData.dienMoi) || 0;
@@ -1954,10 +2017,10 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Điện mới</label>
-                    <input 
-                      type="number" 
-                      value={currentRoomData.dienMoi || ''} 
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Điện mới</label>
+                    <input
+                      type="number"
+                      value={currentRoomData.dienMoi || ''}
                       onChange={e => {
                         const dienMoi = Number(e.target.value) || 0;
                         const dienCu = Number(currentRoomData.dienCu) || 0;
@@ -1986,15 +2049,15 @@ export function AdminPortal() {
                   <IconWater3D size={40} className="shrink-0" />
                   <div>
                     <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
-                    <p className="text-[11px] text-neutral-600">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
+                    <p className="text-[11px] text-neutral-600 dark:text-neutral-300">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Nước cũ</label>
-                    <input 
-                      type="number" 
-                      value={currentRoomData.nuocCu || ''} 
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Nước cũ</label>
+                    <input
+                      type="number"
+                      value={currentRoomData.nuocCu || ''}
                       onChange={e => {
                         const nuocCu = Number(e.target.value) || 0;
                         const nuocMoi = Number(currentRoomData.nuocMoi) || 0;
@@ -2012,10 +2075,10 @@ export function AdminPortal() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1">Nước mới</label>
-                    <input 
-                      type="number" 
-                      value={currentRoomData.nuocMoi || ''} 
+                    <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Nước mới</label>
+                    <input
+                      type="number"
+                      value={currentRoomData.nuocMoi || ''}
                       onChange={e => {
                         const nuocMoi = Number(e.target.value) || 0;
                         const nuocCu = Number(currentRoomData.nuocCu) || 0;
@@ -2047,12 +2110,12 @@ export function AdminPortal() {
                   <IconWallet3D size={40} className="shrink-0 drop-shadow-xs" />
                   <div>
                     <h4 className="font-bold text-neutral-900 dark:text-white text-base">Chi Phí Dịch Vụ & Hóa Đơn Chi Tiết</h4>
-                    <p className="text-xs text-neutral-600">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-300">Các khoản phí dịch vụ và tiền phòng tháng {selectedMonth}</p>
                   </div>
                 </div>
-                
+
                 <div className="text-left sm:text-right">
-                  <span className="text-[10px] text-neutral-600 font-bold uppercase block">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
+                  <span className="text-[10px] text-neutral-600 font-bold uppercase block dark:text-neutral-300">Tổng tiền phòng {selectedRoomId} (Cột P)</span>
                   <span className="text-lg font-black font-num text-neutral-900 dark:text-white px-2.5 py-1 rounded-xl transition-all inline-block">
                     {fmt(currentRoomData.tongTien)} đ
                   </span>
@@ -2238,10 +2301,11 @@ export function AdminPortal() {
             3. BILLING TAB (THU TIỀN THÁNG)
            ========================================================================= */}
         {activeMenu === 'billing' && (
-          <div className="font-apple space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+          <div className="font-apple space-y-4 sm:space-y-6 ">
+            {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all')} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
-              {billingList.map(item => {
+              {visibleBilling.map(item => {
                 const isPaid = item.paymentStatus === 'paid';
                 return (
                   <div key={item.room} className="soft-card p-4 space-y-3.5 font-apple">
@@ -2273,32 +2337,32 @@ export function AdminPortal() {
                     </div>
 
                     {/* Service breakdown in 3 columns without scrolling */}
-                    <div className="grid grid-cols-3 gap-2 bg-neutral-50 dark:bg-neutral-800/50 p-2.5 rounded-xl border border-neutral-100 dark:border-neutral-700/50 text-[11px] font-apple">
+                    <details className="admin-billing-breakdown"><summary>Chi tiết các khoản phí<ChevronDown size={18} /></summary><div className="grid grid-cols-2 gap-3 kit-data-surface p-3 rounded-xl text-xs font-apple">
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Phòng</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Phòng</span>
                         <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienPhong)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Điện</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Điện</span>
                         <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Nước</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Nước</span>
                         <span className="font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienNuoc)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Rác</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Rác</span>
                         <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienRac)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Net</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Net</span>
                         <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienNet)} đ</span>
                       </div>
                       <div className="font-apple">
-                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple">Xe</span>
+                        <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Xe</span>
                         <span className="font-apple font-semibold text-neutral-700 dark:text-neutral-300">{fmt(item.tienXe)} đ</span>
                       </div>
-                    </div>
+                    </div></details>
 
                     {/* Total Row */}
                     <div className="flex items-center justify-between pt-0.5 font-apple">
@@ -2313,7 +2377,7 @@ export function AdminPortal() {
             </div>
 
             {/* Desktop View: Full Spacious Table */}
-            <div className="hidden md:block soft-card overflow-hidden font-apple">
+            <div className="hidden md:block soft-card kit-data-surface overflow-hidden font-apple">
               <div className="overflow-x-auto font-apple">
                 <table className="w-full text-left text-xs font-apple">
                   <thead>
@@ -2331,7 +2395,7 @@ export function AdminPortal() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 font-apple">
-                    {billingList.map(item => {
+                    {visibleBilling.map(item => {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={item.room} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple">
@@ -2377,9 +2441,9 @@ export function AdminPortal() {
             4. LICENSE PLATE SEARCH
            ========================================================================= */}
         {activeMenu === 'plates' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 ">
             {/* Top Navigation Bar: Back Button */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2392,8 +2456,8 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
-                <Search size={15} className="text-neutral-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                <Search size={15} className="text-neutral-600 dark:text-neutral-300" />
                 <span>Tra cứu biển số xe</span>
               </div>
             </div>
@@ -2402,11 +2466,11 @@ export function AdminPortal() {
               <IconLocation3D size={52} className="mx-auto drop-shadow-xs mb-1" />
               <div className="text-center max-w-md mx-auto space-y-1 mb-4">
                 <h3 className="type-h2 font-bold text-neutral-900 dark:text-white">Tra Cứu Biển Số Xe</h3>
-                <p className="text-xs text-neutral-600">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
               </div>
 
               <div className="relative max-w-xl mx-auto">
-                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" />
+                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-300" />
                 <input
                   type="text"
                   value={plateQuery}
@@ -2432,7 +2496,7 @@ export function AdminPortal() {
                     </span>
                   </div>
                   <p className="font-bold text-sm text-neutral-800 dark:text-white">{r.name || r.tenant || 'Chưa cập nhật tên'}</p>
-                  <p className="text-xs text-neutral-600 font-mono">SĐT: {r.phone || 'Chưa cập nhật'}</p>
+                  <p className="text-xs text-neutral-600 font-mono dark:text-neutral-300">SĐT: {r.phone || 'Chưa cập nhật'}</p>
                 </div>
               ))}
             </div>
@@ -2443,9 +2507,9 @@ export function AdminPortal() {
             5. CONTRACT & CT01 (A4 PDF/PRINT FORMAT MATCHING USER CODE)
            ========================================================================= */}
         {activeMenu === 'contract' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 ">
             {/* Top Navigation Bar: Back Button */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2458,39 +2522,39 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
-                <FileText size={15} className="text-neutral-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                <FileText size={15} className="text-neutral-600 dark:text-neutral-300" />
                 <span>Hợp đồng & Mẫu CT01</span>
               </div>
             </div>
 
             {/* Action Bar */}
             <div className="soft-card p-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+              <div className="admin-document-switch flex items-center gap-3">
                 <IconCalendar3D size={36} className="shrink-0 drop-shadow-2xs" />
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setContractDocType('ct01')}
+                    onClick={() => setContractDocType('ct01')} aria-pressed={contractDocType === 'ct01'} aria-label="Mẫu CT01 (Tờ khai cư trú)"
                     className={cn(
                       "px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
                       contractDocType === 'ct01' ? "bg-neutral-900 text-white" : "soft-button"
                     )}
                   >
-                    Mẫu CT01 (Tờ khai cư trú)
+                    Tờ khai CT01
                   </button>
                   <button
-                    onClick={() => setContractDocType('contract')}
+                    onClick={() => setContractDocType('contract')} aria-pressed={contractDocType === 'contract'} aria-label="Hợp đồng thuê phòng trọ"
                     className={cn(
                       "px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
                       contractDocType === 'contract' ? "bg-neutral-900 text-white" : "soft-button"
                     )}
                   >
-                    Hợp đồng thuê phòng trọ
+                    Hợp đồng
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="admin-document-actions flex flex-wrap items-center gap-3">
                 <select
                   value={contractHouse}
                   onChange={e => setContractHouse(e.target.value as any)}
@@ -2510,7 +2574,7 @@ export function AdminPortal() {
             </div>
 
             {/* A4 Document Container */}
-            <div 
+            <div
               style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
               className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-neutral-200 shadow-sm max-w-3xl mx-auto text-neutral-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
             >
@@ -2523,7 +2587,7 @@ export function AdminPortal() {
                     Mẫu CT01 ban hành kèm theo Thông tư số 116/2026/TT-BCA<br />
                     ngày 29 tháng 6 năm 2026 của Bộ trưởng Bộ Công an
                   </p>
-                  
+
                   <div className="text-center space-y-1">
                     <p className="font-bold uppercase tracking-wider text-xs sm:text-sm">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
                     <p className="font-bold text-xs sm:text-sm">Độc lập – Tự do – Hạnh phúc</p>
@@ -2552,7 +2616,7 @@ export function AdminPortal() {
                     <p><b>10. Nội dung đề nghị<sup>(3)</sup>:</b> Đăng ký tạm trú cho công dân tại địa chỉ: {activeHouse.address}</p>
                     <p><b>11. Những thành viên trong hộ gia đình cùng thay đổi:</b></p>
 
-                    <table className="w-full border-collapse border border-neutral-800 text-[11px] mt-2 mb-4">
+                    <table aria-label="Thông tin các thành viên cư trú" tabIndex={0} className="admin-ct01-table w-full border-collapse border border-neutral-800 text-[11px] mt-2 mb-4">
                       <thead>
                         <tr className="bg-neutral-100">
                           <th className="border border-neutral-800 p-1 text-center w-8">TT</th>
@@ -2682,9 +2746,9 @@ export function AdminPortal() {
             6. METER BATCH READING
            ========================================================================= */}
         {activeMenu === 'meter' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 ">
             {/* Top Navigation Bar: Back Button */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2697,14 +2761,14 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                 <Zap size={15} className="text-neutral-900 dark:text-white" />
                 <span>Nhập chỉ số điện nước</span>
               </div>
             </div>
 
-            <div className="soft-card p-6 space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
+              <div className="admin-section-toolbar flex flex-wrap items-center justify-between gap-3">
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
                 <button
                   type="button"
@@ -2718,7 +2782,7 @@ export function AdminPortal() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="admin-meter-table w-full text-left text-xs">
                   <thead>
                     <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-200 font-bold uppercase">
                       <th className="p-3">Phòng</th>
@@ -2737,34 +2801,38 @@ export function AdminPortal() {
                       return (
                         <tr key={r.room} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition-colors">
                           <td className="p-3 font-bold text-neutral-900 dark:text-white">{r.room}</td>
-                          <td className="p-2">
-                            <input 
-                              type="number" 
-                              value={currentDienCu} 
+                          <td data-label="Điện cũ" className="p-2">
+                            <input
+                              type="number"
+                              value={currentDienCu}
+                              aria-label={'Điện cũ phòng ' + r.room} inputMode="decimal"
                               onChange={e => handleBatchMeterChange(r.room, 'dienCu', Number(e.target.value) || 0)}
                               className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
-                          <td className="p-2">
-                            <input 
-                              type="number" 
-                              value={currentDienMoi} 
+                          <td data-label="Điện mới" className="p-2">
+                            <input
+                              type="number"
+                              value={currentDienMoi}
+                              aria-label={'Điện mới phòng ' + r.room} inputMode="decimal"
                               onChange={e => handleBatchMeterChange(r.room, 'dienMoi', Number(e.target.value) || 0)}
                               className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
-                          <td className="p-2">
-                            <input 
-                              type="number" 
-                              value={currentNuocCu} 
+                          <td data-label="Nước cũ" className="p-2">
+                            <input
+                              type="number"
+                              value={currentNuocCu}
+                              aria-label={'Nước cũ phòng ' + r.room} inputMode="decimal"
                               onChange={e => handleBatchMeterChange(r.room, 'nuocCu', Number(e.target.value) || 0)}
                               className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
                           </td>
-                          <td className="p-2">
-                            <input 
-                              type="number" 
-                              value={currentNuocMoi} 
+                          <td data-label="Nước mới" className="p-2">
+                            <input
+                              type="number"
+                              value={currentNuocMoi}
+                              aria-label={'Nước mới phòng ' + r.room} inputMode="decimal"
                               onChange={e => handleBatchMeterChange(r.room, 'nuocMoi', Number(e.target.value) || 0)}
                               className="w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
                             />
@@ -2783,9 +2851,9 @@ export function AdminPortal() {
             7. CONFIG TAB (CÀI ĐẶT ĐƠN GIÁ)
            ========================================================================= */}
         {activeMenu === 'config' && (
-          <div className="space-y-6 animate-in fade-in duration-300 pb-36 sm:pb-32">
+          <div className="space-y-6  pb-36 sm:pb-32">
             {/* Top Navigation Bar: Back Button */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2798,26 +2866,27 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
-                <Settings size={15} className="text-neutral-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                <Settings size={15} className="text-neutral-600 dark:text-neutral-300" />
                 <span>Cài đặt đơn giá phí</span>
               </div>
             </div>
 
-            <div className="soft-card p-6 sm:p-8 space-y-6">
+            <div className="soft-card kit-form-surface p-4 sm:p-8 space-y-6">
               <div>
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
                 <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">
                   Đồng bộ trực tiếp các ô <span className="font-semibold text-neutral-600 dark:text-neutral-200">H5</span> (Điện), <span className="font-semibold text-neutral-600 dark:text-neutral-200">I5</span> (Nước), <span className="font-semibold text-neutral-600 dark:text-neutral-200">K5</span> (Rác), <span className="font-semibold text-neutral-600 dark:text-neutral-200">L5</span> (Internet), <span className="font-semibold text-neutral-600 dark:text-neutral-200">M5</span> (Xe) trên Google Sheet.
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-600 uppercase">Điện (1 kW)</label>
+                  <label htmlFor="admin-price-dien" className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">Điện (1 kW)</label>
                   <div className="relative">
                     <input
                       type="text"
+                      id="admin-price-dien" inputMode="numeric"
                       value={unitConfig.dien ? fmt(unitConfig.dien) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, dien: parseCurrency(e.target.value) })}
@@ -2828,10 +2897,11 @@ export function AdminPortal() {
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-600 uppercase">Nước (1 m³)</label>
+                  <label htmlFor="admin-price-nuoc" className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">Nước (1 m³)</label>
                   <div className="relative">
                     <input
                       type="text"
+                      id="admin-price-nuoc" inputMode="numeric"
                       value={unitConfig.nuoc ? fmt(unitConfig.nuoc) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, nuoc: parseCurrency(e.target.value) })}
@@ -2842,10 +2912,11 @@ export function AdminPortal() {
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-600 uppercase">Tiền Rác</label>
+                  <label htmlFor="admin-price-rac" className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">Tiền Rác</label>
                   <div className="relative">
                     <input
                       type="text"
+                      id="admin-price-rac" inputMode="numeric"
                       value={unitConfig.rac ? fmt(unitConfig.rac) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, rac: parseCurrency(e.target.value) })}
@@ -2856,10 +2927,11 @@ export function AdminPortal() {
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-600 uppercase">Internet / người</label>
+                  <label htmlFor="admin-price-net" className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">Internet / người</label>
                   <div className="relative">
                     <input
                       type="text"
+                      id="admin-price-net" inputMode="numeric"
                       value={unitConfig.net ? fmt(unitConfig.net) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, net: parseCurrency(e.target.value) })}
@@ -2870,10 +2942,11 @@ export function AdminPortal() {
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
-                  <label className="text-xs font-bold text-neutral-600 uppercase">Xe máy / chiếc</label>
+                  <label htmlFor="admin-price-xe" className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">Xe máy / chiếc</label>
                   <div className="relative">
                     <input
                       type="text"
+                      id="admin-price-xe" inputMode="numeric"
                       value={unitConfig.xe ? fmt(unitConfig.xe) : ''}
                       placeholder="0"
                       onChange={e => setUnitConfig({ ...unitConfig, xe: parseCurrency(e.target.value) })}
@@ -2892,7 +2965,7 @@ export function AdminPortal() {
                   <Save size={16} />
                   <span>Lưu cấu hình đơn giá</span>
                 </button>
-                {configSaveMsg && <p className="text-xs font-bold text-emerald-600">{configSaveMsg}</p>}
+                {configSaveMsg && <p role="status" className="text-xs font-bold text-emerald-600">{configSaveMsg}</p>}
               </div>
             </div>
           </div>
@@ -2902,9 +2975,9 @@ export function AdminPortal() {
             8. DECLARATION TAB (SỔ DOANH THU MẪU S1a-HKD)
            ========================================================================= */}
         {activeMenu === 'declaration' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 ">
             {/* Top Navigation Bar: Back Button */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2917,8 +2990,8 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
-                <BookOpen size={15} className="text-neutral-600" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                <BookOpen size={15} className="text-neutral-600 dark:text-neutral-300" />
                 <span>Kỳ kê khai doanh thu (S1a-HKD)</span>
               </div>
             </div>
@@ -2965,7 +3038,7 @@ export function AdminPortal() {
             )}
 
             {/* Mẫu S1a-HKD Container */}
-            <div 
+            <div
               style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
               className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-neutral-200 shadow-sm max-w-4xl mx-auto text-neutral-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
             >
@@ -2992,7 +3065,7 @@ export function AdminPortal() {
               </div>
 
               {/* Table */}
-              <table className="w-full border-collapse border border-neutral-800 text-xs sm:text-sm mb-6">
+              <table className="admin-declaration-table w-full border-collapse border border-neutral-800 text-xs sm:text-sm mb-6">
                 <thead>
                   <tr className="bg-neutral-100 border-b border-neutral-800">
                     <th className="border border-neutral-800 p-2 text-center w-28">Ngày tháng</th>
@@ -3003,10 +3076,10 @@ export function AdminPortal() {
                 <tbody>
                   {declarationRows.map((row, idx) => (
                     <tr key={idx} className="border-b border-neutral-800">
-                      <td className="border border-neutral-800 p-2 text-center">
+                      <td data-label="Ngày tháng" className="border border-neutral-800 p-2 text-center">
                         <input
                           type="text"
-                          value={row.date || ''}
+                          aria-label={'Ngày đóng dòng ' + (idx + 1)} inputMode="numeric" value={row.date || ''}
                           onChange={e => {
                             const updated = [...declarationRows];
                             updated[idx].date = e.target.value;
@@ -3016,10 +3089,10 @@ export function AdminPortal() {
                           className="w-full text-center bg-transparent border-none outline-none font-serif text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="border border-neutral-800 p-2">
+                      <td data-label="Người đóng / Phòng" className="border border-neutral-800 p-2">
                         <input
                           type="text"
-                          value={row.person || ''}
+                          aria-label={'Người đóng hoặc phòng dòng ' + (idx + 1)} value={row.person || ''}
                           onChange={e => {
                             const updated = [...declarationRows];
                             updated[idx].person = e.target.value;
@@ -3029,10 +3102,10 @@ export function AdminPortal() {
                           className="w-full bg-transparent border-none outline-none font-serif text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="border border-neutral-800 p-2 text-right">
+                      <td data-label="Số tiền (VNĐ)" className="border border-neutral-800 p-2 text-right">
                         <input
                           type="number"
-                          value={row.amount || ''}
+                          aria-label={'Số tiền dòng ' + (idx + 1)} inputMode="numeric" value={row.amount || ''}
                           onChange={e => {
                             const updated = [...declarationRows];
                             updated[idx].amount = Number(e.target.value) || 0;
@@ -3083,10 +3156,10 @@ export function AdminPortal() {
             9. CREATE NOTIFICATION TAB (TẠO THÔNG BÁO CHO CƯ DÂN)
            ========================================================================= */}
         {activeMenu === 'createNotification' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            
+          <div className="space-y-6 ">
+
             {/* Top Navigation Bar: Back Button */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -3136,13 +3209,13 @@ export function AdminPortal() {
 
               {/* Form Body */}
               <div className="space-y-6">
-                
+
                 {/* 1. MỤC PHÒNG */}
                 <div className="space-y-3">
                   <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
                     1. Phòng nhận thông báo <span className="text-rose-500">*</span>
                   </label>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* Option 1: Tất cả */}
                     <button
@@ -3258,7 +3331,7 @@ export function AdminPortal() {
                           <button
                             type="button"
                             onClick={() => setSelectedCustomRooms([])}
-                            className="text-[11px] font-bold text-neutral-600 hover:text-neutral-600 cursor-pointer"
+                            className="text-[11px] font-bold text-neutral-600 hover:text-neutral-600 cursor-pointer dark:text-neutral-300"
                           >
                             Bỏ chọn
                           </button>
@@ -3274,7 +3347,7 @@ export function AdminPortal() {
                               type="button"
                               onClick={() => {
                                 playSound('click');
-                                setSelectedCustomRooms(prev => 
+                                setSelectedCustomRooms(prev =>
                                    isSelected ? prev.filter(r => r !== rNum) : [...prev, rNum]
                                 );
                               }}
@@ -3528,9 +3601,9 @@ export function AdminPortal() {
             10. LAUNDRY ADMIN TAB (QUẢN LÝ HỆ THỐNG GIẶT SẤY 24/7)
            ========================================================================= */}
         {activeMenu === 'laundry' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 ">
             {/* Top Navigation Bar: Back Button & Title */}
-            <div className="soft-card p-4 flex items-center justify-between">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -3544,13 +3617,14 @@ export function AdminPortal() {
               </button>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>LaundryFlow Server Engine Active</span>
+                <span className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5 dark:text-neutral-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>Máy giặt & lịch đặt</span>
                 </span>
                 <button
                   type="button"
                   onClick={handleAdminSyncSheet}
+                  aria-label="Đồng bộ danh sách máy và giá dịch vụ"
                   disabled={laundryLoading}
                   className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-neutral-600 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-800/60"
                   title="Đồng bộ danh sách máy và giá từ tab Machines trên Google Sheet"
@@ -3561,6 +3635,7 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={fetchAdminLaundry}
+                  aria-label="Cập nhật trạng thái máy giặt sấy"
                   disabled={laundryLoading}
                   className="soft-button px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
@@ -3581,25 +3656,25 @@ export function AdminPortal() {
             {/* Overview Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Doanh thu hôm nay</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block dark:text-neutral-300">Doanh thu hôm nay</span>
                 <span className="text-xl font-bold font-num text-emerald-600 dark:text-emerald-400">
                   {(laundryStats.todayRevenue || 0).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Tổng doanh thu</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block dark:text-neutral-300">Tổng doanh thu</span>
                 <span className="text-xl font-bold font-num text-neutral-900 dark:text-white">
                   {(laundryStats.totalRevenue || 0).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Phiên giặt hôm nay</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block dark:text-neutral-300">Phiên giặt hôm nay</span>
                 <span className="text-xl font-bold font-num text-neutral-600 dark:text-neutral-200">
                   {laundryStats.todaySessions || 0} lượt
                 </span>
               </div>
               <div className="soft-card p-4 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-600 block">Lịch cọc đang giữ</span>
+                <span className="text-[10px] uppercase font-bold text-neutral-600 block dark:text-neutral-300">Lịch cọc đang giữ</span>
                 <span className="text-xl font-bold font-num text-amber-600 dark:text-amber-400">
                   {laundryStats.activeBookings || 0} slot
                 </span>
@@ -3609,22 +3684,22 @@ export function AdminPortal() {
             {/* Machine Management Grid */}
             <div className="space-y-3">
               <h3 className="type-h3 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                <WashingMachine size={20} className="text-neutral-600" />
+                <WashingMachine size={20} className="text-neutral-600 dark:text-neutral-300" />
                 <span>Điều Khiển Máy Giặt & Máy Sấy Trực Tuyến</span>
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                 {laundryMachines.map(m => {
                   const isWasher = m.type === 'WASHER';
-                  const remainingSec = m.status === 'RUNNING' && m.expectedEndTime 
+                  const remainingSec = m.status === 'RUNNING' && m.expectedEndTime
                     ? Math.max(0, Math.floor((new Date(m.expectedEndTime).getTime() - Date.now()) / 1000))
                     : 0;
                   const minsLeft = Math.ceil(remainingSec / 60);
 
                   return (
-                    <div 
+                    <div
                       key={m.machineId}
-                      className="soft-card p-5 space-y-4 border border-neutral-200/80 dark:border-neutral-800"
+                      className="admin-machine-card soft-card p-5 space-y-4 border border-neutral-200/80 dark:border-neutral-800"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -3634,7 +3709,7 @@ export function AdminPortal() {
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
                                 {m.machineId}
                               </span>
-                              <span className="text-xs font-semibold text-neutral-600">
+                              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                                 {isWasher ? 'Máy giặt' : 'Máy sấy'} • {m.cycleMinutes}p
                               </span>
                             </div>
@@ -3659,7 +3734,7 @@ export function AdminPortal() {
                       </div>
 
                       {/* Power Switch & Price Bar */}
-                      <div className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl flex items-center justify-between text-xs">
+                      <div className="admin-machine-power kit-data-surface p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
                         <div className="flex items-center gap-2.5">
                           <span className="text-neutral-700 dark:text-neutral-200 font-medium">Ổ điện thông minh:</span>
                           <span className={cn(
@@ -3674,7 +3749,7 @@ export function AdminPortal() {
 
                         <button
                           type="button"
-                          onClick={() => handleAdminTogglePlug(m.machineId)}
+                          onClick={() => handleAdminTogglePlug(m.machineId)} aria-label={`Đổi nguồn máy ${m.machineId}`}
                           className="soft-button px-3 py-1 text-xs font-bold flex items-center gap-1 cursor-pointer"
                         >
                           <Power size={13} className={m.plugState === 'ON' ? "text-emerald-600" : "text-neutral-600"} />
@@ -3683,11 +3758,12 @@ export function AdminPortal() {
                       </div>
 
                       {/* Admin Actions */}
-                      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-2">
+                      <div className="admin-laundry-actions pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-neutral-600">Giá:</span>
+                          <span className="text-xs text-neutral-600 dark:text-neutral-300">Giá:</span>
                           <input
                             type="number"
+                            aria-label={`Giá dịch vụ máy ${m.machineId}`} inputMode="numeric"
                             defaultValue={m.price}
                             onBlur={e => {
                               const val = Number(e.target.value);
@@ -3701,7 +3777,7 @@ export function AdminPortal() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleAdminForceStart(m.machineId)}
+                            onClick={() => handleAdminForceStart(m.machineId)} aria-label={`Bật ngay máy ${m.machineId}`}
                             className="primary-button px-3 py-1.5 text-xs font-bold flex items-center gap-1 cursor-pointer"
                             title="Kích hoạt chạy ngay cho khách"
                           >
@@ -3711,7 +3787,7 @@ export function AdminPortal() {
 
                           <button
                             type="button"
-                            onClick={() => handleAdminReset(m.machineId)}
+                            onClick={() => handleAdminReset(m.machineId)} aria-label={`Đặt lại máy ${m.machineId}`}
                             className="soft-button px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center gap-1 cursor-pointer"
                             title="Reset về Sẵn Sàng & tắt điện"
                           >
@@ -3729,16 +3805,16 @@ export function AdminPortal() {
             {/* Recent Bookings in Admin */}
             <div className="soft-card p-5 space-y-3">
               <h4 className="type-h4 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                <CalendarClock size={18} className="text-neutral-600" />
+                <CalendarClock size={18} className="text-neutral-600 dark:text-neutral-300" />
                 <span>Lịch Đặt Chỗ Gần Đây Của Cư Dân</span>
               </h4>
 
               {laundryBookings.length === 0 ? (
-                <p className="text-xs text-neutral-600">Chưa có lịch đặt chỗ nào.</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">Chưa có lịch đặt chỗ nào.</p>
               ) : (
                 <div className="space-y-2">
                   {laundryBookings.slice(0, 8).map((b: any) => (
-                    <div key={b.bookingId} className="p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl flex items-center justify-between text-xs">
+                    <div key={b.bookingId} className="admin-booking-row kit-data-surface p-3 rounded-xl flex items-center justify-between text-xs">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold font-num bg-neutral-100 text-neutral-800 dark:bg-neutral-950/60 dark:text-neutral-300">
@@ -3747,7 +3823,7 @@ export function AdminPortal() {
                           <span className="font-bold text-neutral-900 dark:text-white">
                             {b.tenantName} {b.roomNumber ? `(P.${b.roomNumber})` : ''}
                           </span>
-                          <span className="text-neutral-600">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
+                          <span className="text-neutral-600 dark:text-neutral-300">Hẹn: {b.bookingTime} ({b.bookingDate})</span>
                         </div>
                       </div>
 
@@ -3773,46 +3849,26 @@ export function AdminPortal() {
       {/* =========================================================================
           MOBILE BOTTOM NAVIGATION (Fixed bottom on mobile)
          ========================================================================= */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 px-3 py-2 flex items-center justify-around shadow-lg">
-        {[
-          { key: 'dashboard', icon: IconHome3D, label: 'Tổng quan' },
-          { key: 'rooms', icon: Users, label: 'Phòng' },
-          { key: 'billing', icon: Receipt, label: 'Thu tiền' },
-          { key: 'utilities', icon: LayoutGrid, label: 'Tiện ích' }
-        ].map(m => {
-          const Icon = m.icon;
-          const isActive = activeMenu === m.key || (m.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
-          return (
-            <button
-              key={m.key}
-              onClick={() => {
-                playSound('click');
-                setActiveMenu(m.key as any);
-              }}
-              className={cn(
-                "flex flex-col items-center justify-center p-2 rounded-2xl transition-all cursor-pointer",
-                isActive ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-600 dark:text-neutral-300 font-medium"
-              )}
-            >
-              <Icon size={20} />
-              <span className="text-[10px] mt-0.5">{m.label}</span>
-            </button>
-          );
-        })}
-
-        {/* Center Power Switch Button */}
-        <button
-          onClick={togglePaymentGate}
-          className={cn(
-            "w-11 h-11 rounded-2xl flex flex-col items-center justify-center text-white shadow-md cursor-pointer",
-            paymentGate === 'START' ? "bg-emerald-500" : "bg-rose-500"
-          )}
-          title={`Cổng thanh toán: ${paymentGate}`}
-        >
-          <Power size={17} />
-          <span className="text-[8px] font-bold uppercase leading-none mt-0.5">{paymentGate}</span>
-        </button>
-      </nav>
+      <div className="kit-admin-dock-wrap fixed inset-x-0 bottom-0 z-50 lg:hidden">
+        <nav aria-label="Điều hướng quản trị" className="kit-dock kit-admin-dock">
+          {[
+            { key: 'dashboard', icon: NavigationHome, label: 'Tổng quan' },
+            { key: 'rooms', icon: NavIcons.Users, label: 'Phòng' },
+            { key: 'billing', icon: NavIcons.Receipt, label: 'Thu tiền' },
+            { key: 'utilities', icon: NavIcons.LayoutGrid, label: 'Tiện ích' }
+          ].map(({ key, icon: Icon, label }) => {
+            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
+            return <button type="button" key={key} aria-current={isActive ? 'page' : undefined} onClick={() => { playSound('click'); setActiveMenu(key as any); }} className={cn('kit-nav-item kit-admin-dock-item', isActive && 'kit-nav-active')}>
+              <Icon size={21} /><span>{label}</span>
+            </button>;
+          })}
+          <span className="kit-admin-dock-divider" aria-hidden="true" />
+          <button type="button" onClick={togglePaymentGate} aria-label={'Cổng thanh toán: ' + (paymentGate === 'START' ? 'đang mở. Nhấn để đóng cổng' : 'đang đóng. Nhấn để mở cổng')} aria-pressed={paymentGate === 'START'} className="kit-nav-item kit-admin-dock-item kit-admin-gate">
+            <span className="relative"><NavIcons.Power size={21} /><span aria-hidden="true" className={cn('kit-gate-dot', paymentGate === 'START' ? 'bg-emerald-500' : 'bg-rose-500')} /></span>
+            <span>{paymentGate === 'START' ? 'Đang mở' : 'Đã đóng'}</span>
+          </button>
+        </nav>
+      </div>
 
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import { Check } from 'lucide-react';
+import { Check } from './AppIcons';
 import { soundFx } from '../lib/soundFx';
 
 export interface AppleSwitchProps {
@@ -184,12 +184,12 @@ export const AppleCheckbox: React.FC<AppleCheckboxProps> = ({
             sizeConfig.box,
             checked
               ? color === 'blue'
-                ? 'border-[#007DDC] bg-[#0091FF] text-white'
-                : 'border-black/10 bg-neutral-900 text-white dark:border-white/20 dark:bg-white dark:text-neutral-950'
+                ? 'border-transparent bg-transparent'
+                : 'border-transparent bg-transparent'
               : 'border-[var(--separator)] bg-[var(--control-fill)]'
           )}
         >
-          {checked && <Check size={sizeConfig.icon} strokeWidth={2.6} />}
+          {checked && <Check size={sizeConfig.icon + 14} strokeWidth={2.6} />}
         </span>
       </button>
 

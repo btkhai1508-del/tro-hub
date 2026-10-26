@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { Printer, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
+import '../styles/resident-tahoe.css';
+import { Printer, ZoomIn, ZoomOut, ChevronRight } from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { IconContract3D, IconDeclaration3D } from './Icons3D';
 
@@ -7,7 +9,14 @@ export function Contract() {
   const { profile } = useApp();
   const [activeTab, setActiveTab] = useState<'contract' | 'ct01'>('contract');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [isDocumentOpen, setIsDocumentOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
   const printRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const preparePrint = () => flushSync(() => setIsDocumentOpen(true));
+    window.addEventListener('beforeprint', preparePrint);
+    return () => window.removeEventListener('beforeprint', preparePrint);
+  }, []);
 
   const cleanRoom = profile.room?.roomNumber
     ? (profile.room.roomNumber.startsWith('P.') ? profile.room.roomNumber : `P. ${profile.room.roomNumber}`)
@@ -32,6 +41,7 @@ export function Contract() {
 
   // Handle native print / export to PDF
   const handlePrint = () => {
+    flushSync(() => setIsDocumentOpen(true));
     window.print();
   };
 
@@ -53,15 +63,16 @@ export function Contract() {
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2"><span className="badge-paid">✓ Đang hiệu lực</span><span className="apple-callout kit-text-secondary">01/06/2026 — 01/12/2028</span></div>
           <span className="apple-callout kit-text-secondary break-all">Mã: {contractCode}</span>
+          <dl className="grid w-full grid-cols-2 gap-3 border-t border-[var(--separator)] pt-3 lg:hidden"><div><dt className="apple-callout kit-text-secondary">Người thuê</dt><dd className="mt-1 break-words apple-body font-medium kit-text-primary">{profile.name || 'Chưa cập nhật'}</dd></div><div><dt className="apple-callout kit-text-secondary">Phòng</dt><dd className="mt-1 break-words apple-body font-medium kit-text-primary">{cleanRoom}</dd></div></dl>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div role="group" aria-label="Loại tài liệu" className="kit-segmented flex w-full max-w-lg items-stretch gap-1">
-            <button type="button" aria-pressed={activeTab === 'contract'} onClick={() => setActiveTab('contract')}
+            <button type="button" aria-pressed={activeTab === 'contract'} onClick={() => { setActiveTab('contract'); setIsDocumentOpen(true); }}
               className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body ${activeTab === 'contract' ? 'kit-segment-active' : ''}`}>
               <IconContract3D size={25} />
               <span>Hợp đồng thuê phòng</span>
             </button>
-            <button type="button" aria-pressed={activeTab === 'ct01'} onClick={() => setActiveTab('ct01')}
+            <button type="button" aria-pressed={activeTab === 'ct01'} onClick={() => { setActiveTab('ct01'); setIsDocumentOpen(true); }}
               className={`kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body ${activeTab === 'ct01' ? 'kit-segment-active' : ''}`}>
               <IconDeclaration3D size={25} />
               <span>Tờ khai cư trú (CT01)</span>
@@ -84,7 +95,13 @@ export function Contract() {
       {/* =========================================================================
           A4 ADMINISTRATIVE PAPER CONTAINER (TIMES NEW ROMAN & PURE BLACK #000000)
           ========================================================================= */}
-      <div className="w-full overflow-x-auto flex justify-center py-2">
+      <details className="resident-disclosure resident-document-disclosure" open={isDocumentOpen} onToggle={event => setIsDocumentOpen(event.currentTarget.open)}>
+        <summary className="resident-disclosure-summary kit-inset min-h-16 gap-3 rounded-[20px] px-4 py-3 print:hidden">
+          <IconContract3D size={40} />
+          <span className="min-w-0 flex-1"><span className="block apple-body font-semibold kit-text-primary">Đọc toàn bộ {activeTab === 'contract' ? 'hợp đồng' : 'tờ khai CT01'}</span><span className="block mt-1 apple-callout kit-text-secondary">Bản tài liệu nền trắng · có thể in hoặc lưu PDF</span></span>
+          <ChevronRight size={20} className="resident-disclosure-chevron shrink-0" />
+        </summary>
+      <div className="resident-detail-body resident-document-scroll w-full overflow-x-auto flex justify-center py-2" tabIndex={0} role="region" aria-label="Nội dung tài liệu; cuộn ngang khi cần">
         <div 
           ref={printRef}
           style={{ 
@@ -481,6 +498,7 @@ export function Contract() {
 
         </div>
       </div>
+      </details>
 
     </div>
   );

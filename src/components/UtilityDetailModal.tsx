@@ -1,15 +1,16 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
-import { X, Copy, Check, Phone, MessageCircle, AlertTriangle, ShieldCheck, Wrench, Wifi, Droplet, Zap, Bike, FileText, CheckCircle2, Send, Clock } from 'lucide-react';
+import { X, Copy, Check, Phone, MessageCircle, AlertTriangle, ShieldCheck, Wrench, Wifi, Droplet, Zap, Bike, FileText, CheckCircle2, Send, Clock } from './AppIcons';
 import { useApp } from '../context/AppContext';
-import { 
-  IconMeter3D, 
+import {
+  IconMeter3D,
   IconElectricity3D,
   IconWater3D,
-  IconVehicle3D, 
-  IconWifi3D, 
-  IconMaintenance3D, 
-  IconDeclaration3D, 
-  IconHandbook3D, 
+  IconVehicle3D,
+  IconWifi3D,
+  IconMaintenance3D,
+  IconDeclaration3D,
+  IconHandbook3D,
   IconSupport3D,
   IconSecurity3D,
   IconClock3D,
@@ -69,6 +70,8 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
   const [meterReportSent, setMeterReportSent] = useState(false);
   const [meterNote, setMeterNote] = useState('');
 
+  const dialogRef = useDialogFocus(Boolean(isOpen && type), onClose);
+
   if (!isOpen || !type) return null;
 
   const copyToClipboard = (text: string, key: string) => {
@@ -101,12 +104,12 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
     : 'P. G02';
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/30 dark:bg-black/45 duration-200"
       onClick={onClose}
     >
-      <div 
-        role="dialog" aria-modal="true" aria-labelledby="utility-dialog-title" className="kit-dialog w-full max-w-2xl flex flex-col max-h-[90svh] overflow-hidden relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1}
+        role="dialog" aria-modal="true" aria-labelledby="utility-dialog-title" className="tahoe-dialog kit-dialog w-full max-w-2xl flex flex-col max-h-[90svh] overflow-hidden relative duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Top Header */}
@@ -148,14 +151,14 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
 
         {/* Modal Scrollable Body */}
         <div className="kit-dialog-body min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 text-neutral-700 dark:text-neutral-200">
-          
+
           {/* =========================================================================
               1. ĐIỆN & NƯỚC (METER)
              ========================================================================= */}
           {type === 'meter' && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* Electricity Card */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50/80 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-neutral-800 space-y-3">
                   <div className="flex items-center justify-between">
@@ -238,7 +241,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                 ) : (
                   <div className="space-y-2.5">
                     <textarea
-                      value={meterNote}
+                      aria-label="Ghi chú kiểm tra chỉ số điện nước" value={meterNote}
                       onChange={(e) => setMeterNote(e.target.value)}
                       placeholder="Nếu bạn thấy chỉ số ghi chưa khớp với công tơ thực tế tại phòng, vui lòng ghi chú số đo hiện tại tại đây..."
                       className="kit-field w-full text-xs p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/60 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white resize-none h-20"
@@ -324,7 +327,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
              ========================================================================= */}
           {type === 'wifi' && (
             <div className="space-y-5">
-              
+
               {/* 5GHz High Speed */}
               <div className="kit-inset p-4 sm:p-5 space-y-3">
                 <div className="flex items-center justify-between">
@@ -415,7 +418,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
              ========================================================================= */}
           {type === 'maintenance' && (
             <div className="space-y-6">
-              
+
               {/* Form to submit request */}
               <form onSubmit={handleCreateTicket} className="kit-inset p-4 sm:p-5 space-y-3.5">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
@@ -436,7 +439,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                       Loại thiết bị / Sự cố:
                     </label>
                     <select
-                      value={mCategory}
+                      aria-label="Loại sự cố" value={mCategory}
                       onChange={(e) => setMCategory(e.target.value)}
                       className="kit-field w-full text-xs p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white"
                     >
@@ -454,7 +457,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                       Mức độ ưu tiên:
                     </label>
                     <select
-                      value={mUrgency}
+                      aria-label="Mức độ ưu tiên" value={mUrgency}
                       onChange={(e) => setMUrgency(e.target.value as any)}
                       className="kit-field w-full text-xs p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white"
                     >
@@ -469,7 +472,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                     Mô tả chi tiết sự cố:
                   </label>
                   <textarea
-                    value={mDesc}
+                    aria-label="Mô tả sự cố" value={mDesc}
                     onChange={(e) => setMDesc(e.target.value)}
                     placeholder="Mô tả cụ thể sự cố để kỹ thuật viên mang đúng đồ nghề (ví dụ: vòi rửa bát bị rò nước ở khớp nối dưới bồn)..."
                     rows={2}
@@ -539,7 +542,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
              ========================================================================= */}
           {type === 'declaration' && (
             <div className="space-y-5">
-              
+
               {/* 4-Step Guide */}
               <div className="p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 dark:border-emerald-900/40 space-y-3 text-xs">
                 <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-300">
@@ -629,7 +632,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
              ========================================================================= */}
           {type === 'rules' && (
             <div className="space-y-4 text-xs leading-relaxed">
-              
+
               {/* Rule 1: Giờ giấc */}
               <div className="kit-inset p-4 space-y-1.5">
                 <h4 className="font-bold text-neutral-900 dark:text-white text-sm">
@@ -680,7 +683,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
              ========================================================================= */}
           {type === 'hotline' && (
             <div className="space-y-3.5">
-              
+
               {/* Landlord Card */}
               <div className="kit-inset p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>

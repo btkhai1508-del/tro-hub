@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import '../styles/resident-tahoe.css';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, LockKeyhole, ReceiptText, WalletCards } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, LockKeyhole, ReceiptText, WalletCards } from './AppIcons';
 import { IconWallet3D } from './Icons3D';
 import { useApp, type Invoice } from '../context/AppContext';
 import { PaymentHistoryExportModal } from './PaymentHistoryExportModal';
@@ -9,6 +10,9 @@ export function InvoicesAndPayment() {
   const navigate = useNavigate();
   const { invoices, openInvoiceDetailModal, paymentGateStatus } = useApp();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | Invoice['status']>('all');
+  const [visibleCount, setVisibleCount] = useState(6);
+  const filteredInvoices = invoices.filter(invoice => statusFilter === 'all' || invoice.status === statusFilter);
   const unpaidInvoices = invoices.filter(invoice => invoice.status === 'unpaid');
   const totalUnpaidAmount = unpaidInvoices.reduce((total, invoice) => total + invoice.total, 0);
   const currency = (amount: number) => amount.toLocaleString('vi-VN');
@@ -37,7 +41,7 @@ export function InvoicesAndPayment() {
         <div className="relative flex flex-col gap-6 p-5 sm:p-7 md:flex-row md:items-center md:justify-between">
           <div className="relative">
             <div className="mb-5 flex items-center gap-2.5">
-              <span className="glass-icon kit-text-secondary"><IconWallet3D size={48} /></span>
+              <span className="glass-icon kit-text-secondary icon-plate"><IconWallet3D size={48} /></span>
               <span className="apple-body font-medium kit-text-secondary">{unpaidInvoices.length ? 'Tổng cần thanh toán' : 'Tổng quan thanh toán'}</span>
             </div>
             <div className="flex flex-wrap items-baseline gap-2 kit-text-primary">
@@ -58,20 +62,30 @@ export function InvoicesAndPayment() {
       </section>
 
       <section aria-labelledby="invoice-list-heading" className="liquid-panel overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-black/[0.07] px-5 py-4 dark:border-white/10 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.07] px-4 py-4 dark:border-white/10 sm:px-6">
           <h2 id="invoice-list-heading" className="kit-card-heading">Hóa đơn theo kỳ</h2>
-          <span className="apple-callout kit-text-secondary">{invoices.length} hóa đơn</span>
+          <label className="resident-invoice-filter flex min-h-11 items-center gap-2 apple-callout kit-text-secondary">
+            <span className="sr-only">Lọc hóa đơn</span>
+            <select aria-label="Lọc hóa đơn" value={statusFilter} onChange={event => { setStatusFilter(event.target.value as typeof statusFilter); setVisibleCount(6); }} className="kit-field min-h-11 max-w-full px-3 py-2 apple-callout">
+              <option value="all">Tất cả kỳ</option><option value="unpaid">Chưa thanh toán</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã thanh toán</option>
+            </select>
+          </label>
         </div>
         {invoices.length === 0 ? (
           <div className="flex flex-col items-center px-6 py-12 text-center">
-            <span className="glass-icon mb-5 h-16 w-16 text-neutral-700"><IconWallet3D size={64} /></span>
+            <span className="glass-icon mb-5 h-16 w-16 text-neutral-700 icon-plate"><IconWallet3D size={64} /></span>
             <h3 className="apple-title2 font-semibold kit-text-primary">Chưa có hóa đơn</h3>
             <p className="mt-2 max-w-xs apple-body leading-relaxed kit-text-secondary">Khi có khoản phí mới, bạn có thể xem chi tiết và theo dõi thanh toán tại đây.</p>
           </div>
-        ) : invoices.map(invoice => (
-          <article key={invoice.id} className="kit-list-row group flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-center">
-            <button type="button" onClick={() => openInvoiceDetailModal(invoice)} aria-label={`Xem chi tiết hóa đơn tháng ${invoice.month}`} className="flex min-w-0 flex-1 items-start gap-3.5 rounded-2xl text-left sm:items-center">
-              <span className="glass-icon shrink-0 kit-text-secondary"><IconWallet3D size={52} /></span>
+        ) : filteredInvoices.length === 0 ? (
+          <div role="status" className="px-5 py-9 text-center">
+            <p className="apple-body font-medium kit-text-primary">Không có hóa đơn ở trạng thái này.</p>
+            <button type="button" onClick={() => setStatusFilter('all')} className="soft-button mt-4 min-h-11 px-4">Xem tất cả kỳ</button>
+          </div>
+        ) : filteredInvoices.slice(0, visibleCount).map(invoice => (
+          <article key={invoice.id} className="kit-list-row group flex flex-col gap-3 px-4 py-4 sm:px-6 md:flex-row md:items-center">
+            <button type="button" onClick={() => openInvoiceDetailModal(invoice)} aria-label={`Xem chi tiết hóa đơn tháng ${invoice.month}`} className="flex min-h-12 min-w-0 flex-1 items-start gap-3.5 rounded-2xl text-left sm:items-center">
+              <span className="glass-icon shrink-0 kit-text-secondary icon-plate"><IconWallet3D size={52} /></span>
               <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="apple-title3 font-semibold tracking-tight kit-text-primary">Tháng {invoice.month}</span>
@@ -80,7 +94,7 @@ export function InvoicesAndPayment() {
                 <span className="mt-1.5 block apple-callout leading-relaxed kit-text-secondary">Hạn nộp {invoice.dueDate} · {invoice.details.length} khoản phí</span>
               </span>
             </button>
-            <div className="flex items-center justify-between gap-4 border-t border-neutral-200/50 pt-4 dark:border-white/10 md:border-0 md:pt-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200/50 pt-4 dark:border-white/10 md:border-0 md:pt-0">
               <span className="font-num apple-title1 font-semibold tracking-tight kit-text-primary">{currency(invoice.total)} <span className="apple-body font-normal kit-text-secondary">₫</span></span>
               {invoice.status === 'unpaid' ? (
                 <button type="button" onClick={() => handlePay(invoice.id)} className="primary-button inline-flex min-h-11 items-center gap-2 px-4 py-2.5 apple-control">
@@ -92,6 +106,7 @@ export function InvoicesAndPayment() {
             </div>
           </article>
         ))}
+        {filteredInvoices.length > visibleCount && <div className="border-t border-[var(--separator)] p-4 text-center"><button type="button" onClick={() => setVisibleCount(count => count + 6)} className="soft-button min-h-11 px-5">Xem thêm hóa đơn</button></div>}
       </section>
       <PaymentHistoryExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>

@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { soundFx } from '../lib/soundFx';
-import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from './AppIcons';
 
 export function PaymentPage() {
-  const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const invoiceIdParam = searchParams.get('invoiceId');
@@ -16,7 +14,7 @@ export function PaymentPage() {
   const { invoices, setInvoices, profile, paymentGateStatus } = useApp();
 
   // Active targeted invoice
-  const selectedInvoice = (invoiceIdParam 
+  const selectedInvoice = (invoiceIdParam
     ? invoices.find(i => i.id === invoiceIdParam) || invoices[0]
     : invoices.find(i => i.status === 'unpaid') || invoices[0]);
   const hasInvoice = Boolean(selectedInvoice);
@@ -33,6 +31,7 @@ export function PaymentPage() {
   });
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState('');
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [pdfError, setPdfError] = useState('');
 
@@ -66,10 +65,15 @@ export function PaymentPage() {
     return val.toLocaleString('vi-VN');
   };
 
-  const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+  const handleCopy = async (text: string, key: string) => {
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch {
+      setCopyError('Chưa thể sao chép. Bạn có thể nhấn giữ để chọn nội dung chuyển khoản.');
+    }
   };
 
   // Real-time automatic polling: checks Google Sheet Column P live status directly
@@ -148,26 +152,26 @@ export function PaymentPage() {
     try {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
-    
+
     // Header
     doc.setFontSize(18);
     doc.setTextColor(15, 23, 42);
     doc.text('NHA TRO PHONG LAN', 105, 22, { align: 'center' });
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
     doc.text(`${profile.room?.building || 'Trung Kim'} | Hotline BQL: 0902 371 800`, 105, 28, { align: 'center' });
-    
+
     // Divider
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.5);
     doc.line(20, 33, 190, 33);
-    
+
     // Title
     doc.setFontSize(14);
     doc.setTextColor(15, 23, 42);
     doc.text(`BIEN LAI THANH TOAN - THANG ${targetInvoice.month}`, 105, 43, { align: 'center' });
-    
+
     // Details
     doc.setFontSize(10);
     doc.setTextColor(71, 85, 105);
@@ -177,7 +181,7 @@ export function PaymentPage() {
     doc.text(`Can ho: ${profile.room?.roomNumber || '203'}`, 190, 61, { align: 'right' });
     doc.text(`Hinh thuc: Chuyen khoan VietQR (Tu dong)`, 20, 68);
     doc.text(`Trang thai: DA HOAN TAT THANH TOAN`, 190, 68, { align: 'right' });
-    
+
     // Table Header
     doc.setFillColor(241, 245, 249);
     doc.rect(20, 75, 170, 8, 'F');
@@ -185,7 +189,7 @@ export function PaymentPage() {
     doc.setTextColor(30, 41, 59);
     doc.text('KHOAN MUC PHI', 24, 80.5);
     doc.text('SO TIEN (VND)', 186, 80.5, { align: 'right' });
-    
+
     // Rows
     let y = 90;
     (targetInvoice.details || []).forEach((item: any) => {
@@ -197,7 +201,7 @@ export function PaymentPage() {
       doc.setDrawColor(241, 245, 249);
       doc.line(20, y - 2, 190, y - 2);
     });
-    
+
     // Total Box
     y += 5;
     doc.setFillColor(248, 250, 252);
@@ -207,12 +211,12 @@ export function PaymentPage() {
     doc.text('TONG CONG THANH TOAN:', 24, y + 9);
     doc.setFontSize(12);
     doc.text(`${targetInvoice.total.toLocaleString('vi-VN')} VND`, 186, y + 9, { align: 'right' });
-    
+
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
     doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
-    
+
     doc.save(`HoaDon_PhongLan_${targetInvoice.month.replace('/', '_')}.pdf`);
     } catch {
       setPdfError('Chưa tạo được PDF. Vui lòng thử lại.');
@@ -224,10 +228,10 @@ export function PaymentPage() {
   const recipientName = 'Bùi Trung Khải';
   const bankName = 'MB Bank (Ngân hàng Quân Đội)';
   const accountNumber = '0902371800';
-  
+
   // Format transfer syntax: Room with LVC -> LVC{room}-T{m}-{y}, Room without LVC -> {room}-T{m}-{y}
   const transferContent = getTransferContent(profile.room?.roomNumber || '', targetInvoice.month);
-  
+
   // Pure QR code matrix without borders or background
   const qrUrl = `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${targetInvoice.total}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(recipientName)}`;
 
@@ -260,6 +264,8 @@ export function PaymentPage() {
 
   return (
     <div className="w-full space-y-5 pb-4">
+      {copiedKey && <span role="status" className="sr-only">Đã sao chép.</span>}
+      {copyError && <p role="alert" className="kit-feedback mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{copyError}</p>}
       <header className="kit-page-header kit-payment-header mx-auto flex w-full max-w-5xl items-center gap-3">
         <button type="button" onClick={() => navigate('/invoices')} aria-label="Quay lại hóa đơn" className="soft-button flex h-11 w-11 shrink-0 items-center justify-center kit-text-secondary"><ChevronLeft size={22} /></button>
         <div>
@@ -268,21 +274,17 @@ export function PaymentPage() {
         </div>
       </header>
       {pdfError && <p role="alert" className="mx-auto max-w-5xl apple-body text-red-700 dark:text-red-300">{pdfError}</p>}
-      <AnimatePresence mode="wait">
+      <>
         {paymentMode === 'processing' ? (
           /* =========================================================================
              PROCESSING TRANSITION SCREEN
              ========================================================================= */
-          <motion.div
+          <div
             key="processing-mode"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[500px] p-8 sm:p-10 flex flex-col items-center text-center transition-colors">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5 animate-pulse">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5 animate-pulse icon-plate">
                 <CheckCircle2 size={36} />
               </div>
 
@@ -313,21 +315,17 @@ export function PaymentPage() {
                 Xem biên lai chi tiết
               </button>
             </main>
-          </motion.div>
+          </div>
         ) : paymentMode === 'success' ? (
           /* =========================================================================
              PAYMENT SUCCESS SCREEN
              ========================================================================= */
-          <motion.div
+          <div
             key="success-mode"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
-              
+
               {/* Success Badge Icon */}
               <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
                 <Check size={40} strokeWidth={3.5} />
@@ -382,7 +380,7 @@ export function PaymentPage() {
 
               {/* Action Buttons */}
               <div className="w-full flex flex-col sm:flex-row items-center gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => navigate('/')}
                   className="primary-button w-full sm:flex-1 min-h-12 px-4"
@@ -391,7 +389,7 @@ export function PaymentPage() {
                   <span>Về trang chủ</span>
                 </button>
 
-                <button 
+                <button
                   type="button"
                   onClick={handleDownloadInvoicePDF}
                   disabled={isExportingPDF}
@@ -403,24 +401,20 @@ export function PaymentPage() {
               </div>
 
             </main>
-          </motion.div>
+          </div>
         ) : paymentGateStatus === 'STOP' ? (
           /* =========================================================================
              PAYMENT GATE CLOSED SCREEN (When Admin turns off payment gate)
              ========================================================================= */
-          <motion.div
+          <div
             key="gate-closed-mode"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[540px] p-6 sm:p-8 flex flex-col items-center text-center transition-colors">
-              <img 
-                src="/lock.svg" 
-                alt="Cổng thanh toán đang tạm đóng" 
-                className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 drop-shadow-[0_10px_25px_rgba(239,68,68,0.22)] select-none pointer-events-none" 
+              <img
+                src="/lock.svg"
+                alt="Cổng thanh toán đang tạm đóng"
+                className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 drop-shadow-[0_10px_25px_rgba(239,68,68,0.22)] select-none pointer-events-none"
               />
 
               <h2 className="apple-title1 font-semibold kit-text-primary mb-2">
@@ -480,26 +474,22 @@ export function PaymentPage() {
                 </button>
               </div>
             </main>
-          </motion.div>
+          </div>
         ) : (
           /* =========================================================================
              QR PAYMENT SCREEN
              ========================================================================= */
-          <motion.div
+          <div
             key="qr-mode"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
             <main className="liquid-panel hidden lg:block w-full max-w-5xl p-8 lg:p-10 relative">
               {/* Top Bar: Back button */}
               <div className="mb-4 flex items-center justify-start">
-                <button 
+                <button
                   type="button"
-                  aria-label="Quay lại" 
+                  aria-label="Quay lại"
                   onClick={() => navigate('/invoices')}
                   className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:scale-95 transition-all cursor-pointer"
                 >
@@ -523,8 +513,8 @@ export function PaymentPage() {
                   {/* Sharp Straight Square Pure QR Container */}
                   <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block max-w-full">
                     {qrUrl ? (
-                      <img 
-                        src={qrUrl} 
+                      <img
+                        src={qrUrl}
                         alt="VietQR Matrix"
                         className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
                       />
@@ -558,43 +548,43 @@ export function PaymentPage() {
                     <div className="kit-inset kit-group p-4 sm:p-5 space-y-4">
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Người nhận</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép người nhận"
                           onClick={() => handleCopy(recipientName, 'd-recipient')}
-                          className="font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {recipientName}
                           {copiedKey === 'd-recipient' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Ngân hàng</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép tên ngân hàng"
                           onClick={() => handleCopy(bankName, 'd-bank')}
-                          className="font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {bankName}
                           {copiedKey === 'd-bank' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Số tài khoản</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép số tài khoản"
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
                           {copiedKey === 'd-acc' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Nội dung CK</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép nội dung chuyển khoản"
                           onClick={() => handleCopy(transferContent, 'd-content')}
-                          className="font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {transferContent}
                           {copiedKey === 'd-content' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -617,15 +607,15 @@ export function PaymentPage() {
             <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col justify-between px-5 pt-4 pb-5 relative">
               {/* Mobile Top Navigation */}
               <header className="w-full flex items-center justify-between mb-1.5">
-                <button 
+                <button
                   type="button"
-                  aria-label="Quay lại" 
+                  aria-label="Quay lại"
                   onClick={() => navigate('/invoices')}
                   className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:opacity-60 transition-opacity cursor-pointer"
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
-                
+
                 <div className="text-center">
                   <h2 className="apple-title2 font-semibold kit-text-primary leading-tight">
                     QR Thanh toán
@@ -635,12 +625,16 @@ export function PaymentPage() {
                 <div className="w-8" />
               </header>
 
+              <div className="kit-payment-summary kit-data-surface mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl p-3.5">
+                <div><p className="apple-callout kit-text-secondary">Phòng {profile.room?.roomNumber} · Tháng {targetInvoice.month}</p><p className="apple-title1 font-semibold font-num kit-text-primary mt-1">{formatCurrency(targetInvoice.total)} ₫</p></div>
+                <span className="apple-callout kit-text-secondary">Hạn: {targetInvoice.dueDate || 'Chưa cập nhật'}</span>
+              </div>
               {/* Mobile Straight Pure QR Code Section */}
               <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
                 <div className="bg-white p-3 rounded-2xl shadow-sm inline-block max-w-full">
                   {qrUrl ? (
-                    <img 
-                      src={qrUrl} 
+                    <img
+                      src={qrUrl}
                       alt="VietQR Matrix"
                       className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
@@ -666,61 +660,56 @@ export function PaymentPage() {
 
               {/* Mobile Payment Details */}
               <section aria-label="Thông tin thanh toán" className="w-full flex flex-col space-y-3 my-2 apple-body">
-                <div className="kit-inset kit-group p-3.5 space-y-3">
+                <details className="kit-data-surface kit-disclosure rounded-2xl"><summary className="kit-disclosure-summary apple-headline kit-text-primary">Thông tin chuyển khoản<span aria-hidden="true" className="kit-disclosure-chevron">⌄</span></summary><div className="px-3.5 pb-3.5 space-y-1">
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Người nhận</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép người nhận"
                       onClick={() => handleCopy(recipientName, 'm-rec')}
-                      className="font-semibold kit-text-primary tracking-tight cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-tight cursor-pointer"
                     >
                       {recipientName}
                       {copiedKey === 'm-rec' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Ngân hàng</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép tên ngân hàng"
                       onClick={() => handleCopy(bankName, 'm-bank')}
-                      className="font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
                     >
                       {bankName}
                       {copiedKey === 'm-bank' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Số TK</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép số tài khoản"
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="font-semibold kit-text-primary font-num cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary font-num cursor-pointer"
                     >
                       {accountNumber}
                       {copiedKey === 'm-acc' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Nội dung CK</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép nội dung chuyển khoản"
                       onClick={() => handleCopy(transferContent, 'm-content')}
-                      className="font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
                     >
                       {transferContent}
                       {copiedKey === 'm-content' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
-                </div>
+                </div></details>
 
-                {/* Total Line */}
-                <div className="flex items-center justify-between px-1 pt-1 border-t border-neutral-100 dark:border-neutral-800">
-                  <span className="apple-body font-medium kit-text-secondary">Tổng tiền</span>
-                  <span className="text-2xl font-semibold kit-text-primary tracking-tight font-num">
-                    {formatCurrency(targetInvoice.total)} ₫
-                  </span>
-                </div>
+                {/* Amount stays visible above the QR code. */}
+
               </section>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
 
     </div>
   );

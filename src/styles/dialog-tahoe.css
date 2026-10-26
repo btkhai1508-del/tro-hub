@@ -1,0 +1,44 @@
+/* Dialogs are a focused task surface; only the outer surface needs glass. */
+.tahoe-dialog-overlay.tahoe-dialog-overlay {
+  top: var(--dialog-viewport-top, 0px);
+  height: var(--dialog-viewport-height, 100dvh);
+  bottom: auto;
+  animation: none;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.tahoe-dialog.tahoe-dialog {
+  max-height: calc(var(--dialog-viewport-height, 100dvh) - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  min-height: 0;
+  animation: none;
+  margin-bottom: 0;
+}
+.tahoe-dialog button:disabled { cursor: not-allowed; opacity: 0.5; }
+.tahoe-dialog:focus { outline: none; }
+.tahoe-dialog :where(button, a[role="button"]) { min-height: 44px; }
+.tahoe-dialog :where(button[aria-label], button[title]) { min-width: 44px; }
+.tahoe-dialog :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) { font-size: 17px; }
+.tahoe-dialog :where(.overflow-y-auto) { overscroll-behavior: contain; scroll-padding-block: 16px; }
+.tahoe-dialog :where([class*="backdrop-blur"]) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.tahoe-dialog :where(h2, h3, p, label) { overflow-wrap: anywhere; }
+.tahoe-dialog .kit-dialog-footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.tahoe-dialog :where(.primary-button, .soft-button, button) {
+  transition-duration: var(--motion-standard, 180ms);
+  transition-timing-function: var(--motion-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+@media (max-width: 639px) {
+  .tahoe-dialog-overlay.tahoe-dialog-overlay { align-items: flex-end; padding-inline: 0; padding-bottom: 0; }
+  .tahoe-dialog.tahoe-dialog { max-height: calc(var(--dialog-viewport-height, 100dvh) - max(12px, env(safe-area-inset-top))); border-radius: 28px 28px 0 0; border-bottom: 0; }
+  .tahoe-dialog > :first-child { padding-inline: 20px; }
+  .tahoe-dialog .kit-dialog-body { padding-inline: 20px; }
+  .tahoe-dialog > :last-child:not(form), .tahoe-dialog > form { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tahoe-dialog :where(.primary-button, .soft-button, button) { transition-duration: 0.01ms; }
+}
+@media print {
+  .tahoe-dialog-overlay.tahoe-dialog-overlay { position: static; height: auto; padding: 0; }
+  .tahoe-dialog.tahoe-dialog { max-height: none; overflow: visible; border-radius: 0; }
+}

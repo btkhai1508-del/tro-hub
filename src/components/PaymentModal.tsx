@@ -1,5 +1,6 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
-import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from 'lucide-react';
+import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from './AppIcons';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { IconWallet3D, IconSecurity3D } from './Icons3D';
@@ -9,6 +10,8 @@ export function PaymentModal() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [lastTxnCode, setLastTxnCode] = useState('');
+
+  const dialogRef = useDialogFocus(Boolean(isPaymentModalOpen && activeInvoice), () => { setIsSuccess(false); closePaymentModal(); });
 
   if (!isPaymentModalOpen || !activeInvoice) return null;
 
@@ -41,12 +44,12 @@ export function PaymentModal() {
   const qrUrl = `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${activeInvoice.total}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountHolder)}`;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md duration-200"
       onClick={handleClose}
     >
-      <div 
-        className="w-full max-w-lg bg-white/95 dark:bg-[#101726]/95 backdrop-blur-2xl rounded-[31px] border border-white dark:border-slate-800 shadow-[12px_12px_36px_rgba(166,175,195,0.35),-12px_-12px_36px_rgba(255,255,255,0.95)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200 transition-colors"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title"
+        className="tahoe-dialog w-full max-w-lg bg-white/95 dark:bg-[#101726]/95 backdrop-blur-2xl rounded-[31px] border border-white dark:border-slate-800 shadow-[12px_12px_36px_rgba(166,175,195,0.35),-12px_-12px_36px_rgba(255,255,255,0.95)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Modal Header with Close Button */}
@@ -55,13 +58,13 @@ export function PaymentModal() {
             <IconWallet3D size={38} className="shrink-0" />
             <div>
               <span className="type-label text-slate-400 dark:text-slate-400 block text-[10px]">Cổng thanh toán điện tử</span>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+              <h2 id="payment-dialog-title" className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
                 Hóa đơn Tháng {activeInvoice.month}
               </h2>
             </div>
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={handleClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
@@ -73,11 +76,11 @@ export function PaymentModal() {
 
         {/* Scrollable Body Content */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
-          
+
           {isSuccess ? (
             /* Success Screen */
             <div className="p-4 text-center space-y-5 animate-in zoom-in-95 duration-300">
-              <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/15 border border-emerald-100 dark:border-emerald-800/50">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/15 border border-emerald-100 dark:border-emerald-800/50 icon-plate">
                 <CheckCircle2 size={36} className="stroke-[2.5]" />
               </div>
 
@@ -110,7 +113,7 @@ export function PaymentModal() {
                 </div>
               </div>
 
-              <button 
+              <button
                 type="button"
                 onClick={handleClose}
                 className="w-full primary-button py-3 text-center text-sm font-semibold cursor-pointer"
@@ -161,10 +164,10 @@ export function PaymentModal() {
               {/* Payment Gate Closed Warning OR QR Payment Details */}
               {paymentGateStatus === 'STOP' ? (
                 <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 text-center space-y-3 animate-in fade-in duration-200">
-                  <img 
-                    src="/lock.svg" 
-                    alt="Cổng thanh toán đang tạm đóng" 
-                    className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-2 shrink-0 drop-shadow-[0_8px_20px_rgba(239,68,68,0.2)] select-none pointer-events-none" 
+                  <img
+                    src="/lock.svg"
+                    alt="Cổng thanh toán đang tạm đóng"
+                    className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-2 shrink-0 drop-shadow-[0_8px_20px_rgba(239,68,68,0.2)] select-none pointer-events-none"
                   />
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -220,7 +223,7 @@ export function PaymentModal() {
                 /* QR Payment Details */
                 <div className="space-y-3 animate-in fade-in duration-200">
                   <div className="bg-slate-50/80 dark:bg-[#162032] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-                    
+
                     {/* QR Code Container */}
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 shrink-0 text-center flex flex-col items-center">
                       {qrUrl ? (
@@ -259,7 +262,7 @@ export function PaymentModal() {
                           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Số tài khoản</span>
                           <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{bankAccount}</span>
                         </div>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => handleCopy(bankAccount, 'account')}
                           className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
@@ -274,7 +277,7 @@ export function PaymentModal() {
                           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Nội dung CK</span>
                           <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{transferContent}</span>
                         </div>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => handleCopy(transferContent, 'content')}
                           className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"

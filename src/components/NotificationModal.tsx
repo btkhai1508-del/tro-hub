@@ -1,4 +1,5 @@
-import { X, ArrowRight } from 'lucide-react';
+import { useDialogFocus } from '../lib/useDialogFocus';
+import { X, ArrowRight } from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { IconWallet3D, IconAlert3D, IconSecurity3D, IconNotification3D } from './Icons3D';
@@ -14,6 +15,8 @@ export function NotificationModal() {
   const { activeNotification, closeNotificationModal } = useApp();
   const navigate = useNavigate();
 
+  const dialogRef = useDialogFocus(Boolean(activeNotification), closeNotificationModal);
+
   if (!activeNotification) return null;
 
   const isInvoice = activeNotification.type === 'invoice';
@@ -26,12 +29,12 @@ export function NotificationModal() {
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 dark:bg-black/45 duration-200"
       onClick={closeNotificationModal}
     >
-      <div 
-        role="dialog" aria-modal="true" aria-labelledby="notification-dialog-title" className="kit-dialog w-full max-w-md max-h-[90svh] overflow-y-auto relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1}
+        role="dialog" aria-modal="true" aria-labelledby="notification-dialog-title" className="tahoe-dialog kit-dialog w-full max-w-md max-h-[90svh] overflow-y-auto relative duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with Darker Bar & Clear Close X Button */}
@@ -45,7 +48,7 @@ export function NotificationModal() {
             </span>
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={closeNotificationModal}
             className="kit-dialog-close h-11 w-11 shrink-0 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
@@ -92,7 +95,7 @@ export function NotificationModal() {
           <button
             type="button"
             onClick={closeNotificationModal}
-            className={isInvoice 
+            className={isInvoice
               ? "soft-button px-5 py-2.5 text-xs text-neutral-600 dark:text-neutral-300 cursor-pointer"
               : "primary-button px-6 py-2.5 text-xs cursor-pointer font-bold"
             }

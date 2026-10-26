@@ -1,6 +1,11 @@
 /* Responsive templates derived from the user's macOS 26 Community kit.
    Material levels and blur are defined in index.css; controls inherit the
    parent material rather than stacking their own backdrop filters. */
+.kit-asset-icon { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; vertical-align: middle; background: transparent; }
+.kit-asset-icon > img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
+.kit-icon-hidden::after { content: ""; position: absolute; top: 48%; left: 8%; width: 84%; height: 2px; background: var(--text-primary); border-radius: 2px; transform: rotate(-45deg); box-shadow: 0 0 0 1px var(--control-fill); }
+.kit-icon-mark { position: absolute; right: -2px; bottom: -2px; display: flex; align-items: center; justify-content: center; width: 10px; height: 10px; border-radius: 50%; background: var(--control-selected); color: var(--text-primary); font: 700 10px/1 var(--font-sans); }
+.glass-icon:has(.kit-asset-icon), .icon-plate { background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .kit-admin-reading-plane, .kit-resident-reading-plane { display: none; }
 /* Keep the wallpaper unobscured between surfaces. Readable backing belongs
    to content and controls instead of a full-screen veil. */
@@ -181,4 +186,123 @@
   .kit-sidebar, .kit-toolbar, .kit-dock, .kit-resident-reading-plane, .kit-admin-reading-plane { display: none !important; }
   .kit-main { margin: 0; min-height: 0; padding-top: 0; }
   .kit-page-content { padding: 0; }
+}
+
+/* Keep glass compositing stable on the first frame. Never fade/transform a
+   surface or an ancestor containing a backdrop filter during route changes. */
+.kit-icon-hidden, .kit-asset-icon:has(.kit-icon-mark) { position: relative; }
+.dark .kit-asset-icon > img[src*="/symbol-"] { filter: brightness(0) invert(1); }
+:where(.liquid-panel, .soft-card, .glass-card-3d, .soft-surface, .apple-grouped-list) {
+  background: var(--glass-sheen), var(--liquid-fill);
+  transition-property: border-color, box-shadow, color;
+}
+.animate-in:has(.liquid-panel, .soft-card, .kit-inset), .page-transition { animation: none; }
+.kit-admin-dock-wrap { padding: 8px 12px max(12px, env(safe-area-inset-bottom)); pointer-events: none; }
+.kit-admin-dock { display: flex; align-items: stretch; gap: 3px; width: min(100%, 480px); margin-inline: auto; pointer-events: auto; }
+.kit-admin-dock-item { display: flex; min-width: 0; min-height: 58px; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 2px; cursor: pointer; touch-action: manipulation; }
+.kit-admin-dock-item > span:last-child { font-size: 11px; line-height: 1.2; white-space: nowrap; font-weight: 500; }
+.kit-admin-dock .kit-nav-active > span:last-child { font-weight: 600; }
+.kit-admin-dock-divider { flex: 0 0 1px; margin: 12px 1px; background: var(--separator); }
+.kit-gate-dot { position: absolute; top: -3px; right: -4px; width: 7px; height: 7px; border-radius: 50%; outline: 2px solid var(--control-selected); }
+@media (prefers-reduced-transparency: reduce) {
+  .kit-admin-dock, .kit-dock { background: var(--material-ultrathick); }
+}
+/* Monochrome service symbols follow the contrast of filled controls. */
+.primary-button .kit-asset-icon > img[src*="/symbol-"] { filter: brightness(0) invert(1); }
+.dark .primary-button .kit-asset-icon > img[src*="/symbol-"],
+.dark button[class*="dark:bg-white"] .kit-asset-icon > img[src*="/symbol-"],
+.dark .invoice-paper .kit-asset-icon > img[src*="/symbol-"] { filter: none; }
+
+/* Tahoe application roles: glass is navigation/chrome; dense business data
+   gets a quiet reading fill without another compositing/blur layer. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --motion-slow: 220ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --reading-fill: rgba(255, 255, 255, 0.84);
+  --form-fill: rgba(255, 255, 255, 0.70);
+}
+.dark {
+  --reading-fill: rgba(24, 24, 28, 0.90);
+  --form-fill: rgba(28, 28, 32, 0.84);
+}
+.kit-data-surface, .kit-reading-surface, .kit-form-surface {
+  border: 1px solid var(--separator);
+  color: var(--text-primary);
+  background: var(--reading-fill);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.kit-form-surface { background: var(--form-fill); }
+.kit-disclosure-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+.kit-disclosure-summary::-webkit-details-marker { display: none; }
+.kit-disclosure-summary::marker { content: ''; }
+.kit-disclosure-chevron { transition: transform var(--motion-standard) var(--motion-ease); }
+.kit-disclosure[open] > summary .kit-disclosure-chevron { transform: rotate(180deg); }
+.kit-copy-value { max-width: 100%; overflow-wrap: anywhere; text-align: end; user-select: text; }
+.kit-feedback { animation: kit-feedback-enter 160ms var(--motion-ease); }
+@keyframes kit-feedback-enter { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+/* Animate controls and feedback, never an ancestor of a glass surface. */
+.liquid-panel.animate-in, .soft-card.animate-in, .kit-popover.animate-in { animation: none; }
+.soft-button, .primary-button, .kit-segment, .kit-nav-item, .kit-toolbar-control {
+  min-height: 44px;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease);
+}
+:where(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--liquid-accent);
+  outline-offset: 3px;
+}
+:where(input, select, textarea) { scroll-margin-block: 90px; }
+.kit-auth-shell { min-height: 100dvh; padding-block: max(16px, env(safe-area-inset-top)); }
+@media (max-height: 700px) {
+  .kit-auth-shell { align-items: flex-start; }
+}
+@media (max-width: 639px) {
+  .kit-login-window { border-radius: 28px; }
+  .kit-login-window .kit-window-toolbar { min-height: 64px; padding-block: 12px; }
+  .kit-login-window .kit-login-footer { padding-block: 8px; }
+  .kit-laundry-flow > div { row-gap: 18px; }
+  .kit-laundry-stats { gap: 8px; }
+  .kit-laundry-stats > div { flex-direction: row; align-items: center; gap: 8px; padding: 10px; }
+  .kit-laundry-stats > div > div:first-child { width: 30px; height: 30px; border: 0; background: transparent; }
+  .kit-laundry-stats .kit-asset-icon { max-width: 28px; max-height: 28px; }
+  .kit-laundry-stats > div > div:last-child > span:last-child { font-size: 20px; margin-top: 2px; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --reading-fill: #fff; --form-fill: #fff; }
+  .dark { --reading-fill: #242426; --form-fill: #242426; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --reading-fill: #fff; --form-fill: #fff; }
+  .dark { --reading-fill: #242426; --form-fill: #242426; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kit-feedback { animation: none; }
+  .kit-disclosure-chevron { transition: none; }
+}
+@media print {
+  .kit-data-surface, .kit-reading-surface, .kit-form-surface { background: #fff; color: #171717; box-shadow: none; }
+}
+/* The title provides opening feedback while the sheet's glass stays stable. */
+.kit-feedback.animate-in, .tahoe-dialog :where(h2, h3) { animation: kit-feedback-enter 160ms var(--motion-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .kit-feedback.animate-in, .tahoe-dialog :where(h2, h3) { animation: none; }
 }

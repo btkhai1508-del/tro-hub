@@ -1,34 +1,33 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   ChevronLeft,
-  WashingMachine, 
-  Timer, 
-  Clock, 
-  Copy, 
-  Check, 
-  CalendarClock, 
-  BookOpen, 
-  RefreshCw, 
-  Zap, 
-  Power, 
-  AlertCircle, 
-  CheckCircle2, 
-  Sparkles, 
-  PhoneCall, 
+  WashingMachine,
+  Timer,
+  Clock,
+  Copy,
+  Check,
+  CalendarClock,
+  BookOpen,
+  RefreshCw,
+  Zap,
+  Power,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
+  PhoneCall,
   Info,
   ImageDown,
   Home
-} from 'lucide-react';
+} from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { soundFx } from '../lib/soundFx';
 import { saveQrToDevice } from '../lib/qrHelper';
-import { 
-  IconLaundry3D, 
+import {
+  IconLaundry3D,
   IconDryer3D
 } from './Icons3D';
 
@@ -60,7 +59,6 @@ interface Booking {
 }
 
 export function LaundryPage() {
-  const reduceMotion = useReducedMotion();
   const navigate = useNavigate();
   const { profile } = useApp();
 
@@ -79,6 +77,7 @@ export function LaundryPage() {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'WASHER' | 'DRYER'>('ALL');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState('');
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
@@ -114,7 +113,7 @@ export function LaundryPage() {
             setMachines(data.machines);
             const curSelected = selectedMachineRef.current;
             const curMode = viewModeRef.current;
-            
+
             if (curSelected) {
               const updated = data.machines.find((m: Machine) => m.machineId === curSelected.machineId);
               if (updated) {
@@ -173,11 +172,16 @@ export function LaundryPage() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const handleCopy = (text: string, key: string) => {
+  const handleCopy = async (text: string, key: string) => {
     soundFx.click();
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch {
+      setCopyError('Chưa thể sao chép. Bạn có thể nhấn giữ để chọn nội dung chuyển khoản.');
+    }
   };
 
   const handleOpenMachine = (m: Machine) => {
@@ -196,7 +200,7 @@ export function LaundryPage() {
   };
 
   // Build clean VietQR URL matching PaymentPage (straight QR without cluttered templates)
-  const qrUrl = selectedMachine 
+  const qrUrl = selectedMachine
     ? `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${selectedMachine.price}&addInfo=${encodeURIComponent(selectedMachine.machineId)}&accountName=${encodeURIComponent(recipientName)}`
     : '';
 
@@ -253,24 +257,22 @@ export function LaundryPage() {
   const dryerCount = machines.filter(m => m.type === 'DRYER').length;
 
   return (
-    <div className="w-full flex flex-col items-center pb-6">
-      
-      <AnimatePresence mode="wait">
-        
+    <div className="kit-laundry-flow w-full flex flex-col items-center pb-6">
+      {copiedKey && <span role="status" className="sr-only">Đã sao chép.</span>}
+      {copyError && <p role="alert" className="kit-feedback mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{copyError}</p>}
+
+      <>
+
         {/* =========================================================================
             SCREEN 1: ACTIVATION SUCCESS (Exact match to PaymentPage success mode)
            ========================================================================= */}
         {viewMode === 'success' && selectedMachine ? (
-          <motion.div
+          <div
             key="laundry-success-view"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-4"
           >
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
-              
+
               {/* Success Badge Icon */}
               <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
                 <Check size={40} strokeWidth={3.5} />
@@ -330,7 +332,7 @@ export function LaundryPage() {
 
               {/* Action Buttons */}
               <div className="w-full flex flex-col sm:flex-row items-center gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => {
                     soundFx.click();
@@ -342,7 +344,7 @@ export function LaundryPage() {
                   <span>Xem đồng hồ đếm ngược</span>
                 </button>
 
-                <button 
+                <button
                   type="button"
                   onClick={() => {
                     soundFx.click();
@@ -356,28 +358,24 @@ export function LaundryPage() {
               </div>
 
             </main>
-          </motion.div>
+          </div>
 
         /* =========================================================================
             SCREEN 2: QR PAYMENT ACTIVATION (Exact match to PaymentPage.tsx layout)
            ========================================================================= */
         ) : viewMode === 'activate' && selectedMachine ? (
-          <motion.div
+          <div
             key="laundry-qr-view"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
             <main className="liquid-panel hidden lg:block w-full max-w-5xl p-8 lg:p-10 relative">
-              
+
               {/* Top Bar: Back button to return to machine list */}
               <div className="mb-4 flex items-center justify-between">
-                <button 
+                <button
                   type="button"
-                  aria-label="Quay lại" 
+                  aria-label="Quay lại"
                   onClick={() => {
                     soundFx.click();
                     setViewMode('list');
@@ -410,8 +408,8 @@ export function LaundryPage() {
                   {/* Sharp Straight Square Pure QR Container */}
                   <div className="bg-white p-3.5 rounded-2xl shadow-sm inline-block max-w-full">
                     {qrUrl ? (
-                      <img 
-                        src={qrUrl} 
+                      <img
+                        src={qrUrl}
                         alt="VietQR Matrix"
                         className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
                       />
@@ -450,44 +448,44 @@ export function LaundryPage() {
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Người nhận</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép người nhận"
                           onClick={() => handleCopy(recipientName, 'd-recipient')}
-                          className="font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {recipientName}
                           {copiedKey === 'd-recipient' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Ngân hàng</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép tên ngân hàng"
                           onClick={() => handleCopy(bankName, 'd-bank')}
-                          className="font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {bankName}
                           {copiedKey === 'd-bank' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Số tài khoản</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép số tài khoản"
                           onClick={() => handleCopy(accountNumber, 'd-acc')}
-                          className="font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
                           {copiedKey === 'd-acc' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Nội dung CK</span>
-                        <span 
+                        <button type="button" aria-label="Sao chép nội dung chuyển khoản"
                           onClick={() => handleCopy(selectedMachine.machineId, 'd-content')}
-                          className="font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
+                          className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-callout cursor-pointer hover:underline flex items-center gap-1"
                           title="Bắt buộc giữ nguyên mã máy"
                         >
                           {selectedMachine.machineId}
                           {copiedKey === 'd-content' && <span className="apple-callout text-emerald-600 font-semibold">✓</span>}
-                        </span>
+                        </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Thời lượng chu kỳ</span>
@@ -522,9 +520,9 @@ export function LaundryPage() {
             <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col justify-between px-5 pt-4 pb-5 relative">
               {/* Mobile Top Navigation */}
               <header className="w-full flex items-center justify-between mb-1.5">
-                <button 
+                <button
                   type="button"
-                  aria-label="Quay lại" 
+                  aria-label="Quay lại"
                   onClick={() => {
                     soundFx.click();
                     setViewMode('list');
@@ -533,7 +531,7 @@ export function LaundryPage() {
                 >
                   <ChevronLeft size={22} strokeWidth={2.2} />
                 </button>
-                
+
                 <div className="text-center">
                   <h1 className="apple-title2 font-semibold kit-text-primary leading-tight">
                     QR Kích hoạt ({selectedMachine.machineId})
@@ -547,8 +545,8 @@ export function LaundryPage() {
               <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center my-1">
                 <div className="bg-white p-3 rounded-2xl shadow-sm inline-block max-w-full">
                   {qrUrl ? (
-                    <img 
-                      src={qrUrl} 
+                    <img
+                      src={qrUrl}
                       alt="VietQR Matrix"
                       className="w-[240px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
@@ -583,43 +581,43 @@ export function LaundryPage() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Người nhận</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép người nhận"
                       onClick={() => handleCopy(recipientName, 'm-rec')}
-                      className="font-semibold kit-text-primary tracking-tight cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-tight cursor-pointer"
                     >
                       {recipientName}
                       {copiedKey === 'm-rec' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Ngân hàng</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép tên ngân hàng"
                       onClick={() => handleCopy(bankName, 'm-bank')}
-                      className="font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
                     >
                       {bankName}
                       {copiedKey === 'm-bank' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Số TK</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép số tài khoản"
                       onClick={() => handleCopy(accountNumber, 'm-acc')}
-                      className="font-semibold kit-text-primary font-num cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary font-num cursor-pointer"
                     >
                       {accountNumber}
                       {copiedKey === 'm-acc' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                     <span className="kit-text-secondary">Nội dung CK</span>
-                    <span 
+                    <button type="button" aria-label="Sao chép nội dung chuyển khoản"
                       onClick={() => handleCopy(selectedMachine.machineId, 'm-content')}
-                      className="font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
+                      className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
                     >
                       {selectedMachine.machineId}
                       {copiedKey === 'm-content' && <span className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
-                    </span>
+                    </button>
                   </div>
                 </div>
 
@@ -638,22 +636,18 @@ export function LaundryPage() {
                 <span>Hệ thống tự động kích hoạt sau khi nhận được tiền...</span>
               </div>
             </div>
-          </motion.div>
+          </div>
 
         /* =========================================================================
             SCREEN 3: LIVE CIRCULAR COUNTDOWN TIMER
            ========================================================================= */
         ) : viewMode === 'timer' && selectedMachine ? (
-          <motion.div
+          <div
             key="laundry-timer-view"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2 }}
             className="w-full flex justify-center py-4"
           >
             <main className="w-full max-w-[500px] liquid-panel rounded-[34px] border border-neutral-200/90 dark:border-neutral-800 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
-              
+
               {/* Header with back button */}
               <div className="w-full flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-2">
                 <button
@@ -695,7 +689,7 @@ export function LaundryPage() {
                 return (
                   <div className="w-full flex flex-col items-center justify-center space-y-6 py-4">
                     <div className="relative w-full max-w-64 aspect-square flex items-center justify-center select-none">
-                      
+
                       {/* Outer Rim */}
                       <div className="absolute inset-0 rounded-full bg-neutral-100 dark:bg-neutral-900/60 shadow-[inset_0_4px_10px_rgba(0,0,0,0.06),0_10px_30px_rgba(0,0,0,0.08)] border border-neutral-200/70 dark:border-neutral-800" />
 
@@ -804,18 +798,14 @@ export function LaundryPage() {
               })()}
 
             </main>
-          </motion.div>
+          </div>
 
         /* =========================================================================
             SCREEN 4: MAIN LAUNDRY DASHBOARD (When viewMode === 'list')
            ========================================================================= */
         ) : (
-          <motion.div
+          <div
             key="laundry-list-view"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.15 }}
             className="w-full space-y-6"
           >
             <header className="kit-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -833,9 +823,9 @@ export function LaundryPage() {
             </header>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            <div className="kit-laundry-stats grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
               <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40 icon-plate">
                   <CheckCircle2 size={24} className="stroke-[2.5]" />
                 </div>
                 <div>
@@ -849,7 +839,7 @@ export function LaundryPage() {
               </div>
 
               <div className="kit-inset p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 relative overflow-hidden group">
-                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 kit-text-secondary flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-950/40 kit-text-secondary flex items-center justify-center shrink-0 border border-neutral-100 dark:border-neutral-800/40 icon-plate">
                   <Clock size={23} strokeWidth={1.7} />
                 </div>
                 <div>
@@ -929,7 +919,7 @@ export function LaundryPage() {
                   fetchLaundryData();
                 }}
                 disabled={isLoading}
-                className="soft-button px-3.5 py-2 flex items-center gap-2 cursor-pointer apple-control font-semibold kit-text-secondary self-end sm:self-auto"
+                className="soft-button min-h-11 px-3.5 py-2 flex items-center gap-2 cursor-pointer apple-control font-semibold kit-text-secondary self-end sm:self-auto"
                 title="Cập nhật trạng thái"
               >
                 <RefreshCw size={13} className={cn(isLoading && "animate-spin kit-text-secondary")} />
@@ -939,7 +929,7 @@ export function LaundryPage() {
 
             {/* Tab 1: Machine Grid */}
             {activeTab === 'machines' && (
-              <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="space-y-5 ">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                   <div className="kit-segmented flex flex-wrap items-center gap-1 p-1" aria-label="Loại máy">
                     {[
@@ -984,7 +974,7 @@ export function LaundryPage() {
                         onClick={() => handleOpenMachine(m)}
                         className={cn(
                           "soft-surface group relative flex flex-col justify-between p-5 sm:p-6 rounded-[34px] transition-colors duration-150 cursor-pointer overflow-hidden border",
-                          isRunning 
+                          isRunning
                             ? "border-neutral-300/80 dark:border-neutral-800/60 shadow-md ring-2 ring-neutral-100 dark:ring-neutral-950/40"
                             : "border-white/80 dark:border-white/10"
                         )}
@@ -996,7 +986,7 @@ export function LaundryPage() {
                             {/* Simplified 3D Icon */}
                             <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
                               {isWasher ? <IconLaundry3D size={56} /> : <IconDryer3D size={56} />}
-                              
+
                               {isRunning && (
                                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-neutral-500 text-white flex items-center justify-center shadow-md ring-2 ring-white dark:ring-neutral-900">
                                   <RefreshCw size={11} className="animate-spin" />
@@ -1024,12 +1014,12 @@ export function LaundryPage() {
                           <div>
                             {isRunning ? (
                               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-callout font-semibold bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800">
-                                <span className="w-2 h-2 rounded-full bg-neutral-500 animate-ping" />
+                                <span className="w-2 h-2 rounded-full bg-neutral-500" />
                                 <span className="font-num">Còn {minsLeft} phút</span>
                               </div>
                             ) : (
                               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-callout font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                 <span>Sẵn sàng</span>
                               </div>
                             )}
@@ -1048,7 +1038,7 @@ export function LaundryPage() {
                               </span>
                             </div>
                             <div className="w-full h-2 rounded-full bg-neutral-200/60 dark:bg-neutral-900/60 overflow-hidden">
-                              <div 
+                              <div
                                 className="h-full bg-neutral-600 rounded-full transition-all duration-1000 ease-linear"
                                 style={{
                                   width: `${Math.min(100, Math.max(0, (1 - remaining / ((m.cycleMinutes || 45) * 60)) * 100))}%`
@@ -1105,7 +1095,7 @@ export function LaundryPage() {
 
             {/* Tab 2: Booking Reservation */}
             {activeTab === 'booking' && (
-              <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="space-y-6 ">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[34px] border border-white/80 dark:border-white/10 space-y-5">
                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900/5 dark:border-white/10">
@@ -1134,12 +1124,12 @@ export function LaundryPage() {
                       </div>
                     )}
 
-                    <form onSubmit={handleCreateBooking} className="space-y-4">
+                    <form onSubmit={handleCreateBooking} className="kit-form-surface rounded-2xl p-4 space-y-4">
                       <div>
-                        <label className="apple-callout font-semibold kit-text-secondary block mb-1.5">
+                        <label htmlFor="booking-machine" className="apple-callout font-semibold kit-text-secondary block mb-1.5">
                           1. Chọn máy giặt / sấy:
                         </label>
-                        <select
+                        <select id="booking-machine"
                           value={bookingMachineId}
                           onChange={e => setBookingMachineId(e.target.value)}
                           className="kit-field w-full min-w-0 p-3 cursor-pointer"
@@ -1154,11 +1144,11 @@ export function LaundryPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                          <label className="apple-callout font-semibold kit-text-secondary block mb-1.5">
+                          <label htmlFor="booking-time" className="apple-callout font-semibold kit-text-secondary block mb-1.5">
                             2. Giờ giặt:
                           </label>
                           <input
-                            type="time"
+                            id="booking-time" type="time"
                             value={bookingTime}
                             onChange={e => setBookingTime(e.target.value)}
                             required
@@ -1167,11 +1157,11 @@ export function LaundryPage() {
                         </div>
 
                         <div>
-                          <label className="apple-callout font-semibold kit-text-secondary block mb-1.5">
+                          <label htmlFor="booking-date" className="apple-callout font-semibold kit-text-secondary block mb-1.5">
                             3. Ngày giặt:
                           </label>
                           <input
-                            type="text"
+                            id="booking-date" type="text" inputMode="numeric"
                             value={bookingDate}
                             onChange={e => setBookingDate(e.target.value)}
                             placeholder="DD/MM/YYYY"
@@ -1252,7 +1242,7 @@ export function LaundryPage() {
 
             {/* Tab 3: Rules & Pricing */}
             {activeTab === 'rules' && (
-              <div className="space-y-4 max-w-3xl animate-in fade-in duration-200">
+              <div className="space-y-4 max-w-3xl ">
                 <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
                   <h4 className="type-h3 font-semibold kit-text-primary flex items-center gap-2.5">
                     <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 apple-callout flex items-center justify-center font-semibold">1</span>
@@ -1299,10 +1289,10 @@ export function LaundryPage() {
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         )}
 
-      </AnimatePresence>
+      </>
 
     </div>
   );

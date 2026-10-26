@@ -1,13 +1,14 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
-import { 
-  KeyRound, 
-  Eye, 
-  EyeOff, 
-  ShieldCheck, 
-  CheckCircle2, 
+import {
+  KeyRound,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  CheckCircle2,
   AlertCircle,
   X
-} from 'lucide-react';
+} from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { IconKey3D } from './Icons3D';
@@ -20,17 +21,19 @@ interface PasswordUpdateModalProps {
 
 export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpdateModalProps) {
   const { currentPassword, updatePassword, profile } = useApp();
-  
+
   const [curPass, setCurPass] = useState('1');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [showCurPass, setShowCurPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
-  
+
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const dialogRef = useDialogFocus(isOpen, () => { localStorage.setItem(`ecostay_pw_postponed_${profile.phone || 'default'}`, 'true'); onClose(); });
 
   if (!isOpen) return null;
 
@@ -91,16 +94,16 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200 select-none"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 dark:bg-black/45 duration-200 select-none"
       onClick={handlePostpone}
     >
-      <div 
-        role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" className="kit-dialog w-full max-w-md max-h-[90svh] overflow-y-auto relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1}
+        role="dialog" aria-modal="true" aria-labelledby="password-dialog-title" className="tahoe-dialog kit-dialog w-full max-w-md max-h-[90svh] overflow-y-auto relative duration-200"
         onClick={e => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="kit-dialog-body p-5 sm:p-7 space-y-5 relative z-10">
-          
+
           {/* Header */}
           <div className="flex items-start gap-4">
             <IconKey3D size={48} className="shrink-0" />
@@ -116,14 +119,14 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
           {/* Alert Messages */}
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+            <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
               <AlertCircle size={15} className="shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in duration-200 font-bold">
+            <div role="status" className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in duration-200 font-bold">
               <CheckCircle2 size={15} className="shrink-0" />
               <span>{successMsg}</span>
             </div>
@@ -131,7 +134,7 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
 
           {/* Input Fields */}
           <div className="space-y-3.5 pt-1">
-            
+
             {/* Field 1: Mật khẩu hiện tại */}
             <div>
               <label htmlFor="password-curPass" className="block text-[13px] font-semibold text-neutral-700 dark:text-neutral-200 mb-1">

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell, CheckCheck, Receipt, AlertTriangle, CheckCircle2, MessageSquare, X, Sun, Moon, Monitor, ChevronRight } from 'lucide-react';
+import { Bell, CheckCheck, Receipt, AlertTriangle, CheckCircle2, MessageSquare, X, Sun, Moon, Monitor, ChevronRight } from './AppIcons';
 import { IconClock3D, IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -72,7 +72,7 @@ export function TopHeader() {
           </div>
         </div>
         <div className="min-h-0 max-h-[min(420px,calc(100svh_-_15rem))] space-y-1 overflow-y-auto overscroll-contain">
-          {notifications.length === 0 ? <div className="flex flex-col items-center px-3 py-9 text-center"><div className="glass-icon mb-4 flex h-12 w-12 items-center justify-center rounded-2xl text-neutral-700"><Bell size={22} strokeWidth={1.5} /></div><p className="apple-body kit-text-primary font-semibold">Bạn đã cập nhật tất cả</p><p className="apple-callout kit-text-secondary mt-1 max-w-[230px]">Thông báo từ ban quản lý sẽ xuất hiện tại đây.</p></div> : notifications.map(notif => {
+          {notifications.length === 0 ? <div className="flex flex-col items-center px-3 py-9 text-center"><div className="glass-icon mb-4 flex h-12 w-12 items-center justify-center rounded-2xl text-neutral-700 icon-plate"><Bell size={22} strokeWidth={1.5} /></div><p className="apple-body kit-text-primary font-semibold">Bạn đã cập nhật tất cả</p><p className="apple-callout kit-text-secondary mt-1 max-w-[230px]">Thông báo từ ban quản lý sẽ xuất hiện tại đây.</p></div> : notifications.map(notif => {
             const Icon = iconMap[notif.type] || Bell;
             return <button key={notif.id} type="button" onClick={() => { setIsNotificationPanelOpen(false); openNotificationModal(notif); }} className={cn('relative flex w-full gap-3 rounded-[20px] p-3 text-left transition-colors', notif.unread ? 'bg-black/[0.035] hover:bg-black/5 dark:bg-white/[0.055] dark:hover:bg-white/10' : 'hover:bg-white/50 dark:hover:bg-white/5')}>
               <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px]', badgeColorMap[notif.type])}><Icon size={18} strokeWidth={1.8} /></span>

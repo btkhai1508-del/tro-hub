@@ -1,0 +1,34 @@
+/* Task-first resident layouts. Glass stays on stable surfaces; disclosures
+   reveal document/detail content without fading an ancestor of a backdrop. */
+.resident-disclosure-summary { display: flex; align-items: center; list-style: none; cursor: pointer; color: var(--text-primary); }
+.resident-disclosure-summary::-webkit-details-marker { display: none; }
+.resident-disclosure-summary::marker { content: ''; }
+.resident-disclosure-summary:focus-visible { outline: 2px solid var(--liquid-accent); outline-offset: 5px; border-radius: 14px; }
+.resident-disclosure-chevron { transition: transform var(--motion-standard, 180ms) var(--motion-ease, ease); }
+.resident-disclosure[open] > .resident-disclosure-summary .resident-disclosure-chevron { transform: rotate(90deg); }
+.resident-disclosure[open] > .resident-disclosure-summary { margin-bottom: 0; }
+.resident-detail-body { min-width: 0; }
+.resident-invoice-filter { max-width: 100%; }
+.resident-invoice-filter select { width: auto; min-width: 148px; font-size: 13px; }
+.resident-document-scroll { overscroll-behavior-inline: contain; }
+@media (max-width: 639px) {
+  .resident-home { gap: 18px; }
+  .resident-home .apple-amount { font-size: clamp(30px, 9.5vw, 40px); overflow-wrap: anywhere; }
+  .resident-home .kit-quick-action .apple-callout { display: none; }
+  .resident-laundry-icon .kit-asset-icon { width: 60px !important; height: 60px !important; }
+  .resident-room-panel { align-self: start; }
+  .resident-document-scroll { justify-content: flex-start; }
+  .resident-document-scroll .contract-document-a4 { min-width: 650px; padding: 32px; }
+}
+@media (min-width: 1024px) {
+  .resident-room-panel { min-height: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .resident-disclosure-chevron { transition: none; }
+}
+@media print {
+  .resident-document-disclosure { display: contents; }
+  .resident-document-disclosure::details-content { display: contents; content-visibility: visible; }
+  .resident-document-scroll { overflow: visible; display: block; }
+  .resident-document-scroll .contract-document-a4 { min-width: 0; transform: none !important; }
+}

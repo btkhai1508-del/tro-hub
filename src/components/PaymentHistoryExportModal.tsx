@@ -1,20 +1,21 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState, useRef } from 'react';
-import { 
-  X, 
-  Download, 
-  Printer, 
-  FileText, 
-  Calendar, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
-  Building2, 
-  User, 
-  Phone, 
+import {
+  X,
+  Download,
+  Printer,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Building2,
+  User,
+  Phone,
   CreditCard,
   Layers,
   ChevronDown
-} from 'lucide-react';
+} from './AppIcons';
 import { useApp, Invoice } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { IconContract3D } from './Icons3D';
@@ -29,6 +30,8 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  const dialogRef = useDialogFocus(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -58,7 +61,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
       const [{ jsPDF }, { default: html2canvas }] = await Promise.all([import('jspdf'), import('html2canvas')]);
       // Temporary style adjustments for capture
       const element = printRef.current;
-      
+
       const canvas = await html2canvas(element, {
         scale: 2, // 2x resolution for crystal clear text
         useCORS: true,
@@ -72,7 +75,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      
+
       const roomStr = profile.room?.roomNumber ? `_P${profile.room.roomNumber}` : '';
       pdf.save(`Lich_Su_Thanh_Toan_PhongLan${roomStr}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}.pdf`);
     } catch (error) {
@@ -89,12 +92,12 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200 select-none"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/65 backdrop-blur-md duration-200 select-none"
       onClick={onClose}
     >
-      <div 
-        className="w-full max-w-4xl bg-white dark:bg-[#101726] rounded-[28px] border border-white/80 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="payment-history-dialog-title"
+        className="tahoe-dialog w-full max-w-4xl bg-white dark:bg-[#101726] rounded-[28px] border border-white/80 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -102,7 +105,7 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
           <div className="flex items-center gap-3">
             <IconContract3D size={40} className="shrink-0" />
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 id="payment-history-dialog-title" className="text-base font-bold text-slate-900 dark:text-white">
                 Xuất Lịch Sử Thanh Toán (PDF)
               </h2>
               <p className="text-xs text-slate-400">
@@ -154,9 +157,9 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
 
         {/* Modal Body: Scrollable Document Preview */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/70 dark:bg-slate-950/60">
-          
+
           {/* Printable A4 Container */}
-          <div 
+          <div
             ref={printRef}
             className="bg-white text-slate-900 rounded-2xl p-6 sm:p-10 max-w-[780px] mx-auto shadow-sm border border-slate-200/90 font-sans print:p-0 print:border-none print:shadow-none print:m-0"
           >
@@ -352,11 +355,11 @@ export function PaymentHistoryExportModal({ isOpen, onClose }: PaymentHistoryExp
 
             <button
               type="button"
-              disabled={isExporting}
+              disabled={isExporting} aria-busy={isExporting}
               onClick={handleDownloadPDF}
               className="flex-1 sm:flex-none primary-button py-2.5 px-6 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md"
             >
-              <Download size={15} className={isExporting ? "animate-bounce" : ""} />
+              {isExporting ? <span aria-hidden="true" className="ui-spinner h-4 w-4" /> : <Download size={15} />}
               <span>{isExporting ? 'Đang tạo PDF...' : 'Tải tệp PDF về máy'}</span>
             </button>
           </div>

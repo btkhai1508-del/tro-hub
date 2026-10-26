@@ -6,8 +6,10 @@ import { useApp } from '../context/AppContext';
 import { preloadRoute } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 
+function NavigationHome({ size = 21, className = '' }: { size?: number; strokeWidth?: number; className?: string }) { return <img src="/icons/home.svg" alt="" aria-hidden="true" width={size} height={size} className={className} />; }
+
 const navItems = [
-  { name: 'Trang chủ', path: '/', icon: IconHome3D, tutorial: 'nav-dashboard' },
+  { name: 'Trang chủ', path: '/', icon: NavigationHome, tutorial: 'nav-dashboard' },
   { name: 'Tiện ích', path: '/utilities', icon: LayoutGrid, tutorial: 'nav-utilities' },
   { name: 'Hóa đơn', path: '/invoices', icon: Receipt, tutorial: 'nav-invoices' },
   { name: 'Hợp đồng', path: '/contract', icon: FileText, tutorial: 'nav-contract' },

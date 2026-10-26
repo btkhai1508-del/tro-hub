@@ -1,13 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutGrid, Receipt, FileText, User } from 'lucide-react';
-import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { preloadRoute } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 
+function NavigationHome({ size = 21, className = '' }: { size?: number; strokeWidth?: number; className?: string }) { return <img src="/icons/home.svg" alt="" aria-hidden="true" width={size} height={size} className={className} />; }
+
 const navItems = [
-  { name: 'Trang chủ', path: '/', Icon: IconHome3D, tutorial: 'nav-dashboard-mobile' },
+  { name: 'Trang chủ', path: '/', Icon: NavigationHome, tutorial: 'nav-dashboard-mobile' },
   { name: 'Tiện ích', path: '/utilities', Icon: LayoutGrid, tutorial: 'nav-utilities-mobile' },
   { name: 'Hóa đơn', path: '/invoices', Icon: Receipt, tutorial: 'nav-invoices-mobile' },
   { name: 'Hợp đồng', path: '/contract', Icon: FileText, tutorial: 'nav-contract-mobile' },

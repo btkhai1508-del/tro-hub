@@ -13,7 +13,7 @@ import {
   Clock, 
   ShieldAlert, 
   PhoneCall
-} from 'lucide-react';
+} from './AppIcons';
 import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { Background } from './Background';
@@ -146,7 +146,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative isolate flex min-h-svh items-center justify-center overflow-hidden px-3 py-6 sm:px-8 sm:py-10">
+    <div className="kit-auth-shell relative isolate flex min-h-svh items-center justify-center px-3 py-6 sm:px-8 sm:py-10">
       <Background />
       <div className="kit-login-window liquid-panel auth-panel relative z-10 mx-auto w-full max-w-[464px] overflow-hidden">
         <div className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
@@ -199,14 +199,14 @@ export function LoginPage() {
           )}
 
           {errorMsg && (
-            <div role="alert" className="mb-4 flex items-start gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/90 p-3.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-950/70 dark:text-rose-200 animate-in fade-in">
+            <div id="auth-error" role="alert" className="kit-feedback mb-4 flex items-start gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/90 p-3.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-950/70 dark:text-rose-200 animate-in fade-in">
               <AlertCircle aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
               <span className="leading-relaxed">{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div role="status" className="mb-4 flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-3.5 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-950/70 dark:text-emerald-200 animate-in fade-in">
+            <div role="status" className="kit-feedback mb-4 flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-3.5 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-950/70 dark:text-emerald-200 animate-in fade-in">
               <CheckCircle2 aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
               <span className="leading-relaxed">{successMsg}</span>
             </div>
@@ -214,13 +214,13 @@ export function LoginPage() {
 
           {mode === 'login' && (
             <div className="space-y-4">
-              <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <form onSubmit={handleLoginSubmit} aria-busy={isLoading} aria-describedby={errorMsg ? "auth-error" : undefined} className="space-y-4">
                 <div>
                   <label htmlFor="login-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
                   <div className="relative flex items-center">
                     <Phone aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
                     <input
-                      id="login-phone"
+                      id="login-phone" name="username" enterKeyHint="next"
                       type="tel"
                       autoComplete="tel"
                       required
@@ -238,7 +238,7 @@ export function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setMode('forgot')}
-                      className="min-h-9 cursor-pointer text-[13px] font-medium text-neutral-700 underline-offset-4 hover:underline dark:text-neutral-200"
+                      className="min-h-11 cursor-pointer text-[13px] font-medium text-neutral-700 underline-offset-4 hover:underline dark:text-neutral-200"
                     >
                       Quên mật khẩu?
                     </button>
@@ -246,7 +246,7 @@ export function LoginPage() {
                   <div className="relative flex items-center">
                     <Lock aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
                     <input
-                      id="login-password"
+                      id="login-password" name="password" enterKeyHint="go"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       required
@@ -299,7 +299,7 @@ export function LoginPage() {
           )}
 
           {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+            <form onSubmit={handleRegisterSubmit} aria-busy={isLoading} aria-describedby={errorMsg ? "auth-error" : undefined} className="space-y-4">
               <div className="flex items-start gap-2 rounded-2xl border border-amber-200/80 bg-amber-50/90 p-3.5 text-[13px] leading-relaxed text-amber-900 dark:border-amber-500/20 dark:bg-amber-950/60 dark:text-amber-200">
                 <ShieldAlert aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
                 <span><strong>Yêu cầu xác nhận:</strong> Sau khi đăng ký, tài khoản cần được <strong>Chủ trọ / Ban quản lý</strong> xác nhận duyệt phòng trước khi có thể đăng nhập.</span>
@@ -332,7 +332,7 @@ export function LoginPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
                   <label htmlFor="register-password" className="mb-2 block apple-headline kit-text-primary">Mật khẩu</label>
-                  <input id="register-password" type="password" autoComplete="new-password" required placeholder="Ít nhất 6 ký tự" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
+                  <input id="register-password" minLength={6} type="password" autoComplete="new-password" required placeholder="Ít nhất 6 ký tự" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
                 <div className="min-w-0">
                   <label htmlFor="register-confirm" className="mb-2 block apple-headline kit-text-primary">Nhập lại mật khẩu</label>
@@ -350,7 +350,7 @@ export function LoginPage() {
 
           {mode === 'pending_approval' && (
             <div className="space-y-5 py-1 text-center animate-in fade-in zoom-in-95">
-              <div aria-hidden="true" className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-950/60 dark:text-amber-200">
+              <div aria-hidden="true" className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-950/60 dark:text-amber-200 icon-plate">
                 <Clock size={28} />
               </div>
               <div>

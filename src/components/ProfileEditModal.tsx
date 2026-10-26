@@ -1,20 +1,21 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Check, 
-  Camera, 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Bike, 
-  ShieldAlert, 
+import {
+  X,
+  Check,
+  Camera,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Bike,
+  ShieldAlert,
   Calendar,
   RefreshCw,
   AlertCircle,
   FileSpreadsheet,
   LogIn
-} from 'lucide-react';
+} from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { updateResidentProfileToSheet, DEFAULT_SPREADSHEET_ID, DEFAULT_PROFILE_TAB } from '../lib/googleSheetsService';
 import { getAccessToken, googleSignIn, auth } from '../lib/googleAuth';
@@ -28,10 +29,10 @@ const sampleAvatars = [
 ];
 
 export function ProfileEditModal() {
-  const { 
-    profile, 
-    updateProfile, 
-    isProfileEditModalOpen, 
+  const {
+    profile,
+    updateProfile,
+    isProfileEditModalOpen,
     closeProfileEditModal,
     sheetConfig
   } = useApp();
@@ -84,6 +85,8 @@ export function ProfileEditModal() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isProfileEditModalOpen]);
+
+  const dialogRef = useDialogFocus(isProfileEditModalOpen, closeProfileEditModal);
 
   if (!isProfileEditModalOpen) return null;
 
@@ -204,18 +207,18 @@ export function ProfileEditModal() {
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 dark:bg-black/45 animate-in fade-in duration-200"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/30 dark:bg-black/45 duration-200"
       onClick={closeProfileEditModal}
     >
-      <div 
-        role="dialog" aria-modal="true" aria-labelledby="profile-edit-dialog-title" className="kit-dialog w-full max-w-lg flex flex-col max-h-[92svh] overflow-hidden relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1}
+        role="dialog" aria-modal="true" aria-labelledby="profile-edit-dialog-title" className="tahoe-dialog kit-dialog w-full max-w-lg flex flex-col max-h-[92svh] overflow-hidden relative duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Header */}
         <div className="kit-window-toolbar shrink-0 flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 flex items-center justify-center icon-plate">
               <User size={18} />
             </div>
             <div>
@@ -224,7 +227,7 @@ export function ProfileEditModal() {
             </div>
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={closeProfileEditModal}
             className="kit-dialog-close h-11 w-11 shrink-0 rounded-full bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
@@ -239,19 +242,19 @@ export function ProfileEditModal() {
 
           {/* Status Alert Message */}
           {syncStatus.type === 'success' && (
-            <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <div role="status" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
               <Check size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{syncStatus.message}</span>
             </div>
           )}
           {syncStatus.type === 'warning' && (
-            <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <div role="status" className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2 animate-in fade-in">
               <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
               <span>{syncStatus.message}</span>
             </div>
           )}
           {syncStatus.type === 'error' && (
-            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
               <AlertCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0" />
               <span>{syncStatus.message}</span>
             </div>
@@ -260,9 +263,9 @@ export function ProfileEditModal() {
           {/* Avatar Section */}
           <div className="flex flex-col items-center justify-center pb-2">
             <div className="relative">
-              <img 
-                src={formData.avatar || sampleAvatars[0]} 
-                alt="Avatar" 
+              <img
+                src={formData.avatar || sampleAvatars[0]}
+                alt="Avatar"
                 className="w-20 h-20 rounded-3xl object-cover ring-4 ring-neutral-100 dark:ring-neutral-800 shadow-md"
               />
               <button
@@ -280,7 +283,7 @@ export function ProfileEditModal() {
                 <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Chọn ảnh mẫu hoặc tải ảnh lên:</span>
                 <div className="flex items-center gap-2">
                   {sampleAvatars.map((url, idx) => (
-                    <img 
+                    <img
                       key={idx}
                       src={url}
                       alt={`Avatar ${idx + 1}`}

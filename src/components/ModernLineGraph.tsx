@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, Zap, Droplet } from 'lucide-react';
+import { TrendingUp, Zap, Droplet } from './AppIcons';
 import { cn } from '../lib/utils';
 
 export interface MonthTrendItem {
@@ -58,7 +58,7 @@ function generateAreaPath(points: { x: number; y: number }[], baseY: number): st
   return `${curve} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
 }
 
-// Normalize to exactly 6 consecutive months leading up to selectedMonth
+// Use only real observations from the six months ending at selectedMonth.
 function ensureSixMonthsTrend(rawList: MonthTrendItem[], targetMonth: string): MonthTrendItem[] {
   const parts = (targetMonth || '10/2026').split('/');
   const curM = parseInt(parts[0], 10) || 10;
@@ -87,18 +87,6 @@ function ensureSixMonthsTrend(rawList: MonthTrendItem[], targetMonth: string): M
         dien: Number(found.dien || 0),
         nuoc: Number(found.nuoc || 0)
       });
-    } else {
-      // Clean fallback extrapolation
-      const baseDien = Math.round(3500 + Math.sin(m * 1.5) * 220);
-      const baseNuoc = Math.round(235 + Math.cos(m * 1.2) * 18);
-      result.push({
-        month: monthStr,
-        dien: baseDien,
-        nuoc: baseNuoc,
-        tienDien: baseDien * 3500,
-        tienNuoc: baseNuoc * 20000,
-        doanhThu: 124000000
-      });
     }
   }
   return result;
@@ -110,7 +98,7 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
 
   const fmt = (n: number) => Number(n || 0).toLocaleString('vi-VN');
 
-  // Exactly 6 months
+  // Missing periods stay absent; never invent financial or usage data.
   const sixMonths = useMemo(() => {
     return ensureSixMonthsTrend(data || [], selectedMonth);
   }, [data, selectedMonth]);
@@ -195,14 +183,14 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
       {/* Header with Title & Legend Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-xs">
+          <div className="icon-plate w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-xs">
             <TrendingUp size={22} />
           </div>
           <div>
             <h3 className="type-h4 text-slate-900 dark:text-white font-bold">
               Biểu đồ tiêu thụ Điện & Nước
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5 dark:text-neutral-300">
               Diễn biến chỉ số qua các chu kỳ tháng
             </p>
           </div>
@@ -212,12 +200,12 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => setActiveFilter('all')}
+            aria-pressed={activeFilter === 'all'} onClick={() => setActiveFilter('all')}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === 'all'
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                : "text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
             )}
           >
             <span>Tất cả</span>
@@ -225,12 +213,12 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
 
           <button
             type="button"
-            onClick={() => setActiveFilter('dien')}
+            aria-pressed={activeFilter === 'dien'} onClick={() => setActiveFilter('dien')}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === 'dien'
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                : "text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
             )}
           >
             <Zap size={13} className={activeFilter === 'dien' ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white"} />
@@ -239,12 +227,12 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
 
           <button
             type="button"
-            onClick={() => setActiveFilter('nuoc')}
+            aria-pressed={activeFilter === 'nuoc'} onClick={() => setActiveFilter('nuoc')}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === 'nuoc'
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                : "text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
             )}
           >
             <Droplet size={13} className={activeFilter === 'nuoc' ? "text-white dark:text-slate-900" : "text-slate-900 dark:text-white"} />
@@ -253,9 +241,10 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
         </div>
       </div>
 
+      {sixMonths.length > 0 ? <>
       {/* SVG Canvas Container */}
       <div className="relative w-full bg-slate-50/60 dark:bg-slate-900/50 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 p-2 sm:p-3 overflow-hidden select-none">
-        <svg
+        <svg role="img" aria-label="Xu hướng điện và nước theo kỳ. Mở bảng số liệu bên dưới để đọc hoặc chọn kỳ bằng bàn phím."
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full h-56 sm:h-64 cursor-crosshair overflow-visible"
           onMouseMove={handleMouseMove}
@@ -482,6 +471,18 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
           })}
         </svg>
       </div>
+      <details className="kit-disclosure kit-data-surface rounded-2xl">
+        <summary className="kit-disclosure-summary apple-headline">Xem số liệu theo kỳ<span className="kit-disclosure-chevron" aria-hidden="true">⌄</span></summary>
+        <div className="px-3 pb-3 space-y-1">
+          <div className="grid grid-cols-3 gap-2 px-2 apple-callout kit-text-secondary"><span>Kỳ</span><span className="text-right">Điện (kWh)</span><span className="text-right">Nước (m³)</span></div>
+          {sixMonths.map(item => <div key={item.month} className="grid grid-cols-3 items-center gap-2 border-t border-[var(--separator)] px-2 apple-callout">
+            <button type="button" className="min-h-11 text-left font-semibold kit-text-primary" aria-label={"Xem kỳ " + item.month} aria-pressed={item.month === selectedMonth} onClick={() => onSelectMonth?.(item.month)}>{item.month}</button>
+            <span className="text-right font-num kit-text-primary">{fmt(item.dien)}</span><span className="text-right font-num kit-text-primary">{fmt(item.nuoc)}</span>
+          </div>)}
+          {sixMonths.length < 6 && <p className="pt-2 apple-callout kit-text-secondary">Chỉ hiển thị các kỳ có dữ liệu. Không nội suy kỳ còn thiếu.</p>}
+        </div>
+      </details>
+      </> : <div role="status" className="kit-data-surface rounded-2xl p-6 text-center"><p className="apple-headline kit-text-primary">Chưa có dữ liệu biểu đồ</p><p className="mt-1 apple-callout kit-text-secondary">Số liệu điện và nước sẽ hiển thị khi được cập nhật cho kỳ này.</p></div>}
     </div>
   );
 }

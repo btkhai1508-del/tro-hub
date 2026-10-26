@@ -48,6 +48,8 @@ Role classes và trọng lượng chữ nằm tại `src/styles/apple-typography
 
 ## Vật liệu và hiệu ứng quang học
 
+Thông số dưới đây ghi lại **kit nguồn**. Các giá trị áp dụng mới, khác biệt có chủ đích theo yêu cầu tăng độ trong và bố cục tác vụ mobile, nằm trong [đặc tả Tahoe](tahoe-upgrade.md).
+
 | Material từ export | Light, `rgb(246,246,246)` | Dark, `rgb(0,0,0)` | Áp dụng |
 | --- | ---: | ---: | --- |
 | Ultra Thin | 36% | 10% | Toolbar, track chọn chế độ |
@@ -64,7 +66,7 @@ Role classes và trọng lượng chữ nằm tại `src/styles/apple-typography
 
 ## Độ rõ của chữ trên wallpaper mới
 
-Cập nhật theo yêu cầu mới: bỏ lớp đọc phủ toàn màn hình ở cả cư dân và quản trị. Wallpaper giữ opacity90%; nền đọc chỉ nằm trên panel, tiêu đề và control. Panel Light dùng Thick72%, Dark dùng UltraThick50%. Các số đo lớp phủ dưới đây ghi lại phân tích phiên bản trước và không còn đại diện cho nền trống ở bản hiện tại.
+Cập nhật theo yêu cầu mới: bỏ lớp đọc phủ toàn màn hình ở cả cư dân và quản trị. Wallpaper giữ opacity90%; nền đọc chỉ nằm trên panel, tiêu đề và control. Bản Tahoe hiện dùng tint24%/blur12px cho card; vùng đọc/form có backing riêng. Các số đo lớp phủ dưới đây ghi lại phân tích phiên bản trước và không còn đại diện cho nền trống ở bản hiện tại.
 
 Wallpaper mới có độ sáng thay đổi lớn. Chỉ dùng Thin/Ultra Thin trực tiếp trên ảnh có thể làm chữ secondary khó đọc. Vì vậy có lớp đọc phía dưới các material: Light `rgba(246,246,246,.68)`, Dark `rgba(0,0,0,.50)`, áp dụng cả desktop/mobile và trang quản trị. Chữ không bị filter; màu secondary sáng là `#3a3a3c`, tối `#e5e5e7`.
 

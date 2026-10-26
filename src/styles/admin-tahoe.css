@@ -1,0 +1,146 @@
+/* Admin task layouts: shared materials come from the Tahoe system tokens. */
+.admin-page-header { min-width: 0; }
+.admin-mobile-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-month-control { padding: 3px; min-width: 0; flex: 1 1 210px; }
+.admin-dashboard-actions { display: flex; gap: 8px; }
+.admin-dashboard-actions > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-width: 0; }
+.admin-disclosure { min-width: 0; }
+.admin-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 72px; padding: 16px; border: 1px solid var(--liquid-edge); border-radius: 22px; text-align: left; background: var(--material-thick); cursor: pointer; }
+.admin-disclosure-trigger > span { min-width: 0; }
+.admin-disclosure-arrow { transition: transform var(--motion-standard, 180ms) var(--motion-ease, ease); }
+.admin-disclosure-arrow.is-expanded { transform: rotate(180deg); }
+.admin-disclosure-content { display: none; padding-top: 12px; }
+.admin-disclosure-content.is-expanded { display: block; }
+.admin-list-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; }
+.admin-search-field { display: flex; min-width: 0; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--separator); border-radius: 14px; background: var(--control-fill); }
+.admin-search-field input { min-width: 0; width: 100%; min-height: 44px; font-size: 16px; background: transparent; color: var(--text-primary); outline-offset: 3px; }
+.admin-status-filter select { min-height: 44px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--separator); border-radius: 14px; background: var(--control-fill); color: var(--text-primary); font-size: 13px; }
+.admin-result-count { grid-column: 1 / -1; padding-inline: 3px; }
+.admin-room-open { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.admin-room-open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.admin-room-card { position: relative; }
+.admin-room-card > div:first-child > div { position: relative; z-index: 1; }
+.admin-loading-status { display: flex; align-items: center; gap: 8px; }
+.admin-billing-breakdown > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; font-size: 13px; font-weight: 500; color: var(--text-secondary); list-style: none; cursor: pointer; }
+.admin-billing-breakdown > summary::-webkit-details-marker { display: none; }
+.admin-billing-breakdown > summary .kit-asset-icon { transition: transform var(--motion-standard, 180ms) var(--motion-ease, ease); }
+.admin-billing-breakdown[open] > summary .kit-asset-icon { transform: rotate(180deg); }
+.admin-booking-row { gap: 12px; }
+.admin-booking-row > div { min-width: 0; }
+.admin-booking-row > div > div { flex-wrap: wrap; }
+.admin-booking-row span { overflow-wrap: anywhere; }
+.admin-workspace :where(input:not([type='checkbox']):not([type='radio']), select, textarea) { max-width: 100%; }
+@media (max-width: 767px) {
+  .admin-workspace :where(button, select) { min-height: 44px; }
+  .admin-workspace :where(input:not([type='checkbox']):not([type='radio']), textarea) { min-height: 44px; font-size: 16px; }
+  .admin-page-header { gap: 12px; }
+  .admin-page-header > div:first-child { padding: 12px 14px; border-radius: 20px; background: var(--material-thick); }
+  .admin-page-header > div:first-child > p { font-size: 13px; line-height: 1.45; }
+  .admin-header-logout { display: none; } /* Also available in Công cụ quản lý. */
+  .admin-header-theme { min-width: 44px; width: 44px; padding-inline: 0; justify-content: center; }
+  .admin-header-theme > span:last-child { display: none; }
+  .admin-revenue-card { padding: 20px; }
+  .admin-revenue-card > div { gap: 18px; }
+  .admin-revenue-card h2 { font-size: 20px; line-height: 1.25; }
+  .admin-revenue-card .type-display { font-size: clamp(30px, 8vw, 42px); line-height: 1.1; }
+  .admin-dashboard-metrics { gap: 10px; }
+  .admin-dashboard-metrics > div { padding: 14px 16px; }
+  .admin-list-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .admin-status-filter select { width: 100%; }
+  .admin-result-count { grid-column: 1; }
+  .admin-utility-card { min-height: 100px; padding: 12px; gap: 8px; }
+  .admin-utility-card > div > .kit-asset-icon { width: 36px !important; height: 36px !important; }
+  .admin-meter-table, .admin-meter-table tbody { display: block; }
+  .admin-meter-table thead { display: none; }
+  .admin-meter-table tbody { display: flex; flex-direction: column; gap: 12px; }
+  .admin-meter-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 12px; border: 1px solid var(--separator); border-radius: 18px; background: var(--material-inset); }
+  .admin-meter-table td { display: block; min-width: 0; padding: 0; border: 0; }
+  .admin-meter-table td:first-child { grid-column: 1 / -1; padding-bottom: 4px; font-size: 15px; }
+  .admin-meter-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+  .admin-meter-table input { width: 100%; }
+  .admin-laundry-actions { flex-direction: column; align-items: stretch; }
+  .admin-laundry-actions > div:first-child { justify-content: flex-start; }
+  .admin-laundry-actions > div:first-child input { flex: 1; }
+  .admin-laundry-actions > div:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .admin-laundry-actions > div:last-child button { justify-content: center; padding-inline: 8px; }
+  .admin-booking-row { flex-direction: column; align-items: flex-start; }
+  .admin-booking-row > div > div { align-items: flex-start; }
+}
+@media (min-width: 768px) {
+  .admin-dashboard-actions { display: none; }
+  .admin-disclosure-trigger { display: none; }
+  .admin-disclosure-content { display: block; height: 100%; padding: 0; }
+  .admin-disclosure-content > .admin-dashboard-metrics { height: 100%; }
+}
+@media (min-width: 1024px) {
+  .admin-mobile-toolbar { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-disclosure-arrow, .admin-billing-breakdown > summary .kit-asset-icon { transition: none; }
+}
+@media print {
+  .admin-page-header, .admin-mobile-toolbar, .admin-disclosure-trigger, .admin-dashboard-actions, .admin-list-toolbar { display: none !important; }
+  .admin-disclosure-content { display: block; }
+}
+@media (max-width: 767px) {
+  .admin-section-toolbar { gap: 12px; }
+  .admin-section-toolbar > div { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+  .admin-section-toolbar > button { flex-shrink: 0; }
+  .admin-document-switch { width: 100%; min-width: 0; }
+  .admin-document-switch > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; min-width: 0; flex: 1; }
+  .admin-document-switch button { padding-inline: 8px; }
+  .admin-workspace .administrative-document { padding: 20px 16px; overflow-wrap: anywhere; }
+  .admin-workspace .administrative-document > .flex { flex-wrap: wrap; gap: 12px; }
+  .admin-ct01-table { display: block; overflow-x: auto; }
+  .admin-declaration-table { border: 0; }
+  .admin-declaration-table, .admin-declaration-table tbody, .admin-declaration-table tfoot { display: block; }
+  .admin-declaration-table thead { display: none; }
+  .admin-declaration-table tbody { display: grid; gap: 12px; }
+  .admin-declaration-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 12px; border: 1px solid #d4d4d4; border-radius: 12px; }
+  .admin-declaration-table tbody td { display: block; padding: 0; border: 0; text-align: left; }
+  .admin-declaration-table td[data-label]::before { content: attr(data-label); display: block; font: 500 12px/1.4 var(--font-sans); color: #525252; }
+  .admin-declaration-table input { min-height: 44px; text-align: left; }
+  .admin-declaration-table tfoot tr { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding-top: 12px; }
+  .admin-declaration-table tfoot td { border: 0; padding: 4px; }
+}
+@media print {
+  .admin-declaration-table { display: table; }
+  .admin-declaration-table thead { display: table-header-group; }
+  .admin-declaration-table tbody { display: table-row-group; }
+  .admin-declaration-table tfoot { display: table-footer-group; }
+  .admin-declaration-table tr { display: table-row; }
+  .admin-declaration-table td { display: table-cell; }
+  .admin-declaration-table td[data-label]::before { display: none; }
+  .admin-ct01-table { display: table; overflow: visible; }
+}
+@media (max-width: 767px) {
+  .admin-month-control { flex-basis: 170px; }
+  .admin-dashboard-actions > button { font-size: 14px; line-height: 1.3; }
+  .admin-cccd-boxes { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); width: 100%; gap: 1px; margin-left: 0; }
+  .admin-cccd-boxes > span { min-width: 0; width: 100%; }
+  .admin-document-actions { max-width: 100%; }
+  .admin-document-actions select { width: 100%; }
+}
+@media print {
+  .admin-cccd-boxes { display: inline-flex; width: auto; gap: 4px; margin-left: 8px; }
+  .admin-cccd-boxes > span { width: 24px; }
+}
+.admin-load-error { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 1px solid var(--separator); }
+.admin-load-error > div { min-width: 0; flex: 1 1 180px; }
+.admin-load-error > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.admin-workspace .administrative-document :where(h1, h2, h3, h4) { color: #171717; font-family: inherit; }
+@media (max-width: 767px) {
+  .admin-booking-row > div > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .admin-booking-row > div > div > span:first-child { justify-self: start; }
+  .admin-booking-row > span { align-self: flex-start; }
+  .admin-machine-card > div:first-child { flex-wrap: wrap; }
+  .admin-machine-card > div:first-child > div { min-width: 0; width: 100%; }
+  .admin-machine-card > div:first-child > div > div { min-width: 0; flex: 1; }
+  .admin-machine-card > div:first-child > div > div > div { flex-wrap: wrap; }
+  .admin-machine-card h4 { overflow-wrap: anywhere; }
+}
+@media print {
+  .admin-declaration-table tbody tr, .admin-declaration-table tfoot tr { display: table-row; padding: 0; border-radius: 0; }
+  .admin-declaration-table tbody td, .admin-declaration-table tfoot td { display: table-cell; padding: 8px; border: 1px solid #262626; }
+  .admin-declaration-table input { min-height: 0; font-size: 12px; text-align: inherit; }
+}

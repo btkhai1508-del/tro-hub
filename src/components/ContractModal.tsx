@@ -1,6 +1,7 @@
+import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Printer, ExternalLink, Building2 } from 'lucide-react';
+import { X, Printer, ExternalLink, Building2 } from './AppIcons';
 import { useApp } from '../context/AppContext';
 import { IconContract3D, IconDeclaration3D } from './Icons3D';
 
@@ -8,6 +9,8 @@ export function ContractModal() {
   const { profile, isContractModalOpen, closeContractModal } = useApp();
   const [activeTab, setActiveTab] = useState<'contract' | 'ct01'>('contract');
   const navigate = useNavigate();
+
+  const dialogRef = useDialogFocus(isContractModalOpen, closeContractModal);
 
   if (!isContractModalOpen) return null;
 
@@ -40,12 +43,12 @@ export function ContractModal() {
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200"
+    <div
+      className="tahoe-dialog-overlay fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-md duration-200"
       onClick={closeContractModal}
     >
-      <div 
-        className="w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] flex flex-col max-h-[92vh] overflow-hidden relative animate-in zoom-in-95 duration-200"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="contract-dialog-title"
+        className="tahoe-dialog w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -54,7 +57,7 @@ export function ContractModal() {
             <IconContract3D size={40} className="shrink-0" />
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 id="contract-dialog-title" className="text-base font-bold text-slate-900 dark:text-white">
                   Văn bản Pháp lý & Hợp đồng
                 </h3>
                 <span className="badge-paid text-[10px] py-0.5">Hiệu lực</span>
@@ -74,7 +77,7 @@ export function ContractModal() {
             >
               <ExternalLink size={18} />
             </button>
-            <button 
+            <button
               type="button"
               onClick={closeContractModal}
               className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
@@ -115,11 +118,11 @@ export function ContractModal() {
 
         {/* Body Container: Scrollable A4 Document Sheet */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-100 dark:bg-[#070b14]">
-          <div 
+          <div
             style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
             className="contract-document-a4 w-full bg-white text-black shadow-md border border-slate-300 rounded-none p-6 sm:p-10 leading-[1.45] text-[13px] select-text"
           >
-            
+
             {activeTab === 'contract' ? (
               /* TAB 1: CONTRACT A4 */
               <div className="space-y-3.5 text-black">
@@ -199,7 +202,7 @@ export function ContractModal() {
                 <div className="space-y-1.5 text-[12.5px]">
                   <p>1. Họ, chữ đệm và tên khai sinh: <span className="font-bold uppercase">{profile.name || 'TRƯƠNG ĐÌNH TRƯỜNG AN'}</span></p>
                   <p>2. Ngày sinh: <span className="font-semibold">{dobDay}/{dobMonth}/{dobYear}</span> — 3. Giới tính: Nam</p>
-                  
+
                   <div className="flex items-center gap-1.5 pt-0.5">
                     <span className="shrink-0">4. Số định danh cá nhân:</span>
                     <div className="flex gap-0.5 font-mono font-bold">

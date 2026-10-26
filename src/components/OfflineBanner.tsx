@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { WifiOff } from 'lucide-react';
+import { WifiOff } from './AppIcons';
 
 export function OfflineBanner() {
   const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
