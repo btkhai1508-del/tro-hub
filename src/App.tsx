@@ -17,25 +17,6 @@ const LaundryPage = lazy(() => routeLoaders.laundry().then(module => ({ default:
 const LoginPage = lazy(() => routeLoaders.login().then(module => ({ default: module.LoginPage })));
 const AdminPortal = lazy(() => routeLoaders.admin().then(module => ({ default: module.AdminPortal })));
 
-
-function AppLoading() {
-  return (
-    <main role="status" aria-live="polite" aria-label="Đang tải giao diện" className="flex min-h-svh items-center justify-center px-5 py-10">
-      <div className="liquid-panel w-full max-w-sm space-y-5 p-7">
-        <div className="flex items-center gap-3">
-          <span aria-hidden="true" className="ui-spinner" />
-          <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">Đang mở không gian của bạn…</p>
-        </div>
-        <div aria-hidden="true" className="space-y-3">
-          <div className="h-3 w-2/3 rounded-full bg-black/5 dark:bg-white/10" />
-          <div className="h-3 w-full rounded-full bg-black/5 dark:bg-white/10" />
-          <div className="h-24 rounded-2xl border border-white/50 bg-white/20 dark:border-white/10 dark:bg-white/5" />
-        </div>
-      </div>
-    </main>
-  );
-}
-
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useApp();
   const location = useLocation();
@@ -146,7 +127,8 @@ export default function App() {
         <Icons3DDefs />
         <BrandIntro />
         <HashRouter>
-          <Suspense fallback={<AppLoading />}>
+          {/* Match the intro veil while the first route chunk loads. */}
+          <Suspense fallback={<div aria-hidden="true" className="fixed inset-0 bg-[#f7f8fa] dark:bg-[#101114]" />}>
             <AppRoutes />
           </Suspense>
         </HashRouter>

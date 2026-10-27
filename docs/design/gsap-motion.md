@@ -6,7 +6,7 @@ Thiết kế lại hệ motion theo yêu cầu: giữ bố cục và nghiệp v�
 
 Dùng đúng Home.svg, tên Trọ-Hub và phụ đề Nhà trọ Phong Lan. Một lớp trang trí `aria-hidden`, không bắt pointer, nằm ngoài cây layout ứng dụng. Chữ được render ngay ở font-size lớn; SVG có width/height lớn thực tế. Khi thu nhỏ, tween font-size, line-height, letter-spacing và kích thước/vị trí từng phần trên riêng lớp intro. Parent chỉ dịch chuyển, không scale phóng lớn bitmap chữ. Không giữ will-change trên chữ trong nhịp đứng yên.
 
-Intro gắn một lần ở App, ngoài route Suspense. Khi mở website đã có phiên đăng nhập, nó chọn thương hiệu thật đang hiển thị của cư dân/admin thay vì đòi qua login. `data-brand-target` và các slot logo/title/subtitle phân biệt đích desktop/mobile, tránh chọn sidebar ẩn. Sidebar thu gọn nhận logo, chữ tan trước khi đáp; mobile admin/thanh toán không có logo dùng header/content anchor để thu và tan nhẹ, không đổi heading. Nhãn thương hiệu/nhãn mục khác nhau crossfade ở cuối chuyển động để khớp chữ thật trên header.
+Intro gắn một lần ở App, ngoài route Suspense. Trong lúc chờ chunk đầu tiên, Suspense chỉ hiện nền phẳng trùng màu veil sáng/tối; đã bỏ card/spinner và câu “Đang mở không gian của bạn…” trước intro. Khi mở website đã có phiên đăng nhập, nó chọn thương hiệu thật đang hiển thị của cư dân/admin thay vì đòi qua login. `data-brand-target` và các slot logo/title/subtitle phân biệt đích desktop/mobile, tránh chọn sidebar ẩn. Sidebar thu gọn nhận logo, chữ tan trước khi đáp; mobile admin/thanh toán không có logo dùng header/content anchor để thu và tan nhẹ, không đổi heading. Nhãn thương hiệu/nhãn mục khác nhau crossfade ở cuối chuyển động để khớp chữ thật trên header.
 
 | Nhịp | Thời điểm bắt đầu | Thời lượng | Easing |
 | --- | ---: | ---: | --- |
