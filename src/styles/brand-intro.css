@@ -31,13 +31,25 @@
 }
 .brand-intro-mark {
   position: fixed;
-  display: flex;
-  align-items: center;
+  contain: layout style;
   pointer-events: none;
-  will-change: transform;
 }
-.brand-intro-mark > *, .brand-intro-mark > :last-child > * {
-  will-change: transform, opacity;
+.brand-intro-logo, .brand-intro-title, .brand-intro-subtitle,
+.brand-intro-title-destination, .brand-intro-subtitle-destination {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.brand-intro-logo { object-fit: contain; max-width: none; }
+.brand-intro-title, .brand-intro-subtitle,
+.brand-intro-title-destination, .brand-intro-subtitle-destination {
+  white-space: nowrap;
+}
+.brand-intro-title, .brand-intro-subtitle { overflow: visible; }
+.brand-intro-title-destination, .brand-intro-subtitle-destination {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (prefers-reduced-motion: reduce), print {
   .brand-intro-stage { display: none; }

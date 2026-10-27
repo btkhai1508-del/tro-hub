@@ -1233,8 +1233,9 @@ export function AdminPortal() {
           {/* Top Brand */}
           <div className="w-full">
             {isSidebarCollapsed ? (
-              <div className="flex justify-center mb-6 w-full">
+              <div data-brand-target="brand" className="flex justify-center mb-6 w-full">
                 <div
+                  data-brand-logo
                   className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 cursor-pointer transition-transform icon-plate"
                   title="Nhà Trọ Phong Lan - Quản lý chủ trọ"
                 >
@@ -1242,18 +1243,18 @@ export function AdminPortal() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 px-1 mb-6">
-                <div className="w-11 h-11 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 shrink-0 icon-plate">
+              <div data-brand-target="brand" className="flex items-center gap-3 px-1 mb-6">
+                <div data-brand-logo className="w-11 h-11 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 shrink-0 icon-plate">
                   <IconHome3D size={48} />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div data-brand-copy className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">Phong Lan</span>
+                    <span data-brand-title className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">Phong Lan</span>
                     <span className="px-1.5 py-0.2 bg-neutral-50 text-neutral-600 text-[10px] font-bold rounded-md font-num border border-neutral-100 uppercase dark:text-neutral-300">
                       Admin
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-600 font-medium truncate dark:text-neutral-300">
+                  <p data-brand-subtitle className="text-[11px] text-neutral-600 font-medium truncate dark:text-neutral-300">
                     Quản lý chủ trọ
                   </p>
                 </div>
@@ -1534,7 +1535,7 @@ export function AdminPortal() {
 
         {/* Welcome Header */}
         <header className="admin-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div>
+          <div data-brand-target="anchor">
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
               <span className="px-2 py-0.5 rounded-md bg-neutral-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">

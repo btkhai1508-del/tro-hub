@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { routeLoaders } from './lib/routePreload';
 import { Layout } from './components/Layout';
 import { Icons3DDefs } from './components/Icons3D';
+import { BrandIntro } from './components/BrandIntro';
 
 const Home = lazy(() => routeLoaders.home().then(module => ({ default: module.Home })));
 const Utilities = lazy(() => routeLoaders.utilities().then(module => ({ default: module.Utilities })));
@@ -143,6 +144,7 @@ export default function App() {
     <ThemeProvider>
       <AppProvider>
         <Icons3DDefs />
+        <BrandIntro />
         <HashRouter>
           <Suspense fallback={<AppLoading />}>
             <AppRoutes />

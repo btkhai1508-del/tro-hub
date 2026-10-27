@@ -31,11 +31,11 @@ export function Sidebar() {
       <div className="kit-sidebar-panel h-full min-h-0">
         <div id="resident-sidebar-content" className={cn('kit-sidebar-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain py-5', isSidebarCollapsed ? 'px-3' : 'px-4')}>
           <div className={cn('mb-3 flex min-h-16 shrink-0 items-center gap-2', isSidebarCollapsed ? 'justify-center' : 'px-2')}>
-            <NavLink to="/" aria-label="Trọ-Hub · Trang chủ" className={cn('flex min-w-0 flex-1 items-center gap-2.5', isSidebarCollapsed && 'justify-center')}>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center">
+            <NavLink data-brand-target="brand" to="/" aria-label="Trọ-Hub · Trang chủ" className={cn('flex min-w-0 flex-1 items-center gap-2.5', isSidebarCollapsed && 'justify-center')}>
+              <div data-brand-logo className="flex h-11 w-11 shrink-0 items-center justify-center">
                 <IconHome3D size={52} />
               </div>
-              {!isSidebarCollapsed && <div className="min-w-0"><span className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub.</span><span className="apple-subheadline kit-text-secondary block truncate whitespace-nowrap">Nhà trọ Phong Lan</span></div>}
+              {!isSidebarCollapsed && <div data-brand-copy className="min-w-0"><span data-brand-title className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub.</span><span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate whitespace-nowrap">Nhà trọ Phong Lan</span></div>}
             </NavLink>
           </div>
 

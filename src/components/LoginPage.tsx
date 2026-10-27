@@ -1,5 +1,4 @@
-import React, { useRef, useState } from 'react';
-import { BrandIntro } from './BrandIntro';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Phone, 
@@ -21,7 +20,6 @@ import { Background } from './Background';
 import { AppleCheckbox } from './AppleControls';
 
 export function LoginPage() {
-  const brandRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { loginUser, loginWithZalo, registerResident } = useApp();
@@ -150,15 +148,14 @@ export function LoginPage() {
   return (
     <div className="kit-auth-shell relative isolate flex min-h-svh items-center justify-center px-3 py-6 sm:px-8 sm:py-10">
       <Background />
-      <BrandIntro targetRef={brandRef} />
       <div className="kit-login-window liquid-panel auth-panel relative z-10 mx-auto w-full max-w-[464px] overflow-hidden">
-        <div ref={brandRef} data-brand-target className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
-          <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
+        <div data-brand-target="brand" className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
+          <span data-brand-logo aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
             <IconHome3D size={56} />
           </span>
-          <div className="min-w-0">
-            <span className="block apple-title2 apple-strong kit-text-primary">Trọ-Hub</span>
-            <span className="block apple-callout kit-text-secondary">Nhà trọ Phong Lan</span>
+          <div data-brand-copy className="min-w-0">
+            <span data-brand-title className="block apple-title2 apple-strong kit-text-primary">Trọ-Hub</span>
+            <span data-brand-subtitle className="block apple-callout kit-text-secondary">Nhà trọ Phong Lan</span>
           </div>
         </div>
 

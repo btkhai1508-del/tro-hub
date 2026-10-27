@@ -249,7 +249,7 @@ export function PaymentPage() {
 
   if (!hasInvoice) {
     return (
-      <div className="w-full flex items-center justify-center p-4">
+      <div data-brand-target="anchor" className="w-full flex items-center justify-center p-4">
         <div className="soft-card max-w-md p-8 text-center space-y-4">
           <h1 className="apple-title2 font-semibold kit-text-primary">Chưa có hóa đơn để thanh toán</h1>
           <p className="apple-body kit-text-secondary">Hóa đơn của bạn sẽ xuất hiện tại đây khi được phát hành.</p>
@@ -263,7 +263,7 @@ export function PaymentPage() {
   }
 
   return (
-    <div className="w-full space-y-4 pb-4">
+    <div data-brand-target="anchor" className="w-full space-y-4 pb-4">
       {copiedKey && <span role="status" className="sr-only">Đã sao chép.</span>}
       {copyError && <p role="alert" className="kit-feedback mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950 dark:text-rose-200">{copyError}</p>}
       {pdfError && <p role="alert" className="mx-auto max-w-5xl apple-body text-red-700 dark:text-red-300">{pdfError}</p>}

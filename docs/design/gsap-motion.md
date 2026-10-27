@@ -2,9 +2,11 @@
 
 Thiết kế lại hệ motion theo yêu cầu: giữ bố cục và nghiệp vụ hiện có, tập trung intro thương hiệu; đổi mục chỉ fade-out rồi fade-in; sidebar thu/mở nhẹ. Thay bộ hiệu ứng cũ, không chạy hai hệ song song.
 
-## Intro đăng nhập
+## Intro khi mở website
 
-Dùng đúng Home asset, tên Trọ-Hub và phụ đề đang có trong header. Một bản sao trang trí, `aria-hidden`, không bắt pointer, nằm ngoài cây layout của ứng dụng. Header thật giữ nguyên kích thước/vị trí. Đo vùng thương hiệu thực tế, đưa bản sao tới giữa viewport rồi dùng transform đưa về đúng vùng đó; không dùng tọa độ cố định cho đích.
+Dùng đúng Home.svg, tên Trọ-Hub và phụ đề Nhà trọ Phong Lan. Một lớp trang trí `aria-hidden`, không bắt pointer, nằm ngoài cây layout ứng dụng. Chữ được render ngay ở font-size lớn; SVG có width/height lớn thực tế. Khi thu nhỏ, tween font-size, line-height, letter-spacing và kích thước/vị trí từng phần trên riêng lớp intro. Parent chỉ dịch chuyển, không scale phóng lớn bitmap chữ. Không giữ will-change trên chữ trong nhịp đứng yên.
+
+Intro gắn một lần ở App, ngoài route Suspense. Khi mở website đã có phiên đăng nhập, nó chọn thương hiệu thật đang hiển thị của cư dân/admin thay vì đòi qua login. `data-brand-target` và các slot logo/title/subtitle phân biệt đích desktop/mobile, tránh chọn sidebar ẩn. Sidebar thu gọn nhận logo, chữ tan trước khi đáp; mobile admin/thanh toán không có logo dùng header/content anchor để thu và tan nhẹ, không đổi heading. Nhãn thương hiệu/nhãn mục khác nhau crossfade ở cuối chuyển động để khớp chữ thật trên header.
 
 | Nhịp | Thời điểm bắt đầu | Thời lượng | Easing |
 | --- | ---: | ---: | --- |
@@ -15,9 +17,9 @@ Dùng đúng Home asset, tên Trọ-Hub và phụ đề đang có trong header. 
 | Lộ wallpaper và card thật | 760ms | 560ms | power2.inOut |
 | Cả cụm thu về header | 760ms | 720ms | power3.inOut |
 
-Tổng 1,48 giây sau khi sẵn sàng. Scale tối đa2.6, giới hạn theo chiều rộng viewport. Chỉ phát một lần trong mỗi document: tải lại/mở tab mới sẽ phát lại; đổi đăng nhập/đăng ký trong cùng trang không phát lại.
+Tổng 1,48 giây sau khi sẵn sàng. Kích thước lớn tối đa2.6 lần metrics gốc, giới hạn theo viewport; đây là kích thước font/SVG thật, không phải scale-up parent. Chỉ phát một lần trong mỗi document: tải lại/mở tab mới sẽ phát lại; đổi đăng nhập/đăng ký trong cùng trang không phát lại.
 
-Chạm, bàn phím, focus vào field, cuộn, resize, bàn phím ảo đổi viewport, chuyển tab, in hoặc bật giảm chuyển động đều hủy ngay và khôi phục header. Không đặt nội dung thật opacity0 trong CSS mặc định. Nếu GSAP hoặc logo chưa sẵn sàng trong600ms thì bỏ qua; failsafe1750ms dọn overlay nếu có sự cố.
+Chạm, bàn phím, focus vào field, cuộn, resize, bàn phím ảo đổi viewport, chuyển tab, in hoặc bật giảm chuyển động đều hủy ngay và khôi phục header. Không đặt nội dung thật opacity0 trong CSS mặc định. Chờ UI lazy đầu tiên tối đa4giây; khi có đích, GSAP/logo có600ms để sẵn sàng, sau đó bỏ qua; failsafe1750ms dọn overlay nếu có sự cố.
 
 ## Hệ tương tác dùng chung
 
@@ -45,7 +47,7 @@ Nhấn liên tục hủy tween cũ; chọn nhiều mục liên tiếp luôn lấ
 ## Kiến trúc và giới hạn hiệu ứng
 
 - GSAP3.13.0 qua CDN async trong `index.html`, không thêm dependency npm, video hay thư viện render vào bundle ứng dụng.
-- `BrandIntro.tsx` + `brand-intro.css`: intro riêng biệt, dọn toàn bộ clone/listener/timer sau mỗi lượt.
+- `BrandIntro.tsx` + `brand-intro.css`: intro toàn ứng dụng, native text/SVG dimensions, dọn toàn bộ node/listener/timer sau mỗi lượt; đích bị tháo cũng hủy ngay.
 - `FadeOutlet.tsx`: giữ outlet cũ để fade tuần tự. `useCrossfadeState.ts`: cùng cơ chế cho admin.
 - `motionEngine.ts`: capability chung. `uiMotion.ts`: một observer đã giới hạn attribute và các listener dùng chung; rAF gộp mutation.
 - `motion-system.css`: timing và phản hồi CSS. `data-stage` đánh dấu rõ vùng tiền, list, progress, copied, success và popover; bộ lọc trỏ đến đúng list bằng `data-stage-filter`.
@@ -58,7 +60,7 @@ Nhấn liên tục hủy tween cũ; chọn nhiều mục liên tiếp luôn lấ
 
 Build production trong bản sao riêng vì plugin Vite Zalo ghi lại asset hash vào app-config.json. Không chạy backend hoặc ghi Google Sheets thật. Browser dùng API fixture và chặn các kết nối ngoài cần thiết; GSAP thật được lấy về làm fixture CDN.
 
-Kết quả trên bản production tích hợp: **213 assertion Chromium đạt**, TypeScript và production build đạt, diff-check sạch.
+Bản reset motion `cb04423`: **213 assertion Chromium đạt**, TypeScript và production build đạt, diff-check sạch. Đây là kiểm tra nền trước đợt cập nhật native intro bên dưới.
 
 - 49 kiểm tra intro:320/390/1440px sáng/tối; center, đích đến lệch dưới1px; reload, không phát lại khi đổi mode; ngắt bằng focus/pointer/resize/scroll/reduced-motion/in; CDN bị chặn/chậm1500ms và field vẫn nhập được.
 - 33 kiểm tra route cư dân: giữ DOM cũ trong fade-out; same-path không remount; 12 lần đổi mục nhanh; giảm chuyển động giữa fade; CDN lỗi; lazy Profile chunk chậm; đăng xuất tháo outlet ngay.
@@ -66,3 +68,12 @@ Kết quả trên bản production tích hợp: **213 assertion Chromium đạt*
 - 93 kiểm tra phản hồi: popup thông báo và modal hồ sơ thật; fixture DOM riêng cho toast/copy/success, bộ lọc chỉ chạy trên hàng mới, gõ form khác không replay list, progress giữ gốc trái/ARIA thật, SVG khôi phục sau nhấn/thả và ngắt bằng reduced-motion; không tween host có blur, không lỗi JavaScript.
 
 Các kiểm tra motion/data fixture không chứng minh giao dịch, Zalo OAuth, Google Sheets hoặc tốc độ mạng người dùng thực tế. Chưa kiểm tra Safari/iPhone thật hoặc trạng thái deploy Render.
+
+### Cập nhật intro native và phiên đăng nhập được khôi phục
+
+- 1014 assertion Chromium trên36 tổ hợp: login/cư dân/admin ×320/390/1440px ×sáng/tối ×DPR1/2; thêm reload cả3 vai trò, redirect từ/login khi đã có phiên, deep link/profile, sidebar tự thu ở1050px, chunk admin chậm1500ms, CDN lỗi/chậm, reduced-motion và khôi phục khi ngắt.
+- Kiểm tra font-size lớn thực tế, parent không phóng scale; logo có kích thước CSS lớn thực tế. Cuối intro so khớp từng vùng logo/title/subtitle, font-size và letter-spacing với header thật. Tắt autoRound trên tween native để giữ metrics thập phân, tránh chữ bị thêm dấu… hoặc lệch khi đáp.
+- Sau chỉnh CSS cuối,86 assertion bổ sung cho mobile cư dân/admin sáng/tối DPR2: phụ đề chính không bị cắt giữa nhịp thu, font native và đích đến đúng.
+- 34 assertion bổ sung: đích bị tháo; sự kiện hết phiên thật chuyển về login, không phát lại, field dùng được; mobile payment deep link sáng/tối dùng anchor và giữ thao tác quay lại. Tổng kiểm tra intro đợt này1134 assertion đạt.
+- Chạy lại33 kiểm tra fade cư dân và38 kiểm tra admin trên build mới: đều đạt.
+- API trong các kiểm tra là fixture; chưa thử Safari/iPhone thật. DPR2 trong Chromium là mô phỏng mật độ pixel, không phải thiết bị iPhone thật.
