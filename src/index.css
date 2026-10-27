@@ -522,3 +522,22 @@
   .motion-nav-trail, .motion-data-updated::before, .motion-success-ring::after { display: none; }
   .motion-switch-thumb { scale: none; }
 }
+
+/* Final polish: immediate, visible focus plus a short neutral focus halo. */
+.kit-field {
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 160ms ease-out;
+}
+.kit-field:focus-visible {
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.035), 0 0 0 5px rgba(127,127,127,.12);
+}
+:where(.kit-nav-item, .kit-segment, .kit-quick-action):focus-visible {
+  animation: motion-keyboard-focus 180ms ease-out;
+}
+@keyframes motion-keyboard-focus {
+  from { outline-offset: 6px; }
+  to { outline-offset: 3px; }
+}
+@media (prefers-reduced-motion: reduce), print {
+  .kit-field { transition: none; }
+  :where(.kit-nav-item, .kit-segment, .kit-quick-action):focus-visible { animation: none; }
+}

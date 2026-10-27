@@ -42,3 +42,11 @@ Số tiền, mã, dữ liệu `.font-num`, giấy A4/chi tiết hóa đơn khôn
 Các cảnh không dùng animation vô hạn. Callback không trì hoãn đổi trang/lưu/đóng dialog. Tween cũ bị dọn trước lượt mới; layer, frame và tham chiếu navigation được dọn khi node unmount. `beforeprint`, tab ẩn, giảm chuyển động và HMR đều dọn hiệu ứng. CDN không tải được vẫn có UI đầy đủ, không có opacity0 mặc định.
 
 Kiểm tra production build bằng Chromium, API giả lập:36 kiểm tra cảnh trên390/1440px sáng/tối;13 kiểm tra bổ sung cho trạng thái máy/đồng hồ, nội dung dialog, busy/error, in, CDN bị chặn và đổi mục liên tục. Kiểm tra lại58 trường hợp GSAP/fallback/layout và15 trường hợp card/sidebar trước đó. Các phép thử điều khiển DOM để cô lập hiệu ứng không phải kiểm tra thanh toán hay Google Sheets thật; chưa thử Safari/iPhone thật.
+
+## Danh mục và ưu tiên cuối
+
+Giữ các nhóm đã triển khai: nhấn/thả nút; tiêu đề trang; chọn tab; vệt chọn menu; sidebar stagger; card light sweep; disclosure; danh sách; tiến độ; dữ liệu cập nhật; switch; tick copy; thành công; lỗi; busy label; nội dung dialog; empty/status feedback; spinner đang tải.
+
+Đợt bổ sung nhỏ: focus field có halo trung tính160ms; focus điều hướng bằng bàn phím có outline-offset6→3px trong180ms. Outline hiện ngay, không animate opacity của input hoặc di chuyển field; không đổi layout. Giảm chuyển động/in sẽ tắt các hiệu ứng này.
+
+Không bật mặc định parallax nền, card tilt3D, cursor tùy chỉnh, confetti hoặc blur chuyển động. Chúng không cần thiết cho tác vụ quản lý và làm tăng chi phí render.
