@@ -68,7 +68,7 @@ export function Home() {
             <div className="py-5 sm:py-9">
               <p className="apple-body kit-text-secondary mb-2">{!currentInvoice ? 'Chưa có hóa đơn' : isPaid ? 'Số tiền đã thanh toán' : isPending ? 'Số tiền chờ xác nhận' : 'Số tiền cần thanh toán'}</p>
               {currentInvoice ? <div className="flex items-baseline gap-2 text-neutral-950 dark:text-white">
-                <span data-motion-watch className="apple-amount font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
+                <span data-stage="amount" className="apple-amount font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
                 <span className="apple-title2 font-normal kit-text-secondary">₫</span>
               </div> : <h3 className="apple-title1 apple-strong kit-text-primary">Một nơi để theo dõi<br />mọi khoản phí.</h3>}
               <p className="mt-3 flex flex-wrap items-center gap-1.5 apple-callout kit-text-secondary">
@@ -77,12 +77,12 @@ export function Home() {
             </div>
 
             <div data-tutorial="billing-pay-btn" className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 border-t border-neutral-900/[0.06] dark:border-white/[0.08] pt-5">
-              {isUnpaid && <button type="button" onClick={() => navigate(`/payment?invoiceId=${currentInvoice.id}`)} className="primary-button min-h-12 px-5 flex items-center justify-center gap-2 text-sm w-full sm:w-auto font-semibold cursor-pointer active:scale-98">
+              {isUnpaid && <button type="button" onClick={() => navigate(`/payment?invoiceId=${currentInvoice.id}`)} className="primary-button min-h-12 px-5 flex items-center justify-center gap-2 text-sm w-full sm:w-auto font-semibold cursor-pointer">
                 {paymentGateStatus === 'STOP' ? <LockKeyhole size={16} /> : <CreditCard size={16} />}
                 {paymentGateStatus === 'STOP' ? 'Thông tin thanh toán' : 'Thanh toán ngay'}
                 <ArrowUpRight size={16} />
               </button>}
-              <button type="button" onClick={() => currentInvoice ? openInvoiceDetailModal(currentInvoice) : navigate('/invoices')} className="soft-button min-h-12 px-5 inline-flex items-center justify-center gap-2 apple-control kit-text-primary w-full sm:w-auto font-semibold cursor-pointer active:scale-98">
+              <button type="button" onClick={() => currentInvoice ? openInvoiceDetailModal(currentInvoice) : navigate('/invoices')} className="soft-button min-h-12 px-5 inline-flex items-center justify-center gap-2 apple-control kit-text-primary w-full sm:w-auto font-semibold cursor-pointer">
                 {currentInvoice ? 'Xem hóa đơn' : 'Đến mục hóa đơn'}<ArrowRight size={15} />
               </button>
             </div>

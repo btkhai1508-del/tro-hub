@@ -1,0 +1,44 @@
+/* A finite decorative composition, outside the app's layout and focus tree.
+   There is no backdrop blur or video: the existing wallpaper is revealed once. */
+.brand-intro-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  contain: paint;
+}
+.brand-intro-veil {
+  position: absolute;
+  inset: 0;
+  background: #f7f8fa;
+}
+.dark .brand-intro-veil { background: #101114; }
+.brand-intro-aura {
+  position: absolute;
+  width: min(92vw, 520px);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 50%;
+  margin-left: max(-46vw, -260px);
+  margin-top: max(-46vw, -260px);
+  background: radial-gradient(ellipse at center, rgb(255 255 255 / 95%), rgb(255 255 255 / 0%) 68%);
+  pointer-events: none;
+}
+.dark .brand-intro-aura {
+  background: radial-gradient(ellipse at center, rgb(255 255 255 / 6%), rgb(255 255 255 / 0%) 68%);
+}
+.brand-intro-mark {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  will-change: transform;
+}
+.brand-intro-mark > *, .brand-intro-mark > :last-child > * {
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce), print {
+  .brand-intro-stage { display: none; }
+}

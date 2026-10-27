@@ -274,7 +274,7 @@ export function LaundryPage() {
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
 
               {/* Success Badge Icon */}
-              <div data-motion-success className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
+              <div data-stage="success" className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
                 <Check size={40} strokeWidth={3.5} />
               </div>
 
@@ -338,7 +338,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('timer');
                   }}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold apple-body flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-neutral-900 hover:bg-black dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-semibold apple-body flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
                 >
                   <Timer size={18} />
                   <span>Xem đồng hồ đếm ngược</span>
@@ -350,7 +350,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 kit-text-primary border border-gray-200 dark:border-neutral-700 font-semibold apple-body flex items-center justify-center gap-2 transition-colors active:scale-[0.99] cursor-pointer"
+                  className="w-full sm:flex-1 h-12 rounded-xl bg-white/20 dark:bg-white/5 hover:bg-white/35 dark:hover:bg-white/10 kit-text-primary border border-gray-200 dark:border-neutral-700 font-semibold apple-body flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <Home size={18} />
                   <span>Danh sách máy</span>
@@ -380,7 +380,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:scale-95 transition-all cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
@@ -453,7 +453,7 @@ export function LaundryPage() {
                           className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {recipientName}
-                          {copiedKey === 'd-recipient' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-recipient' && <span data-stage="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -463,7 +463,7 @@ export function LaundryPage() {
                           className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {bankName}
-                          {copiedKey === 'd-bank' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-bank' && <span data-stage="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -473,7 +473,7 @@ export function LaundryPage() {
                           className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-wider font-num cursor-pointer hover:underline flex items-center gap-1"
                         >
                           {accountNumber}
-                          {copiedKey === 'd-acc' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-acc' && <span data-stage="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -484,7 +484,7 @@ export function LaundryPage() {
                           title="Bắt buộc giữ nguyên mã máy"
                         >
                           {selectedMachine.machineId}
-                          {copiedKey === 'd-content' && <span data-ui-motion="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
+                          {copiedKey === 'd-content' && <span data-stage="copied" className="apple-callout text-emerald-600 font-semibold">✓</span>}
                         </button>
                       </div>
                       <div className="flex items-center justify-between apple-body">
@@ -586,7 +586,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary tracking-tight cursor-pointer"
                     >
                       {recipientName}
-                      {copiedKey === 'm-rec' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-rec' && <span data-stage="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -596,7 +596,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-medium kit-text-primary truncate max-w-[200px] text-right cursor-pointer"
                     >
                       {bankName}
-                      {copiedKey === 'm-bank' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-bank' && <span data-stage="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -606,7 +606,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-primary font-num cursor-pointer"
                     >
                       {accountNumber}
-                      {copiedKey === 'm-acc' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-acc' && <span data-stage="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -616,7 +616,7 @@ export function LaundryPage() {
                       className="kit-copy-value min-h-11 text-right break-words font-semibold kit-text-secondary font-num apple-subheadline cursor-pointer"
                     >
                       {selectedMachine.machineId}
-                      {copiedKey === 'm-content' && <span data-ui-motion="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
+                      {copiedKey === 'm-content' && <span data-stage="copied" className="ml-1 apple-caption text-emerald-600 font-semibold">✓</span>}
                     </button>
                   </div>
                 </div>
@@ -656,7 +656,7 @@ export function LaundryPage() {
                     soundFx.click();
                     setViewMode('list');
                   }}
-                  className="w-10 h-10 flex items-center justify-center kit-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 rounded-full transition-all cursor-pointer -ml-2"
+                  className="w-10 h-10 flex items-center justify-center kit-text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all cursor-pointer -ml-2"
                   title="Quay lại danh sách"
                 >
                   <ChevronLeft size={24} strokeWidth={2.2} />
@@ -741,7 +741,7 @@ export function LaundryPage() {
                               : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60"
                           )}>
                             <span className={cn(
-                              "w-2 h-2 rounded-full animate-ping",
+                              "w-2 h-2 rounded-full ",
                               isWasher ? "bg-neutral-500" : "bg-amber-500"
                             )} />
                             <span>{isWasher ? "Đang giặt đồ" : "Đang sấy đồ"}</span>
@@ -929,7 +929,7 @@ export function LaundryPage() {
 
             {/* Tab 1: Machine Grid */}
             {activeTab === 'machines' && (
-              <div className="space-y-5 ">
+              <div className="space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                   <div className="kit-segmented flex flex-wrap items-center gap-1 p-1" aria-label="Loại máy">
                     {[
@@ -941,6 +941,7 @@ export function LaundryPage() {
                         key={f.key}
                         type="button"
                         aria-pressed={activeFilter === f.key}
+                        data-stage-filter="laundry-machine-results"
                         onClick={() => {
                           soundFx.click();
                           setActiveFilter(f.key as any);
@@ -961,7 +962,7 @@ export function LaundryPage() {
                   </div>
                 </div>
 
-                <div data-motion-list className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                <div id="laundry-machine-results" data-stage="list" className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {filteredMachines.map(m => {
                     const isWasher = m.type === 'WASHER';
                     const remaining = getRemainingSeconds(m);
@@ -984,7 +985,7 @@ export function LaundryPage() {
                         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
                           <div className="flex min-w-0 items-center gap-3">
                             {/* Simplified 3D Icon */}
-                            <div className="relative shrink-0 group-hover:scale-105 transition-transform duration-300">
+                            <div className="relative shrink-0 transition-transform duration-300">
                               {isWasher ? <IconLaundry3D size={56} /> : <IconDryer3D size={56} />}
 
                               {isRunning && (
@@ -1011,7 +1012,7 @@ export function LaundryPage() {
                             </div>
                           </div>
 
-                          <div data-motion-watch data-motion-value={isRunning ? "RUNNING" : m.status}>
+                          <div data-stage="amount" data-stage-value={isRunning ? "RUNNING" : m.status}>
                             {isRunning ? (
                               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-callout font-semibold bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800">
                                 <span className="w-2 h-2 rounded-full bg-neutral-500" />
@@ -1095,7 +1096,7 @@ export function LaundryPage() {
 
             {/* Tab 2: Booking Reservation */}
             {activeTab === 'booking' && (
-              <div className="space-y-6 ">
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[34px] border border-white/80 dark:border-white/10 space-y-5">
                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900/5 dark:border-white/10">
@@ -1114,7 +1115,7 @@ export function LaundryPage() {
 
                     {bookingMsg && (
                       <div className={cn(
-                        "p-3.5 rounded-2xl apple-callout font-semibold flex items-center gap-2.5 animate-in fade-in",
+                        "p-3.5 rounded-2xl apple-callout font-semibold flex items-center gap-2.5  ",
                         bookingMsg.isError
                           ? "bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
                           : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
@@ -1242,7 +1243,7 @@ export function LaundryPage() {
 
             {/* Tab 3: Rules & Pricing */}
             {activeTab === 'rules' && (
-              <div className="space-y-4 max-w-3xl ">
+              <div className="space-y-4 max-w-3xl">
                 <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
                   <h4 className="type-h3 font-semibold kit-text-primary flex items-center gap-2.5">
                     <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 apple-callout flex items-center justify-center font-semibold">1</span>

@@ -1,52 +1,68 @@
-# Animation GSAP — không đổi layout
+# Motion Trọ-Hub — Brand Morph
 
-Áp dụng trên bản GitHub `7a6ddff`. Không thay cấu trúc, khoảng cách, màu, kích thước card, điều hướng hoặc handler nghiệp vụ.
+Thiết kế lại hệ motion theo yêu cầu: giữ bố cục và nghiệp vụ hiện có, tập trung intro thương hiệu; đổi mục chỉ fade-out rồi fade-in; sidebar thu/mở nhẹ. Thay bộ hiệu ứng cũ, không chạy hai hệ song song.
 
-- CDN: `https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js`, tải async trong `index.html`. Không cài dependency npm, không dùng ScrollTrigger.
-- Bộ điều khiển: `src/lib/uiMotion.ts`, khởi tạo một lần ở `main.tsx`, dọn listener/observer khi HMR dispose.
-- Tiêu đề trang hoặc dialog mới: opacity0→1, y4→0,160ms, `power2.out`.
-- Nhấn nội dung bên trong nút: scale0.97 trong80ms, thả về1 trong120ms. Không scale chính card/nút có kính. Pointer cancel/mất focus trả trạng thái về bình thường.
-- Tab được chọn: icon/nội dung lá phản hồi opacity0.6→1 trong120ms. Tiêu đề thay đổi được nhận biết cả khi React cập nhật text node.
-- Tick copy thành công: scale0.85→1, opacity0.5→1,120ms. Gắn marker không thay markup/handler clipboard.
-- Khung kính và ancestor chứa kính không nhận opacity/transform animation; chỉ heading hoặc nội dung lá đủ điều kiện mới được chạy. Tài liệu trắng/invoice/A4 và spinner được bỏ qua.
-- Đóng popup vẫn diễn ra ngay theo handler hiện có, không trì hoãn để đợi hiệu ứng. Giữ spinner/loading CSS hiện có.
-- Không ghi đè transform/opacity gốc sau hiệu ứng; khôi phục cả SVG transform/data-svg-origin. Tween cũ bị hủy trước khi chạy hiệu ứng mới; node tháo khỏi DOM được dọn.
-- `prefers-reduced-motion: reduce` chặn GSAP và hủy ngay hiệu ứng đang chạy. CDN lỗi/chậm không ẩn nội dung hoặc chặn thao tác. Không đặt opacity0 mặc định trong CSS.
+## Intro đăng nhập
 
-Kiểm tra trên production build bằng Chromium với API giả lập: **58 kiểm tra tương tác/layout/fallback và 11 kiểm tra tick/CDN chậm đều đạt**. TypeScript/build/diff-check; viewport390/1440 sáng/tối, CDN thật được lấy về dùng trong fixture, chặn CDN, nhấn giữ/thả/lặp, đổi mục nhanh, mở dialog, đổi trạng thái giảm chuyển động, so sánh chính xác bounding box và chiều dài trang khi bật/tắt GSAP. Không kiểm tra Safari/iPhone thật hoặc tốc độ CDN trên mạng người dùng.
+Dùng đúng Home asset, tên Trọ-Hub và phụ đề đang có trong header. Một bản sao trang trí, `aria-hidden`, không bắt pointer, nằm ngoài cây layout của ứng dụng. Header thật giữ nguyên kích thước/vị trí. Đo vùng thương hiệu thực tế, đưa bản sao tới giữa viewport rồi dùng transform đưa về đúng vùng đó; không dùng tọa độ cố định cho đích.
 
-## Điểm nhấn cho card và sidebar
+| Nhịp | Thời điểm bắt đầu | Thời lượng | Easing |
+| --- | ---: | ---: | --- |
+| Logo hiện từ scale .76, nghiêng −7°, y8px | 80ms | 460ms | expo.out |
+| Tên thương hiệu từ x12px, opacity0 | 180ms | 360ms | power3.out |
+| Phụ đề từ y4px, opacity0 | 320ms | 280ms | sine.out |
+| Ánh sáng trung tính phía sau xuất hiện, rồi tan | 80 / 620ms | 500 / 400ms | sine.out / sine.in |
+| Lộ wallpaper và card thật | 760ms | 560ms | power2.inOut |
+| Cả cụm thu về header | 760ms | 720ms | power3.inOut |
 
-- Card chi phí/phòng, quick action, doanh thu và phòng admin: dải sáng trắng mảnh lướt550ms khi hover bằng chuột, focus bàn phím hoặc chạm. Chỉ animate biến CSS của gradient trang trí `::after`; không di chuyển card hoặc thay blur. Không chạy nền liên tục, không xử lý pointermove.
-- Mở sidebar user/admin: nhãn menu đi từ trái8px, opacity0→1 trong220ms; lệch nhau25ms, tối đa125ms. Giữ nguyên hiệu ứng độ rộng/layout có sẵn. Mở/đóng liên tiếp hủy tween cũ và khôi phục style.
-- Lớp sáng bỏ qua pointer để không chặn nút. Tắt và dọn ngay khi bật giảm chuyển động, tab bị ẩn hoặc node bị tháo khỏi DOM; không chạy khi CDN chưa sẵn sàng.
+Tổng 1,48 giây sau khi sẵn sàng. Scale tối đa2.6, giới hạn theo chiều rộng viewport. Chỉ phát một lần trong mỗi document: tải lại/mở tab mới sẽ phát lại; đổi đăng nhập/đăng ký trong cùng trang không phát lại.
 
-## Phản hồi tác vụ trên toàn website
+Chạm, bàn phím, focus vào field, cuộn, resize, bàn phím ảo đổi viewport, chuyển tab, in hoặc bật giảm chuyển động đều hủy ngay và khôi phục header. Không đặt nội dung thật opacity0 trong CSS mặc định. Nếu GSAP hoặc logo chưa sẵn sàng trong600ms thì bỏ qua; failsafe1750ms dọn overlay nếu có sự cố.
 
-Bộ cảnh dùng chung nằm tại `src/lib/uiMotionScenes.ts`, được nối vào observer hiện có thay vì tạo một observer toàn trang thứ hai. Bổ sung marker không đổi layout, màu, dữ liệu hoặc handler nghiệp vụ.
+## Hệ tương tác dùng chung
 
-| Cảnh | Áp dụng | Chuyển động |
-| --- | --- | --- |
-| Chọn mục | Sidebar, bottom bar, segmented tab | Viền chọn di chuyển giữa hai mục220ms; vị trí/selected thật đổi ngay. Lớp tuyệt đối không bắt pointer và tự xóa |
-| Mở chi tiết | Native details, disclosure admin, body dialog | Chữ/nhãn xuất hiện từ dưới3px,160ms; lệch15ms, tối đa8 phần tử mỗi nhóm |
-| Danh sách | Phòng admin, lịch sử hóa đơn, tiện ích, danh sách máy | Nhãn kết quả hiện theo nhịp khi DOM danh sách thay đổi; không fade nguyên card kính |
-| Cập nhật dữ liệu | Chi phí trang chủ, tổng hóa đơn, doanh thu admin, trạng thái máy | Viền sáng450ms khi giá trị khác lần trước; không count-up số tiền. Không kích hoạt lần mount đầu hoặc khi dữ liệu không đổi |
-| Tiến độ thu tiền | Dashboard admin | Scale phần fill từ mức cũ sang mới300ms; aria-valuenow và phần trăm hiển thị đúng giá trị mới ngay. Không tạo dữ liệu hay ghi API |
-| Công tắc | AppleSwitch ở các màn hình đang dùng | Núm co ngang90%→100% trong180ms; giữ chuyển động translate và checked/handler hiện có |
-| Thành công | Payment/Laundry ở nhánh success hiện có | Tick xuất hiện200ms và vòng sáng mảnh320ms, một lần khi nhánh đó được mount; không tự xác nhận thanh toán |
-| Lỗi | Alert và input invalid | Thông báo hiện160ms; trường invalid lắc tối đa2px/180ms, giữ focus và nội dung |
-| Đang xử lý | Nhãn nút có nội dung Đang/Đã lưu/Đã gửi/Đã cập nhật | Opacity nhãn0.6→1 trong120ms; spinner, disabled và thời điểm hoàn thành do nghiệp vụ hiện có quyết định |
+| Thành phần / tác vụ | Motion mới | Thời lượng |
+| --- | --- | ---: |
+| Chuyển trang cư dân | Giữ màn cũ để fade-out; sau đó render màn mới và fade-in. Không dịch chuyển/card stagger khi đổi trang | 100 + 160ms |
+| Chuyển mục admin | Cùng nhịp với cư dân, áp dụng cho state menu nội bộ | 100 + 160ms |
+| Sidebar hai vai trò | Độ rộng, phần bù nội dung và padding nội bộ cùng easing cubic-bezier(.2,.7,.2,1) | 240ms |
+| Nhấn/thả nút | Chỉ nội dung lá an toàn co .985 rồi hồi1; không scale khung kính | 80 / 120ms |
+| Quick action và tiện ích admin | Icon3D nhấc3px, nghiêng−2°, scale1.035 khi hover/focus trên thiết bị có chuột; mũi tên2D dịch2px | 160–220ms |
+| Dialog, disclosure, popover thông báo | Tối đa6 tiêu đề/nhãn/nội dung hiện từ y5px, opacity.65; lệch25ms | 200ms mỗi phần |
+| Thông báo lỗi/thành công/toast | Text/icon hiện từ y4px, opacity.45; nền kính và vị trí cố định không bị transform | 180ms |
+| Copy thành công | Tick nhỏ scale.8→1, opacity.3→1 | 180ms |
+| Checkbox và nhánh thành công hiện có | Vẽ nét tick một lần; trạng thái nghiệp vụ thay đổi ngay | 350ms |
+| Công tắc | Núm di chuyển theo checked thật, easing nhẹ | 180ms |
+| Bộ lọc danh sách / xem thêm | Chỉ nhãn mới lộ ra, tối đa6; gom lượt gõ100ms. Không chạy lại danh sách khi gõ form khác | 200ms + nhịp25ms |
+| Tiến độ thu phí | Phần fill chuyển từ tỷ lệ trước sang mới, gốc ở trái; số và ARIA cập nhật ngay | 300ms |
+| Giá trị tiền/trạng thái thay đổi | Gạch nhấn mảnh xuất hiện rồi tan; không count-up số tiền | 450ms |
+| Input invalid | Lắc nhẹ tối đa2px; không đổi focus/nội dung | 180ms |
+| Biểu đồ khi mở chi tiết | Vẽ nét đường dữ liệu một lần nếu là SVG đủ điều kiện | 450ms |
+| Loading / busy | Giữ spinner/skeleton phản ánh việc tải thật; nhãn đổi trạng thái phản hồi opacity | 120ms cho nhãn |
 
-Số tiền, mã, dữ liệu `.font-num`, giấy A4/chi tiết hóa đơn không bị làm mờ theo danh sách. Đọc trạng thái máy qua `data-motion-value` để thay đổi số phút còn lại không kích hoạt viền. Hiệu ứng card cập nhật dữ liệu ưu tiên hơn ánh sáng hover trên cùng card.
+Nhấn liên tục hủy tween cũ; chọn nhiều mục liên tiếp luôn lấy mục cuối. Màn đang fade-out tạm inert để tránh thao tác lên dữ liệu cũ; điều hướng bên ngoài vẫn dùng được. Khi lazy chunk chưa tới, fallback tải trang vẫn hiện và không để panel bị opacity0. Đăng xuất/guard quyền nằm ngoài lớp chuyển cảnh nên có thể tháo màn ngay.
 
-Các cảnh không dùng animation vô hạn. Callback không trì hoãn đổi trang/lưu/đóng dialog. Tween cũ bị dọn trước lượt mới; layer, frame và tham chiếu navigation được dọn khi node unmount. `beforeprint`, tab ẩn, giảm chuyển động và HMR đều dọn hiệu ứng. CDN không tải được vẫn có UI đầy đủ, không có opacity0 mặc định.
+## Kiến trúc và giới hạn hiệu ứng
 
-Kiểm tra production build bằng Chromium, API giả lập:36 kiểm tra cảnh trên390/1440px sáng/tối;13 kiểm tra bổ sung cho trạng thái máy/đồng hồ, nội dung dialog, busy/error, in, CDN bị chặn và đổi mục liên tục. Kiểm tra lại58 trường hợp GSAP/fallback/layout và15 trường hợp card/sidebar trước đó. Các phép thử điều khiển DOM để cô lập hiệu ứng không phải kiểm tra thanh toán hay Google Sheets thật; chưa thử Safari/iPhone thật.
+- GSAP3.13.0 qua CDN async trong `index.html`, không thêm dependency npm, video hay thư viện render vào bundle ứng dụng.
+- `BrandIntro.tsx` + `brand-intro.css`: intro riêng biệt, dọn toàn bộ clone/listener/timer sau mỗi lượt.
+- `FadeOutlet.tsx`: giữ outlet cũ để fade tuần tự. `useCrossfadeState.ts`: cùng cơ chế cho admin.
+- `motionEngine.ts`: capability chung. `uiMotion.ts`: một observer đã giới hạn attribute và các listener dùng chung; rAF gộp mutation.
+- `motion-system.css`: timing và phản hồi CSS. `data-stage` đánh dấu rõ vùng tiền, list, progress, copied, success và popover; bộ lọc trỏ đến đúng list bằng `data-stage-filter`.
+- Xóa `uiMotionScenes.ts`, card light sweep, vệt chọn menu, stagger nhãn sidebar, animation tiêu đề toàn trang và các utility entrance cũ. Không thêm lại dưới tên khác.
+- Khung kính popup/card không nhận transform/opacity riêng; chỉ nội dung lá an toàn được animate. Chuyển màn là fade wrapper theo yêu cầu riêng. Không tween blur, filter, màu wallpaper, kích thước card hoặc số tiền.
+- Giấy hóa đơn/A4, spinner, vùng sr-only và phần tử có backdrop-filter được loại khỏi motion nội dung. SVG giữ lại transform/data-svg-origin gốc sau khi kết thúc.
+- `prefers-reduced-motion`, tab ẩn, blur cửa sổ, in và HMR dọn tween/style tạm. Khi GSAP không tải, giao diện và thao tác vẫn hiện bình thường. CSS giảm chuyển động áp dụng cả transition cũ còn phục vụ trạng thái.
 
-## Danh mục và ưu tiên cuối
+## Kiểm tra
 
-Giữ các nhóm đã triển khai: nhấn/thả nút; tiêu đề trang; chọn tab; vệt chọn menu; sidebar stagger; card light sweep; disclosure; danh sách; tiến độ; dữ liệu cập nhật; switch; tick copy; thành công; lỗi; busy label; nội dung dialog; empty/status feedback; spinner đang tải.
+Build production trong bản sao riêng vì plugin Vite Zalo ghi lại asset hash vào app-config.json. Không chạy backend hoặc ghi Google Sheets thật. Browser dùng API fixture và chặn các kết nối ngoài cần thiết; GSAP thật được lấy về làm fixture CDN.
 
-Đợt bổ sung nhỏ: focus field có halo trung tính160ms; focus điều hướng bằng bàn phím có outline-offset6→3px trong180ms. Outline hiện ngay, không animate opacity của input hoặc di chuyển field; không đổi layout. Giảm chuyển động/in sẽ tắt các hiệu ứng này.
+Kết quả trên bản production tích hợp: **213 assertion Chromium đạt**, TypeScript và production build đạt, diff-check sạch.
 
-Không bật mặc định parallax nền, card tilt3D, cursor tùy chỉnh, confetti hoặc blur chuyển động. Chúng không cần thiết cho tác vụ quản lý và làm tăng chi phí render.
+- 49 kiểm tra intro:320/390/1440px sáng/tối; center, đích đến lệch dưới1px; reload, không phát lại khi đổi mode; ngắt bằng focus/pointer/resize/scroll/reduced-motion/in; CDN bị chặn/chậm1500ms và field vẫn nhập được.
+- 33 kiểm tra route cư dân: giữ DOM cũ trong fade-out; same-path không remount; 12 lần đổi mục nhanh; giảm chuyển động giữa fade; CDN lỗi; lazy Profile chunk chậm; đăng xuất tháo outlet ngay.
+- 38 kiểm tra admin:390/1440px sáng/tối; giữ màn cũ; lựa chọn cuối thắng; hủy yêu cầu bằng mục hiện tại; reduced-motion giữa fade; CDN lỗi; thu/mở sidebar8lần về đúng kích thước; không tràn ngang.
+- 93 kiểm tra phản hồi: popup thông báo và modal hồ sơ thật; fixture DOM riêng cho toast/copy/success, bộ lọc chỉ chạy trên hàng mới, gõ form khác không replay list, progress giữ gốc trái/ARIA thật, SVG khôi phục sau nhấn/thả và ngắt bằng reduced-motion; không tween host có blur, không lỗi JavaScript.
+
+Các kiểm tra motion/data fixture không chứng minh giao dịch, Zalo OAuth, Google Sheets hoặc tốc độ mạng người dùng thực tế. Chưa kiểm tra Safari/iPhone thật hoặc trạng thái deploy Render.

@@ -45,7 +45,7 @@ export function InvoicesAndPayment() {
               <span className="apple-body font-medium kit-text-secondary">{unpaidInvoices.length ? 'Tổng cần thanh toán' : 'Tổng quan thanh toán'}</span>
             </div>
             <div className="flex flex-wrap items-baseline gap-2 kit-text-primary">
-              <span data-motion-watch className="font-num text-[38px] leading-none font-semibold tracking-[-0.04em] sm:text-[40px]">{currency(totalUnpaidAmount)}</span>
+              <span data-stage="amount" className="font-num text-[38px] leading-none font-semibold tracking-[-0.04em] sm:text-[40px]">{currency(totalUnpaidAmount)}</span>
               <span className="apple-title1 kit-text-secondary">₫</span>
             </div>
             <p className="mt-3 apple-body kit-text-secondary">
@@ -61,7 +61,7 @@ export function InvoicesAndPayment() {
         </div>
       </section>
 
-      <section data-motion-list aria-labelledby="invoice-list-heading" className="liquid-panel overflow-hidden">
+      <section id="invoice-results" data-stage="list" aria-labelledby="invoice-list-heading" className="liquid-panel overflow-hidden">
         <div className="flex items-center justify-between border-b border-black/[0.07] px-4 py-3.5 dark:border-white/10 sm:px-6">
           <h2 id="invoice-list-heading" className="kit-card-heading">Hóa đơn theo kỳ</h2>
           <span className="apple-callout kit-text-secondary">{invoices.length} kỳ hóa đơn</span>
@@ -78,7 +78,7 @@ export function InvoicesAndPayment() {
               <span className="glass-icon shrink-0 kit-text-secondary icon-plate"><IconWallet3D size={52} /></span>
               <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span data-motion-item-label className="apple-title3 font-semibold tracking-tight kit-text-primary">Tháng {invoice.month}</span>
+                  <span data-stage="item" className="apple-title3 font-semibold tracking-tight kit-text-primary">Tháng {invoice.month}</span>
                   {statusBadge(invoice.status)}
                 </span>
                 <span className="mt-1.5 block apple-callout leading-relaxed kit-text-secondary">Hạn nộp {invoice.dueDate} · {invoice.details.length} khoản phí</span>
@@ -96,7 +96,7 @@ export function InvoicesAndPayment() {
             </div>
           </article>
         ))}
-        {filteredInvoices.length > visibleCount && <div className="border-t border-[var(--separator)] p-4 text-center"><button type="button" onClick={() => setVisibleCount(count => count + 6)} className="soft-button min-h-11 px-5">Xem thêm hóa đơn</button></div>}
+        {filteredInvoices.length > visibleCount && <div className="border-t border-[var(--separator)] p-4 text-center"><button type="button" data-stage-filter="invoice-results" onClick={() => setVisibleCount(count => count + 6)} className="soft-button min-h-11 px-5">Xem thêm hóa đơn</button></div>}
       </section>
       <PaymentHistoryExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>

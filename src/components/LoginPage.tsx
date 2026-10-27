@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { BrandIntro } from './BrandIntro';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Phone, 
@@ -20,6 +21,7 @@ import { Background } from './Background';
 import { AppleCheckbox } from './AppleControls';
 
 export function LoginPage() {
+  const brandRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { loginUser, loginWithZalo, registerResident } = useApp();
@@ -148,8 +150,9 @@ export function LoginPage() {
   return (
     <div className="kit-auth-shell relative isolate flex min-h-svh items-center justify-center px-3 py-6 sm:px-8 sm:py-10">
       <Background />
+      <BrandIntro targetRef={brandRef} />
       <div className="kit-login-window liquid-panel auth-panel relative z-10 mx-auto w-full max-w-[464px] overflow-hidden">
-        <div className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
+        <div ref={brandRef} data-brand-target className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
           <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
             <IconHome3D size={56} />
           </span>
@@ -199,14 +202,14 @@ export function LoginPage() {
           )}
 
           {errorMsg && (
-            <div id="auth-error" role="alert" className="kit-feedback mb-4 flex items-start gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/90 p-3.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-950/70 dark:text-rose-200 animate-in fade-in">
+            <div id="auth-error" role="alert" className="kit-feedback mb-4 flex items-start gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/90 p-3.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-950/70 dark:text-rose-200">
               <AlertCircle aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
               <span className="leading-relaxed">{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div role="status" className="kit-feedback mb-4 flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-3.5 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-950/70 dark:text-emerald-200 animate-in fade-in">
+            <div role="status" className="kit-feedback mb-4 flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-3.5 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-950/70 dark:text-emerald-200">
               <CheckCircle2 aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
               <span className="leading-relaxed">{successMsg}</span>
             </div>
@@ -349,7 +352,7 @@ export function LoginPage() {
           )}
 
           {mode === 'pending_approval' && (
-            <div className="space-y-5 py-1 text-center animate-in fade-in zoom-in-95">
+            <div className="space-y-5 py-1 text-center">
               <div aria-hidden="true" className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200/60 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-950/60 dark:text-amber-200 icon-plate">
                 <Clock size={28} />
               </div>

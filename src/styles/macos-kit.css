@@ -196,7 +196,6 @@
   background: var(--glass-sheen), var(--liquid-fill);
   transition-property: border-color, box-shadow, color;
 }
-.animate-in:has(.liquid-panel, .soft-card, .kit-inset), .page-transition { animation: none; }
 .kit-admin-dock-wrap { padding: 8px 12px max(12px, env(safe-area-inset-bottom)); pointer-events: none; }
 .kit-admin-dock { display: flex; align-items: stretch; gap: 3px; width: min(100%, 480px); margin-inline: auto; pointer-events: auto; }
 .kit-admin-dock-item { display: flex; min-width: 0; min-height: 58px; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 2px; cursor: pointer; touch-action: manipulation; }
@@ -257,10 +256,7 @@
 .kit-disclosure-chevron { transition: transform var(--motion-standard) var(--motion-ease); }
 .kit-disclosure[open] > summary .kit-disclosure-chevron { transform: rotate(180deg); }
 .kit-copy-value { max-width: 100%; overflow-wrap: anywhere; text-align: end; user-select: text; }
-.kit-feedback { animation: kit-feedback-enter 160ms var(--motion-ease); }
-@keyframes kit-feedback-enter { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 /* Animate controls and feedback, never an ancestor of a glass surface. */
-.liquid-panel.animate-in, .soft-card.animate-in, .kit-popover.animate-in { animation: none; }
 .soft-button, .primary-button, .kit-segment, .kit-nav-item, .kit-toolbar-control {
   min-height: 44px;
   transition-duration: var(--motion-fast);
@@ -295,14 +291,8 @@
   .dark { --reading-fill: #242426; --form-fill: #242426; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kit-feedback { animation: none; }
   .kit-disclosure-chevron { transition: none; }
 }
 @media print {
   .kit-data-surface, .kit-reading-surface, .kit-form-surface { background: #fff; color: #171717; box-shadow: none; }
-}
-/* The title provides opening feedback while the sheet's glass stays stable. */
-.kit-feedback.animate-in, .tahoe-dialog :where(h2, h3) { animation: kit-feedback-enter 160ms var(--motion-ease); }
-@media (prefers-reduced-motion: reduce) {
-  .kit-feedback.animate-in, .tahoe-dialog :where(h2, h3) { animation: none; }
 }

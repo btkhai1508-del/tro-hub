@@ -75,7 +75,7 @@ export function Sidebar() {
                 aria-label="Đăng xuất"
                 title="Đăng xuất"
                 className={cn(
-                  'flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-300/80 dark:border-rose-900/60 bg-rose-50/60 hover:bg-rose-100/80 dark:bg-rose-950/25 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold transition-all cursor-pointer shadow-xs active:scale-95',
+                  'flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-300/80 dark:border-rose-900/60 bg-rose-50/60 hover:bg-rose-100/80 dark:bg-rose-950/25 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-semibold transition-all cursor-pointer shadow-xs ',
                   isSidebarCollapsed ? 'w-11 h-11 p-0' : 'w-full px-4 text-sm'
                 )}
               >
@@ -93,7 +93,7 @@ export function Sidebar() {
         title={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
         aria-expanded={!isSidebarCollapsed}
         aria-controls="resident-sidebar-content"
-        className="kit-sidebar-toggle absolute -right-5 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white bg-white/95 text-neutral-700 shadow-md transition-[background-color,transform] duration-150 hover:scale-105 hover:text-neutral-900 active:scale-95 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+        className="kit-sidebar-toggle absolute -right-5 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white bg-white/95 text-neutral-700 shadow-md transition-[background-color,transform] duration-150 hover:text-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
       >
         {isSidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
       </button>

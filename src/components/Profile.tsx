@@ -113,7 +113,7 @@ export function Profile() {
         <button
           type="button"
           onClick={() => setIsPasswordModalOpen(true)}
-          className="soft-button flex min-h-12 w-full sm:w-auto items-center justify-center gap-2.5 rounded-2xl px-6 py-3 text-sm font-bold kit-text-primary active:scale-98 cursor-pointer"
+          className="soft-button flex min-h-12 w-full sm:w-auto items-center justify-center gap-2.5 rounded-2xl px-6 py-3 text-sm font-bold kit-text-primary cursor-pointer"
         >
           <span className="glass-icon h-7 w-7 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate">
             <IconKey3D size={30} />
@@ -124,7 +124,7 @@ export function Profile() {
         <button
           type="button"
           onClick={logoutUser}
-          className="flex min-h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-rose-300/80 bg-rose-50/70 px-6 py-3 text-sm font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 hover:shadow-sm active:scale-98 dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
+          className="flex min-h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-rose-300/80 bg-rose-50/70 px-6 py-3 text-sm font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 hover:shadow-sm dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
         >
           <LogOut size={18} strokeWidth={2} />
           <span>Đăng xuất tài khoản</span>

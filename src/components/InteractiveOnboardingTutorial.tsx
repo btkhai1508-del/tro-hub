@@ -317,7 +317,7 @@ export function InteractiveOnboardingTutorial() {
               </div>
 
               {/* Tap to continue indicator */}
-              <div className="text-white/85 font-medium flex items-center gap-1.5 animate-pulse drop-shadow-sm">
+              <div className="text-white/85 font-medium flex items-center gap-1.5 drop-shadow-sm">
                 <span>{isLastStep ? 'Chạm bất kỳ để hoàn tất' : 'Chạm bất kỳ để tiếp tục'}</span>
                 <span>→</span>
               </div>

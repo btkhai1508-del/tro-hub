@@ -242,19 +242,19 @@ export function ProfileEditModal() {
 
           {/* Status Alert Message */}
           {syncStatus.type === 'success' && (
-            <div role="status" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <div role="status" className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
               <Check size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{syncStatus.message}</span>
             </div>
           )}
           {syncStatus.type === 'warning' && (
-            <div role="status" className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <div role="status" className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
               <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
               <span>{syncStatus.message}</span>
             </div>
           )}
           {syncStatus.type === 'error' && (
-            <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <div role="alert" className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2">
               <AlertCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0" />
               <span>{syncStatus.message}</span>
             </div>
@@ -279,7 +279,7 @@ export function ProfileEditModal() {
             </div>
 
             {showAvatarPicker && (
-              <div className="mt-3 p-3 bg-white/25 dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex flex-col items-center gap-2.5 animate-in fade-in duration-150">
+              <div className="mt-3 p-3 bg-white/25 dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex flex-col items-center gap-2.5 duration-150">
                 <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Chọn ảnh mẫu hoặc tải ảnh lên:</span>
                 <div className="flex items-center gap-2">
                   {sampleAvatars.map((url, idx) => (
@@ -291,7 +291,7 @@ export function ProfileEditModal() {
                         setFormData(prev => ({ ...prev, avatar: url }));
                         setShowAvatarPicker(false);
                       }}
-                      className="w-9 h-9 rounded-xl object-cover ring-1 ring-neutral-300 dark:ring-neutral-600 hover:scale-105 cursor-pointer transition-transform"
+                      className="w-9 h-9 rounded-xl object-cover ring-1 ring-neutral-300 dark:ring-neutral-600 cursor-pointer transition-transform"
                     />
                   ))}
                   <label className="w-9 h-9 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-800 dark:hover:text-neutral-200 hover:border-neutral-500 cursor-pointer text-xs">

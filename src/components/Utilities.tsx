@@ -34,7 +34,7 @@ export function Utilities() {
         <div className="kit-inset rounded-full hidden sm:flex items-center gap-2 px-4 py-2.5 apple-body font-medium kit-text-secondary"><House size={16} strokeWidth={1.7} />{profile.room.roomNumber || 'Phòng của bạn'}</div>
       </header>
 
-      <section data-motion-list data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+      <section data-stage="list" data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
         <button type="button" onClick={() => navigate('/laundry')} className="lg:col-span-2 liquid-panel p-5 sm:p-7 relative overflow-hidden text-left group flex flex-col justify-between min-h-[172px] sm:min-h-[240px]">
 
           <div className="relative mb-3 flex items-center gap-3 sm:mt-3 sm:mb-6 sm:gap-4">
@@ -49,7 +49,7 @@ export function Utilities() {
           {utilitiesList.map(({ id, title, desc, Icon, color, action }) => <button key={id} type="button" onClick={action} className="kit-list-row w-full flex min-h-20 items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-[18px] text-left hover:bg-white/55 dark:hover:bg-white/5 transition-colors group">
             <span className={`h-11 w-11 sm:h-14 sm:w-14 flex items-center justify-center shrink-0`}><Icon size={56} /></span>
             <span className="min-w-0 flex-1"><span className="block apple-body font-semibold kit-text-primary">{title}</span><span className="block mt-1 apple-callout leading-relaxed kit-text-secondary">{desc}</span></span>
-            <ChevronRight size={17} className="text-neutral-600 shrink-0 group-hover:translate-x-0.5 transition-transform dark:text-neutral-300" />
+            <ChevronRight size={17} className="text-neutral-600 shrink-0 transition-transform dark:text-neutral-300" />
           </button>)}
         </div>
       </section>

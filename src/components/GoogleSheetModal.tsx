@@ -566,7 +566,7 @@ function markRowPending() {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isSigningIn}
-                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-xl shadow-xs transition-all cursor-pointer active:scale-[0.99]"
+                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 48 48">
                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
@@ -592,7 +592,7 @@ function markRowPending() {
                   type="button"
                   onClick={handleBatchSyncToSheet}
                   disabled={isBatchSyncing || isSyncing}
-                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
                   title="Chuyển toàn bộ danh sách cư dân (Cột Q-AB) sang Tab Thông Tin Cá Nhân"
                 >
                   <RefreshCw size={12} className={isBatchSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-600'} />
@@ -641,7 +641,7 @@ function markRowPending() {
 
           {/* SePAY Webhook Integration Guide */}
           {showSepayGuide && (
-            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs space-y-3.5 animate-in fade-in duration-200">
+            <div className="p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs space-y-3.5 duration-200">
               <div className="flex items-center justify-between">
                 <div className="font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
                   <Database size={16} className="text-emerald-600" />
@@ -692,7 +692,7 @@ function markRowPending() {
                   type="button"
                   onClick={handleTestSepay}
                   disabled={isTestingSepay}
-                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   <RefreshCw size={12} className={isTestingSepay ? 'animate-spin' : ''} />
                   <span>{isTestingSepay ? 'Đang bắn test...' : '⚡ Bắn Test Webhook SePAY'}</span>
@@ -703,7 +703,7 @@ function markRowPending() {
 
           {/* 3. Schema Explanation (Accordion) */}
           {showSchemaGuide && (
-            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs space-y-3 animate-in fade-in duration-200">
+            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs space-y-3 duration-200">
               <div className="font-bold text-indigo-900 flex items-center gap-1.5">
                 <Database size={15} />
                 <span>Cấu trúc chuẩn đã thiết lập theo yêu cầu của bạn:</span>
@@ -737,7 +737,7 @@ function markRowPending() {
                   <button
                     type="button"
                     onClick={handleCopyScript}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1 transition-all cursor-pointer shadow-xs"
                   >
                     {copiedScript ? (
                       <>
@@ -869,7 +869,7 @@ function markRowPending() {
               type="button"
               onClick={handleBatchSyncToSheet}
               disabled={isBatchSyncing || isSyncing}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
               title="Bưng toàn bộ cư dân từ cột Q-AB của tab Tháng sang Tab Thông tin cá nhân trên Google Sheet"
             >
               <RefreshCw size={13} className={isBatchSyncing ? 'animate-spin' : ''} />
@@ -880,7 +880,7 @@ function markRowPending() {
               type="button"
               onClick={handleSyncData}
               disabled={isSyncing || isBatchSyncing}
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
             >
               <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
               <span>{isSyncing ? 'Đang đọc...' : 'Đồng bộ'}</span>

@@ -248,7 +248,7 @@ export function InvoiceDetailModal() {
             type="button"
             onClick={handleDownloadInvoicePDF}
             disabled={isExporting}
-            className="flex-1 sm:flex-initial soft-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 text-slate-700 cursor-pointer font-semibold active:scale-95 transition-all"
+            className="flex-1 sm:flex-initial soft-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 text-slate-700 cursor-pointer font-semibold transition-all"
             title="Tải hóa đơn dạng tệp PDF"
           >
             <Download size={14} />
@@ -259,7 +259,7 @@ export function InvoiceDetailModal() {
             <button
               type="button"
               onClick={handlePayNow}
-              className="flex-1 sm:flex-initial primary-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 shadow-sm font-bold cursor-pointer active:scale-95 transition-all"
+              className="flex-1 sm:flex-initial primary-button text-xs py-2.5 px-3 sm:px-4 flex items-center justify-center gap-1.5 shadow-sm font-bold cursor-pointer transition-all"
               title={paymentGateStatus === 'STOP' ? 'Cổng thanh toán đang tạm đóng' : 'Quét mã VietQR thanh toán'}
             >
               {paymentGateStatus === 'STOP' ? (

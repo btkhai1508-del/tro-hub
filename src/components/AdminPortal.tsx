@@ -1,3 +1,4 @@
+import { useCrossfadeState } from '../lib/useCrossfadeState';
 import * as NavIcons from 'lucide-react';
 import '../styles/admin-tahoe.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -170,7 +171,7 @@ export function AdminPortal() {
   const { mode, isDark, toggleTheme } = useTheme();
 
   // Active Menu
-  const [activeMenu, setActiveMenu] = useState<
+  const [activeMenu, setActiveMenu, screenMotionRef] = useCrossfadeState<
     'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry'
   >('dashboard');
 
@@ -1218,7 +1219,7 @@ export function AdminPortal() {
               playSound('click');
               setIsSidebarCollapsed(!isSidebarCollapsed);
             }}
-            className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 dark:bg-neutral-800 backdrop-blur-md border border-white dark:border-neutral-700 shadow-md hover:scale-105 active:scale-95 text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 flex items-center justify-center transition-all z-50 cursor-pointer"
+            className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 dark:bg-neutral-800 backdrop-blur-md border border-white dark:border-neutral-700 shadow-md text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 flex items-center justify-center transition-all z-50 cursor-pointer"
             title={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
             aria-expanded={!isSidebarCollapsed}
             aria-label={isSidebarCollapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
@@ -1234,7 +1235,7 @@ export function AdminPortal() {
             {isSidebarCollapsed ? (
               <div className="flex justify-center mb-6 w-full">
                 <div
-                  className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 cursor-pointer hover:scale-105 transition-transform icon-plate"
+                  className="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md shadow-neutral-900/15 cursor-pointer transition-transform icon-plate"
                   title="Nhà Trọ Phong Lan - Quản lý chủ trọ"
                 >
                   <IconHome3D size={48} />
@@ -1298,7 +1299,7 @@ export function AdminPortal() {
                         size={20}
                         className={cn(
                           "transition-all duration-200 shrink-0",
-                          isActive ? "text-neutral-600 dark:text-neutral-300 scale-105" : "text-neutral-600 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white group-hover:scale-105"
+                          isActive ? "text-neutral-600 dark:text-neutral-300" : "text-neutral-600 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white "
                         )}
                       />
                       {!isSidebarCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
@@ -1355,7 +1356,7 @@ export function AdminPortal() {
                         type="button"
                         onClick={handlePrevMonth}
                         disabled={months.indexOf(selectedMonth) <= 0}
-                        className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                        className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Tháng trước"
                         aria-label="Tháng trước"
                       >
@@ -1365,7 +1366,7 @@ export function AdminPortal() {
                         type="button"
                         onClick={handleNextMonth}
                         disabled={months.indexOf(selectedMonth) >= months.length - 1}
-                        className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                        className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Tháng tiếp theo"
                         aria-label="Tháng tiếp theo"
                       >
@@ -1380,7 +1381,7 @@ export function AdminPortal() {
                   <button
                     type="button"
                     onClick={toggleTheme}
-                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group"
                     title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
@@ -1399,7 +1400,7 @@ export function AdminPortal() {
                   <button
                     type="button"
                     onClick={() => loadTabContent(activeMenu, selectedMonth)}
-                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group active:scale-[0.98]"
+                    className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group"
                     title="Làm mới dữ liệu từ Google Sheets"
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
@@ -1434,11 +1435,11 @@ export function AdminPortal() {
                     logoutUser();
                     navigate('/login');
                   }}
-                  className="soft-surface w-full h-10 px-3 rounded-2xl relative overflow-hidden flex items-center justify-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/5 dark:hover:bg-rose-500/10 transition-all cursor-pointer active:scale-[0.98] group"
+                  className="soft-surface w-full h-10 px-3 rounded-2xl relative overflow-hidden flex items-center justify-center gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/5 dark:hover:bg-rose-500/10 transition-all cursor-pointer group"
                   title="Đăng xuất khỏi hệ thống quản lý"
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
-                  <NavIcons.LogOut size={15} className="text-neutral-600 dark:text-neutral-200 group-hover:text-rose-500 dark:group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all" />
+                  <NavIcons.LogOut size={15} className="text-neutral-600 dark:text-neutral-200 group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-all" />
                   <span>Đăng xuất Admin</span>
                 </button>
               </div>
@@ -1447,7 +1448,7 @@ export function AdminPortal() {
               <div className="flex flex-col items-center gap-2 pt-1 w-full">
                 {/* Month Selector in Collapsed Mode */}
                 <div
-                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white hover:scale-105 transition-all cursor-pointer group"
+                  className="soft-surface relative w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white transition-all cursor-pointer group"
                   title={`Kỳ tháng: Tháng ${selectedMonth} (Bấm để chọn tháng)`}
                 >
                   <NavIcons.Calendar size={18} className="text-neutral-900 dark:text-white" />
@@ -1469,7 +1470,7 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:scale-105 transition-all cursor-pointer"
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer"
                   title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
                 >
                   {mode === 'light' ? (
@@ -1485,7 +1486,7 @@ export function AdminPortal() {
                 <button
                   type="button"
                   onClick={() => loadTabContent(activeMenu, selectedMonth)}
-                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white hover:scale-105 transition-all cursor-pointer"
+                  className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white transition-all cursor-pointer"
                   title="Làm mới dữ liệu từ Google Sheets"
                 >
                   <NavIcons.RefreshCw size={17} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
@@ -1496,7 +1497,7 @@ export function AdminPortal() {
                   type="button"
                   onClick={togglePaymentGate}
                   className={cn(
-                    "w-11 h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-xs hover:scale-105 transition-all",
+                    "w-11 h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-xs  transition-all",
                     paymentGate === 'START' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
                   )}
                   title={`Cổng thanh toán: ${paymentGate}`}
@@ -1526,7 +1527,7 @@ export function AdminPortal() {
       {/* =========================================================================
           MAIN ADMIN WORKSPACE (Aligning with resident page layout & margin)
           ========================================================================= */}
-      <main className={cn(
+      <main ref={screenMotionRef} className={cn(
         "admin-workspace flex-1 min-w-0 p-4 sm:p-6 md:p-7 pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto ",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>
@@ -1547,7 +1548,7 @@ export function AdminPortal() {
               {isLoading && (
                 <span
                   role="status"
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-300 shadow-2xs backdrop-blur-md animate-pulse"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/80 dark:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-700/80 text-neutral-700 dark:text-neutral-300 shadow-2xs backdrop-blur-md"
                 >
                   <span aria-hidden="true" className="ui-spinner h-3.5 w-3.5" />
                   Đang cập nhật dữ liệu…
@@ -1567,7 +1568,7 @@ export function AdminPortal() {
                 type="button"
                 onClick={handlePrevMonth}
                 disabled={months.indexOf(selectedMonth) <= 0}
-                className="w-11 h-11 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                className="w-11 h-11 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Tháng trước"
                 aria-label="Tháng trước"
               >
@@ -1603,7 +1604,7 @@ export function AdminPortal() {
                 type="button"
                 onClick={handleNextMonth}
                 disabled={months.indexOf(selectedMonth) >= months.length - 1}
-                className="w-11 h-11 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                className="w-11 h-11 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-900 hover:text-white dark:hover:bg-white dark:hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Tháng tiếp theo"
                 aria-label="Tháng tiếp theo"
               >
@@ -1652,7 +1653,7 @@ export function AdminPortal() {
                 logoutUser();
                 navigate('/login');
               }}
-              className="admin-header-logout flex min-h-11 min-w-[125px] items-center justify-center gap-1.5 rounded-2xl border border-rose-300 bg-rose-50/70 px-4 text-xs font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 active:scale-95 dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
+              className="admin-header-logout flex min-h-11 min-w-[125px] items-center justify-center gap-1.5 rounded-2xl border border-rose-300 bg-rose-50/70 px-4 text-xs font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
               title="Đăng xuất Admin"
             >
               <LogOut size={15} strokeWidth={2} />
@@ -1663,13 +1664,13 @@ export function AdminPortal() {
 
         {adminLoadError && <div role="alert" className="admin-load-error kit-data-surface rounded-[18px] p-4 mb-4"><div><p className="apple-headline kit-text-primary">Không thể cập nhật dữ liệu</p><p className="apple-callout kit-text-secondary mt-1">{adminLoadError}</p></div><button type="button" className="soft-button min-h-11 px-4" onClick={() => { setAdminLoadError(''); loadTabContent(activeMenu, selectedMonth); }}><RefreshCw size={18} />Thử lại</button></div>}
         {(activeMenu === 'rooms' || activeMenu === 'billing') && <div className="admin-list-toolbar kit-data-surface rounded-[20px] p-3 mb-4">
-          <label className="admin-search-field"><Search size={21} /><input type="search" value={adminSearch} onChange={event => setAdminSearch(event.target.value)} placeholder="Tìm phòng, tên hoặc số điện thoại" aria-label="Tìm phòng, tên hoặc số điện thoại" /></label>
-          <label className="admin-status-filter"><span className="sr-only">Trạng thái thu tiền</span><select value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái thu tiền"><option value="all">Tất cả trạng thái</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></select></label>
+          <label className="admin-search-field"><Search size={21} /><input type="search" data-stage-filter="admin-room-results" value={adminSearch} onChange={event => setAdminSearch(event.target.value)} placeholder="Tìm phòng, tên hoặc số điện thoại" aria-label="Tìm phòng, tên hoặc số điện thoại" /></label>
+          <label className="admin-status-filter"><span className="sr-only">Trạng thái thu tiền</span><select data-stage-filter="admin-room-results" value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái thu tiền"><option value="all">Tất cả trạng thái</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></select></label>
           <p role="status" className="admin-result-count apple-callout kit-text-secondary">{activeMenu === 'rooms' ? visibleRooms.length : visibleBilling.length} kết quả</p>
         </div>}
 
         {activeMenu === 'utilities' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 mb-6 ">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 mb-6">
             {[
               { key: 'createNotification', label: 'Tạo thông báo', icon: IconNotification3D },
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
@@ -1690,7 +1691,7 @@ export function AdminPortal() {
                   }}
                   className="admin-utility-card soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-950 dark:hover:text-white hover:border-neutral-400/80 transition-all cursor-pointer relative group"
                 >
-                  <div className="group-hover:scale-105 transition-transform duration-200">
+                  <div className="transition-transform duration-200">
                     <Icon size={42} />
                   </div>
                   <span>{item.label}</span>
@@ -1708,7 +1709,7 @@ export function AdminPortal() {
               }}
               className="admin-utility-card soft-card p-4 min-h-28 flex flex-col items-center justify-center gap-2.5 text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 hover:border-rose-300 transition-all cursor-pointer group"
             >
-              <div className="group-hover:scale-105 transition-transform duration-200">
+              <div className="transition-transform duration-200">
                 <IconLogout3D size={42} />
               </div>
               <span>Đăng xuất</span>
@@ -1759,7 +1760,7 @@ export function AdminPortal() {
                     <p className="type-label text-neutral-600 mb-1 dark:text-neutral-300">
                       Tổng tiền đã hạch toán · Cột P
                     </p>
-                    <div data-motion-watch className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
+                    <div data-stage="amount" className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
                       {fmt(dashboardData?.doanhThu ?? 0)}
                       <span className="text-2xl font-normal text-neutral-600 dark:text-neutral-300">₫</span>
                     </div>
@@ -1773,7 +1774,7 @@ export function AdminPortal() {
                     </div>
                     <div className="w-full h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                       <div
-                        data-motion-progress={collectionPercent} role="progressbar" aria-label="Tỷ lệ hoàn thành thu phí" aria-valuenow={collectionPercent} aria-valuemin={0} aria-valuemax={100}
+                        data-stage="progress" role="progressbar" aria-label="Tỷ lệ hoàn thành thu phí" aria-valuenow={collectionPercent} aria-valuemin={0} aria-valuemax={100}
                         className="h-full bg-neutral-900 dark:bg-white rounded-full transition-all duration-700"
                         style={{ width: `${collectionPercent}%` }}
                       />
@@ -1856,9 +1857,9 @@ export function AdminPortal() {
             2. ROOMS MANAGEMENT
            ========================================================================= */}
         {activeMenu === 'rooms' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {!isLoading && !adminLoadError && visibleRooms.length === 0 && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all')} title="Chưa có thông tin phòng" />}
-            <div data-motion-list className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div id="admin-room-results" data-stage="list" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {visibleRooms.map(r => {
                 const isPaid = (r.paymentStatus || r.status) === 'paid';
                 const isPending = (r.paymentStatus || r.status) === 'pending';
@@ -1909,7 +1910,7 @@ export function AdminPortal() {
 
         {/* Room Detail Editor */}
         {activeMenu === 'roomDetail' && currentRoomData && (
-          <div className="space-y-6  pb-36 sm:pb-32">
+          <div className="space-y-6 pb-36 sm:pb-32">
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 onClick={() => {
@@ -2342,7 +2343,7 @@ export function AdminPortal() {
             3. BILLING TAB (THU TIỀN THÁNG)
            ========================================================================= */}
         {activeMenu === 'billing' && (
-          <div className="font-apple space-y-4 sm:space-y-6 ">
+          <div className="font-apple space-y-4 sm:space-y-6">
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all')} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
@@ -2482,7 +2483,7 @@ export function AdminPortal() {
             4. LICENSE PLATE SEARCH
            ========================================================================= */}
         {activeMenu === 'plates' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Top Navigation Bar: Back Button */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -2548,7 +2549,7 @@ export function AdminPortal() {
             5. CONTRACT & CT01 (A4 PDF/PRINT FORMAT MATCHING USER CODE)
            ========================================================================= */}
         {activeMenu === 'contract' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Top Navigation Bar: Back Button */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -2787,7 +2788,7 @@ export function AdminPortal() {
             6. METER BATCH READING
            ========================================================================= */}
         {activeMenu === 'meter' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Top Navigation Bar: Back Button */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -2892,7 +2893,7 @@ export function AdminPortal() {
             7. CONFIG TAB (CÀI ĐẶT ĐƠN GIÁ)
            ========================================================================= */}
         {activeMenu === 'config' && (
-          <div className="space-y-6  pb-36 sm:pb-32">
+          <div className="space-y-6 pb-36 sm:pb-32">
             {/* Top Navigation Bar: Back Button */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -3016,7 +3017,7 @@ export function AdminPortal() {
             8. DECLARATION TAB (SỔ DOANH THU MẪU S1a-HKD)
            ========================================================================= */}
         {activeMenu === 'declaration' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Top Navigation Bar: Back Button */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -3197,7 +3198,7 @@ export function AdminPortal() {
             9. CREATE NOTIFICATION TAB (TẠO THÔNG BÁO CHO CƯ DÂN)
            ========================================================================= */}
         {activeMenu === 'createNotification' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
 
             {/* Top Navigation Bar: Back Button */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
@@ -3233,7 +3234,7 @@ export function AdminPortal() {
 
               {/* Success Notification Alert */}
               {notifSuccessMsg && (
-                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-3 duration-200">
                   <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
                     <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
                     <span>{notifSuccessMsg}</span>
@@ -3355,7 +3356,7 @@ export function AdminPortal() {
 
                   {/* Danh sách phòng có sẵn khi chọn tùy chọn */}
                   {notifTarget === 'CUSTOM' && (
-                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-3 animate-in fade-in duration-200">
+                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-3 duration-200">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">
                           Bấm chọn các phòng cần gửi thông báo:
@@ -3497,7 +3498,7 @@ export function AdminPortal() {
 
                   {/* Banner tự động báo của Thanh toán */}
                   {notifType === 'thanh_toan' && (
-                    <div className="p-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center gap-3 text-xs text-neutral-800 dark:text-neutral-200 animate-in fade-in duration-200">
+                    <div className="p-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center gap-3 text-xs text-neutral-800 dark:text-neutral-200 duration-200">
                       <IconWallet3D size={26} className="shrink-0" />
                       <div>
                         <span className="font-bold">Hệ thống tự động kích hoạt:</span> Cư dân khi nhận thông báo này sẽ có nút liên kết quét mã VietQR tự động kèm số tiền và đúng cú pháp chuyển khoản của phòng họ.
@@ -3588,7 +3589,7 @@ export function AdminPortal() {
                   </div>
 
                   {notifScheduleMode === 'scheduled' && (
-                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-2 animate-in fade-in duration-200">
+                    <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-2 duration-200">
                       <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
                         <Clock size={14} className="text-neutral-900 dark:text-white" />
                         <span>Thời gian kích hoạt gửi:</span>
@@ -3620,7 +3621,7 @@ export function AdminPortal() {
                     type="button"
                     disabled={isSendingNotif}
                     onClick={handleSendNotification}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isSendingNotif ? (
                       <RefreshCw size={15} className="animate-spin" />
@@ -3642,7 +3643,7 @@ export function AdminPortal() {
             10. LAUNDRY ADMIN TAB (QUẢN LÝ HỆ THỐNG GIẶT SẤY 24/7)
            ========================================================================= */}
         {activeMenu === 'laundry' && (
-          <div className="space-y-6 ">
+          <div className="space-y-6">
             {/* Top Navigation Bar: Back Button & Title */}
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -3763,7 +3764,7 @@ export function AdminPortal() {
                         {/* Status Badge */}
                         {m.status === 'RUNNING' ? (
                           <span className="badge-unpaid text-xs py-1 px-2.5">
-                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                             <span>Đang chạy ({minsLeft}p)</span>
                           </span>
                         ) : (

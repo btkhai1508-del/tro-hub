@@ -10,3 +10,6 @@ coverage/
 .firebase
 .env*
 !.env.example
+
+# Generated local Superdesign source context
+.superdesign/init/

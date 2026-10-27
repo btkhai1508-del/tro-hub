@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect } from 'react';
-import { Outlet, useLocation, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useLocation, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { Background } from './Background';
@@ -14,6 +14,7 @@ import { OfflineBanner } from './OfflineBanner';
 import { useApp } from '../context/AppContext';
 import { warmResidentRoutes } from '../lib/routePreload';
 import { cn } from '../lib/utils';
+import { FadeOutlet } from './FadeOutlet';
 
 function PageLoading() {
   return (
@@ -56,11 +57,7 @@ export function Layout() {
           {/* The payment flow already includes its own back control. */}
           {!isPaymentPage && <TopHeader />}
           <div className={cn('kit-page-content w-full', isPaymentPage && 'kit-payment-content')}>
-            <Suspense key={location.pathname} fallback={<PageLoading />}>
-              <div className="route-content">
-                <Outlet />
-              </div>
-            </Suspense>
+            <FadeOutlet fallback={<PageLoading />} />
           </div>
         </div>
       </main>

@@ -277,7 +277,7 @@ export function PaymentPage() {
             className="w-full flex justify-center py-6"
           >
             <main className="liquid-panel w-full max-w-[500px] p-8 sm:p-10 flex flex-col items-center text-center transition-colors">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5 animate-pulse icon-plate">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5 icon-plate">
                 <CheckCircle2 size={36} />
               </div>
 
@@ -320,7 +320,7 @@ export function PaymentPage() {
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
 
               {/* Success Badge Icon */}
-              <div data-motion-success className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
+              <div data-stage="success" className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
                 <Check size={40} strokeWidth={3.5} />
               </div>
 
@@ -484,7 +484,7 @@ export function PaymentPage() {
                   type="button"
                   aria-label="Quay lại"
                   onClick={() => navigate('/invoices')}
-                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary active:scale-95 transition-all cursor-pointer"
+                  className="soft-button w-11 h-11 flex items-center justify-center kit-text-secondary transition-all cursor-pointer"
                 >
                   <ChevronLeft size={26} strokeWidth={2.2} />
                 </button>
@@ -547,7 +547,7 @@ export function PaymentPage() {
                         >
                           <span className="font-semibold kit-text-primary">{recipientName}</span>
                           {copiedKey === 'd-recipient' ? (
-                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -561,7 +561,7 @@ export function PaymentPage() {
                         >
                           <span className="font-medium kit-text-primary">{bankName}</span>
                           {copiedKey === 'd-bank' ? (
-                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -575,7 +575,7 @@ export function PaymentPage() {
                         >
                           <span className="font-semibold kit-text-primary tracking-wider font-num">{accountNumber}</span>
                           {copiedKey === 'd-acc' ? (
-                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -589,7 +589,7 @@ export function PaymentPage() {
                         >
                           <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
                           {copiedKey === 'd-content' ? (
-                            <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
                             <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                           )}
@@ -618,7 +618,7 @@ export function PaymentPage() {
                 type="button"
                 aria-label="Quay lại hóa đơn"
                 onClick={() => navigate('/invoices')}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-100 shadow-lg backdrop-blur-xl border border-white/70 dark:border-white/15 active:scale-90 transition-all cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-100 shadow-lg backdrop-blur-xl border border-white/70 dark:border-white/15 transition-all cursor-pointer"
               >
                 <ChevronLeft size={24} strokeWidth={2.4} />
               </button>
@@ -683,7 +683,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-primary break-words">{recipientName}</span>
                         {copiedKey === 'm-rec' ? (
-                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}
@@ -699,7 +699,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-primary">{bankName}</span>
                         {copiedKey === 'm-bank' ? (
-                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}
@@ -715,7 +715,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-primary tracking-wider font-num">{accountNumber}</span>
                         {copiedKey === 'm-acc' ? (
-                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}
@@ -731,7 +731,7 @@ export function PaymentPage() {
                       >
                         <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
                         {copiedKey === 'm-content' ? (
-                          <Check data-ui-motion="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <Copy size={13} strokeWidth={2} className="text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-800 dark:group-hover:text-white shrink-0 transition-colors" />
                         )}

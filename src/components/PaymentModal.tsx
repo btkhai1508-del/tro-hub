@@ -67,7 +67,7 @@ export function PaymentModal() {
           <button
             type="button"
             onClick={handleClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
             aria-label="Đóng cửa sổ thanh toán"
           >
             <X size={18} className="stroke-[2.5]" />
@@ -79,7 +79,7 @@ export function PaymentModal() {
 
           {isSuccess ? (
             /* Success Screen */
-            <div className="p-4 text-center space-y-5 animate-in zoom-in-95 duration-300">
+            <div className="p-4 text-center space-y-5 duration-300">
               <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/15 border border-emerald-100 dark:border-emerald-800/50 icon-plate">
                 <CheckCircle2 size={36} className="stroke-[2.5]" />
               </div>
@@ -163,7 +163,7 @@ export function PaymentModal() {
 
               {/* Payment Gate Closed Warning OR QR Payment Details */}
               {paymentGateStatus === 'STOP' ? (
-                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 text-center space-y-3 animate-in fade-in duration-200">
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-5 text-center space-y-3 duration-200">
                   <img
                     src="/lock.svg"
                     alt="Cổng thanh toán đang tạm đóng"
@@ -221,7 +221,7 @@ export function PaymentModal() {
                 </div>
               ) : (
                 /* QR Payment Details */
-                <div className="space-y-3 animate-in fade-in duration-200">
+                <div className="space-y-3 duration-200">
                   <div className="bg-slate-50/80 dark:bg-[#162032] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
 
                     {/* QR Code Container */}
@@ -242,7 +242,7 @@ export function PaymentModal() {
                         <button
                           type="button"
                           onClick={() => saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`)}
-                          className="py-1.5 px-2 rounded-lg bg-black hover:bg-neutral-900 text-white text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                          className="py-1.5 px-2 rounded-lg bg-black hover:bg-neutral-900 text-white text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
                         >
                           <ImageDown size={12} />
                           <span>Lưu ảnh QR</span>

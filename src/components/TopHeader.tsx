@@ -58,7 +58,7 @@ export function TopHeader() {
         <button
           type="button"
           onClick={toggleTheme}
-          className="kit-toolbar-control flex h-11 items-center justify-center gap-2 rounded-full border border-black/[0.08] bg-white/70 px-3 text-[var(--text-secondary)] shadow-xs backdrop-blur-md transition-all hover:bg-white hover:shadow-sm active:scale-95 dark:border-white/[0.12] dark:bg-neutral-800/75 dark:hover:bg-neutral-800 sm:px-3.5 cursor-pointer"
+          className="kit-toolbar-control flex h-11 items-center justify-center gap-2 rounded-full border border-black/[0.08] bg-white/70 px-3 text-[var(--text-secondary)] shadow-xs backdrop-blur-md transition-all hover:bg-white hover:shadow-sm dark:border-white/[0.12] dark:bg-neutral-800/75 dark:hover:bg-neutral-800 sm:px-3.5 cursor-pointer"
           aria-label={`${themeLabel}. Bấm để đổi giao diện`}
           title={`${themeLabel} · Bấm để chuyển Sáng, Tối hoặc Tự động`}
         >
@@ -73,7 +73,7 @@ export function TopHeader() {
           data-tutorial="header-notifications"
           onClick={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)}
           className={cn(
-            'kit-toolbar-control relative flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.08] bg-white/70 text-[var(--text-secondary)] shadow-xs backdrop-blur-md transition-all hover:bg-white hover:shadow-sm active:scale-95 dark:border-white/[0.12] dark:bg-neutral-800/75 dark:hover:bg-neutral-800 cursor-pointer',
+            'kit-toolbar-control relative flex h-11 w-11 items-center justify-center rounded-full border border-black/[0.08] bg-white/70 text-[var(--text-secondary)] shadow-xs backdrop-blur-md transition-all hover:bg-white hover:shadow-sm  dark:border-white/[0.12] dark:bg-neutral-800/75 dark:hover:bg-neutral-800 cursor-pointer',
             isNotificationPanelOpen && 'ring-2 ring-neutral-900/15 bg-white dark:ring-white/20 dark:bg-neutral-700'
           )}
           aria-label={`Thông báo${unreadNotiCount > 0 ? `, ${unreadNotiCount} chưa đọc` : ''}`}
@@ -81,9 +81,9 @@ export function TopHeader() {
           aria-controls="header-notification-panel"
           title="Thông báo"
         >
-          <Bell size={19} strokeWidth={1.85} className="transition-transform active:rotate-12" />
+          <Bell size={19} strokeWidth={1.85} className="transition-transform" />
           {unreadNotiCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-xs ring-2 ring-white dark:ring-neutral-900 animate-in zoom-in-95">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-xs ring-2 ring-white dark:ring-neutral-900">
               {unreadNotiCount > 9 ? '9+' : unreadNotiCount}
             </span>
           )}
@@ -94,8 +94,9 @@ export function TopHeader() {
         <div
           ref={panelRef}
           id="header-notification-panel"
+          data-stage="popover"
           aria-label="Danh sách thông báo"
-          className="notification-popover-frosted absolute right-0 top-[calc(100%+8px)] z-50 flex max-h-[calc(100svh_-_8rem)] w-[min(380px,calc(100vw-2rem))] flex-col space-y-3 overflow-y-auto rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="notification-popover-frosted absolute right-0 top-[calc(100%+8px)] z-50 flex max-h-[calc(100svh_-_8rem)] w-[min(380px,calc(100vw-2rem))] flex-col space-y-3 overflow-y-auto rounded-xl p-4 duration-200"
         >
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-300/60 dark:border-white/10 pb-3 px-1">
             <div className="flex items-center gap-2">
