@@ -1250,7 +1250,7 @@ export function AdminPortal() {
                 <div data-brand-copy className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span data-brand-title className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">Phong Lan</span>
-                    <span className="px-1.5 py-0.2 bg-neutral-50 text-neutral-600 text-[10px] font-bold rounded-md font-num border border-neutral-100 uppercase dark:text-neutral-300">
+                    <span className="admin-role-badge px-1.5 py-0.2 text-[10px] font-bold rounded-md font-num border uppercase">
                       Admin
                     </span>
                   </div>
@@ -1538,7 +1538,7 @@ export function AdminPortal() {
           <div data-brand-target="anchor">
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
-              <span className="px-2 py-0.5 rounded-md bg-neutral-900 text-white font-bold text-[10px] tracking-wide uppercase font-num">
+              <span className="admin-role-badge px-2 py-0.5 rounded-md font-bold text-[10px] tracking-wide uppercase font-num">
                 Admin
               </span>
             </div>

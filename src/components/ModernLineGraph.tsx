@@ -244,7 +244,7 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
       {sixMonths.length > 0 ? <>
       {/* SVG Canvas Container */}
       <div className="relative w-full bg-slate-50/60 dark:bg-slate-900/50 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 p-2 sm:p-3 overflow-hidden select-none">
-        <svg role="img" aria-label="Xu hướng điện và nước theo kỳ. Mở bảng số liệu bên dưới để đọc hoặc chọn kỳ bằng bàn phím."
+        <svg role="img" aria-label={`Xu hướng điện và nước theo kỳ. ${sixMonths.map(item => `${item.month}: điện ${fmt(item.dien)} kWh, nước ${fmt(item.nuoc)} m³`).join('; ')}. Dùng bộ chọn kỳ tháng để đổi kỳ.`}
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full h-56 sm:h-64 cursor-crosshair overflow-visible"
           onMouseMove={handleMouseMove}
@@ -471,17 +471,6 @@ export function ModernLineGraph({ data, selectedMonth, onSelectMonth }: ModernLi
           })}
         </svg>
       </div>
-      <details className="kit-disclosure kit-data-surface rounded-2xl">
-        <summary className="kit-disclosure-summary apple-headline">Xem số liệu theo kỳ<span className="kit-disclosure-chevron" aria-hidden="true">⌄</span></summary>
-        <div className="px-3 pb-3 space-y-1">
-          <div className="grid grid-cols-3 gap-2 px-2 apple-callout kit-text-secondary"><span>Kỳ</span><span className="text-right">Điện (kWh)</span><span className="text-right">Nước (m³)</span></div>
-          {sixMonths.map(item => <div key={item.month} className="grid grid-cols-3 items-center gap-2 border-t border-[var(--separator)] px-2 apple-callout">
-            <button type="button" className="min-h-11 text-left font-semibold kit-text-primary" aria-label={"Xem kỳ " + item.month} aria-pressed={item.month === selectedMonth} onClick={() => onSelectMonth?.(item.month)}>{item.month}</button>
-            <span className="text-right font-num kit-text-primary">{fmt(item.dien)}</span><span className="text-right font-num kit-text-primary">{fmt(item.nuoc)}</span>
-          </div>)}
-          {sixMonths.length < 6 && <p className="pt-2 apple-callout kit-text-secondary">Chỉ hiển thị các kỳ có dữ liệu. Không nội suy kỳ còn thiếu.</p>}
-        </div>
-      </details>
       </> : <div role="status" className="kit-data-surface rounded-2xl p-6 text-center"><p className="apple-headline kit-text-primary">Chưa có dữ liệu biểu đồ</p><p className="mt-1 apple-callout kit-text-secondary">Số liệu điện và nước sẽ hiển thị khi được cập nhật cho kỳ này.</p></div>}
     </div>
   );
