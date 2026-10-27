@@ -20,3 +20,25 @@ Kiểm tra trên production build bằng Chromium với API giả lập: **58 ki
 - Card chi phí/phòng, quick action, doanh thu và phòng admin: dải sáng trắng mảnh lướt550ms khi hover bằng chuột, focus bàn phím hoặc chạm. Chỉ animate biến CSS của gradient trang trí `::after`; không di chuyển card hoặc thay blur. Không chạy nền liên tục, không xử lý pointermove.
 - Mở sidebar user/admin: nhãn menu đi từ trái8px, opacity0→1 trong220ms; lệch nhau25ms, tối đa125ms. Giữ nguyên hiệu ứng độ rộng/layout có sẵn. Mở/đóng liên tiếp hủy tween cũ và khôi phục style.
 - Lớp sáng bỏ qua pointer để không chặn nút. Tắt và dọn ngay khi bật giảm chuyển động, tab bị ẩn hoặc node bị tháo khỏi DOM; không chạy khi CDN chưa sẵn sàng.
+
+## Phản hồi tác vụ trên toàn website
+
+Bộ cảnh dùng chung nằm tại `src/lib/uiMotionScenes.ts`, được nối vào observer hiện có thay vì tạo một observer toàn trang thứ hai. Bổ sung marker không đổi layout, màu, dữ liệu hoặc handler nghiệp vụ.
+
+| Cảnh | Áp dụng | Chuyển động |
+| --- | --- | --- |
+| Chọn mục | Sidebar, bottom bar, segmented tab | Viền chọn di chuyển giữa hai mục220ms; vị trí/selected thật đổi ngay. Lớp tuyệt đối không bắt pointer và tự xóa |
+| Mở chi tiết | Native details, disclosure admin, body dialog | Chữ/nhãn xuất hiện từ dưới3px,160ms; lệch15ms, tối đa8 phần tử mỗi nhóm |
+| Danh sách | Phòng admin, lịch sử hóa đơn, tiện ích, danh sách máy | Nhãn kết quả hiện theo nhịp khi DOM danh sách thay đổi; không fade nguyên card kính |
+| Cập nhật dữ liệu | Chi phí trang chủ, tổng hóa đơn, doanh thu admin, trạng thái máy | Viền sáng450ms khi giá trị khác lần trước; không count-up số tiền. Không kích hoạt lần mount đầu hoặc khi dữ liệu không đổi |
+| Tiến độ thu tiền | Dashboard admin | Scale phần fill từ mức cũ sang mới300ms; aria-valuenow và phần trăm hiển thị đúng giá trị mới ngay. Không tạo dữ liệu hay ghi API |
+| Công tắc | AppleSwitch ở các màn hình đang dùng | Núm co ngang90%→100% trong180ms; giữ chuyển động translate và checked/handler hiện có |
+| Thành công | Payment/Laundry ở nhánh success hiện có | Tick xuất hiện200ms và vòng sáng mảnh320ms, một lần khi nhánh đó được mount; không tự xác nhận thanh toán |
+| Lỗi | Alert và input invalid | Thông báo hiện160ms; trường invalid lắc tối đa2px/180ms, giữ focus và nội dung |
+| Đang xử lý | Nhãn nút có nội dung Đang/Đã lưu/Đã gửi/Đã cập nhật | Opacity nhãn0.6→1 trong120ms; spinner, disabled và thời điểm hoàn thành do nghiệp vụ hiện có quyết định |
+
+Số tiền, mã, dữ liệu `.font-num`, giấy A4/chi tiết hóa đơn không bị làm mờ theo danh sách. Đọc trạng thái máy qua `data-motion-value` để thay đổi số phút còn lại không kích hoạt viền. Hiệu ứng card cập nhật dữ liệu ưu tiên hơn ánh sáng hover trên cùng card.
+
+Các cảnh không dùng animation vô hạn. Callback không trì hoãn đổi trang/lưu/đóng dialog. Tween cũ bị dọn trước lượt mới; layer, frame và tham chiếu navigation được dọn khi node unmount. `beforeprint`, tab ẩn, giảm chuyển động và HMR đều dọn hiệu ứng. CDN không tải được vẫn có UI đầy đủ, không có opacity0 mặc định.
+
+Kiểm tra production build bằng Chromium, API giả lập:36 kiểm tra cảnh trên390/1440px sáng/tối;13 kiểm tra bổ sung cho trạng thái máy/đồng hồ, nội dung dialog, busy/error, in, CDN bị chặn và đổi mục liên tục. Kiểm tra lại58 trường hợp GSAP/fallback/layout và15 trường hợp card/sidebar trước đó. Các phép thử điều khiển DOM để cô lập hiệu ứng không phải kiểm tra thanh toán hay Google Sheets thật; chưa thử Safari/iPhone thật.

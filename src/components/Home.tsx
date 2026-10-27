@@ -68,7 +68,7 @@ export function Home() {
             <div className="py-5 sm:py-9">
               <p className="apple-body kit-text-secondary mb-2">{!currentInvoice ? 'Chưa có hóa đơn' : isPaid ? 'Số tiền đã thanh toán' : isPending ? 'Số tiền chờ xác nhận' : 'Số tiền cần thanh toán'}</p>
               {currentInvoice ? <div className="flex items-baseline gap-2 text-neutral-950 dark:text-white">
-                <span className="apple-amount font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
+                <span data-motion-watch className="apple-amount font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
                 <span className="apple-title2 font-normal kit-text-secondary">₫</span>
               </div> : <h3 className="apple-title1 apple-strong kit-text-primary">Một nơi để theo dõi<br />mọi khoản phí.</h3>}
               <p className="mt-3 flex flex-wrap items-center gap-1.5 apple-callout kit-text-secondary">

@@ -320,7 +320,7 @@ export function PaymentPage() {
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
 
               {/* Success Badge Icon */}
-              <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
+              <div data-motion-success className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
                 <Check size={40} strokeWidth={3.5} />
               </div>
 

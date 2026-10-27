@@ -34,7 +34,7 @@ export function Utilities() {
         <div className="kit-inset rounded-full hidden sm:flex items-center gap-2 px-4 py-2.5 apple-body font-medium kit-text-secondary"><House size={16} strokeWidth={1.7} />{profile.room.roomNumber || 'Phòng của bạn'}</div>
       </header>
 
-      <section data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+      <section data-motion-list data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
         <button type="button" onClick={() => navigate('/laundry')} className="lg:col-span-2 liquid-panel p-5 sm:p-7 relative overflow-hidden text-left group flex flex-col justify-between min-h-[172px] sm:min-h-[240px]">
 
           <div className="relative mb-3 flex items-center gap-3 sm:mt-3 sm:mb-6 sm:gap-4">

@@ -274,7 +274,7 @@ export function LaundryPage() {
             <main className="liquid-panel w-full max-w-[500px] p-6 sm:p-10 flex flex-col items-center relative transition-colors">
 
               {/* Success Badge Icon */}
-              <div className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
+              <div data-motion-success className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-5 shadow-lg bg-emerald-500 shadow-emerald-500/25">
                 <Check size={40} strokeWidth={3.5} />
               </div>
 
@@ -961,7 +961,7 @@ export function LaundryPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                <div data-motion-list className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {filteredMachines.map(m => {
                     const isWasher = m.type === 'WASHER';
                     const remaining = getRemainingSeconds(m);
@@ -1011,7 +1011,7 @@ export function LaundryPage() {
                             </div>
                           </div>
 
-                          <div>
+                          <div data-motion-watch data-motion-value={isRunning ? "RUNNING" : m.status}>
                             {isRunning ? (
                               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full apple-callout font-semibold bg-neutral-50 text-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800">
                                 <span className="w-2 h-2 rounded-full bg-neutral-500" />

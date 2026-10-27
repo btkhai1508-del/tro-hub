@@ -1,3 +1,4 @@
+import { installMotionScenes } from './uiMotionScenes';
 /** Optional GSAP CDN enhancement. Never animate a glass surface or its parent. */
 type Tween = { kill(): void };
 type Engine = { fromTo(target: Element, from: object, to: object): Tween; to(target: Element, vars: object): Tween };
@@ -64,7 +65,7 @@ export function installUiMotion(root: HTMLElement) {
     const card = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-tutorial="billing-card"], .resident-room-panel, .kit-quick-action, .admin-revenue-card, .admin-room-card') : null;
     if (!card || !root.contains(card) || !visible(card)) return;
     if (event instanceof PointerEvent && event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
-    if (glints.has(card)) return;
+    if (glints.has(card) || card.classList.contains('motion-data-updated')) return;
     const previous = card.style.getPropertyValue('--card-glint');
     const hadClass = card.classList.contains('motion-card-light');
     const entry: { tween?: Tween; restore(): void } = { restore() {
@@ -78,7 +79,9 @@ export function installUiMotion(root: HTMLElement) {
       '--card-glint': '0%', duration: 0.55, ease: 'power2.out', overwrite: 'auto', onComplete: entry.restore
     });
   }
+  const scenes = installMotionScenes(root, { enabled, safe, animate, stopGlint(card) { const entry = glints.get(card); if (entry) { entry.tween?.kill(); entry.restore(); } } });
   function scan(node: Element) {
+    scenes.scan(node);
     const selector = 'h1, [role="dialog"] h2, [role="dialog"] h3, #header-notification-panel h2, [data-ui-motion="reveal"], [data-ui-motion="copied"]';
     const targets = [...(node.matches(selector) ? [node] : []), ...node.querySelectorAll(selector)];
     targets.forEach(element => {
@@ -99,6 +102,7 @@ export function installUiMotion(root: HTMLElement) {
     if (!frame) frame = requestAnimationFrame(flush);
   }
   const observer = new MutationObserver(records => {
+    scenes.records(records);
     records.forEach(record => {
       if (record.type === 'attributes' && record.attributeName === 'aria-expanded' && record.target instanceof Element && record.target.getAttribute('aria-expanded') === 'true' && record.target.closest('aside')) {
         sidebarEntrance(record.target.closest('aside')!);
@@ -139,6 +143,7 @@ export function installUiMotion(root: HTMLElement) {
     pressed.clear();
   }
   function reset() {
+    scenes.reset();
     active.forEach((_, element) => stop(element));
     glints.forEach(entry => { entry.tween?.kill(); entry.restore(); });
     pressed.clear(); pending.clear();
@@ -146,7 +151,7 @@ export function installUiMotion(root: HTMLElement) {
   }
   function visibility() { if (document.hidden) reset(); }
   function loaded() { queue(root); }
-  observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'aria-pressed', 'aria-current', 'aria-expanded'] });
+  observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-selected', 'aria-pressed', 'aria-current', 'aria-expanded', 'aria-checked', 'aria-invalid', 'data-motion-progress', 'data-motion-value'] });
   root.addEventListener('pointerover', glint);
   root.addEventListener('focusin', glint);
   root.addEventListener('pointerdown', down);
@@ -155,17 +160,18 @@ export function installUiMotion(root: HTMLElement) {
   window.addEventListener('pointercancel', release);
   window.addEventListener('keyup', release);
   window.addEventListener('blur', reset);
+  window.addEventListener('beforeprint', reset);
   media.addEventListener('change', reset);
   document.addEventListener('visibilitychange', visibility);
   const script = document.getElementById('gsap-cdn');
   script?.addEventListener('load', loaded);
   if (window.gsap) queue(root);
   return () => {
-    observer.disconnect(); reset();
+    observer.disconnect(); reset(); scenes.dispose();
     root.removeEventListener('pointerover', glint); root.removeEventListener('focusin', glint);
     root.removeEventListener('pointerdown', down); root.removeEventListener('keydown', down);
     window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release);
-    window.removeEventListener('keyup', release); window.removeEventListener('blur', reset);
+    window.removeEventListener('keyup', release); window.removeEventListener('blur', reset); window.removeEventListener('beforeprint', reset);
     media.removeEventListener('change', reset); document.removeEventListener('visibilitychange', visibility);
     script?.removeEventListener('load', loaded);
   };

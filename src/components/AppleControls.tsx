@@ -93,7 +93,7 @@ export const AppleSwitch: React.FC<AppleSwitchProps> = ({
           checked ? getActiveClass() : 'bg-black/10 dark:bg-white/15'
         )}
       >
-        <span
+        <span data-motion-thumb
           className={cn(
             'pointer-events-none absolute left-0 block rounded-full bg-white transition-transform duration-200 ease-out',
             sizeConfig.knob,

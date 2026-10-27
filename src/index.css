@@ -484,3 +484,41 @@
 @media (prefers-reduced-motion: reduce), print {
   .motion-card-light::after { display: none; }
 }
+
+/* Scene layers are decorative and take no layout space or pointer input. */
+.motion-nav-scope { position: relative; }
+.motion-nav-trail {
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid currentColor;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+  z-index: 1;
+}
+.motion-data-updated { position: relative; }
+.motion-data-updated::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px currentColor;
+  opacity: calc((1 - var(--update-step, 1)) * .35);
+}
+.motion-data-updated.motion-card-light::after { display: none; }
+.motion-switch-thumb { scale: var(--switch-squeeze, 1) 1; }
+.motion-success-ring { position: relative; }
+.motion-success-ring::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid currentColor;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: calc(1 - var(--success-step, 1));
+  transform: scale(calc(.85 + var(--success-step, 1) * .3));
+}
+[data-motion-progress] { transition-property: background-color; }
+@media (prefers-reduced-motion: reduce), print {
+  .motion-nav-trail, .motion-data-updated::before, .motion-success-ring::after { display: none; }
+  .motion-switch-thumb { scale: none; }
+}

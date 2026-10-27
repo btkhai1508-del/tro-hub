@@ -1277,6 +1277,7 @@ export function AdminPortal() {
                 return (
                   <button
                     key={item.key}
+                    aria-current={isActive ? "page" : undefined}
                     onClick={() => {
                       playSound('click');
                       setActiveMenu(item.key as any);
@@ -1758,7 +1759,7 @@ export function AdminPortal() {
                     <p className="type-label text-neutral-600 mb-1 dark:text-neutral-300">
                       Tổng tiền đã hạch toán · Cột P
                     </p>
-                    <div className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
+                    <div data-motion-watch className="type-display font-num tracking-tight flex items-baseline gap-1.5 font-bold text-neutral-900 dark:text-white">
                       {fmt(dashboardData?.doanhThu ?? 0)}
                       <span className="text-2xl font-normal text-neutral-600 dark:text-neutral-300">₫</span>
                     </div>
@@ -1772,6 +1773,7 @@ export function AdminPortal() {
                     </div>
                     <div className="w-full h-3 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                       <div
+                        data-motion-progress={collectionPercent} role="progressbar" aria-label="Tỷ lệ hoàn thành thu phí" aria-valuenow={collectionPercent} aria-valuemin={0} aria-valuemax={100}
                         className="h-full bg-neutral-900 dark:bg-white rounded-full transition-all duration-700"
                         style={{ width: `${collectionPercent}%` }}
                       />
@@ -1856,7 +1858,7 @@ export function AdminPortal() {
         {activeMenu === 'rooms' && (
           <div className="space-y-6 ">
             {!isLoading && !adminLoadError && visibleRooms.length === 0 && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all')} title="Chưa có thông tin phòng" />}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <div data-motion-list className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {visibleRooms.map(r => {
                 const isPaid = (r.paymentStatus || r.status) === 'paid';
                 const isPending = (r.paymentStatus || r.status) === 'pending';
