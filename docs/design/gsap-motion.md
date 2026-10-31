@@ -17,7 +17,7 @@ Intro gắn một lần ở App, ngoài route Suspense. Trong lúc chờ chunk �
 | Lộ wallpaper và card thật | 760ms | 560ms | power2.inOut |
 | Cả cụm thu về header | 760ms | 720ms | power3.inOut |
 
-Tổng 1,48 giây sau khi sẵn sàng. Kích thước lớn tối đa2.6 lần metrics gốc, giới hạn theo viewport; đây là kích thước font/SVG thật, không phải scale-up parent. Chỉ phát một lần trong mỗi document: tải lại/mở tab mới sẽ phát lại; đổi đăng nhập/đăng ký trong cùng trang không phát lại.
+Bảng trên là nhịp của bản dùng Home.svg. Bản hiện tại vẽ icon bằng CSS (`clip-path` trong `brand-intro.css`, `BrandHomeMark` trong `KitIcons.tsx`): chữ hiện từng ký tự từ 2,13 giây, cụm bắt đầu thu về header lúc 2,45 giây, tổng khoảng 3,13 giây sau khi sẵn sàng; failsafe 3750ms thay cho 1750ms nêu bên dưới. Icon thường trong app dùng bản sao làm mờ thay cho `backdrop-filter`, vì Chromium bỏ qua `clip-path` của lớp kính khi nằm trong khung bo góc có `overflow: hidden`. Kích thước lớn tối đa2.6 lần metrics gốc, giới hạn theo viewport; đây là kích thước font/SVG thật, không phải scale-up parent. Chỉ phát một lần trong mỗi document: tải lại/mở tab mới sẽ phát lại; đổi đăng nhập/đăng ký trong cùng trang không phát lại.
 
 Chạm, bàn phím, focus vào field, cuộn, resize, bàn phím ảo đổi viewport, chuyển tab, in hoặc bật giảm chuyển động đều hủy ngay và khôi phục header. Không đặt nội dung thật opacity0 trong CSS mặc định. Chờ UI lazy đầu tiên tối đa4giây; khi có đích, GSAP/logo có600ms để sẵn sàng, sau đó bỏ qua; failsafe1750ms dọn overlay nếu có sự cố.
 
@@ -26,7 +26,7 @@ Chạm, bàn phím, focus vào field, cuộn, resize, bàn phím ảo đổi vie
 | Thành phần / tác vụ | Motion mới | Thời lượng |
 | --- | --- | ---: |
 | Chuyển trang cư dân | Giữ màn cũ để fade-out; sau đó render màn mới và fade-in. Không dịch chuyển/card stagger khi đổi trang | 100 + 160ms |
-| Chuyển mục admin | Cùng nhịp với cư dân, áp dụng cho state menu nội bộ | 100 + 160ms |
+| Chuyển mục admin | Không animation: đổi màn ngay theo yêu cầu riêng | 0ms |
 | Sidebar hai vai trò | Độ rộng, phần bù nội dung và padding nội bộ cùng easing cubic-bezier(.2,.7,.2,1) | 240ms |
 | Nhấn/thả nút | Chỉ nội dung lá an toàn co .985 rồi hồi1; không scale khung kính | 80 / 120ms |
 | Quick action và tiện ích admin | Icon3D nhấc3px, nghiêng−2°, scale1.035 khi hover/focus trên thiết bị có chuột; mũi tên2D dịch2px | 160–220ms |
@@ -48,7 +48,7 @@ Nhấn liên tục hủy tween cũ; chọn nhiều mục liên tiếp luôn lấ
 
 - GSAP3.13.0 qua CDN async trong `index.html`, không thêm dependency npm, video hay thư viện render vào bundle ứng dụng.
 - `BrandIntro.tsx` + `brand-intro.css`: intro toàn ứng dụng, native text/SVG dimensions, dọn toàn bộ node/listener/timer sau mỗi lượt; đích bị tháo cũng hủy ngay.
-- `FadeOutlet.tsx`: giữ outlet cũ để fade tuần tự. `useCrossfadeState.ts`: cùng cơ chế cho admin.
+- `FadeOutlet.tsx`: giữ outlet cũ để fade tuần tự cho route cư dân. Admin đổi mục bằng state thường, không fade.
 - `motionEngine.ts`: capability chung. `uiMotion.ts`: một observer đã giới hạn attribute và các listener dùng chung; rAF gộp mutation.
 - `motion-system.css`: timing và phản hồi CSS. `data-stage` đánh dấu rõ vùng tiền, list, progress, copied, success và popover; bộ lọc trỏ đến đúng list bằng `data-stage-filter`.
 - Xóa `uiMotionScenes.ts`, card light sweep, vệt chọn menu, stagger nhãn sidebar, animation tiêu đề toàn trang và các utility entrance cũ. Không thêm lại dưới tên khác.

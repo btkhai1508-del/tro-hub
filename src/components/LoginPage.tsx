@@ -38,6 +38,7 @@ export function LoginPage() {
   const [regName, setRegName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regGender, setRegGender] = useState('');
   const [regRoom, setRegRoom] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPass, setRegConfirmPass] = useState('');
@@ -110,6 +111,11 @@ export function LoginPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
+    if (!regGender) {
+      setErrorMsg('Vui lòng chọn giới tính');
+      return;
+    }
+
     if (regPassword !== regConfirmPass) {
       setErrorMsg('Mật khẩu xác nhận không khớp');
       return;
@@ -121,6 +127,7 @@ export function LoginPage() {
         name: regName,
         phone: regPhone,
         email: regEmail,
+        gender: regGender,
         roomNumber: regRoom,
         password: regPassword
       });
@@ -137,6 +144,7 @@ export function LoginPage() {
         setRegName('');
         setRegPhone('');
         setRegEmail('');
+        setRegGender('');
         setRegRoom('');
         setRegPassword('');
         setRegConfirmPass('');
@@ -311,6 +319,18 @@ export function LoginPage() {
                 <div className="relative flex items-center">
                   <User aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
                   <input id="register-name" type="text" autoComplete="name" required placeholder="Họ và tên của bạn" value={regName} onChange={(e) => setRegName(e.target.value)} className="kit-field min-h-12 w-full pl-11 pr-3.5" />
+                </div>
+              </div>
+
+              <div>
+                <span id="register-gender" className="mb-2 block apple-headline kit-text-primary">Giới tính</span>
+                <div role="group" aria-labelledby="register-gender" className="kit-segmented grid grid-cols-2 gap-1 p-1">
+                  {['Nam', 'Nữ'].map(option => (
+                    <button key={option} type="button" aria-pressed={regGender === option} onClick={() => setRegGender(option)}
+                      className={`kit-segment min-h-11 px-3 apple-body font-medium ${regGender === option ? 'kit-segment-active' : ''}`}>
+                      {option}
+                    </button>
+                  ))}
                 </div>
               </div>
 

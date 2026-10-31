@@ -1,4 +1,3 @@
-import { useCrossfadeState } from '../lib/useCrossfadeState';
 import * as NavIcons from 'lucide-react';
 import '../styles/admin-tahoe.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -52,6 +51,11 @@ import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
 import { cn, getCurrentMonthStr, DEFAULT_ROOM_NUMBERS } from '../lib/utils';
 import { apiFetch } from '../lib/api';
+import { HOUSES, houseFromRoom } from '../lib/houses';
+import { buildContract, buildCt01, Person } from '../lib/documents/legalForms';
+import { buildDeclaration } from '../lib/documents/stateFormat';
+import { roomInvoice } from '../lib/documents/fromProfile';
+import { DocumentActions, DocumentSheet, useBuiltDocument } from './DocumentSheet';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { ModernLineGraph } from './ModernLineGraph';
 import { Background } from './Background';
@@ -71,6 +75,7 @@ import {
   IconMeter3D,
   IconSearchPlate3D,
   IconContract3D,
+  IconDeclaration3D,
   IconSettings3D,
   IconLogout3D,
   IconAlert3D,
@@ -94,44 +99,6 @@ const playSound = (type: 'click' | 'hover' | 'success' | 'tab' | 'alert') => {
 /**
  * Đọc số tiền bằng chữ tiếng Việt (Chuẩn hành chính / kế toán)
  */
-function readVietnameseNumber(n: number): string {
-  if (!n || n === 0) return '';
-  const chuSo = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-  const tien = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
-
-  function docBlock(so: number, dayDu: boolean) {
-    let str = '';
-    const tram = Math.floor(so / 100);
-    so = so % 100;
-    const chuc = Math.floor(so / 10);
-    const donVi = so % 10;
-    if (dayDu || tram > 0) {
-      str += chuSo[tram] + ' trăm ';
-      if (chuc === 0 && donVi > 0) str += 'lẻ ';
-    }
-    if (chuc === 1) { str += 'mười '; }
-    else if (chuc > 1) { str += chuSo[chuc] + ' mươi '; }
-    if (chuc > 0 && donVi === 5) { str += 'lăm '; }
-    else if (chuc > 1 && donVi === 1) { str += 'mốt '; }
-    else if (donVi > 0) { str += chuSo[donVi] + ' '; }
-    return str;
-  }
-
-  let str = '';
-  const arr: number[] = [];
-  let temp = n;
-  while (temp > 0) {
-    arr.push(temp % 1000);
-    temp = Math.floor(temp / 1000);
-  }
-  for (let j = arr.length - 1; j >= 0; j--) {
-    if (arr[j] > 0 || (j === 0 && arr.length === 1)) {
-      str += docBlock(arr[j], j < arr.length - 1) + tien[j] + ' ';
-    }
-  }
-  str = str.replace(/\s+/g, ' ').trim();
-  return str.charAt(0).toUpperCase() + str.slice(1) + ' đồng';
-}
 
 const currentMonth = getCurrentMonthStr();
 export const DEFAULT_MONTH_TABS = Array.from(new Set([
@@ -175,8 +142,8 @@ export function AdminPortal() {
   const { mode, isDark, toggleTheme } = useTheme();
 
   // Active Menu
-  const [activeMenu, setActiveMenu, screenMotionRef] = useCrossfadeState<
-    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement'
+  const [activeMenu, setActiveMenu] = useState<
+    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement'
   >('dashboard');
 
   // Account Management (Quản lý tài khoản) state
@@ -314,20 +281,8 @@ export function AdminPortal() {
   // Contract state
   const [contractMode, setContractMode] = useState<'new' | 'history'>('new');
   const [contractHouse, setContractHouse] = useState<'TRUNG_KIM' | 'LVC'>('TRUNG_KIM');
-  const [contractDocType, setContractDocType] = useState<'ct01' | 'contract'>('ct01');
-  const [contractForm, setContractForm] = useState({
-    room: 'G01',
-    rent: 3500000,
-    deposit: 3500000,
-    contractDate: '01/10/2026',
-    personSlot: '1',
-    partyAName: 'Bùi Trung Khải',
-    partyADob: '15/08/2005',
-    partyAHousehold: '109/6 Lê Văn Chí, Linh Xuân, Thủ Đức',
-    partyACccd: '079205019765',
-    partyAPhone: '0902371800',
-    partyAPlate: '59-X1 888.88'
-  });
+  const [contractDocType, setContractDocType] = useState<'ct01' | 'contract'>('contract');
+  const [contractRoom, setContractRoom] = useState('');
   const [contractHistory, setContractHistory] = useState<any[]>([]);
 
   // Declaration state
@@ -336,6 +291,9 @@ export function AdminPortal() {
   const [declarationRows, setDeclarationRows] = useState<any[]>([]);
   const [declarationSigDate, setDeclarationSigDate] = useState('');
   const [saveDeclarationSuccess, setSaveDeclarationSuccess] = useState(false);
+  const [saveDeclarationError, setSaveDeclarationError] = useState('');
+  const declarationRequest = useRef(0);
+  const [invoiceRoom, setInvoiceRoom] = useState('');
 
   // Unit Config
   const [unitConfig, setUnitConfig] = useState({
@@ -716,6 +674,8 @@ export function AdminPortal() {
           if (d.success && d.config) setUnitConfig(d.config);
         })
         .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
+    } else if (menuKey === 'invoices') {
+      fetchRooms(month);
     } else if (menuKey === 'contract') {
       apiFetch(`/api/admin/contract/history?month=${month}&houseKey=${contractHouse}`)
         .then(res => {
@@ -899,22 +859,16 @@ export function AdminPortal() {
 
   const loadDeclaration = (month: string, houseKey: 'TRUNG_KIM' | 'LVC') => {
     setIsLoading(true);
-    const isLVCKey = houseKey === 'LVC';
+    const request = ++declarationRequest.current;
     const fallbackDeclarationData = () => {
-      const filtered = roomsList.filter(r => isLVCKey ? String(r.room).toUpperCase().includes('LVC') : !String(r.room).toUpperCase().includes('LVC'));
-      const rows = filtered.map((r, idx) => ({
-        stt: idx + 1,
-        room: r.room,
-        name: r.name || r.nguoi1,
-        cccd: r.cccd1 || '',
-        phone: r.phone || r.sdt1 || '',
-        rent: r.tienPhong || 0,
-        dien: r.tienDien || 0,
-        nuoc: r.tienNuoc || 0,
-        total: r.tongTien || 0
-      }));
+      if (request !== declarationRequest.current) return;
+      const rows = roomsList
+        .filter(r => houseFromRoom(r.room).key === houseKey && r.paymentStatus === 'paid')
+        .map(r => ({ room: r.room, date: '', person: `${r.name || r.nguoi1} (${r.room})`, amount: r.tongTien || 0 }));
       setDeclarationRows(rows);
       setDeclarationData({ month, houseKey, rows });
+      setDeclarationSigDate('');
+      setAdminLoadError('Chưa tải được sổ kê khai đã lưu. Đang hiện các phòng đã đóng trong dữ liệu hiện có.');
       setIsLoading(false);
     };
 
@@ -925,6 +879,7 @@ export function AdminPortal() {
         return res.json();
       })
       .then(d => {
+        if (request !== declarationRequest.current) return;
         setIsLoading(false);
         if (d.success && d.declaration) {
           setDeclarationData(d.declaration);
@@ -941,6 +896,7 @@ export function AdminPortal() {
 
   const saveDeclaration = async () => {
     playSound('click');
+    setSaveDeclarationError('');
     try {
       const res = await apiFetch('/api/admin/declaration', {
         method: 'POST',
@@ -953,15 +909,12 @@ export function AdminPortal() {
         })
       });
       const data = await res.json();
-      if (data.success) {
-        playSound('success');
-        setSaveDeclarationSuccess(true);
-        setTimeout(() => setSaveDeclarationSuccess(false), 3000);
-      }
-    } catch (e) {
+      if (!data.success) throw new Error(data.error || 'save failed');
       playSound('success');
       setSaveDeclarationSuccess(true);
       setTimeout(() => setSaveDeclarationSuccess(false), 3000);
+    } catch (e) {
+      setSaveDeclarationError('Chưa lưu được sổ kê khai. Vui lòng kiểm tra mạng và thử lại.');
     }
   };
 
@@ -1120,6 +1073,7 @@ export function AdminPortal() {
     meter: { title: 'Chỉ số điện nước', description: 'Nhập chỉ số từng phòng theo kỳ tháng.' },
     plates: { title: 'Tra biển số xe', description: 'Tìm xe và phòng đã đăng ký.' },
     contract: { title: 'Hồ sơ cư trú', description: 'Tờ khai CT01 và hợp đồng thuê phòng.' },
+    invoices: { title: 'Hoá đơn phòng', description: 'Xem, in hoặc lưu PDF hoá đơn của từng phòng theo kỳ tháng.' },
     declaration: { title: 'Kê khai doanh thu', description: 'Sổ doanh thu theo hộ kinh doanh và kỳ tháng.' },
     config: { title: 'Đơn giá dịch vụ', description: 'Điều chỉnh đơn giá đang áp dụng trong tháng.' },
     createNotification: { title: 'Thông báo cư dân', description: 'Soạn nội dung và chọn người nhận.' },
@@ -1157,44 +1111,41 @@ export function AdminPortal() {
   const visibleRooms = roomsList.filter(filterAdminRows);
   const visibleBilling = billingList.filter(filterAdminRows);
 
-  // Landlord houses information
-  const housesInfo = {
-    TRUNG_KIM: {
-      name: 'NHÀ TRỌ TRUNG KIM',
-      address: '116/32 Đường 17, P. Linh Xuân, TP. Thủ Đức, TP. Hồ Chí Minh',
-      landlord: 'Lương Thị Kim Phượng',
-      dob: '18/10/1973',
-      cccd: '024073000292',
-      phone: '0903616569'
-    },
-    LVC: {
-      name: 'NHÀ TRỌ 109/6',
-      address: '109/6 Lê Văn Chí, P. Linh Xuân, TP. Thủ Đức, TP. Hồ Chí Minh',
-      landlord: 'Bùi Trung Khải',
-      dob: '15/08/2005',
-      cccd: '079205019765',
-      phone: '0902371800'
-    }
-  };
+  const contractRooms = roomsList.filter((r: any) => houseFromRoom(r.room).key === contractHouse);
+  const selectedContractRoom: any = contractRooms.find((r: any) => r.room === contractRoom);
+  const contractTenants: Person[] = selectedContractRoom
+    ? [1, 2, 3]
+        .map(i => ({ ...selectedContractRoom[`info${i}`], name: selectedContractRoom[`nguoi${i}`], cccd: selectedContractRoom[`cccd${i}`], phone: selectedContractRoom[`sdt${i}`], relation: 'Người thuê trọ' }))
+        .filter(person => person.name)
+    : [];
+  const { doc: adminDoc } = useBuiltDocument(
+    m => contractDocType === 'ct01'
+      ? buildCt01(m, { house: HOUSES[contractHouse], room: selectedContractRoom?.room, declarant: contractTenants[0] || {}, members: contractTenants.slice(1) })
+      : buildContract(m, { house: HOUSES[contractHouse], room: selectedContractRoom?.room, tenants: contractTenants }),
+    `${contractDocType}|${contractHouse}|${JSON.stringify(contractTenants)}|${selectedContractRoom?.room || ''}`
+  );
 
-  const activeHouse = housesInfo[contractHouse];
+  const { doc: declarationDoc } = useBuiltDocument(
+    m => buildDeclaration(m, { house: HOUSES[declarationHouse], month: selectedMonth, rows: declarationRows, sigDate: declarationSigDate }),
+    `${declarationHouse}|${selectedMonth}|${declarationSigDate}|${JSON.stringify(declarationRows)}`
+  );
 
-  // Helper to render 12 boxes for CCCD
-  const renderCccdBoxes = (code: string) => {
-    const digits = (code || '').replace(/\D/g, '').split('');
-    return (
-      <div className="admin-cccd-boxes inline-flex items-center gap-1 align-middle ml-2">
-        {Array.from({ length: 12 }).map((_, idx) => (
-          <span
-            key={idx}
-            className="w-6 h-7 border border-neutral-800 text-center font-bold text-xs flex items-center justify-center font-mono bg-white"
-          >
-            {digits[idx] || ''}
-          </span>
-        ))}
-      </div>
-    );
-  };
+  const selectedInvoiceRoom: any = roomsList.find((r: any) => r.room === invoiceRoom) || roomsList[0];
+  const { doc: invoiceDoc } = useBuiltDocument(
+    m => roomInvoice(m, selectedInvoiceRoom || { room: '' }, selectedMonth),
+    `${selectedMonth}|${JSON.stringify(selectedInvoiceRoom || null)}`
+  );
+
+  const monthSelect = (
+    <select
+      aria-label="Kỳ tháng"
+      value={selectedMonth}
+      onChange={e => setSelectedMonth(e.target.value)}
+      className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+    >
+      {months.map(m => <option key={m} value={m} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Tháng {m}</option>)}
+    </select>
+  );
 
   return (
     <div className="min-h-screen relative isolate text-neutral-800 dark:text-neutral-100 flex flex-col lg:flex-row antialiased">
@@ -1292,7 +1243,7 @@ export function AdminPortal() {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.key ||
                   (item.key === 'rooms' && activeMenu === 'roomDetail') ||
-                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
+                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
                 return (
 
                   <button
@@ -1546,7 +1497,7 @@ export function AdminPortal() {
       {/* =========================================================================
           MAIN ADMIN WORKSPACE (Aligning with resident page layout & margin)
           ========================================================================= */}
-      <main ref={screenMotionRef} className={cn(
+      <main className={cn(
         "admin-workspace flex-1 min-w-0 p-4 sm:p-6 md:p-7 pb-[calc(112px+env(safe-area-inset-bottom))] lg:pb-6 min-h-screen relative z-10 w-full max-w-[1260px] mx-auto ",
         isSidebarCollapsed ? "lg:ml-[137px]" : "lg:ml-[292px]"
       )}>
@@ -1696,6 +1647,7 @@ export function AdminPortal() {
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
               { key: 'plates', label: 'Tra biển số', icon: IconSearchPlate3D },
               { key: 'contract', label: 'Hợp đồng & CT01', icon: IconContract3D },
+              { key: 'invoices', label: 'Hoá đơn phòng', icon: IconWallet3D },
               { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
               { key: 'config', label: 'Cài đặt phí', icon: IconSettings3D },
               { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D }
@@ -2592,214 +2544,90 @@ export function AdminPortal() {
 
             {/* Action Bar */}
             <div className="soft-card p-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="admin-document-switch flex items-center gap-3">
-                <IconCalendar3D size={36} className="shrink-0 drop-shadow-2xs" />
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setContractDocType('ct01')} aria-pressed={contractDocType === 'ct01'} aria-label="Mẫu CT01 (Tờ khai cư trú)"
-                    className={cn(
-                      "px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
-                      contractDocType === 'ct01' ? "bg-neutral-900 text-white" : "soft-button"
-                    )}
-                  >
-                    Tờ khai CT01
-                  </button>
-                  <button
-                    onClick={() => setContractDocType('contract')} aria-pressed={contractDocType === 'contract'} aria-label="Hợp đồng thuê phòng trọ"
-                    className={cn(
-                      "px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
-                      contractDocType === 'contract' ? "bg-neutral-900 text-white" : "soft-button"
-                    )}
-                  >
-                    Hợp đồng
-                  </button>
-                </div>
+              <div role="group" aria-label="Loại tài liệu" className="admin-document-switch kit-segmented flex w-full max-w-lg items-stretch gap-1">
+                <button type="button" aria-pressed={contractDocType === 'contract'} onClick={() => setContractDocType('contract')}
+                  className={cn('kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body', contractDocType === 'contract' && 'kit-segment-active')}>
+                  <IconContract3D size={25} />
+                  <span>Hợp đồng thuê phòng</span>
+                </button>
+                <button type="button" aria-pressed={contractDocType === 'ct01'} onClick={() => setContractDocType('ct01')}
+                  className={cn('kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body', contractDocType === 'ct01' && 'kit-segment-active')}>
+                  <IconDeclaration3D size={25} />
+                  <span>Tờ khai cư trú (CT01)</span>
+                </button>
               </div>
 
               <div className="admin-document-actions flex flex-wrap items-center gap-3">
                 <select
                   value={contractHouse}
-                  onChange={e => setContractHouse(e.target.value as any)}
+                  onChange={e => { setContractHouse(e.target.value as any); setContractRoom(''); }}
                   className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
                   <option value="TRUNG_KIM" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ Trung Kim (116/32)</option>
                   <option value="LVC" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
                 </select>
-                <button
-                  onClick={() => window.print()}
-                  className="primary-button py-2 px-4 text-xs flex items-center gap-1.5 cursor-pointer font-bold shadow-xs"
+                <select
+                  aria-label="Chọn phòng để điền tài liệu"
+                  value={contractRoom}
+                  onChange={e => setContractRoom(e.target.value)}
+                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
-                  <Printer size={15} />
-                  <span>In / Xuất PDF A4</span>
-                </button>
+                  <option value="">Mẫu trống</option>
+                  {contractRooms.map((r: any) => <option key={r.room} value={r.room}>Phòng {r.room}{r.nguoi1 ? ` – ${r.nguoi1}` : ''}</option>)}
+                </select>
+                <DocumentActions doc={adminDoc} />
               </div>
             </div>
 
-            {/* A4 Document Container */}
-            <div
-              style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
-              className="administrative-document bg-white rounded-3xl p-8 sm:p-14 border border-neutral-200 shadow-sm max-w-3xl mx-auto text-neutral-900 leading-relaxed print:p-0 print:border-none print:shadow-none print:m-0"
-            >
-              {contractDocType === 'ct01' ? (
-                /* =========================================================================
-                   MẪU CT01 THEO THÔNG TƯ 116/2026/TT-BCA
-                   ========================================================================= */
-                <div className="space-y-4 text-xs sm:text-[13px] leading-relaxed">
-                  <p className="text-right text-[10.5px] italic">
-                    Mẫu CT01 ban hành kèm theo Thông tư số 116/2026/TT-BCA<br />
-                    ngày 29 tháng 6 năm 2026 của Bộ trưởng Bộ Công an
-                  </p>
+            <div className="mx-auto w-full max-w-3xl">
+              <DocumentSheet doc={adminDoc} />
+            </div>
+          </div>
+        )}
 
-                  <div className="text-center space-y-1">
-                    <p className="font-bold uppercase tracking-wider text-xs sm:text-sm">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-                    <p className="font-bold text-xs sm:text-sm">Độc lập – Tự do – Hạnh phúc</p>
-                    <p>——————</p>
-                    <h3 className="text-base sm:text-lg font-bold uppercase mt-4">
-                      TỜ KHAI THAY ĐỔI THÔNG TIN CƯ TRÚ
-                    </h3>
-                  </div>
+        {/* =========================================================================
+            ROOM INVOICES (same notice residents download)
+           ========================================================================= */}
+        {activeMenu === 'invoices' && (
+          <div className="space-y-6">
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setActiveMenu('utilities');
+                }}
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
+              >
+                <ArrowLeft size={16} />
+                <span>Quay lại Tiện ích</span>
+              </button>
 
-                  <div className="space-y-2 pt-2">
-                    <p><b>Kính gửi<sup>(1)</sup>:</b> Công an Phường Linh Xuân, TP. Thủ Đức, TP. Hồ Chí Minh</p>
-                    <p><b>1. Họ, chữ đệm và tên:</b> <b>{contractForm.partyAName}</b></p>
-                    <p><b>2. Ngày, tháng, năm sinh:</b> {contractForm.partyADob} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>3. Giới tính:</b> Nam/Nữ</p>
-                    <div className="flex items-center">
-                      <b>4. Số định danh cá nhân:</b>
-                      {renderCccdBoxes(contractForm.partyACccd)}
-                    </div>
-                    <p><b>5. Số điện thoại liên hệ:</b> {contractForm.partyAPhone}</p>
-                    <p><b>6. Email:</b> ....................................................................................</p>
-                    <p><b>7. Họ, chữ đệm và tên chủ hộ<sup>(2)</sup>:</b> <b>{activeHouse.landlord}</b></p>
-                    <p><b>8. Mối quan hệ với chủ hộ:</b> Cho thuê chỗ ở</p>
-                    <div className="flex items-center">
-                      <b>9. Số ĐDCN của chủ hộ:</b>
-                      {renderCccdBoxes(activeHouse.cccd)}
-                    </div>
-                    <p><b>10. Nội dung đề nghị<sup>(3)</sup>:</b> Đăng ký tạm trú cho công dân tại địa chỉ: {activeHouse.address}</p>
-                    <p><b>11. Những thành viên trong hộ gia đình cùng thay đổi:</b></p>
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                <Receipt size={15} className="text-neutral-600 dark:text-neutral-300" />
+                <span>Hoá đơn phòng</span>
+              </div>
+            </div>
 
-                    <table aria-label="Thông tin các thành viên cư trú" tabIndex={0} className="admin-ct01-table w-full border-collapse border border-neutral-800 text-[11px] mt-2 mb-4">
-                      <thead>
-                        <tr className="bg-neutral-100">
-                          <th className="border border-neutral-800 p-1 text-center w-8">TT</th>
-                          <th className="border border-neutral-800 p-1 text-center">Họ, chữ đệm và tên</th>
-                          <th className="border border-neutral-800 p-1 text-center w-20">Ngày sinh</th>
-                          <th className="border border-neutral-800 p-1 text-center w-16">Giới tính</th>
-                          <th className="border border-neutral-800 p-1 text-center w-28">Số ĐDCN</th>
-                          <th className="border border-neutral-800 p-1 text-center">Mối quan hệ với chủ hộ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[1, 2, 3, 4].map(idx => (
-                          <tr key={idx} className="h-6">
-                            <td className="border border-neutral-800 p-1 text-center">{idx}</td>
-                            <td className="border border-neutral-800 p-1">{idx === 1 ? contractForm.partyAName : ''}</td>
-                            <td className="border border-neutral-800 p-1 text-center">{idx === 1 ? contractForm.partyADob : ''}</td>
-                            <td className="border border-neutral-800 p-1 text-center">{idx === 1 ? 'Nam' : ''}</td>
-                            <td className="border border-neutral-800 p-1 text-center font-mono">{idx === 1 ? contractForm.partyACccd : ''}</td>
-                            <td className="border border-neutral-800 p-1">{idx === 1 ? 'Thuê phòng' : ''}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+            <div className="soft-card p-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  aria-label="Chọn phòng"
+                  value={selectedInvoiceRoom?.room || ''}
+                  onChange={e => setInvoiceRoom(e.target.value)}
+                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+                >
+                  {roomsList.map((r: any) => <option key={r.room} value={r.room} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Phòng {r.room}{r.nguoi1 ? ` – ${r.nguoi1}` : ''}</option>)}
+                </select>
+                {monthSelect}
+              </div>
+              <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" />
+            </div>
 
-                  {/* Signatures */}
-                  <div className="grid grid-cols-4 gap-2 text-center text-[11px] pt-4">
-                    <div>
-                      <p className="italic">..., ngày ... tháng ... năm ...</p>
-                      <p className="font-bold mt-1">Ý KIẾN CỦA CHỦ HỘ<sup>(4)</sup></p>
-                    </div>
-                    <div>
-                      <p className="italic">..., ngày ... tháng ... năm ...</p>
-                      <p className="font-bold mt-1">Ý KIẾN CỦA CHỦ SỞ HỮU<sup>(5)</sup></p>
-                    </div>
-                    <div>
-                      <p className="italic">..., ngày ... tháng ... năm ...</p>
-                      <p className="font-bold mt-1">Ý KIẾN CỦA GIÁM HỘ<sup>(6)</sup></p>
-                    </div>
-                    <div>
-                      <p className="italic">..., ngày ... tháng ... năm ...</p>
-                      <p className="font-bold mt-1">NGƯỜI KÊ KHAI<sup>(7)</sup></p>
-                      <div className="h-14" />
-                      <p className="font-bold">{contractForm.partyAName}</p>
-                    </div>
-                  </div>
-
-                  {/* Page 2: Notes */}
-                  <div className="pt-8 border-t border-dashed border-neutral-300 mt-6 print:break-before-page">
-                    <p className="font-bold text-xs mb-2">Chú thích:</p>
-                    <div className="text-[10.5px] leading-relaxed text-neutral-700 space-y-1 text-justify">
-                      <p>(1) Cơ quan đăng ký cư trú.</p>
-                      <p>(2) Trường hợp đăng ký thường trú, đăng ký tạm trú, tách hộ ghi thông tin chủ hộ gia đình mới.</p>
-                      <p>(3) Ghi rõ ràng, cụ thể nội dung đề nghị đăng ký tạm trú tại địa chỉ hợp pháp.</p>
-                      <p>(4), (5), (6) Áp dụng đối với các trường hợp theo Luật Cư trú 2020 và xác nhận qua ứng dụng VNeID.</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* =========================================================================
-                   HỢP ĐỒNG THUÊ PHÒNG TRỌ CHUẨN PHÁP LÝ
-                   ========================================================================= */
-                <div className="space-y-4 text-xs sm:text-[13px] leading-relaxed text-neutral-900">
-                  <div className="text-center space-y-1">
-                    <p className="font-bold uppercase text-xs sm:text-sm">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-                    <p className="font-bold text-xs sm:text-sm">Độc lập – Tự do – Hạnh phúc</p>
-                    <p>——————</p>
-                    <h3 className="text-base sm:text-lg font-bold uppercase mt-4">
-                      HỢP ĐỒNG THUÊ PHÒNG TRỌ
-                    </h3>
-                  </div>
-
-                  <p className="italic">Hôm nay, ngày {contractForm.contractDate} tại địa chỉ: {activeHouse.address}</p>
-                  <p>Chúng tôi gồm:</p>
-
-                  <div className="space-y-1.5 pl-4">
-                    <p><b>1. Bên thuê phòng trọ (Bên A):</b></p>
-                    <p>Ông/bà: <b>{contractForm.partyAName}</b> &nbsp;&nbsp;&nbsp;&nbsp; Sinh ngày: {contractForm.partyADob}</p>
-                    <p>Nơi đăng ký HKTT: {contractForm.partyAHousehold}</p>
-                    <p>Số CCCD: {contractForm.partyACccd} &nbsp;&nbsp;&nbsp;&nbsp; SĐT: {contractForm.partyAPhone}</p>
-                  </div>
-
-                  <div className="space-y-1.5 pl-4 pt-2">
-                    <p><b>2. Đại diện bên cho thuê phòng trọ (Bên B):</b></p>
-                    <p>Ông/bà: <b>{activeHouse.landlord}</b> &nbsp;&nbsp;&nbsp;&nbsp; Sinh ngày: {activeHouse.dob}</p>
-                    <p>Nơi đăng ký hộ khẩu: {activeHouse.address}</p>
-                    <p>Số CCCD: {activeHouse.cccd} &nbsp;&nbsp;&nbsp;&nbsp; SĐT: {activeHouse.phone}</p>
-                  </div>
-
-                  <p className="pt-2">Hai bên thống nhất ký kết hợp đồng thuê phòng trọ với các điều khoản sau:</p>
-                  <div className="space-y-1 pl-4">
-                    <p>• <b>Giá thuê phòng:</b> {fmt(contractForm.rent)} đ/tháng ({readVietnameseNumber(contractForm.rent)})</p>
-                    <p>• <b>Tiền đặt cọc:</b> {fmt(contractForm.deposit)} đ ({readVietnameseNumber(contractForm.deposit)})</p>
-                    <p>• <b>Tiền điện:</b> Theo chỉ số công tơ thực tế (3.500 đ/kW)</p>
-                    <p>• <b>Tiền nước:</b> Theo chỉ số đồng hồ nước thực tế (20.000 đ/m³)</p>
-                  </div>
-
-                  <p><b>TRÁCH NHIỆM CỦA CÁC BÊN:</b></p>
-                  <div className="space-y-1 pl-4 text-justify">
-                    <p>1. Bên B tạo điều kiện thuận lợi, cấp nguồn điện nước và wifi ổn định cho Bên A sử dụng.</p>
-                    <p>2. Bên A thanh toán đầy đủ tiền phòng và các chi phí phát sinh trước ngày 05 hàng tháng.</p>
-                    <p>3. Bên A giữ gìn an ninh trật tự, vệ sinh chung và chấp hành nghiêm quy định pháp luật.</p>
-                  </div>
-
-                  {/* Signatures */}
-                  <div className="grid grid-cols-2 gap-4 text-center pt-8">
-                    <div>
-                      <p className="font-bold">ĐẠI DIỆN BÊN B</p>
-                      <p className="italic text-[11px]">(Chủ nhà trọ)</p>
-                      <div className="h-16" />
-                      <p className="font-bold">{activeHouse.landlord}</p>
-                    </div>
-                    <div>
-                      <p className="font-bold">ĐẠI DIỆN BÊN A</p>
-                      <p className="italic text-[11px]">(Người thuê trọ)</p>
-                      <div className="h-16" />
-                      <p className="font-bold">{contractForm.partyAName}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="mx-auto w-full max-w-5xl">
+              {selectedInvoiceRoom
+                ? <DocumentSheet doc={invoiceDoc} />
+                : <p className="soft-card p-4 text-xs text-neutral-600 dark:text-neutral-300">Chưa có dữ liệu phòng của tháng {selectedMonth}.</p>}
             </div>
           </div>
         )}
@@ -3073,9 +2901,10 @@ export function AdminPortal() {
                   <option value="TRUNG_KIM" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Hộ KD Trung Kim (116/32)</option>
                   <option value="LVC" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
                 </select>
+                <div className="hidden lg:block">{monthSelect}</div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={saveDeclaration}
                   className="py-2.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs"
@@ -3083,15 +2912,15 @@ export function AdminPortal() {
                   <Save size={15} />
                   <span>Lưu sổ kê khai</span>
                 </button>
-                <button
-                  onClick={() => window.print()}
-                  className="primary-button py-2.5 px-5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs"
-                >
-                  <Printer size={15} />
-                  <span>Xuất báo cáo in A4</span>
-                </button>
+                <DocumentActions doc={declarationDoc} downloadLabel="Lưu PDF" />
               </div>
             </div>
+
+            {saveDeclarationError && (
+              <div role="alert" className="p-3 bg-rose-100 border border-rose-300 text-rose-800 rounded-2xl text-xs font-bold text-center">
+                {saveDeclarationError}
+              </div>
+            )}
 
             {saveDeclarationSuccess && (
               <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-2xl text-xs font-bold text-center">
@@ -3106,21 +2935,21 @@ export function AdminPortal() {
             >
               <div className="flex justify-between items-start text-xs sm:text-sm mb-6 border-b border-neutral-200 pb-4">
                 <div>
-                  <p className="font-bold underline">{declarationData?.headerLeft3 || 'HỘ CÁ NHÂN KD: NHÀ TRỌ TRUNG KIM'}</p>
-                  <p>{declarationData?.headerLeft4 || 'Địa chỉ: 116/32 Đường 17, P. Linh Xuân, TP. Thủ Đức'}</p>
-                  <p>{declarationData?.headerLeft5 || 'Mã số thuế: 024073000292'}</p>
+                  <p className="font-bold underline">{declarationData?.headerLeft3 || `HỘ, CÁ NHÂN KINH DOANH: ${HOUSES[declarationHouse].name}`}</p>
+                  <p>{declarationData?.headerLeft4 || `Địa chỉ: ${HOUSES[declarationHouse].address}`}</p>
+                  <p>{declarationData?.headerLeft5 || `Mã số thuế: ${HOUSES[declarationHouse].landlordCccd}`}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{declarationData?.headerRight3 || 'Mẫu số S1a-HKD'}</p>
                   <p className="italic text-[11px] text-neutral-700">
-                    (Kèm theo Thông tư số 152/2025/TT-BTC)
+                    (Kèm theo Thông tư số 152/2025/TT-BTC ngày 31 tháng 12 năm 2025 của Bộ trưởng Bộ Tài chính)
                   </p>
                 </div>
               </div>
 
               <div className="text-center my-6">
                 <h3 className="text-lg sm:text-xl font-bold uppercase">
-                  SỔ DOANH THU BÁN HÀNG HÓA DỊCH VỤ
+                  SỔ DOANH THU BÁN HÀNG HÓA, DỊCH VỤ
                 </h3>
                 <p className="text-xs sm:text-sm mt-1">{declarationData?.location}</p>
                 <p className="text-xs sm:text-sm font-bold mt-1">Kỳ kê khai: {selectedMonth}</p>
@@ -3131,7 +2960,7 @@ export function AdminPortal() {
                 <thead>
                   <tr className="bg-neutral-100 border-b border-neutral-800">
                     <th className="border border-neutral-800 p-2 text-center w-28">Ngày tháng</th>
-                    <th className="border border-neutral-800 p-2 text-center">Diễn giải (Người đóng / Phòng)</th>
+                    <th className="border border-neutral-800 p-2 text-center">Diễn giải</th>
                     <th className="border border-neutral-800 p-2 text-center w-36">Số tiền (VNĐ)</th>
                   </tr>
                 </thead>
@@ -3199,7 +3028,7 @@ export function AdminPortal() {
                     type="text"
                     value={declarationSigDate}
                     onChange={e => setDeclarationSigDate(e.target.value)}
-                    placeholder="Ngày 31 tháng ... năm ..."
+                    placeholder="Ngày ... tháng ... năm ..."
                     className="w-full text-center italic bg-transparent border-none outline-none"
                   />
                   <p className="font-bold uppercase text-[11px] sm:text-xs">
@@ -3207,7 +3036,7 @@ export function AdminPortal() {
                   </p>
                   <p className="text-[10px] italic text-neutral-700">(Ký ghi rõ họ tên)</p>
                   <div className="h-16" />
-                  <p className="font-bold text-sm">{declarationData?.ownerName || activeHouse.landlord}</p>
+                  <p className="font-bold text-sm">{declarationData?.ownerName || HOUSES[declarationHouse].landlord}</p>
                 </div>
               </div>
             </div>
@@ -4380,7 +4209,7 @@ export function AdminPortal() {
             { key: 'billing', icon: NavIcons.Receipt, label: 'Thu tiền' },
             { key: 'utilities', icon: NavIcons.LayoutGrid, label: 'Tiện ích' }
           ].map(({ key, icon: Icon, label }) => {
-            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
+            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
             return <button type="button" key={key} aria-current={isActive ? 'page' : undefined} onClick={() => { playSound('click'); setActiveMenu(key as any); }} className={cn('kit-nav-item kit-admin-dock-item', isActive && 'kit-nav-active')}>
               <Icon size={21} /><span>{label}</span>
             </button>;

@@ -210,7 +210,7 @@ export const authService = {
               };
             }
             if (matchedReg.status === 'approved') {
-              const isPassMatch = cleanPassword === matchedReg.password || cleanPassword === '1';
+              const isPassMatch = Boolean(matchedReg.password) && cleanPassword === matchedReg.password;
               if (isPassMatch) {
                 const effectiveSheetId = sheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
                 storage.setItem(STORAGE_KEYS.AUTH, 'true');

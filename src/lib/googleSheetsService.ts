@@ -1021,14 +1021,14 @@ export async function fetchMonthlyInvoicesFromSheet(
                 { name: 'Tiền rác & dịch vụ', amount: trashCost, type: 'service', note: 'Vệ sinh & thu gom rác' },
                 { name: 'Phí giữ phương tiện', amount: vehicleCost, type: 'parking', note: 'Xe đã đăng ký' }
               ];
-              if (otherCost > 0) details.push({ name: 'Chi phí khác', amount: otherCost, type: 'service', note: 'Phụ thu phát sinh' });
+              if (otherCost !== 0) details.push({ name: 'Khoản khác / giảm trừ', amount: otherCost, type: 'service', note: 'Cột KHÁC trên Google Sheet' });
               if (depositCost > 0) details.push({ name: 'Tiền đặt cọc', amount: depositCost, type: 'service', note: 'Cọc hợp đồng' });
 
               return {
                 id: `SHEET-${roomNumber.replace(/[^\w]/g, '')}-${invoiceMonth.replace(/[^\w]/g, '')}`,
                 month: invoiceMonth,
-                issueDate: '01/10/2026',
-                dueDate: '05/10/2026',
+                issueDate: `01/${invoiceMonth}`,
+                dueDate: `05/${invoiceMonth}`,
                 total: totalCost,
                 status: effectiveStatus,
                 paidAt: effectivePaidLabel,
@@ -1143,14 +1143,14 @@ export async function fetchMonthlyInvoicesFromSheet(
               { name: 'Tiền rác & dịch vụ', amount: trashCost, type: 'service', note: 'Vệ sinh & thu gom rác' },
               { name: 'Phí giữ phương tiện', amount: vehicleCost, type: 'parking', note: 'Xe đã đăng ký' }
             ];
-            if (otherCost > 0) details.push({ name: 'Chi phí khác', amount: otherCost, type: 'service', note: 'Phụ thu phát sinh' });
+            if (otherCost !== 0) details.push({ name: 'Khoản khác / giảm trừ', amount: otherCost, type: 'service', note: 'Cột KHÁC trên Google Sheet' });
             if (depositCost > 0) details.push({ name: 'Tiền đặt cọc', amount: depositCost, type: 'service', note: 'Cọc hợp đồng' });
 
             return {
               id: `SHEET-${roomNumber.replace(/[^\w]/g, '')}-${invoiceMonth.replace(/[^\w]/g, '')}`,
               month: invoiceMonth,
-              issueDate: '01/10/2026',
-              dueDate: '05/10/2026',
+              issueDate: `01/${invoiceMonth}`,
+              dueDate: `05/${invoiceMonth}`,
               total: totalCost,
               status: effectivePaymentStatus,
               paidAt: effectivePaidAt,

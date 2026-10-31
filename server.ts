@@ -413,6 +413,7 @@ async function startServer() {
           plateNumber: profileData.plateNumber || (profileData.vehicle?.plateNumber) || '',
           email: profileData.email || '',
           dob: profileData.dob || '',
+          gender: profileData.gender || '',
           address: profileData.address || '',
           vehicleType: profileData.vehicleType || (profileData.vehicle?.type) || 'Xe máy',
           emergencyName: profileData.emergencyName || (profileData.emergencyContact?.name) || '',

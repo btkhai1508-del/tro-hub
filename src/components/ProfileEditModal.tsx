@@ -20,6 +20,7 @@ import { useApp } from '../context/AppContext';
 import { updateResidentProfileToSheet, DEFAULT_SPREADSHEET_ID, DEFAULT_PROFILE_TAB } from '../lib/googleSheetsService';
 import { getAccessToken, googleSignIn, auth } from '../lib/googleAuth';
 import { apiFetch } from '../lib/api';
+import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 
 const sampleAvatars = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
@@ -43,6 +44,7 @@ export function ProfileEditModal() {
     email: '',
     cccd: '',
     dob: '',
+    gender: '',
     address: '',
     avatar: '',
     vehicleType: '',
@@ -54,6 +56,7 @@ export function ProfileEditModal() {
   });
 
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [hasGoogleToken, setHasGoogleToken] = useState(false);
@@ -72,6 +75,7 @@ export function ProfileEditModal() {
         email: profile.email || '',
         cccd: profile.cccd || '',
         dob: profile.dob || '',
+        gender: profile.gender || '',
         address: profile.address || '',
         avatar: profile.avatar || sampleAvatars[0],
         vehicleType: profile.vehicle?.type || 'Xe máy',
@@ -129,6 +133,7 @@ export function ProfileEditModal() {
       email: formData.email.trim(),
       cccd: formData.cccd.trim(),
       dob: formData.dob.trim(),
+      gender: formData.gender,
       address: formData.address.trim(),
       avatar: formData.avatar,
       vehicle: {
@@ -161,6 +166,7 @@ export function ProfileEditModal() {
           cccd: formData.cccd.trim(),
           email: formData.email.trim(),
           dob: formData.dob.trim(),
+          gender: formData.gender,
           address: formData.address.trim(),
           plateNumber: formData.plateNumber.trim(),
           vehicleType: formData.vehicleType.trim() || 'Xe máy',
@@ -194,15 +200,30 @@ export function ProfileEditModal() {
     }
   };
 
-  const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const applyAvatar = (dataUrl: string | null) => {
+    if (!dataUrl) return;
+    setFormData(prev => ({ ...prev, avatar: dataUrl }));
+    setShowAvatarPicker(false);
+    setAvatarError('');
+  };
+
+  const handleCustomAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, avatar: reader.result as string }));
-        setShowAvatarPicker(false);
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      applyAvatar(await fileToAvatarDataUrl(file));
+    } catch {
+      setAvatarError('Không đọc được ảnh này. Vui lòng chọn ảnh JPG hoặc PNG khác.');
+    }
+  };
+
+  const handleZaloAvatar = async (source: 'album' | 'camera') => {
+    try {
+      applyAvatar(await pickImageInZalo(source));
+    } catch (err: any) {
+      console.warn('[avatar] chooseImage failed', err);
+      setAvatarError('Zalo chưa được cấp quyền truy cập ảnh. Vui lòng cho phép trong cài đặt Zalo rồi thử lại.');
     }
   };
 
@@ -294,13 +315,29 @@ export function ProfileEditModal() {
                       className="w-9 h-9 rounded-xl object-cover ring-1 ring-neutral-300 dark:ring-neutral-600 cursor-pointer transition-transform"
                     />
                   ))}
-                  <label className="w-9 h-9 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-600 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-800 dark:hover:text-neutral-200 hover:border-neutral-500 cursor-pointer text-xs">
-                    +
-                    <input type="file" accept="image/*" onChange={handleCustomAvatarUpload} className="hidden" />
-                  </label>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {usesZaloImagePicker ? (
+                    <>
+                      <button type="button" onClick={() => handleZaloAvatar('album')} className="soft-button min-h-11 px-4 text-xs">Chọn từ thư viện ảnh</button>
+                      <button type="button" onClick={() => handleZaloAvatar('camera')} className="soft-button min-h-11 px-4 text-xs">Chụp ảnh</button>
+                    </>
+                  ) : (
+                    <>
+                      <label className="soft-button min-h-11 px-4 text-xs cursor-pointer inline-flex items-center focus-within:ring-2">
+                        Chọn từ thư viện ảnh
+                        <input type="file" accept="image/*" onChange={handleCustomAvatarUpload} className="sr-only" />
+                      </label>
+                      <label className="soft-button min-h-11 px-4 text-xs cursor-pointer inline-flex items-center focus-within:ring-2 lg:hidden">
+                        Chụp ảnh
+                        <input type="file" accept="image/*" capture="user" onChange={handleCustomAvatarUpload} className="sr-only" />
+                      </label>
+                    </>
+                  )}
                 </div>
               </div>
             )}
+            {avatarError && <p role="alert" className="mt-2 text-center text-xs text-red-700 dark:text-red-400">{avatarError}</p>}
           </div>
 
           {/* Section 1: Thông tin cơ bản */}
@@ -374,6 +411,18 @@ export function ProfileEditModal() {
                   onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
                   className="kit-field w-full px-3 py-2 text-xs font-num font-bold rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/25 dark:bg-white/5 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-900/10 focus:outline-none"
                 />
+              </div>
+            </div>
+
+            <div>
+              <span id="profile-edit-gender" className="text-xs font-medium text-neutral-600 dark:text-neutral-300 block mb-1">Giới tính</span>
+              <div role="group" aria-labelledby="profile-edit-gender" className="kit-segmented grid grid-cols-2 gap-1 p-1">
+                {['Nam', 'Nữ'].map(option => (
+                  <button key={option} type="button" aria-pressed={formData.gender === option} onClick={() => setFormData({ ...formData, gender: option })}
+                    className={`kit-segment min-h-10 px-3 text-xs font-medium ${formData.gender === option ? 'kit-segment-active' : ''}`}>
+                    {option}
+                  </button>
+                ))}
               </div>
             </div>
 

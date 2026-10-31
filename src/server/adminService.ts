@@ -4,13 +4,14 @@ import { fileURLToPath } from 'url';
 import AdmZip from 'adm-zip';
 import { GoogleGenAI } from '@google/genai';
 import { setRoomColumnPStatus, getRoomColumnPStatus } from './columnPStatusStore.js';
-import { mapColorToPaymentStatus } from './googleSheetColorService.js';
+import { checkRoomTransferInLogs, mapColorToPaymentStatus } from './googleSheetColorService.js';
 import { fetchSheetDataViaGviz } from './googleSheetsBackendService.js';
 import { GOOGLE_APPS_SCRIPT_WEBAPP_URL } from './notificationStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PAYMENT_GATE_STORE_PATH = path.resolve(__dirname, 'paymentGateStore.json');
+const DECLARATION_STORE_PATH = path.resolve(__dirname, 'declarationStore.json');
 
 interface GateRecord {
   value: 'START' | 'STOP';
@@ -85,7 +86,6 @@ let unitConfigState: Record<string, any> = {
   '09/2026': { dien: 3500, nuoc: 20000, rac: 30000, net: 40000, xe: 50000 }
 };
 
-let declarationStore: Record<string, any> = {};
 
 /**
  * Normalizes room name
@@ -416,6 +416,35 @@ export function computeParkingFee(mCell: any, soXe: number, unitPriceXe: number 
 /**
  * Get Room List for a given month
  */
+/** Excel stores dates as day counts from 1899-12-30. */
+function sheetDate(cell: any): string {
+  const num = cell?.num;
+  if (typeof num === 'number' && num > 10000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + num * 86400000);
+    return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+  }
+  return String(cell?.value ?? '').trim();
+}
+
+/** Details the month tab does not hold, from the personal tab, matched by phone and then name. */
+async function loadPersonalInfo(zip: AdmZip) {
+  const { rows } = await parseSheetXmlRows(zip, 'THÔNG TIN CÁ NHÂN');
+  const digits = (v: any) => String(v ?? '').replace(/\D/g, '').replace(/^0+/, '');
+  const name = (v: any) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const people = rows.filter((r: any) => r.rowNumber >= 2 && r.cells.A?.value).map((r: any) => ({
+    phone: digits(r.cells.B?.value),
+    name: name(r.cells.A?.value),
+    info: {
+      email: String(r.cells.D?.value ?? '').trim(),
+      dob: sheetDate(r.cells.E),
+      address: String(r.cells.F?.value ?? '').trim(),
+      gender: String(r.cells.Q?.value ?? '').trim()
+    }
+  }));
+  return (personName: any, phone: any) =>
+    (people.find((p: any) => p.phone && p.phone === digits(phone)) || people.find((p: any) => p.name === name(personName)))?.info;
+}
+
 export async function getRoomListByMonth(month: string = '10/2026') {
   try {
     const zip = await fetchSheetXlsx();
@@ -527,6 +556,15 @@ export async function getRoomListByMonth(month: string = '10/2026') {
         }
       }
     });
+
+    try {
+      const lookup = await loadPersonalInfo(zip);
+      rooms.forEach(room => {
+        [1, 2, 3].forEach(i => {
+          if (room[`nguoi${i}`]) room[`info${i}`] = lookup(room[`nguoi${i}`], room[`sdt${i}`]);
+        });
+      });
+    } catch {}
 
     return rooms;
   } catch (e) {
@@ -837,84 +875,100 @@ export async function searchLicensePlates(month: string = '10/2026', query: stri
  * Get Declaration Data (Mẫu S1a-HKD Thông tư 152/2025/TT-BTC)
  */
 export async function getDeclarationData(month: string = '10/2026', houseKey: 'LVC' | 'TRUNG_KIM' = 'TRUNG_KIM') {
-  const house = HOUSES_CONFIG[houseKey] || HOUSES_CONFIG.TRUNG_KIM;
-  const storeKey = `${houseKey}_${month}`;
-
-  if (declarationStore[storeKey]) {
-    return declarationStore[storeKey];
-  }
-
-  // Auto populate from sheet billing data
   const billing = await getMonthlyBilling(month);
-  const filtered = billing.filter(b => houseKeyFromRoom(b.room) === houseKey && b.paymentStatus === 'paid');
+  const paid = billing.filter(b => houseKeyFromRoom(b.room) === houseKey && b.paymentStatus === 'paid');
+  const logsRows = await loadPaymentLogsForMonth(month);
 
-  const rows: any[] = [];
-  let total = 0;
+  const autoRows = paid.map(item => ({
+    room: item.room,
+    date: logsRows.length ? paidDateFromLogs(logsRows, item.room, month) : '',
+    person: `${item.name} (${item.room})`,
+    amount: item.tongTien
+  }));
 
-  filtered.forEach(item => {
-    rows.push({
-      date: `05/${month}`,
-      person: `${item.name} (${item.room})`,
-      amount: item.tongTien
-    });
-    total += item.tongTien;
+  // A saved book keeps the admin's edits; rooms paid after saving are still added to it.
+  const saved = loadDeclarationFile()[`${houseKey}_${month}`];
+  const rows: any[] = saved ? [...saved.rows] : [];
+  autoRows.forEach(auto => {
+    if (rows.some(row => row.room === auto.room)) return;
+    const empty = rows.findIndex(row => !row.date && !row.person && !row.amount);
+    if (empty >= 0) rows[empty] = auto;
+    else rows.push(auto);
   });
+  while (rows.length < DECLARATION_MIN_ROWS) rows.push({ date: '', person: '', amount: 0 });
 
-  // Pad to at least 8 rows for standard A4 report
-  const targetCount = houseKey === 'LVC' ? 8 : 12;
-  while (rows.length < targetCount) {
-    rows.push({
-      date: '',
-      person: '',
-      amount: 0
-    });
-  }
-
-  const result = {
-    houseKey,
-    month,
-    headerLeft3: `HỘ CÁ NHÂN KD: ${house.houseName}`,
-    headerLeft4: `Địa chỉ: ${house.address}`,
-    headerLeft5: `Mã số thuế: ${house.taxCode}`,
-    headerRight3: 'Mẫu số S1a-HKD',
-    headerRight4: '(Kèm theo Thông tư số 152/2025/TT-BTC ngày 31 tháng 12 năm 2025 của Bộ trưởng Bộ Tài chính)',
-    title: 'SỔ DOANH THU BÁN HÀNG HÓA DỊCH VỤ',
-    location: `Địa điểm kinh doanh: ${house.address}`,
-    rows,
-    total,
-    sigDate: `Ngày 31 tháng ${month.split('/')[0]} năm ${month.split('/')[1]}`,
-    sigLabel: 'NGƯỜI ĐẠI DIỆN HỘ KINH DOANH / CÁ NHÂN KINH DOANH',
-    ownerName: house.landlord
-  };
-
-  declarationStore[storeKey] = result;
-  return result;
+  return declarationBook(month, houseKey, rows, saved?.sigDate);
 }
 
 export function saveDeclarationData(month: string, houseKey: string, rows: any[], sigDate: string) {
-  const storeKey = `${houseKey}_${month}`;
+  const data = loadDeclarationFile();
+  data[`${houseKey}_${month}`] = { rows, sigDate, updatedAt: Date.now() };
+  fs.writeFileSync(DECLARATION_STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  return { success: true, message: 'Đã lưu sổ kê khai doanh thu thành công' };
+}
+
+const DECLARATION_MIN_ROWS = 8;
+
+function loadDeclarationFile(): Record<string, { rows: any[]; sigDate?: string; updatedAt: number }> {
+  try {
+    if (fs.existsSync(DECLARATION_STORE_PATH)) return JSON.parse(fs.readFileSync(DECLARATION_STORE_PATH, 'utf-8'));
+  } catch {}
+  return {};
+}
+
+function declarationBook(month: string, houseKey: string, rows: any[], sigDate?: string) {
   const house = HOUSES_CONFIG[houseKey] || HOUSES_CONFIG.TRUNG_KIM;
-
-  const total = rows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-
-  declarationStore[storeKey] = {
+  const [mm, yyyy] = month.split('/').map(Number);
+  return {
     houseKey,
     month,
-    headerLeft3: `HỘ CÁ NHÂN KD: ${house.houseName}`,
+    headerLeft3: `HỘ, CÁ NHÂN KINH DOANH: ${house.houseName}`,
     headerLeft4: `Địa chỉ: ${house.address}`,
     headerLeft5: `Mã số thuế: ${house.taxCode}`,
     headerRight3: 'Mẫu số S1a-HKD',
     headerRight4: '(Kèm theo Thông tư số 152/2025/TT-BTC ngày 31 tháng 12 năm 2025 của Bộ trưởng Bộ Tài chính)',
-    title: 'SỔ DOANH THU BÁN HÀNG HÓA DỊCH VỤ',
+    title: 'SỔ DOANH THU BÁN HÀNG HÓA, DỊCH VỤ',
     location: `Địa điểm kinh doanh: ${house.address}`,
     rows,
-    total,
-    sigDate: sigDate || `Ngày 31 tháng ${month.split('/')[0]} năm ${month.split('/')[1]}`,
+    total: rows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0),
+    // Day 0 of the next month is the real last day of this one.
+    sigDate: sigDate || `Ngày ${new Date(yyyy, mm, 0).getDate()} tháng ${String(mm).padStart(2, '0')} năm ${yyyy}`,
     sigLabel: 'NGƯỜI ĐẠI DIỆN HỘ KINH DOANH / CÁ NHÂN KINH DOANH',
     ownerName: house.landlord
   };
+}
 
-  return { success: true, message: 'Đã lưu sổ kê khai doanh thu thành công' };
+/** Log dates arrive as text ("2026-10-20 16:01:00") or as a sheet date serial. */
+function logDate(cell: any): string {
+  const iso = String(cell?.value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return iso ? `${iso[3]}/${iso[2]}/${iso[1]}` : sheetDate(cell).split(' ')[0];
+}
+
+/** Bank log rows dated in the billing month or the one after, when late payments arrive. */
+async function loadPaymentLogsForMonth(month: string): Promise<string[][]> {
+  try {
+    const zip = await fetchSheetXlsx();
+    if (!zip) return [];
+    const { rows } = await parseSheetXmlRows(zip, 'Logs');
+    const [mm, yyyy] = month.split('/').map(Number);
+    const first = yyyy * 12 + mm;
+    return rows
+      .map((r: any) => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map(col => (col === 'B' ? logDate(r.cells.B) : String(r.cells[col]?.value ?? ''))))
+      .filter((row: string[]) => {
+        const match = row[1].match(/^\d{2}\/(\d{2})\/(\d{4})$/);
+        if (!match) return false;
+        const value = Number(match[2]) * 12 + Number(match[1]);
+        return value === first || value === first + 1;
+      });
+  } catch {
+    return [];
+  }
+}
+
+/** Cash payments have no bank line, so their date stays blank for the admin to enter. */
+function paidDateFromLogs(logsRows: string[][], room: string, month: string): string {
+  const transfer = checkRoomTransferInLogs(logsRows, room, month);
+  return transfer.date || '';
 }
 
 /**

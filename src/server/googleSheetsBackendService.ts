@@ -42,6 +42,7 @@ export interface BackendTenantProfile {
   cccd: string;
   email: string;
   dob: string;
+  gender?: string;
   address: string;
   plateNumber: string;
   vehicleType: string;
@@ -117,6 +118,8 @@ import { getLiveRoomPaymentStatus, ColumnPStatusResult, normalizeMonthFormat } f
 
 export const DEFAULT_SPREADSHEET_ID = '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
 export const DEFAULT_PROFILE_TAB = 'THÔNG TIN CÁ NHÂN';
+/** Column Q of the profile tab, optional: "Giới tính". */
+const PROFILE_GENDER_COLUMN = 16;
 export const DEFAULT_MONTHLY_TAB = '10/2026';
 export const DEFAULT_LOGS_TAB = 'Logs';
 
@@ -1200,6 +1203,7 @@ export async function authenticateUser(
       personType,
       email: String(matchedUserRow[3] || '').replace(/^(Email Liên Hệ|Email)\s*/i, '').trim(),
       dob: String(matchedUserRow[4] || '').replace(/^(Ngày sinh)\s*/i, '').trim(),
+      gender: String(matchedUserRow[PROFILE_GENDER_COLUMN] || '').trim(),
       address: String(matchedUserRow[5] || '').replace(/^(Địa chỉ thường trú|Địa chỉ)\s*/i, '').trim(),
       vehicleType: String(matchedUserRow[7] || '').includes('Xe máy') ? 'Xe máy' : (String(matchedUserRow[7] || '').trim() || 'Xe máy'),
       emergencyName: String(matchedUserRow[9] || '').replace(/^(Người liên hệ)\s*/i, '').trim(),
@@ -1426,6 +1430,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
       personType: personData?.personType || 'person1',
       email: userRow ? String(userRow[3] || '').trim() : '',
       dob: userRow ? String(userRow[4] || '').trim() : '',
+      gender: userRow ? String(userRow[PROFILE_GENDER_COLUMN] || '').trim() : '',
       address: userRow ? String(userRow[5] || '').trim() : '',
       vehicleType: userRow ? String(userRow[7] || '').trim() || 'Xe máy' : 'Xe máy',
       emergencyName: userRow ? String(userRow[9] || '').trim() : '',

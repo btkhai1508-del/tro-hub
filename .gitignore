@@ -13,3 +13,4 @@ coverage/
 
 # Generated local Superdesign source context
 .superdesign/init/
+src/server/declarationStore.json

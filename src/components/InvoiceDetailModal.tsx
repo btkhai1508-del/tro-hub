@@ -1,46 +1,39 @@
 import { useDialogFocus } from '../lib/useDialogFocus';
 import { useState } from 'react';
-import {
-  X,
-  Download,
-  Building2,
-  Zap,
-  Droplet,
-  Wifi,
-  ShieldCheck,
-  Bike,
-  ReceiptText,
-  QrCode,
-  Lock
-} from './AppIcons';
+import { X, Download, QrCode, Lock } from './AppIcons';
+import { Bike, Building2, Droplet, Landmark, ReceiptText, Trash2, Wallet, Wifi, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
-import { IconWallet3D } from './Icons3D';
+import { getMeasurer } from '../lib/documents/engine';
+import { saveDocument } from '../lib/documents/output';
+import { residentInvoice } from '../lib/documents/fromProfile';
+import { isDeposit } from '../lib/documents/stateFormat';
 
-// Reliable Lucide SVG icons mapped to invoice categories
-const getCategoryIcon = (type: string) => {
-  switch (type) {
+// Flat 2D icons, imported from lucide directly because AppIcons maps these names to 3D artwork.
+const getCategoryIcon = (detail: { type: string; name: string }) => {
+  if (isDeposit(detail)) return <Landmark size={16} className="text-slate-700" />;
+  switch (detail.type) {
     case 'room':
       return <Building2 size={16} className="text-slate-700" />;
     case 'electricity':
-      return <Zap size={16} className="text-amber-500" />;
+      return <Zap size={16} className="text-slate-700" />;
     case 'water':
-      return <Droplet size={16} className="text-sky-500" />;
+      return <Droplet size={16} className="text-slate-700" />;
     case 'internet':
-      return <Wifi size={16} className="text-blue-500" />;
+      return <Wifi size={16} className="text-slate-700" />;
     case 'service':
-      return <ShieldCheck size={16} className="text-emerald-500" />;
+      return <Trash2 size={16} className="text-slate-700" />;
     case 'parking':
-      return <Bike size={16} className="text-indigo-500" />;
+      return <Bike size={16} className="text-slate-700" />;
     default:
-      return <ReceiptText size={16} className="text-neutral-700" />;
+      return <ReceiptText size={16} className="text-slate-700" />;
   }
 };
 
 export function InvoiceDetailModal() {
   const navigate = useNavigate();
-  const { viewingInvoice, closeInvoiceDetailModal, profile, paymentGateStatus } = useApp();
+  const { viewingInvoice, closeInvoiceDetailModal, profile, invoices, paymentGateStatus } = useApp();
 
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState('');
@@ -62,79 +55,9 @@ export function InvoiceDetailModal() {
     setIsExporting(true);
     setExportError('');
     try {
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42);
-    doc.text('NHA TRO PHONG LAN', 105, 22, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${profile.room?.building || 'Trung Kim'} | Hotline BQL: 0902 371 800`, 105, 28, { align: 'center' });
-
-    // Divider line
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.5);
-    doc.line(20, 33, 190, 33);
-
-    // Title
-    doc.setFontSize(14);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`HOA DON DICH VU - THANG ${viewingInvoice.month}`, 105, 43, { align: 'center' });
-
-    // Invoice Meta
-    doc.setFontSize(10);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Ma hoa don: ${viewingInvoice.id}`, 20, 54);
-    doc.text(`Han nop: ${viewingInvoice.dueDate}`, 190, 54, { align: 'right' });
-    doc.text(`Khach thue: ${profile.name}`, 20, 61);
-    doc.text(`Can ho: ${profile.room.roomNumber} - ${profile.room.building}`, 190, 61, { align: 'right' });
-    doc.text(`Trang thai: ${viewingInvoice.status === 'paid' ? 'DA THANH TOAN' : 'CHUA THANH TOAN'}`, 20, 68);
-
-    // Table Header
-    doc.setFillColor(241, 245, 249);
-    doc.rect(20, 75, 170, 8, 'F');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    doc.text('KHOAN MUC PHI', 24, 80.5);
-    doc.text('SO TIEN (VND)', 186, 80.5, { align: 'right' });
-
-    // Table Rows
-    let y = 90;
-    viewingInvoice.details.forEach((item) => {
-      doc.setFontSize(9);
-      doc.setTextColor(51, 65, 85);
-      doc.text(item.name, 24, y);
-      doc.text(`${item.amount.toLocaleString('vi-VN')} VND`, 186, y, { align: 'right' });
-      if (item.metric) {
-        y += 4.5;
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text(item.metric, 24, y);
-      }
-      y += 7.5;
-      doc.setDrawColor(241, 245, 249);
-      doc.line(20, y - 2, 190, y - 2);
-    });
-
-    // Total Box
-    y += 5;
-    doc.setFillColor(248, 250, 252);
-    doc.rect(20, y, 170, 14, 'F');
-    doc.setFontSize(11);
-    doc.setTextColor(15, 23, 42);
-    doc.text('TONG CONG THANH TOAN:', 24, y + 9);
-    doc.setFontSize(12);
-    doc.text(`${viewingInvoice.total.toLocaleString('vi-VN')} VND`, 186, y + 9, { align: 'right' });
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
-
-    doc.save(`HoaDon_PhongLan_${viewingInvoice.month.replace('/', '_')}.pdf`);
+      const measurer = await getMeasurer();
+      const result = await saveDocument(residentInvoice(measurer, profile, viewingInvoice, invoices));
+      if (!result.ok && result.message) setExportError(result.message);
     } catch {
       setExportError('Chưa tạo được PDF. Vui lòng thử lại.');
     } finally {
@@ -161,7 +84,7 @@ export function InvoiceDetailModal() {
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-3">
-            <IconWallet3D size={42} className="shrink-0" />
+            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100"><Wallet size={21} className="text-slate-700" /></span>
             <div>
               <h3 id="invoice-detail-title" className="type-h3 text-slate-900 font-bold">Hóa đơn Tháng {viewingInvoice.month}</h3>
               <p className="type-caption text-neutral-600 font-num">Mã số: {viewingInvoice.id}</p>
@@ -205,12 +128,15 @@ export function InvoiceDetailModal() {
                   <div key={idx} className="p-2.5 sm:p-3 flex items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                        {getCategoryIcon(detail.type)}
+                        {getCategoryIcon(detail)}
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-slate-900 truncate leading-tight">{detail.name}</p>
                         {detail.metric && (
                           <p className="text-xs text-neutral-600 font-num mt-0.5">{detail.metric}</p>
+                        )}
+                        {isDeposit(detail) && (
+                          <p className="text-xs text-neutral-600 mt-0.5">Không tính vào tổng tiền</p>
                         )}
                       </div>
                     </div>

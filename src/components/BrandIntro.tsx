@@ -1,5 +1,5 @@
 import { useLayoutEffect } from 'react';
-import { KIT_ASSETS } from './KitIcons';
+import { BRAND_MARK_INTRO } from './KitIcons';
 import '../styles/brand-intro.css';
 
 let attemptedInDocument = false;
@@ -11,7 +11,7 @@ const visible = (node: Element | null): node is HTMLElement => Boolean(node?.get
 const box = (node: Element): Box => { const { left, top, width, height } = node.getBoundingClientRect(); return { left, top, width, height }; };
 
 /** One launch intro for public and restored sessions, outside route Suspense.
- * Text and SVG are laid out at their real large size, never enlarged bitmaps. */
+ * Text and the CSS-built mark are laid out at their real large size, never enlarged bitmaps. */
 export function BrandIntro() {
   useLayoutEffect(() => {
     let cancelled = false;
@@ -30,6 +30,7 @@ export function BrandIntro() {
       let readinessDeadline = 0;
       let timer = 0;
       let failsafe = 0;
+      let lettersTimer = 0;
       const startupDeadline = performance.now() + 4000;
       const tweens: Array<{ kill(): void }> = [];
       const originals: Array<{ node: HTMLElement; opacity: string; priority: string }> = [];
@@ -42,7 +43,7 @@ export function BrandIntro() {
       function finish() {
         if (disposed) return;
         disposed = true; attemptedInDocument = true;
-        clearTimeout(timer); clearTimeout(failsafe); observer.disconnect();
+        clearTimeout(timer); clearTimeout(failsafe); clearTimeout(lettersTimer); observer.disconnect();
         tweens.forEach(tween => tween.kill());
         originals.forEach(({ node, opacity, priority }) => opacity ? node.style.setProperty('opacity', opacity, priority) : node.style.removeProperty('opacity'));
         stage?.remove();
@@ -57,7 +58,7 @@ export function BrandIntro() {
       function visibility() { if (document.hidden) finish(); }
       function slots(target: HTMLElement) {
         const logoSlot = target.querySelector('[data-brand-logo]');
-        const logo = logoSlot?.querySelector('img,svg') ?? logoSlot;
+        const logo = logoSlot?.querySelector('.brand-home-icon,img,svg') ?? logoSlot;
         const title = target.querySelector('[data-brand-title]');
         const subtitle = target.querySelector('[data-brand-subtitle]');
         return { logo: visible(logo) ? logo : null, title: visible(title) ? title : null, subtitle: visible(subtitle) ? subtitle : null };
@@ -120,8 +121,8 @@ export function BrandIntro() {
         const aura = document.createElement('div'); aura.className = 'brand-intro-aura';
         const brand = document.createElement('div'); brand.className = 'brand-intro-mark';
         Object.assign(brand.style, { left: `${left}px`, top: `${top}px`, width: `${baseWidth * factor}px`, height: `${baseHeight * factor}px` });
-        const logo = document.createElement('img'); logo.className = 'brand-intro-logo'; logo.alt = ''; logo.draggable = false;
-        logo.src = source.logo instanceof HTMLImageElement ? source.logo.currentSrc || source.logo.src : KIT_ASSETS.Home;
+        const logo = document.createElement('div'); logo.className = 'brand-intro-logo';
+        logo.innerHTML = BRAND_MARK_INTRO;
         Object.assign(logo.style, { left: `${logoBox.left * factor}px`, top: `${logoBox.top * factor}px`, width: `${logoBox.width * factor}px`, height: `${logoBox.height * factor}px` });
         brand.append(logo);
         function makeText(className: string, text: string, metrics: TextBox, width: number) {
@@ -130,6 +131,12 @@ export function BrandIntro() {
           brand.append(node); return node;
         }
         const title = makeText('brand-intro-title', TITLE, titleBox, titleWidth);
+        // The mark forms alone at the centre, then steps aside as the name arrives letter by letter.
+        logo.style.setProperty('--brand-shift', `${(baseWidth - logoBox.width) * factor / 2 - logoBox.left * factor}px`);
+        title.textContent = '';
+        [...TITLE].forEach((char, i) => { const span = document.createElement('span'); span.className = 'brand-intro-char'; span.style.setProperty('--i', String(i)); span.textContent = char; title.append(span); });
+        // Plain text again before the glide, so its kerning matches the header it lands on.
+        lettersTimer = window.setTimeout(() => { title.textContent = TITLE; }, 2130);
         stage.append(veil, aura, brand); document.body.append(stage);
         
         // Hide destination elements and the card initially
@@ -147,12 +154,10 @@ export function BrandIntro() {
 
         try {
           const ease = 'power3.inOut';
-          const moveDelay = 1.48; // Hold title & logo in center for ~1s
+          const moveDelay = 2.45; // The mark assembles, the name arrives, then a short hold
           const moveDuration = 0.68;
 
           tweens.push(engine.fromTo(brand, { x: centerX, y: centerY }, { x: centerX, y: centerY, duration: .01, force3D: false }));
-          tweens.push(engine.fromTo(logo, { y: 10, scale: .76, rotation: -7, opacity: 0 }, { y: 0, scale: 1, rotation: 0, opacity: 1, duration: .46, delay: .08, ease: 'expo.out', force3D: false }));
-          tweens.push(engine.fromTo(title, { x: 12, opacity: 0 }, { x: 0, opacity: 1, duration: .36, delay: .18, ease: 'power3.out', force3D: false }));
           tweens.push(engine.fromTo(aura, { opacity: 0, scale: .88 }, { opacity: 1, scale: 1, duration: .5, delay: .08, ease: 'sine.out' }));
           
           // Aura and veil fade out as transition starts
@@ -213,7 +218,7 @@ export function BrandIntro() {
             }));
           }
 
-          failsafe = window.setTimeout(finish, 2750);
+          failsafe = window.setTimeout(finish, 3750);
         } catch { finish(); }
       }
 

@@ -1,3 +1,4 @@
+import '../styles/brand-intro.css';
 import React from 'react';
 
 /** Original transparent SVG artwork supplied by the user. Each external SVG
@@ -96,7 +97,9 @@ export function createKitIcon(name: KitIconName, rotation = 0, variant?: 'hidden
     const labelled = Boolean(props['aria-label'] || props['aria-labelledby']);
     return (
       <span {...props} aria-hidden={props['aria-hidden'] ?? !labelled} role={labelled ? 'img' : props.role} data-kit-icon={name} className={`kit-asset-icon ${variant === 'hidden' ? 'kit-icon-hidden' : ''} ${className}`} style={{ width: size, height: size, ...style }}>
-        <img src={KIT_ASSETS[name]} alt="" aria-hidden="true" draggable={false} decoding="async" style={{ transform: rotation ? `rotate(${rotation}deg)` : undefined }} />
+        {name === 'Home'
+          ? <BrandHomeMark />
+          : <img src={KIT_ASSETS[name]} alt="" aria-hidden="true" draggable={false} decoding="async" style={{ transform: rotation ? `rotate(${rotation}deg)` : undefined }} />}
         {(variant === 'plus' || variant === 'minus') && <span aria-hidden="true" className="kit-icon-mark">{variant === 'plus' ? '+' : '−'}</span>}
       </span>
     );
@@ -104,8 +107,19 @@ export function createKitIcon(name: KitIconName, rotation = 0, variant?: 'hidden
   AssetIcon.displayName = `Kit${name}`;
   return AssetIcon;
 }
+const part = (name: string) => `<span class="brand-mark-part brand-mark-${name}"></span>`;
+
+/** The Home mark as CSS layers (brand-intro.css), shared by every icon and the launch intro. */
+const behindGlass = `${part('back')}<span class="brand-mark-part brand-mark-glow-wrap">${part('glow')}</span>`;
+export const BRAND_MARK_LAYERS = `<span class="brand-mark-part brand-mark-cut">${behindGlass}</span><span class="brand-mark-part brand-mark-glass"><span class="brand-mark-part brand-mark-frost">${behindGlass}</span>${part('tint')}</span>${part('pill')}`;
+export const BRAND_MARK_INTRO = `<span class="brand-mark">${part('ripple')}${part('ripple')}${behindGlass}${part('glass')}${part('shine')}${part('pill')}</span>`;
+
+function BrandHomeMark() {
+  return <span className="brand-home-icon"><span className="brand-mark" dangerouslySetInnerHTML={{ __html: BRAND_MARK_LAYERS }} /></span>;
+}
+
 export const KitIcon = ({ name, ...props }: KitIconProps & { name: KitIconName }) => {
   const labelled = Boolean(props['aria-label'] || props['aria-labelledby']);
   const { size = 48, className = '', style, strokeWidth: _stroke, absoluteStrokeWidth: _absolute, color: _color, fill: _fill, children: _children, ...rest } = props;
-  return <span {...rest} aria-hidden={rest['aria-hidden'] ?? !labelled} role={labelled ? 'img' : rest.role} data-kit-icon={name} className={`kit-asset-icon ${className}`} style={{ width: size, height: size, ...style }}><img src={KIT_ASSETS[name]} alt="" aria-hidden="true" draggable={false} decoding="async" /></span>;
+  return <span {...rest} aria-hidden={rest['aria-hidden'] ?? !labelled} role={labelled ? 'img' : rest.role} data-kit-icon={name} className={`kit-asset-icon ${className}`} style={{ width: size, height: size, ...style }}>{name === 'Home' ? <BrandHomeMark /> : <img src={KIT_ASSETS[name]} alt="" aria-hidden="true" draggable={false} decoding="async" />}</span>;
 };

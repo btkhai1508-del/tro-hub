@@ -17,6 +17,7 @@ import {
   IconCleanliness3D
 } from './Icons3D';
 import { cn } from '../lib/utils';
+import { houseFromRoom } from '../lib/houses';
 
 export type UtilityModalType = 'meter' | 'vehicle' | 'wifi' | 'maintenance' | 'declaration' | 'rules' | 'hotline' | null;
 
@@ -57,6 +58,7 @@ const DEFAULT_TICKETS: MaintenanceTicket[] = [
 
 export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: UtilityDetailModalProps) {
   const { profile } = useApp();
+  const residentHouse = houseFromRoom(profile.room?.roomNumber);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Maintenance form state
@@ -566,11 +568,11 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
                     <div>
                       <span className="text-[10px] text-neutral-400 block">Họ tên chủ nhà:</span>
-                      <span className="font-bold text-neutral-900 dark:text-white">BÙI TRUNG KHẢI</span>
+                      <span className="font-bold text-neutral-900 dark:text-white">{residentHouse.landlord}</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => copyToClipboard('BÙI TRUNG KHẢI', 'landlord_name')}
+                      onClick={() => copyToClipboard(residentHouse.landlord, 'landlord_name')}
                       className="min-h-11 p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                       title="Sao chép tên chủ nhà"
                     >
@@ -581,11 +583,11 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
                     <div>
                       <span className="text-[10px] text-neutral-400 block">Số CCCD chủ nhà:</span>
-                      <span className="font-mono font-bold text-neutral-900 dark:text-white">079090001800</span>
+                      <span className="font-mono font-bold text-neutral-900 dark:text-white">{residentHouse.landlordCccd}</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => copyToClipboard('079090001800', 'landlord_cccd')}
+                      onClick={() => copyToClipboard(residentHouse.landlordCccd, 'landlord_cccd')}
                       className="min-h-11 p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                       title="Sao chép CCCD"
                     >
@@ -596,11 +598,11 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
                     <div>
                       <span className="text-[10px] text-neutral-400 block">Địa chỉ nhà trọ:</span>
-                      <span className="font-medium text-neutral-900 dark:text-white">Tòa nhà Nhà Trọ Phong Lan, Khu dân cư Trung Kim</span>
+                      <span className="font-medium text-neutral-900 dark:text-white">{residentHouse.address}</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => copyToClipboard('Tòa nhà Nhà Trọ Phong Lan, Khu dân cư Trung Kim', 'address')}
+                      onClick={() => copyToClipboard(residentHouse.address, 'address')}
                       className="min-h-11 p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                       title="Sao chép địa chỉ"
                     >

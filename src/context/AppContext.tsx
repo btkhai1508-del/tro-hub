@@ -80,6 +80,7 @@ export interface UserProfile {
   email: string;
   cccd: string;
   dob: string;
+  gender?: string;
   address: string;
   avatar: string;
   personType?: PersonType;
@@ -106,6 +107,7 @@ export interface RegisteredAccount {
   name: string;
   phone: string;
   email: string;
+  gender?: string;
   roomNumber: string;
   password?: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -185,7 +187,7 @@ interface AppContextType {
   currentPassword: string;
   loginUser: (phone: string, pass: string) => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
   loginWithZalo: () => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
-  registerResident: (data: { name: string; phone: string; email?: string; password: string; roomNumber: string; autoApprove?: boolean }) => { success: boolean; pendingApproval?: boolean; message?: string; error?: string };
+  registerResident: (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }) => { success: boolean; pendingApproval?: boolean; message?: string; error?: string };
   registeredAccounts: RegisteredAccount[];
   updateAccountStatus: (id: string, status: 'pending' | 'approved' | 'rejected') => void;
   updatePassword: (currentPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
@@ -415,6 +417,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 cccd: data.profile.cccd !== undefined ? data.profile.cccd : prev.cccd,
                 email: data.profile.email !== undefined ? data.profile.email : prev.email,
                 dob: data.profile.dob !== undefined ? data.profile.dob : prev.dob,
+                gender: data.profile.gender || prev.gender,
                 address: data.profile.address !== undefined ? data.profile.address : prev.address,
                 vehicle: {
                   ...prev.vehicle,
@@ -758,59 +761,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
+  // Gender chosen at sign-up stays on this device until the sheet has a value for it.
+  useEffect(() => {
+    if (!profile.phone || profile.gender) return;
+    try {
+      const clean = (phone?: string) => (phone || '').replace(/[\s.-]/g, '');
+      const stored = JSON.parse(storage.getItem('ecostay_registered_users') || '[]');
+      const gender = stored.find((u: any) => clean(u.phone) === clean(profile.phone))?.gender;
+      if (gender) setProfile(prev => ({ ...prev, gender }));
+    } catch {}
+  }, [profile.phone, profile.gender]);
+
   const [registeredAccounts, setRegisteredAccounts] = useState<RegisteredAccount[]>(() => {
-    const defaultAccounts: RegisteredAccount[] = [
-      {
-        id: 'reg-default-1',
-        name: 'Nguyễn Minh Khôi',
-        phone: '0938124567',
-        email: 'minhkhoi.nguyen@gmail.com',
-        roomNumber: '203',
-        password: '123456',
-        status: 'pending',
-        createdAt: '28/10/2026'
-      },
-      {
-        id: 'reg-default-2',
-        name: 'Trần Bảo Ngọc',
-        phone: '0914889234',
-        email: 'baongoc.tran@gmail.com',
-        roomNumber: 'G06',
-        password: '123456',
-        status: 'pending',
-        createdAt: '29/10/2026'
-      },
-      {
-        id: 'reg-default-3',
-        name: 'Lê Hoàng Nam',
-        phone: '0972551890',
-        email: 'hoangnam.le@gmail.com',
-        roomNumber: 'LVC-102',
-        password: '123456',
-        status: 'approved',
-        createdAt: '25/10/2026'
-      }
-    ];
     try {
       const raw = storage.getItem('ecostay_registered_users');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((u: any, idx: number) => ({
+        if (Array.isArray(parsed)) {
+          // Sample accounts seeded by an earlier build could still sign in, so they are purged.
+          const real = parsed.filter((u: any) => !String(u.id || '').startsWith('reg-default-'));
+          if (real.length !== parsed.length) storage.setItem('ecostay_registered_users', JSON.stringify(real));
+          return real.map((u: any, idx: number) => ({
             id: u.id || `reg-${idx}-${String(u.phone || '').replace(/\D/g, '')}`,
             name: u.name || 'Cư dân',
             phone: u.phone || '',
             email: u.email || '',
+            gender: u.gender || '',
             roomNumber: u.roomNumber || 'G01',
-            password: u.password || '123456',
+            password: u.password || '',
             status: u.status === 'approved' || u.status === 'rejected' ? u.status : 'pending',
             createdAt: u.createdAt || new Date().toLocaleDateString('vi-VN')
           }));
         }
       }
     } catch {}
-    storage.setItem('ecostay_registered_users', JSON.stringify(defaultAccounts));
-    return defaultAccounts;
+    return [];
   });
 
   const updateAccountStatus = useCallback((id: string, status: 'pending' | 'approved' | 'rejected') => {
@@ -821,7 +806,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const registerResident = (data: { name: string; phone: string; email?: string; password: string; roomNumber: string; autoApprove?: boolean }): { success: boolean; pendingApproval?: boolean; message?: string; error?: string } => {
+  const registerResident = (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }): { success: boolean; pendingApproval?: boolean; message?: string; error?: string } => {
     const cleanPhone = data.phone.replace(/[\s.-]/g, '').trim();
     if (!data.name.trim() || !cleanPhone || !data.password.trim()) {
       return { success: false, error: 'Vui lòng điền đầy đủ họ tên, số điện thoại và mật khẩu' };
@@ -844,6 +829,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       name: data.name.trim(),
       phone: data.phone.trim(),
       email: data.email?.trim() || '',
+      gender: data.gender || '',
       roomNumber: data.roomNumber.trim(),
       password: data.password.trim(),
       status: isAutoApproved ? 'approved' : 'pending',

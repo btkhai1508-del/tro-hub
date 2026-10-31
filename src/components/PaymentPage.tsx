@@ -4,6 +4,9 @@ import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { soundFx } from '../lib/soundFx';
+import { getMeasurer } from '../lib/documents/engine';
+import { saveDocument } from '../lib/documents/output';
+import { residentInvoice } from '../lib/documents/fromProfile';
 import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from './AppIcons';
 
 export function PaymentPage() {
@@ -150,74 +153,9 @@ export function PaymentPage() {
     setIsExportingPDF(true);
     setPdfError('');
     try {
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42);
-    doc.text('NHA TRO PHONG LAN', 105, 22, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${profile.room?.building || 'Trung Kim'} | Hotline BQL: 0902 371 800`, 105, 28, { align: 'center' });
-
-    // Divider
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.5);
-    doc.line(20, 33, 190, 33);
-
-    // Title
-    doc.setFontSize(14);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`BIEN LAI THANH TOAN - THANG ${targetInvoice.month}`, 105, 43, { align: 'center' });
-
-    // Details
-    doc.setFontSize(10);
-    doc.setTextColor(71, 85, 105);
-    doc.text(`Ma hoa don: ${targetInvoice.id}`, 20, 54);
-    doc.text(`Ngay: Hom nay`, 190, 54, { align: 'right' });
-    doc.text(`Khach thue: ${profile.name}`, 20, 61);
-    doc.text(`Can ho: ${profile.room?.roomNumber || '203'}`, 190, 61, { align: 'right' });
-    doc.text(`Hinh thuc: Chuyen khoan VietQR (Tu dong)`, 20, 68);
-    doc.text(`Trang thai: DA HOAN TAT THANH TOAN`, 190, 68, { align: 'right' });
-
-    // Table Header
-    doc.setFillColor(241, 245, 249);
-    doc.rect(20, 75, 170, 8, 'F');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    doc.text('KHOAN MUC PHI', 24, 80.5);
-    doc.text('SO TIEN (VND)', 186, 80.5, { align: 'right' });
-
-    // Rows
-    let y = 90;
-    (targetInvoice.details || []).forEach((item: any) => {
-      doc.setFontSize(9);
-      doc.setTextColor(51, 65, 85);
-      doc.text(item.name, 24, y);
-      doc.text(`${item.amount.toLocaleString('vi-VN')} VND`, 186, y, { align: 'right' });
-      y += 8;
-      doc.setDrawColor(241, 245, 249);
-      doc.line(20, y - 2, 190, y - 2);
-    });
-
-    // Total Box
-    y += 5;
-    doc.setFillColor(248, 250, 252);
-    doc.rect(20, y, 170, 14, 'F');
-    doc.setFontSize(11);
-    doc.setTextColor(15, 23, 42);
-    doc.text('TONG CONG THANH TOAN:', 24, y + 9);
-    doc.setFontSize(12);
-    doc.text(`${targetInvoice.total.toLocaleString('vi-VN')} VND`, 186, y + 9, { align: 'right' });
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.text('Cam on quy cu dan da su dung dich vu cua Nha Tro Phong Lan.', 105, 275, { align: 'center' });
-
-    doc.save(`HoaDon_PhongLan_${targetInvoice.month.replace('/', '_')}.pdf`);
+      const measurer = await getMeasurer();
+      const result = await saveDocument(residentInvoice(measurer, profile, targetInvoice, invoices));
+      if (!result.ok && result.message) setPdfError(result.message);
     } catch {
       setPdfError('Chưa tạo được PDF. Vui lòng thử lại.');
     } finally {
