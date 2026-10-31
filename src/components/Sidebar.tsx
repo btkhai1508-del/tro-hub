@@ -5,6 +5,7 @@ import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { preloadRoute } from '../lib/routePreload';
 import { cn } from '../lib/utils';
+import { useSidebarLabels } from '../lib/useSidebarLabels';
 
 const navItems = [
   { name: 'Trang chủ', path: '/', icon: Home, tutorial: 'nav-dashboard' },
@@ -15,7 +16,8 @@ const navItems = [
 ];
 
 export function Sidebar() {
-  const { profile, invoices, openProfileEditModal, isSidebarCollapsed, toggleSidebar, logoutUser } = useApp();
+  const { profile, invoices, openProfileEditModal, isSidebarCollapsed: collapsed, toggleSidebar, logoutUser } = useApp();
+  const { collapsedLayout: isSidebarCollapsed, labelPhase } = useSidebarLabels(collapsed);
   const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
   const [hasCopiedPhone, setHasCopiedPhone] = useState(false);
   const handleCopyPhone = async () => {
@@ -27,9 +29,9 @@ export function Sidebar() {
   };
 
   return (
-    <aside aria-label="Thanh điều hướng chính" className={cn('kit-sidebar fixed bottom-4 left-4 top-4 z-40 hidden flex-col lg:flex', isSidebarCollapsed ? 'w-[105px]' : 'w-[260px]')}>
+    <aside aria-label="Thanh điều hướng chính" data-sidebar-labels={labelPhase} className={cn('kit-sidebar fixed bottom-4 left-4 top-4 z-40 hidden flex-col lg:flex', collapsed ? 'w-[105px]' : 'w-[260px]')}>
       <div className="kit-sidebar-panel h-full min-h-0">
-        <div id="resident-sidebar-content" className={cn('kit-sidebar-scroll flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain py-5', isSidebarCollapsed ? 'px-3' : 'px-4')}>
+        <div id="resident-sidebar-content" className={cn('kit-sidebar-scroll flex h-full min-h-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain py-5', isSidebarCollapsed ? 'px-3' : 'px-4')}>
           <div className={cn('mb-3 flex min-h-16 shrink-0 items-center gap-2', isSidebarCollapsed ? 'justify-center' : 'px-2')}>
             <NavLink data-brand-target="brand" to="/" aria-label="Trọ-Hub · Trang chủ" className={cn('flex min-w-0 flex-1 items-center gap-2.5', isSidebarCollapsed && 'justify-center')}>
               <div data-brand-logo className="flex h-11 w-11 shrink-0 items-center justify-center">
@@ -95,7 +97,7 @@ export function Sidebar() {
         aria-controls="resident-sidebar-content"
         className="kit-sidebar-toggle absolute -right-5 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white bg-white/95 text-neutral-700 shadow-md transition-[background-color,transform] duration-150 hover:text-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
       >
-        {isSidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
+        {collapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
       </button>
     </aside>
   );

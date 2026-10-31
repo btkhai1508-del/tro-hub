@@ -164,7 +164,7 @@ export function LoginPage() {
           </span>
           <div data-brand-copy className="min-w-0">
             <span data-brand-title className="block apple-title2 apple-strong kit-text-primary">Trọ-Hub</span>
-            <span data-brand-subtitle className="block apple-callout kit-text-secondary">Nhà trọ Phong Lan</span>
+            <span data-brand-subtitle className="block apple-callout kit-text-secondary">Hệ sinh thái nhà trọ</span>
           </div>
         </div>
 

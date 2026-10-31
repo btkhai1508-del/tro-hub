@@ -1,7 +1,7 @@
 /**
  * Invoices and statements in the administrative format of Nghị định 30/2020/NĐ-CP (Phụ lục I):
  * A4, margins top/bottom 20 mm, left 30 mm, right 15 mm, Times New Roman metrics, black.
- * Statements are portrait; the monthly notice is landscape, like most payment notices.
+ * Every page is portrait.
  */
 import type { Invoice } from '../../context/AppContext';
 import type { HouseInfo } from '../houses';
@@ -90,36 +90,34 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   const w = new PageWriter(m);
   const { invoice, house } = data;
   const { mm, yyyy } = monthParts(invoice.month);
-  const pageRight = A4.height - 15 * MM;
   const [d = '', mo = '', yr = ''] = (invoice.issueDate || '').split('/');
   const dateText = d && mo && yr
     ? `TP. Hồ Chí Minh, ngày ${pad2(d)} tháng ${pad2(mo)} năm ${yr}`
     : `TP. Hồ Chí Minh, ngày ..... tháng ${mm} năm ${yyyy}`;
 
-  let y = writeHeader(w, m, house, `Số: ${mm}/TB-${house.abbreviation}`, dateText, pageRight) - 8;
-  y = writeTitle(w, m, y, 'THÔNG BÁO TIỀN PHÒNG TRỌ', `Tháng ${mm} năm ${yyyy}`, pageRight) - 4;
+  let y = writeHeader(w, m, house, `Số: ${mm}/TB-${house.abbreviation}`, dateText);
+  y = writeTitle(w, m, y, 'THÔNG BÁO TIỀN PHÒNG TRỌ', `Tháng ${mm} năm ${yyyy}`);
 
   const room = (data.room || '').replace(/^P\.\s*/i, '');
-  y = w.flow([t('Kính gửi: '), filled(data.tenantName, '...............................'), t('     CCCD số: '), filled(citizenId(data.tenantCccd), '.....................'), t('     Ở phòng số: '), filled(room, '...............')], { x: LEFT, right: pageRight, y, lineHeight: LH, size: BODY }) + PARA;
-  y = w.flow([t(`Xin thông báo ông bà biết, tiền thuê phòng và các chi phí dịch vụ khác trong tháng ${mm} năm ${yyyy}. Cụ thể như sau:`)], { x: LEFT, firstX: LEFT + INDENT, right: pageRight, y, lineHeight: LH, size: BODY, align: 'justify' }) + PARA;
+  y = w.flow([t('Kính gửi: '), filled(data.tenantName, '...............................'), t('     CCCD số: '), filled(citizenId(data.tenantCccd), '.....................')], { x: LEFT, right: RIGHT, y, lineHeight: LH, size: BODY }) + PARA;
+  y = w.flow([t('Ở phòng số: '), filled(room, '...............')], { x: LEFT, right: RIGHT, y, lineHeight: LH, size: BODY }) + PARA;
+  y = w.flow([t(`Xin thông báo ông bà biết, tiền thuê phòng và các chi phí dịch vụ khác trong tháng ${mm} năm ${yyyy}. Cụ thể như sau:`)], { x: LEFT, firstX: LEFT + INDENT, right: RIGHT, y, lineHeight: LH, size: BODY, align: 'justify' }) + PARA;
 
-  // Fee table on the left, payment summary on the right, so one landscape page holds it all.
-  const tableRight = LEFT + 428;
-  const cols = [LEFT, LEFT + 30, LEFT + 162, LEFT + 340, tableRight];
+  const cols = [LEFT, LEFT + 32, LEFT + 165, LEFT + 355, RIGHT];
   const T = 13;
-  const rowH = 18;
+  const rowH = 20;
   const deposit = invoice.details.find(isDeposit);
   // Column P of the sheet sums H:N, so reductions count and the deposit does not.
   const details = invoice.details.filter(item => !isDeposit(item) && (item.amount !== 0 || ['room', 'electricity', 'water'].includes(item.type)));
   const tableTop = y - 10;
   let rowTop = tableTop;
-  const rowLine = (yy: number) => w.line(LEFT, yy, tableRight, yy, 0.5);
+  const rowLine = (yy: number) => w.line(LEFT, yy, RIGHT, yy, 0.5);
   rowLine(rowTop);
-  ['STT', 'Khoản', 'Chi tiết', 'Thành tiền'].forEach((label, i) => w.center((cols[i] + cols[i + 1]) / 2, rowTop + 13, label, T, 'bold'));
+  ['STT', 'Khoản', 'Chi tiết', 'Thành tiền'].forEach((label, i) => w.center((cols[i] + cols[i + 1]) / 2, rowTop + 14, label, T, 'bold'));
   rowTop += rowH;
   rowLine(rowTop);
   details.forEach((item, i) => {
-    const base = rowTop + 13;
+    const base = rowTop + 14;
     w.center((cols[0] + cols[1]) / 2, base, String(i + 1), T);
     w.text(cols[1] + 4, base, item.name, T);
     if (item.metric) w.text(cols[2] + 4, base, item.metric, T);
@@ -127,28 +125,27 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     rowTop += rowH;
     rowLine(rowTop);
   });
-  w.center((cols[2] + cols[3]) / 2, rowTop + 13, 'Tổng cộng:', T, 'bold');
-  w.rightText(cols[4] - 4, rowTop + 13, fmt(invoice.total), T, 'bold');
+  w.center((cols[2] + cols[3]) / 2, rowTop + 14, 'Tổng cộng:', T, 'bold');
+  w.rightText(cols[4] - 4, rowTop + 14, fmt(invoice.total), T, 'bold');
   rowTop += rowH;
   rowLine(rowTop);
   cols.forEach(x => w.line(x, tableTop, x, rowTop, 0.5));
 
-  const sideX = tableRight + 18;
-  let side = tableTop + 13;
+  y = rowTop + 20;
   const debt = data.previousDebt;
   const label = (text: string, value: string, bold = false) => {
-    w.text(sideX + (bold ? 14 : 0), side, text, BODY, bold ? 'bold' : 'normal');
-    w.rightText(pageRight, side, value, BODY, bold ? 'bold' : 'normal');
-    side += LH;
+    w.text(LEFT + (bold ? INDENT : 0), y, text, BODY, bold ? 'bold' : 'normal');
+    w.rightText(LEFT + 330, y, value, BODY, bold ? 'bold' : 'normal');
+    y += LH;
   };
-  w.text(sideX, side, 'Phần thanh toán:', BODY);
-  w.line(sideX, side + 2, sideX + m.width('Phần thanh toán:', 'normal', BODY), side + 2, 0.5);
-  side += LH;
-  label('- Còn nợ tháng trước:', debt === undefined ? '..............' : fmt(debt));
+  w.text(LEFT, y, 'Phần thanh toán:', BODY);
+  w.line(LEFT, y + 2, LEFT + m.width('Phần thanh toán:', 'normal', BODY), y + 2, 0.5);
+  y += LH;
+  label('- Số tiền còn nợ tháng trước:', debt === undefined ? '..............' : fmt(debt));
   label('- Phải trả tháng này:', fmt(invoice.total));
   label('Tổng cộng:', debt === undefined ? '..............' : fmt(debt + invoice.total), true);
-  w.text(sideX, side, 'Chi tiết thanh toán:', BODY);
-  side += LH;
+  w.text(LEFT, y, 'Chi tiết thanh toán:', BODY);
+  y += LH;
 
   const lines: string[] = [];
   if (invoice.status === 'paid') {
@@ -160,23 +157,21 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     lines.push(`Hạn thanh toán: ${invoice.dueDate}.`);
   }
   if (deposit) lines.push(`Tiền đặt cọc đã giữ: ${fmt(deposit.amount)} đồng (không tính vào tổng).`);
-  if (lines.length) {
-    side = w.flow(lines.map(line => t(`${line} `)), { x: sideX, right: pageRight, y: side, lineHeight: 15, size: T });
-  } else {
-    w.line(sideX, side, pageRight, side, 0.5, [0.6, 1.6]);
-    side += 15;
+  const dotted = Math.max(2, Math.min(3, Math.floor((BOTTOM - y - 118) / 17)));
+  for (let i = 0; i < dotted; i += 1) {
+    if (lines[i]) w.text(LEFT, y, lines[i], T);
+    else w.line(LEFT, y, RIGHT, y, 0.5, [0.6, 1.6]);
+    y += 17;
   }
 
-  writeSignatures(w, Math.max(rowTop, side) + 20,
+  writeSignatures(w, y + 6,
     { title: 'NGƯỜI TRỌ', note: '(Ký, ghi rõ họ tên)', name: data.tenantName },
-    { title: 'QUẢN LÝ NHÀ TRỌ', signed: true, name: house.landlord },
-    pageRight, 44);
+    { title: 'QUẢN LÝ NHÀ TRỌ', signed: true, name: house.landlord });
 
   return {
     title: `Thông báo tiền phòng trọ tháng ${mm}/${yyyy}`,
     fileName: `Thong_bao_tien_phong_${mm}_${yyyy}${room ? `_P${room.replace(/[^\p{L}\p{N}]+/gu, '')}` : ''}.pdf`,
     pages: w.pages,
-    landscape: true,
   };
 }
 

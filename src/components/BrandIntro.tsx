@@ -4,7 +4,7 @@ import '../styles/brand-intro.css';
 
 let attemptedInDocument = false;
 const TITLE = 'Trọ-Hub';
-const SUBTITLE = 'Nhà trọ Phong Lan';
+const SUBTITLE = 'Hệ sinh thái nhà trọ';
 type Box = { left: number; top: number; width: number; height: number };
 type TextBox = Box & { text: string; fontSize: number; letterSpacing: number; fontFamily: string; fontWeight: string; color: string };
 const visible = (node: Element | null): node is HTMLElement => Boolean(node?.getClientRects().length && node.getBoundingClientRect().width && node.getBoundingClientRect().height && getComputedStyle(node).visibility !== 'hidden');
@@ -106,9 +106,10 @@ export function BrandIntro() {
           return canvas.measureText(text).width + Math.max(0, text.length - 1) * metrics.letterSpacing + 2;
         }
         const titleWidth = Math.max(titleBox.width, widthFor(TITLE, titleBox));
-        // Intro displays logo and title without the subtitle line underneath
-        const baseWidth = Math.max(logoBox.left + logoBox.width, titleBox.left + titleWidth);
-        const baseHeight = Math.max(logoBox.top + logoBox.height, titleBox.top + titleBox.height);
+        const subtitleBox = textBox(source.subtitle, SUBTITLE, 13, titleBox.top + titleBox.height + 2);
+        const subtitleWidth = Math.max(subtitleBox.width, widthFor(SUBTITLE, subtitleBox));
+        const baseWidth = Math.max(logoBox.left + logoBox.width, titleBox.left + titleWidth, subtitleBox.left + subtitleWidth);
+        const baseHeight = Math.max(logoBox.top + logoBox.height, subtitleBox.top + subtitleBox.height);
         const factor = Math.max(1, Math.min(2.6, (innerWidth - 48) / baseWidth, (innerHeight - 80) / baseHeight));
         const snap = (value: number) => Math.round(value * devicePixelRatio) / devicePixelRatio;
         const centerX = snap((innerWidth - baseWidth * factor) / 2) - left;
@@ -131,13 +132,26 @@ export function BrandIntro() {
           brand.append(node); return node;
         }
         const title = makeText('brand-intro-title', TITLE, titleBox, titleWidth);
+        const subtitle = makeText('brand-intro-subtitle', SUBTITLE, subtitleBox, subtitleWidth);
         // The mark forms alone at the centre, then steps aside as the name arrives letter by letter.
         logo.style.setProperty('--brand-shift', `${(baseWidth - logoBox.width) * factor / 2 - logoBox.left * factor}px`);
-        title.textContent = '';
-        [...TITLE].forEach((char, i) => { const span = document.createElement('span'); span.className = 'brand-intro-char'; span.style.setProperty('--i', String(i)); span.textContent = char; title.append(span); });
         // Plain text again before the glide, so its kerning matches the header it lands on.
         lettersTimer = window.setTimeout(() => { title.textContent = TITLE; }, 2130);
         stage.append(veil, aura, brand); document.body.append(stage);
+        // Each letter keeps the advance it has in the plain text, kerning included, so nothing jumps at the swap.
+        const titleText = title.firstChild!;
+        const range = document.createRange();
+        let index = 0;
+        const letters = [...TITLE].map(char => {
+          range.setStart(titleText, index); range.setEnd(titleText, index + char.length); index += char.length;
+          return { char, left: range.getBoundingClientRect().left, width: range.getBoundingClientRect().width };
+        });
+        title.textContent = '';
+        letters.forEach(({ char, left, width }, i) => {
+          const span = document.createElement('span'); span.className = 'brand-intro-char'; span.style.setProperty('--i', String(i)); span.textContent = char;
+          span.style.width = `${i < letters.length - 1 ? letters[i + 1].left - left : width}px`;
+          title.append(span);
+        });
         
         // Hide destination elements and the card initially
         hide(source.logo); 
@@ -181,6 +195,7 @@ export function BrandIntro() {
             }
           }
           resolveText(title, titleBox, source.title, 'brand-intro-title-destination');
+          resolveText(subtitle, subtitleBox, source.subtitle, 'brand-intro-subtitle-destination');
 
           // Transition brand container to target coordinates
           tweens.push(engine!.to(brand, { 
@@ -209,15 +224,6 @@ export function BrandIntro() {
               ease: 'power2.out'
             }));
           }
-          if (source.subtitle) {
-            tweens.push(engine!.to(source.subtitle, {
-              opacity: 1,
-              duration: 0.48,
-              delay: moveDelay + 0.16,
-              ease: 'power2.out'
-            }));
-          }
-
           failsafe = window.setTimeout(finish, 3750);
         } catch { finish(); }
       }

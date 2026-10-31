@@ -144,6 +144,8 @@ body:has(.brand-intro-stage[data-intro-phase="assemble"]) .kit-login-window {
   animation: brand-ripple 1050ms cubic-bezier(.16, .8, .3, 1) 420ms both;
 }
 .brand-mark-ripple + .brand-mark-ripple { animation-delay: 620ms; }
+.brand-intro-subtitle { animation: brand-subtitle 460ms ease-out 1750ms backwards; }
+@keyframes brand-subtitle { from { opacity: 0; transform: translateY(35%); } }
 .brand-intro-char {
   display: inline-block;
   white-space: pre;

@@ -5,7 +5,7 @@
 import { chooseImage } from 'zmp-sdk/apis';
 import { isZaloMiniApp } from './platform';
 
-const MAX_SIDE = 512;
+const MAX_SIDE = 1600;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -17,7 +17,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Shrinks a photo so it fits browser storage (a phone photo is several MB). */
+/** Shrinks a photo to a working size for the crop step (a phone photo is several MB). */
 export async function imageToAvatarDataUrl(src: string): Promise<string> {
   const img = await loadImage(src);
   const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));

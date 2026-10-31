@@ -1,4 +1,5 @@
 import { useDialogFocus } from '../lib/useDialogFocus';
+import { AvatarCropper } from './AvatarCropper';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -57,6 +58,7 @@ export function ProfileEditModal() {
 
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatarError, setAvatarError] = useState('');
+  const [cropSource, setCropSource] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [hasGoogleToken, setHasGoogleToken] = useState(false);
@@ -200,11 +202,17 @@ export function ProfileEditModal() {
     }
   };
 
-  const applyAvatar = (dataUrl: string | null) => {
-    if (!dataUrl) return;
+  const applyAvatar = (dataUrl: string) => {
     setFormData(prev => ({ ...prev, avatar: dataUrl }));
+    setCropSource(null);
     setShowAvatarPicker(false);
     setAvatarError('');
+  };
+
+  const startCrop = (dataUrl: string | null) => {
+    if (!dataUrl) return;
+    setAvatarError('');
+    setCropSource(dataUrl);
   };
 
   const handleCustomAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,7 +220,7 @@ export function ProfileEditModal() {
     e.target.value = '';
     if (!file) return;
     try {
-      applyAvatar(await fileToAvatarDataUrl(file));
+      startCrop(await fileToAvatarDataUrl(file));
     } catch {
       setAvatarError('Không đọc được ảnh này. Vui lòng chọn ảnh JPG hoặc PNG khác.');
     }
@@ -220,7 +228,7 @@ export function ProfileEditModal() {
 
   const handleZaloAvatar = async (source: 'album' | 'camera') => {
     try {
-      applyAvatar(await pickImageInZalo(source));
+      startCrop(await pickImageInZalo(source));
     } catch (err: any) {
       console.warn('[avatar] chooseImage failed', err);
       setAvatarError('Zalo chưa được cấp quyền truy cập ảnh. Vui lòng cho phép trong cài đặt Zalo rồi thử lại.');
@@ -337,6 +345,7 @@ export function ProfileEditModal() {
                 </div>
               </div>
             )}
+            {cropSource && <AvatarCropper src={cropSource} onCancel={() => setCropSource(null)} onApply={applyAvatar} />}
             {avatarError && <p role="alert" className="mt-2 text-center text-xs text-red-700 dark:text-red-400">{avatarError}</p>}
           </div>
 

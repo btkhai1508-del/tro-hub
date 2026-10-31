@@ -102,7 +102,7 @@ function AppRoutes() {
         <Route path="payment" element={<PaymentPage />} />
 
         {/* Giặt Sấy Tự Động 24/7 (LaundryFlow) */}
-        <Route path="laundry" element={<LaundryPage />} />
+        <Route path="laundry" element={LAUNDRY_OPEN ? <LaundryPage /> : <Navigate to="/utilities" replace />} />
         
         {/* Notifications redirect to Home */}
         <Route path="notifications" element={<Navigate to="/" replace />} />
@@ -119,6 +119,9 @@ function AppRoutes() {
     </Routes>
   );
 }
+
+/** Laundry stays built but closed to residents until it launches. */
+const LAUNDRY_OPEN = false;
 
 export default function App() {
   return (

@@ -59,6 +59,7 @@ import { DocumentActions, DocumentSheet, useBuiltDocument } from './DocumentShee
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { ModernLineGraph } from './ModernLineGraph';
 import { Background } from './Background';
+import { useSidebarLabels } from '../lib/useSidebarLabels';
 import {
   IconHome3D,
   IconWallet3D,
@@ -257,6 +258,7 @@ export function AdminPortal() {
 
   // Sidebar Collapse
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { collapsedLayout: sidebarCollapsedLayout, labelPhase: sidebarLabelPhase } = useSidebarLabels(isSidebarCollapsed);
 
   // Loading
   const [isLoading, setIsLoading] = useState(false);
@@ -1170,6 +1172,7 @@ export function AdminPortal() {
           DESKTOP FLOATING SIDEBAR (Matching resident page aesthetic)
          ========================================================================= */}
       <aside
+        data-sidebar-labels={sidebarLabelPhase}
         className={cn(
           "hidden lg:flex flex-col fixed left-4 top-4 bottom-4 z-40 transition-all duration-300 ease-out select-none",
           isSidebarCollapsed ? "w-[105px]" : "w-[260px]"
@@ -1177,7 +1180,7 @@ export function AdminPortal() {
       >
         <div className={cn(
           "liquid-panel relative w-full h-full flex flex-col justify-between py-6 transition-all duration-300",
-          isSidebarCollapsed ? "px-3 items-center" : "px-4"
+          sidebarCollapsedLayout ? "px-3 items-center" : "px-4"
         )}>
 
           {/* Toggle Arrow Button */}
@@ -1200,7 +1203,7 @@ export function AdminPortal() {
           </button>
           {/* Top Brand */}
           <div className="w-full">
-            {isSidebarCollapsed ? (
+            {sidebarCollapsedLayout ? (
               <div data-brand-target="brand" className="flex justify-center mb-6 w-full">
                 <div
                   data-brand-logo
@@ -1232,7 +1235,7 @@ export function AdminPortal() {
             {/* Nav Items */}
             <nav className={cn(
               "w-full transition-all duration-300",
-              isSidebarCollapsed ? "flex flex-col items-center space-y-3" : "space-y-1.5"
+              sidebarCollapsedLayout ? "flex flex-col items-center space-y-3" : "space-y-1.5"
             )}>
               {[
                 { key: 'dashboard', label: 'Tổng quan', icon: NavigationHome },
@@ -1255,7 +1258,7 @@ export function AdminPortal() {
                     }}
                     className={cn(
                       "group relative transition-all duration-200 select-none cursor-pointer",
-                      isSidebarCollapsed
+                      sidebarCollapsedLayout
                         ? "w-11 h-11 rounded-2xl flex items-center justify-center mx-auto"
                         : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
                       isActive
@@ -1272,7 +1275,7 @@ export function AdminPortal() {
                           isActive ? "text-neutral-600 dark:text-neutral-300" : "text-neutral-600 dark:text-neutral-200 group-hover:text-neutral-900 dark:group-hover:text-white "
                         )}
                       />
-                      {!isSidebarCollapsed && <span className="text-sm tracking-tight truncate">{item.label}</span>}
+                      {!sidebarCollapsedLayout && <span className="text-sm tracking-tight truncate">{item.label}</span>}
                     </div>
                   </button>
                 );
@@ -1282,7 +1285,7 @@ export function AdminPortal() {
 
           {/* Bottom Section: Controls & Logout */}
           <div className="w-full space-y-2.5 pt-3 border-t border-neutral-900/5 dark:border-white/10">
-            {!isSidebarCollapsed ? (
+            {!sidebarCollapsedLayout ? (
               <div className="space-y-2.5">
                 {/* 1. Month Selector - 3D Glassmorphism Card with Functional Previous/Next Arrows */}
                 <div className="soft-surface p-2 sm:p-2.5 rounded-2xl relative overflow-hidden group">

@@ -53,13 +53,23 @@
   backdrop-filter: blur(var(--material-blur));
 }
 .kit-dock .kit-nav-item { border-radius: 22px; }
-.kit-popover, .kit-dialog {
+.kit-popover {
   background: var(--glass-sheen), var(--material-ultrathick);
   border: 1px solid var(--liquid-edge);
   border-radius: var(--radius-surface);
   box-shadow: var(--liquid-shadow);
   -webkit-backdrop-filter: blur(var(--material-blur));
   backdrop-filter: blur(var(--material-blur));
+  background-clip: padding-box;
+}
+/* Forms sit on dialogs, so they need far more cover than the see-through page cards. */
+.kit-dialog {
+  background: var(--glass-sheen), var(--dialog-fill);
+  border: 1px solid var(--liquid-edge);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--liquid-shadow);
+  -webkit-backdrop-filter: blur(calc(var(--material-blur) * 4));
+  backdrop-filter: blur(calc(var(--material-blur) * 4));
   background-clip: padding-box;
 }
 .kit-page { display: flex; flex-direction: column; gap: 24px; }
@@ -228,10 +238,12 @@
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --reading-fill: rgba(255, 255, 255, 0.42);
   --form-fill: rgba(255, 255, 255, 0.42);
+  --dialog-fill: rgba(255, 255, 255, 0.86);
 }
 .dark {
   --reading-fill: rgba(24, 24, 28, 0.42);
   --form-fill: rgba(28, 28, 32, 0.42);
+  --dialog-fill: rgba(22, 22, 26, 0.86);
 }
 .kit-data-surface, .kit-reading-surface, .kit-form-surface {
   border: 1px solid var(--separator);
@@ -247,6 +259,13 @@
 :where(.liquid-panel, .soft-card, .kit-dialog, .kit-login-window, .kit-data-surface, .kit-reading-surface, .kit-form-surface) .kit-form-surface {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+/* Sidebar text fades on collapse and expand; icons and controls stay put. */
+[data-sidebar-labels="closing"] :is(span, p):not(:has(svg, img)) { opacity: 0; transition: opacity 130ms ease; }
+[data-sidebar-labels="opening"] :is(span, p):not(:has(svg, img)) { animation: sidebar-label-in 220ms ease 120ms backwards; }
+@keyframes sidebar-label-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-sidebar-labels] :is(span, p) { animation: none !important; transition: none !important; }
 }
 .kit-disclosure-summary {
   display: flex;
@@ -290,12 +309,12 @@
   .kit-laundry-stats > div > div:last-child > span:last-child { font-size: 20px; margin-top: 2px; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root { --reading-fill: #fff; --form-fill: #fff; }
-  .dark { --reading-fill: #242426; --form-fill: #242426; }
+  :root { --reading-fill: #fff; --form-fill: #fff; --dialog-fill: #fff; }
+  .dark { --reading-fill: #242426; --form-fill: #242426; --dialog-fill: #242426; }
 }
 @media (prefers-reduced-transparency: reduce) {
-  :root { --reading-fill: #fff; --form-fill: #fff; }
-  .dark { --reading-fill: #242426; --form-fill: #242426; }
+  :root { --reading-fill: #fff; --form-fill: #fff; --dialog-fill: #fff; }
+  .dark { --reading-fill: #242426; --form-fill: #242426; --dialog-fill: #242426; }
 }
 @media (prefers-reduced-motion: reduce) {
   .kit-disclosure-chevron { transition: none; }

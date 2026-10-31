@@ -82,9 +82,9 @@
   }
 }
 
+/* Colour only: fading the overlay itself would switch off the dialog's blur for the first frames. */
 @keyframes dialog-overlay-enter {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  from { background-color: transparent; }
 }
 
 @keyframes dialog-desktop-enter {
@@ -109,38 +109,23 @@
   }
 }
 
-/* 3. Route, Section & Tab Transitions */
-.route-stage-enter,
-.admin-section-enter,
+/* 3. Route, Section & Tab Transitions
+   Glass only blurs the wallpaper when no ancestor fades, transforms or sets will-change, and any
+   of those also traps position: fixed dialogs. So a page never animates as a whole: each glass
+   surface and each glass-free block fades by itself, and fill stays backwards so nothing lingers. */
 .tab-panel-enter,
 .page-transition {
-  animation: section-glide-enter var(--dur-section) var(--ease-snappy) both;
-  backface-visibility: hidden;
-  will-change: transform, opacity;
+  animation: section-glide-enter var(--dur-section) var(--ease-snappy) backwards;
 }
 
 /* 4. Page Header & Staggered Card Entrance */
-.kit-page > .kit-page-header,
-.admin-workspace > .admin-page-header {
-  animation: section-glide-enter 150ms var(--ease-snappy) both;
-  backface-visibility: hidden;
+.kit-page > :not(:has(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface)),
+.kit-page :is(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface):not(:is(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface) *) {
+  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) backwards;
 }
-
-.kit-page > :nth-child(1),
-.home-stagger-1 {
-  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) 0ms both;
-}
-.kit-page > :nth-child(2),
-.home-stagger-2 {
-  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) 20ms both;
-}
-.kit-page > :nth-child(3),
-.home-stagger-3 {
-  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) 40ms both;
-}
-.kit-page > :nth-child(n+4) {
-  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) 50ms both;
-}
+.kit-page > :nth-child(2) { animation-delay: 20ms; }
+.kit-page > :nth-child(3) { animation-delay: 40ms; }
+.kit-page > :nth-child(n+4) { animation-delay: 50ms; }
 
 /* Grid Cards & Multi-Card Sections Cascade */
 .kit-page .grid > :where(.liquid-panel, .soft-card, .soft-surface, .kit-inset, .kit-data-surface),
@@ -150,7 +135,7 @@
 .admin-utility-card,
 .admin-room-card,
 #laundry-machine-results > * {
-  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) both;
+  animation: card-cascade-enter var(--dur-card) var(--ease-snappy) backwards;
   backface-visibility: hidden;
 }
 
@@ -196,7 +181,7 @@
 
 /* List Rows Staggered Entrance (capped at 3 fast tiers) */
 .kit-list-row {
-  animation: row-cascade-enter 160ms var(--ease-snappy) both;
+  animation: row-cascade-enter 160ms var(--ease-snappy) backwards;
   backface-visibility: hidden;
 }
 .kit-list-row:nth-of-type(1) { animation-delay: 15ms; }
@@ -323,22 +308,22 @@
 
 /* 8. Dialogs, Sheets & Notification Popovers */
 .tahoe-dialog-overlay {
-  animation: dialog-overlay-enter 130ms ease-out both;
+  animation: dialog-overlay-enter 130ms ease-out backwards;
 }
 
 .tahoe-dialog {
-  animation: dialog-desktop-enter 160ms var(--ease-snappy) both;
+  animation: dialog-desktop-enter 160ms var(--ease-snappy) backwards;
 }
 
 #header-notification-panel,
 .notification-popover-frosted {
-  animation: dialog-desktop-enter 150ms var(--ease-snappy) both;
+  animation: dialog-desktop-enter 150ms var(--ease-snappy) backwards;
   transform-origin: top right;
 }
 
 @media (max-width: 639px) {
   .tahoe-dialog {
-    animation: dialog-sheet-enter 170ms var(--ease-snappy) both;
+    animation: dialog-sheet-enter 170ms var(--ease-snappy) backwards;
   }
 
   /* Ultra-smooth mobile performance: zero-stagger for instant paint */
@@ -364,9 +349,7 @@
   .tab-panel-enter,
   .page-transition,
   .kit-page > *,
-  .home-stagger-1,
-  .home-stagger-2,
-  .home-stagger-3,
+  .kit-page :is(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface),
   .kit-list-row,
   .admin-utility-card,
   .admin-room-card,
