@@ -36,7 +36,7 @@
     --material-medium: rgba(255, 255, 255, 0.24);
     --material-thick: rgba(255, 255, 255, 0.30);
     --material-ultrathick: rgba(255, 255, 255, 0.52);
-    --material-blur: 12px;
+    --material-blur: 6px;
     --workspace-fill: rgba(246, 246, 246, 0.68);
     --auth-fill: var(--material-thick);
     --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0.08));
@@ -47,7 +47,7 @@
     --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
-    --liquid-fill: var(--material-medium);
+    --liquid-fill: rgba(255, 255, 255, 0.45);
     --liquid-fill-subtle: var(--material-ultrathin);
     --liquid-edge: rgba(255, 255, 255, 0.55);
     --liquid-stroke: var(--separator);
@@ -57,7 +57,7 @@
   }
 
   .dark {
-    --liquid-fill: var(--material-medium);
+    --liquid-fill: rgba(12, 12, 16, 0.45);
     --text-primary: #ffffff;
     --text-secondary: #e5e5e7;
     --text-tertiary: #b8b8bf;
@@ -250,11 +250,15 @@
 .wallpaper-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.30);
   pointer-events: none;
 }
 .dark .wallpaper-overlay {
-  background: rgba(9, 9, 11, 0.85);
+  background: rgba(9, 9, 11, 0.30);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .wallpaper-overlay { background: rgba(255, 255, 255, 0.85); }
+  .dark .wallpaper-overlay { background: rgba(9, 9, 11, 0.85); }
 }
 
 
@@ -317,13 +321,13 @@
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root { --workspace-fill: #f3f3f3; --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; }
-  .dark { --workspace-fill: #242424; --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
+  :root { --workspace-fill: #f3f3f3; --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; --liquid-fill: #f6f6f6; }
+  .dark { --workspace-fill: #242424; --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; --liquid-fill: #292929; }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  :root { --workspace-fill: #f3f3f3; --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; --material-blur: 0px; }
-  .dark { --workspace-fill: #242424; --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; }
+  :root { --workspace-fill: #f3f3f3; --material-ultrathin: #f3f3f3; --material-thin: #f3f3f3; --material-medium: #f6f6f6; --material-thick: #f8f8f8; --material-ultrathick: #fafafa; --material-inset: #ffffff; --material-blur: 0px; --liquid-fill: #f6f6f6; }
+  .dark { --workspace-fill: #242424; --material-ultrathin: #242424; --material-thin: #242424; --material-medium: #292929; --material-thick: #2c2c2c; --material-ultrathick: #303030; --material-inset: #363636; --liquid-fill: #292929; }
 }
 
 /* =========================================================================

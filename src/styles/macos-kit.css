@@ -226,21 +226,28 @@
   --motion-standard: 180ms;
   --motion-slow: 220ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --reading-fill: rgba(255, 255, 255, 0.84);
-  --form-fill: rgba(255, 255, 255, 0.70);
+  --reading-fill: rgba(255, 255, 255, 0.45);
+  --form-fill: rgba(255, 255, 255, 0.45);
 }
 .dark {
-  --reading-fill: rgba(24, 24, 28, 0.90);
-  --form-fill: rgba(28, 28, 32, 0.84);
+  --reading-fill: rgba(24, 24, 28, 0.45);
+  --form-fill: rgba(28, 28, 32, 0.45);
 }
 .kit-data-surface, .kit-reading-surface, .kit-form-surface {
   border: 1px solid var(--separator);
   color: var(--text-primary);
   background: var(--reading-fill);
+  -webkit-backdrop-filter: blur(var(--material-blur));
+  backdrop-filter: blur(var(--material-blur));
+}
+.kit-form-surface { background: var(--form-fill); }
+/* Nested surfaces sit on the parent's blur; a second one is wasted and clips badly. */
+:where(.liquid-panel, .soft-card, .kit-dialog, .kit-login-window, .kit-data-surface, .kit-reading-surface, .kit-form-surface) .kit-data-surface,
+:where(.liquid-panel, .soft-card, .kit-dialog, .kit-login-window, .kit-data-surface, .kit-reading-surface, .kit-form-surface) .kit-reading-surface,
+:where(.liquid-panel, .soft-card, .kit-dialog, .kit-login-window, .kit-data-surface, .kit-reading-surface, .kit-form-surface) .kit-form-surface {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.kit-form-surface { background: var(--form-fill); }
 .kit-disclosure-summary {
   display: flex;
   align-items: center;
