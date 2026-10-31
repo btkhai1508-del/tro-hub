@@ -90,6 +90,27 @@ export function Profile() {
             <ProfileField label="Mối quan hệ" value={profile.emergencyContact.relationship} />
             <ProfileField label="Số điện thoại" value={profile.emergencyContact.phone} />
           </ProfileSection>
+
+          {/* Bottom Actions: Đổi mật khẩu & Đăng xuất tài khoản căn lề theo các card */}
+          <div className="pt-1 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="soft-button flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold kit-text-primary cursor-pointer"
+            >
+              <KeyRound size={18} strokeWidth={2} />
+              <span>Đổi mật khẩu</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={logoutUser}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-rose-300/80 bg-rose-50/70 px-6 py-3 text-sm font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 hover:shadow-sm dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
+            >
+              <LogOut size={18} strokeWidth={2} />
+              <span>Đăng xuất tài khoản</span>
+            </button>
+          </div>
         </div>
 
         <div className="order-1 space-y-4 lg:order-2 lg:space-y-5">
@@ -106,29 +127,6 @@ export function Profile() {
             <p className="mt-3 hidden apple-callout kit-text-secondary sm:block">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
           </section>
         </div>
-      </div>
-
-      {/* Bottom Actions: Đổi mật khẩu & Đăng xuất tài khoản */}
-      <div className="mt-6 pt-2 flex flex-col sm:flex-row items-center justify-end gap-3 w-full">
-        <button
-          type="button"
-          onClick={() => setIsPasswordModalOpen(true)}
-          className="soft-button flex min-h-12 w-full sm:w-auto items-center justify-center gap-2.5 rounded-2xl px-6 py-3 text-sm font-bold kit-text-primary cursor-pointer"
-        >
-          <span className="glass-icon h-7 w-7 shrink-0 text-neutral-700 dark:text-neutral-200 icon-plate">
-            <IconKey3D size={30} />
-          </span>
-          <span>Đổi mật khẩu</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={logoutUser}
-          className="flex min-h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-rose-300/80 bg-rose-50/70 px-6 py-3 text-sm font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 hover:shadow-sm dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
-        >
-          <LogOut size={18} strokeWidth={2} />
-          <span>Đăng xuất tài khoản</span>
-        </button>
       </div>
 
       <PasswordUpdateModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} />

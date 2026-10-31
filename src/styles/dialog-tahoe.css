@@ -3,7 +3,6 @@
   top: var(--dialog-viewport-top, 0px);
   height: var(--dialog-viewport-height, 100dvh);
   bottom: auto;
-  animation: none;
   padding-top: max(16px, env(safe-area-inset-top));
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   -webkit-backdrop-filter: none;
@@ -12,7 +11,6 @@
 .tahoe-dialog.tahoe-dialog {
   max-height: calc(var(--dialog-viewport-height, 100dvh) - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
   min-height: 0;
-  animation: none;
   margin-bottom: 0;
 }
 .tahoe-dialog button:disabled { cursor: not-allowed; opacity: 0.5; }

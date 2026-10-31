@@ -16,11 +16,14 @@ const badgeColorMap = {
 const pageLabels: Record<string, string> = { '/': 'Tổng quan', '/utilities': 'Tiện ích', '/invoices': 'Hóa đơn', '/contract': 'Hợp đồng', '/profile': 'Cá nhân', '/laundry': 'Giặt sấy' };
 
 export function TopHeader() {
-  const { notifications, unreadNotiCount, isNotificationPanelOpen, setIsNotificationPanelOpen, openNotificationModal, markAllNotificationsAsRead } = useApp();
+  const { profile, notifications, unreadNotiCount, isNotificationPanelOpen, setIsNotificationPanelOpen, openNotificationModal, markAllNotificationsAsRead } = useApp();
   const { mode, toggleTheme } = useTheme();
-  const location = useLocation();
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const rawRoom = profile.room?.roomNumber?.trim() || '';
+  const roomSubtitle = rawRoom
+    ? (/^phòng\b/i.test(rawRoom) ? rawRoom : `Phòng ${rawRoom.replace(/^P\.\s*/i, '')}`)
+    : 'Chưa xếp phòng';
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -44,13 +47,13 @@ export function TopHeader() {
   const ThemeIcon = mode === 'light' ? Sun : mode === 'dark' ? Moon : Monitor;
 
   return (
-    <header className="kit-toolbar relative z-40 flex w-full items-center justify-between gap-3">
-      <div data-brand-target="brand" className="flex min-w-0 items-center gap-2.5">
-        <span data-brand-logo className="flex h-10 w-10 shrink-0 items-center justify-center lg:hidden"><IconHome3D size={44} /></span>
-        <div data-brand-copy className="min-w-0 lg:hidden"><span data-brand-title className="apple-title2 kit-text-primary block font-semibold">Trọ-Hub.</span><span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate">{pageLabels[location.pathname] || 'Không gian cư dân'}</span></div>
-        <span className="apple-body kit-text-secondary hidden xl:inline">Không gian cư dân</span>
-        <ChevronRight size={13} className="hidden text-[var(--text-tertiary)] xl:block" />
-        <span className="apple-title2 kit-text-primary hidden truncate font-semibold lg:inline">{pageLabels[location.pathname] || 'Trọ-Hub'}</span>
+    <header className="kit-toolbar relative z-40 flex w-full items-center justify-between lg:justify-end gap-3">
+      <div data-brand-target="brand" className="flex min-w-0 items-center gap-2.5 lg:hidden">
+        <span data-brand-logo className="flex h-10 w-10 shrink-0 items-center justify-center"><IconHome3D size={44} /></span>
+        <div data-brand-copy className="min-w-0">
+          <span data-brand-title className="apple-title2 kit-text-primary block font-semibold">Trọ-Hub.</span>
+          <span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate">{roomSubtitle}</span>
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-2.5 sm:gap-3.5 !bg-transparent !p-0">

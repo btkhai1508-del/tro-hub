@@ -161,7 +161,7 @@
 }
 @media (min-width: 1024px) {
   .kit-sidebar {
-    transition: width 220ms var(--liquid-ease);
+    transition: width 280ms cubic-bezier(0.25, 1, 0.5, 1);
   }
   .kit-sidebar-panel {
     border: 1px solid var(--liquid-edge);
@@ -172,7 +172,7 @@
     backdrop-filter: blur(var(--material-blur));
   }
   .kit-sidebar-scroll { scrollbar-width: thin; border-radius: inherit; }
-  .kit-main { margin-left: 292px; padding-top: 24px; transition: margin-left 220ms var(--liquid-ease); }
+  .kit-main { margin-left: 292px; padding-top: 24px; transition: margin-left 280ms cubic-bezier(0.25, 1, 0.5, 1); }
   .kit-resident-collapsed .kit-main { margin-left: 137px; }
   .kit-toolbar { padding: 0 28px; }
   .kit-page-content { padding: 24px 28px 0; }
@@ -194,7 +194,7 @@
 .dark .kit-asset-icon > img[src*="/symbol-"] { filter: brightness(0) invert(1); }
 :where(.liquid-panel, .soft-card, .glass-card-3d, .soft-surface, .apple-grouped-list) {
   background: var(--glass-sheen), var(--liquid-fill);
-  transition-property: border-color, box-shadow, color;
+  transition-property: transform, border-color, background-color, color;
 }
 .kit-admin-dock-wrap { padding: 8px 12px max(12px, env(safe-area-inset-bottom)); pointer-events: none; }
 .kit-admin-dock { display: flex; align-items: stretch; gap: 3px; width: min(100%, 480px); margin-inline: auto; pointer-events: auto; }

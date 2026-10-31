@@ -231,8 +231,8 @@ export function PasswordUpdateModal({ isOpen, onClose, onSuccess }: PasswordUpda
                 <span>Đang cập nhật...</span>
               ) : (
                 <>
-                  <ShieldCheck size={16} />
-                  <span>Cập nhật mật khẩu</span>
+                  <CheckCircle2 size={16} />
+                  <span>Cập nhật</span>
                 </>
               )}
             </button>

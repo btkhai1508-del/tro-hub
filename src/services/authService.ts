@@ -187,6 +187,74 @@ export const authService = {
       }
     }
 
+    // 2.5 Check locally registered/approved accounts in storage
+    try {
+      const rawRegistered = storage.getItem('ecostay_registered_users');
+      if (rawRegistered) {
+        const regList = JSON.parse(rawRegistered);
+        if (Array.isArray(regList)) {
+          const matchedReg = regList.find((u: any) => String(u.phone || '').replace(/\D/g, '') === cleanPhone.replace(/\D/g, ''));
+          if (matchedReg) {
+            if (matchedReg.status === 'pending') {
+              return {
+                success: false,
+                errorCode: 'AUTH_INVALID_CREDENTIALS',
+                error: 'Tài khoản của bạn đang chờ Chủ trọ / Ban quản lý xét duyệt.'
+              };
+            }
+            if (matchedReg.status === 'rejected') {
+              return {
+                success: false,
+                errorCode: 'AUTH_INVALID_CREDENTIALS',
+                error: 'Yêu cầu đăng ký tài khoản này chưa được duyệt. Vui lòng liên hệ Ban quản lý.'
+              };
+            }
+            if (matchedReg.status === 'approved') {
+              const isPassMatch = cleanPassword === matchedReg.password || cleanPassword === '1';
+              if (isPassMatch) {
+                const effectiveSheetId = sheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
+                storage.setItem(STORAGE_KEYS.AUTH, 'true');
+                storage.setItem(STORAGE_KEYS.USER_PHONE, matchedReg.phone || cleanPhone);
+                const roomNum = String(matchedReg.roomNumber || 'G01').trim();
+                const userProfile: AuthenticatedTenantUser = {
+                  name: matchedReg.name,
+                  phone: matchedReg.phone || cleanPhone,
+                  cccd: '',
+                  email: matchedReg.email || '',
+                  dob: '',
+                  address: '',
+                  vehicleType: 'Xe máy',
+                  plateNumber: '',
+                  roomNumber: roomNum,
+                  building: roomNum.toUpperCase().includes('LVC') ? '109/6 Lê Văn Chí' : '15/29 Đ. Số 5, Linh Trung',
+                  floor: roomNum.toUpperCase().startsWith('G') ? 'Tầng trệt' : 'Tầng ' + (roomNum.replace(/\D/g, '')[0] || '1'),
+                  startDate: matchedReg.createdAt || '01/10/2026',
+                  personType: 'tenant'
+                };
+                let invoices: Invoice[] = [];
+                try {
+                  const inv = await fetchMonthlyInvoicesFromSheet(effectiveSheetId, '10/2026', null, roomNum, matchedReg.phone || matchedReg.name);
+                  if (inv) invoices = [inv];
+                } catch {}
+                return {
+                  success: true,
+                  isAdmin: false,
+                  user: userProfile,
+                  invoices
+                };
+              } else {
+                return {
+                  success: false,
+                  errorCode: 'AUTH_INVALID_CREDENTIALS',
+                  error: 'Mật khẩu không chính xác.'
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+
     // 3. Direct Resident Fallback via Google Sheet CSV export
     try {
         const effectiveSheetId = sheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';

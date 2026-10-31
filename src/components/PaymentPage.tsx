@@ -618,7 +618,7 @@ export function PaymentPage() {
                 type="button"
                 aria-label="Quay lại hóa đơn"
                 onClick={() => navigate('/invoices')}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-100 shadow-lg backdrop-blur-xl border border-white/70 dark:border-white/15 transition-all cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-100 shadow-md backdrop-blur-md border border-white/70 dark:border-white/15 transition-transform active:scale-95 cursor-pointer"
               >
                 <ChevronLeft size={24} strokeWidth={2.4} />
               </button>

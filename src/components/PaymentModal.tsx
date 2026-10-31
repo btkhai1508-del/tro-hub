@@ -49,7 +49,7 @@ export function PaymentModal() {
       onClick={handleClose}
     >
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title"
-        className="tahoe-dialog w-full max-w-lg bg-white/95 dark:bg-[#101726]/95 backdrop-blur-2xl rounded-[31px] border border-white dark:border-slate-800 shadow-[12px_12px_36px_rgba(166,175,195,0.35),-12px_-12px_36px_rgba(255,255,255,0.95)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200 transition-colors"
+        className="tahoe-dialog w-full max-w-lg bg-white/95 dark:bg-[#101726]/95 backdrop-blur-md rounded-[31px] border border-white dark:border-slate-800 shadow-[12px_12px_36px_rgba(166,175,195,0.35),-12px_-12px_36px_rgba(255,255,255,0.95)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky Modal Header with Close Button */}

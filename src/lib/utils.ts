@@ -15,3 +15,15 @@ export function getCurrentMonthStr(): string {
   const y = d.getFullYear();
   return `${m}/${y}`;
 }
+
+/**
+ * Standard list of room numbers across Trung Kim & Le Van Chi
+ */
+export const DEFAULT_ROOM_NUMBERS = [
+  'G01', 'G02', 'G03', 'G04', 'G05', 'G06', 'G07',
+  '101', '102', '103', '104', '105', '106', '107', '108',
+  '201', '202', '203', '204', '205', '206', '207', '208', '209', '210',
+  '301', '302', '303', '304', '305', '306', '307', '308', '309', '310',
+  'LVC-101', 'LVC-102', 'LVC-103', 'LVC-104',
+  'LVC-201', 'LVC-202', 'LVC-203', 'LVC-204'
+];

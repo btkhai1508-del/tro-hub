@@ -41,12 +41,16 @@ import {
   Play,
   RotateCcw,
   CalendarClock,
-  FileSpreadsheet
+  FileSpreadsheet,
+  X,
+  User,
+  ArrowRight,
+  ShieldAlert
 } from './AppIcons';
-import { useApp } from '../context/AppContext';
+import { useApp, RegisteredAccount } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
-import { cn, getCurrentMonthStr } from '../lib/utils';
+import { cn, getCurrentMonthStr, DEFAULT_ROOM_NUMBERS } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { ModernLineGraph } from './ModernLineGraph';
@@ -167,13 +171,25 @@ function AdminEmptyState({ filtered, title }: { filtered: boolean; title: string
 
 export function AdminPortal() {
   const navigate = useNavigate();
-  const { logoutUser, addNotification } = useApp();
+  const { logoutUser, addNotification, registerResident, registeredAccounts, updateAccountStatus } = useApp();
   const { mode, isDark, toggleTheme } = useTheme();
 
   // Active Menu
   const [activeMenu, setActiveMenu, screenMotionRef] = useCrossfadeState<
-    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry'
+    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement'
   >('dashboard');
+
+  // Account Management (Quản lý tài khoản) state
+  const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create'>('approval');
+  const [viewingAccount, setViewingAccount] = useState<RegisteredAccount | null>(null);
+  const [adminRegName, setAdminRegName] = useState('');
+  const [adminRegPhone, setAdminRegPhone] = useState('');
+  const [adminRegRoom, setAdminRegRoom] = useState('');
+  const [adminRegEmail, setAdminRegEmail] = useState('');
+  const [adminRegPassword, setAdminRegPassword] = useState('');
+  const [adminRegConfirmPass, setAdminRegConfirmPass] = useState('');
+  const [adminRegError, setAdminRegError] = useState('');
+  const [adminRegSuccess, setAdminRegSuccess] = useState('');
 
   // Portal Toast Alert (replacing window.alert for iframe compatibility)
   const [portalToast, setPortalToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -1107,7 +1123,8 @@ export function AdminPortal() {
     declaration: { title: 'Kê khai doanh thu', description: 'Sổ doanh thu theo hộ kinh doanh và kỳ tháng.' },
     config: { title: 'Đơn giá dịch vụ', description: 'Điều chỉnh đơn giá đang áp dụng trong tháng.' },
     createNotification: { title: 'Thông báo cư dân', description: 'Soạn nội dung và chọn người nhận.' },
-    laundry: { title: 'Quản lý giặt sấy', description: 'Kiểm tra máy, giá dịch vụ và lịch đặt chỗ.' }
+    laundry: { title: 'Quản lý giặt sấy', description: 'Kiểm tra máy, giá dịch vụ và lịch đặt chỗ.' },
+    accountManagement: { title: 'Quản lý tài khoản', description: 'Xét duyệt yêu cầu đăng ký và tạo tài khoản mới cho cư dân.' }
   };
   const currentAdminPage = adminPageTitles[activeMenu] || adminPageTitles.dashboard;
   const normalizeAdminSearch = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -1275,8 +1292,9 @@ export function AdminPortal() {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.key ||
                   (item.key === 'rooms' && activeMenu === 'roomDetail') ||
-                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
+                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
                 return (
+
                   <button
                     key={item.key}
                     aria-current={isActive ? "page" : undefined}
@@ -1673,6 +1691,7 @@ export function AdminPortal() {
         {activeMenu === 'utilities' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 mb-6">
             {[
+              { key: 'accountManagement', label: 'Quản lý tài khoản', icon: IconProfile3D },
               { key: 'createNotification', label: 'Tạo thông báo', icon: IconNotification3D },
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
               { key: 'plates', label: 'Tra biển số', icon: IconSearchPlate3D },
@@ -1825,7 +1844,7 @@ export function AdminPortal() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 border-l border-neutral-100 dark:border-neutral-800 pl-4">
+                  <div className="flex items-center gap-3">
                     <IconLocation3D size={38} className="shrink-0 drop-shadow-xs" />
                     <div>
                       <p className="text-xs font-bold text-neutral-800 dark:text-white">{dashboardData?.soXe ?? 0} Xe máy</p>
@@ -3887,6 +3906,467 @@ export function AdminPortal() {
           </div>
         )}
 
+        {/* =========================================================================
+            11. ACCOUNT MANAGEMENT TAB (QUẢN LÝ TÀI KHOẢN)
+           ========================================================================= */}
+        {activeMenu === 'accountManagement' && (
+          <div className="space-y-6">
+            {/* Top Navigation Bar: Back Button & Title */}
+            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setActiveMenu('utilities');
+                }}
+                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
+              >
+                <ArrowLeft size={16} />
+                <span>Quay lại Tiện ích</span>
+              </button>
+
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+                <IconProfile3D size={22} />
+                <span>Quản lý tài khoản cư dân</span>
+              </div>
+            </div>
+
+            {/* Main Account Management Card */}
+            <div className="soft-surface p-5 sm:p-8 space-y-6 relative overflow-hidden">
+              <div className="border-b border-neutral-200 dark:border-neutral-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="type-h2 font-bold text-neutral-900 dark:text-white flex items-center gap-3">
+                    <IconProfile3D size={44} />
+                    <span>Quản Lý Tài Khoản</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 mt-1">
+                    Xét duyệt tài khoản đăng ký của cư dân hoặc tạo tài khoản mới trực tiếp theo phòng.
+                  </p>
+                </div>
+              </div>
+
+              {/* 2 Sub-tabs Segmented Control */}
+              <div className="kit-segmented grid grid-cols-2 gap-1 p-1 max-w-md" role="tablist" aria-label="Chọn chức năng quản lý tài khoản">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={accountSubTab === 'approval'}
+                  aria-pressed={accountSubTab === 'approval'}
+                  onClick={() => {
+                    playSound('tab');
+                    setAccountSubTab('approval');
+                    setAdminRegError('');
+                    setAdminRegSuccess('');
+                  }}
+                  className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'approval' && "kit-segment-active")}
+                >
+                  <span>Xét duyệt tài khoản</span>
+                  {registeredAccounts.filter(a => a.status === 'pending').length > 0 && (
+                    <span className="ml-1 inline-flex items-center justify-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold font-num text-amber-700 dark:text-amber-300">
+                      {registeredAccounts.filter(a => a.status === 'pending').length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={accountSubTab === 'create'}
+                  aria-pressed={accountSubTab === 'create'}
+                  onClick={() => {
+                    playSound('tab');
+                    setAccountSubTab('create');
+                    setAdminRegError('');
+                    setAdminRegSuccess('');
+                  }}
+                  className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'create' && "kit-segment-active")}
+                >
+                  <span>Tạo tài khoản mới</span>
+                </button>
+              </div>
+
+              {/* Sub-tab 1: Xét duyệt tài khoản */}
+              {accountSubTab === 'approval' && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="apple-callout kit-text-secondary">
+                      Bấm vào từng tài khoản để xem thông tin chi tiết trước khi xét duyệt. Sử dụng nút dấu tích (✓) để duyệt hoặc dấu (✕) để từ chối / hủy duyệt.
+                    </p>
+                    <span className="apple-callout font-medium kit-text-secondary font-num">
+                      Tổng cộng: {registeredAccounts.length} tài khoản
+                    </span>
+                  </div>
+
+                  {registeredAccounts.length === 0 ? (
+                    <div className="kit-data-surface rounded-2xl p-6 text-center">
+                      <p className="apple-headline kit-text-primary">Chưa có yêu cầu tài khoản nào</p>
+                      <p className="mt-1 apple-callout kit-text-secondary">Các tài khoản đăng ký mới sẽ hiển thị tại đây để bạn xét duyệt.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {registeredAccounts.map((acc) => {
+                        const isApproved = acc.status === 'approved';
+                        const isRejected = acc.status === 'rejected';
+                        return (
+                          <div
+                            key={acc.id}
+                            onClick={() => {
+                              playSound('click');
+                              setViewingAccount(acc);
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setViewingAccount(acc);
+                              }
+                            }}
+                            className="kit-data-surface rounded-[20px] p-4 flex items-center justify-between gap-3 hover:border-neutral-400/80 transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                              <div className="shrink-0">
+                                <IconProfile3D size={42} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="px-2.5 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs font-num">
+                                    Phòng {acc.roomNumber}
+                                  </span>
+                                  <span className="apple-body font-semibold kit-text-primary truncate">
+                                    {acc.name}
+                                  </span>
+                                  <span className={cn(
+                                    "text-[11px] font-semibold px-2.5 py-0.5 rounded-full",
+                                    isApproved
+                                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                                      : isRejected
+                                      ? "bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                                      : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                                  )}>
+                                    {isApproved ? 'Đã xét duyệt' : isRejected ? 'Chưa xét duyệt' : 'Chờ xét duyệt'}
+                                  </span>
+                                </div>
+                                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 apple-callout kit-text-secondary">
+                                  <span className="font-num">SĐT: {acc.phone}</span>
+                                  {acc.email && <span className="truncate">· {acc.email}</span>}
+                                  <span className="font-num">· Ngày ĐK: {acc.createdAt}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right side Tick & X action buttons */}
+                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  playSound('success');
+                                  updateAccountStatus(acc.id, 'approved');
+                                  showPortalToast(`Đã duyệt tài khoản ${acc.name} (Phòng ${acc.roomNumber})`, 'success');
+                                }}
+                                aria-label={`Duyệt tài khoản ${acc.name}`}
+                                title="Xét duyệt tài khoản"
+                                className={cn(
+                                  "h-10 w-10 rounded-xl flex items-center justify-center border transition-all cursor-pointer",
+                                  isApproved
+                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                                    : "bg-white dark:bg-neutral-800 text-emerald-600 dark:text-emerald-400 border-neutral-200 dark:border-neutral-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-300"
+                                )}
+                              >
+                                <Check size={18} className="stroke-[2.5]" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  playSound('click');
+                                  updateAccountStatus(acc.id, 'rejected');
+                                  showPortalToast(`Đã đánh dấu chưa duyệt tài khoản ${acc.name}`, 'info');
+                                }}
+                                aria-label={`Từ chối hoặc hủy duyệt tài khoản ${acc.name}`}
+                                title="Chưa xét duyệt / Từ chối"
+                                className={cn(
+                                  "h-10 w-10 rounded-xl flex items-center justify-center border transition-all cursor-pointer",
+                                  isRejected
+                                    ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                                    : "bg-white dark:bg-neutral-800 text-rose-600 dark:text-rose-400 border-neutral-200 dark:border-neutral-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-300"
+                                )}
+                              >
+                                <X size={18} className="stroke-[2.5]" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-tab 2: Tạo tài khoản mới */}
+              {accountSubTab === 'create' && (
+                <div className="max-w-xl">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setAdminRegError('');
+                      setAdminRegSuccess('');
+
+                      if (!adminRegRoom) {
+                        setAdminRegError('Vui lòng chọn số phòng thuê');
+                        return;
+                      }
+                      if (adminRegPassword !== adminRegConfirmPass) {
+                        setAdminRegError('Mật khẩu xác nhận không khớp');
+                        return;
+                      }
+
+                      const res = registerResident({
+                        name: adminRegName,
+                        phone: adminRegPhone,
+                        email: adminRegEmail,
+                        roomNumber: adminRegRoom,
+                        password: adminRegPassword,
+                        autoApprove: true
+                      });
+
+                      if (res.success) {
+                        playSound('success');
+                        setAdminRegSuccess(res.message || 'Tạo tài khoản cư dân mới thành công!');
+                        showPortalToast(`Đã tạo tài khoản cho phòng ${adminRegRoom}`, 'success');
+                        setAdminRegName('');
+                        setAdminRegPhone('');
+                        setAdminRegRoom('');
+                        setAdminRegEmail('');
+                        setAdminRegPassword('');
+                        setAdminRegConfirmPass('');
+                      } else {
+                        playSound('alert');
+                        setAdminRegError(res.error || 'Không thể tạo tài khoản');
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    {adminRegError && (
+                      <div role="alert" className="kit-feedback flex items-start gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/90 p-3.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-950/70 dark:text-rose-200">
+                        <AlertCircle aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
+                        <span className="leading-relaxed">{adminRegError}</span>
+                      </div>
+                    )}
+
+                    {adminRegSuccess && (
+                      <div role="status" className="kit-feedback flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/90 p-3.5 text-sm text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-950/70 dark:text-emerald-200">
+                        <CheckCircle2 aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
+                        <span className="leading-relaxed">{adminRegSuccess}</span>
+                      </div>
+                    )}
+
+                    <div>
+                      <label htmlFor="admin-register-name" className="mb-2 block apple-headline kit-text-primary">Họ và tên cư dân</label>
+                      <div className="relative flex items-center">
+                        <User aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
+                        <input
+                          id="admin-register-name"
+                          type="text"
+                          autoComplete="name"
+                          required
+                          placeholder="Họ và tên của cư dân"
+                          value={adminRegName}
+                          onChange={(e) => setAdminRegName(e.target.value)}
+                          className="kit-field min-h-12 w-full pl-11 pr-3.5"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="min-w-0">
+                        <label htmlFor="admin-register-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
+                        <input
+                          id="admin-register-phone"
+                          type="tel"
+                          autoComplete="tel"
+                          required
+                          placeholder="09xx xxx xxx"
+                          value={adminRegPhone}
+                          onChange={(e) => setAdminRegPhone(e.target.value)}
+                          className="kit-field min-h-12 w-full px-3.5 font-num"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <label htmlFor="admin-register-room" className="mb-2 block apple-headline kit-text-primary">Số phòng thuê</label>
+                        <select
+                          id="admin-register-room"
+                          required
+                          value={adminRegRoom}
+                          onChange={(e) => setAdminRegRoom(e.target.value)}
+                          className="kit-field min-h-12 w-full px-3.5 font-num cursor-pointer"
+                        >
+                          <option value="" disabled>Chọn phòng thuê</option>
+                          {(availableRoomNumbers.length > 0 ? availableRoomNumbers : DEFAULT_ROOM_NUMBERS).map(rNum => (
+                            <option key={rNum} value={rNum} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
+                              Phòng {rNum}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="admin-register-email" className="mb-2 block apple-headline kit-text-primary">Email liên hệ (tùy chọn)</label>
+                      <input
+                        id="admin-register-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="ban@example.com"
+                        value={adminRegEmail}
+                        onChange={(e) => setAdminRegEmail(e.target.value)}
+                        className="kit-field min-h-12 w-full px-3.5"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="min-w-0">
+                        <label htmlFor="admin-register-password" className="mb-2 block apple-headline kit-text-primary">Mật khẩu</label>
+                        <input
+                          id="admin-register-password"
+                          minLength={6}
+                          type="password"
+                          autoComplete="new-password"
+                          required
+                          placeholder="Ít nhất 6 ký tự"
+                          value={adminRegPassword}
+                          onChange={(e) => setAdminRegPassword(e.target.value)}
+                          className="kit-field min-h-12 w-full px-3.5"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <label htmlFor="admin-register-confirm" className="mb-2 block apple-headline kit-text-primary">Nhập lại mật khẩu</label>
+                        <input
+                          id="admin-register-confirm"
+                          type="password"
+                          autoComplete="new-password"
+                          required
+                          placeholder="Nhập lại mật khẩu"
+                          value={adminRegConfirmPass}
+                          onChange={(e) => setAdminRegConfirmPass(e.target.value)}
+                          className="kit-field min-h-12 w-full px-3.5"
+                        />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="primary-button min-h-12 w-full px-4 py-3 apple-control">
+                      <span>Tạo tài khoản cư dân</span>
+                      <ArrowRight aria-hidden="true" size={17} className="shrink-0" />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+
+            {/* Modal xem chi tiết thông tin tài khoản trước khi xét duyệt */}
+            {viewingAccount && (
+              <div
+                className="tahoe-dialog-overlay fixed inset-0 z-[70] flex items-center justify-center p-4 bg-neutral-950/30"
+                onClick={() => setViewingAccount(null)}
+              >
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="account-detail-dialog-title"
+                  className="tahoe-dialog kit-dialog w-full max-w-md overflow-y-auto overscroll-contain p-5 sm:p-7 space-y-5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <IconProfile3D size={44} />
+                      <div>
+                        <span className="apple-callout kit-text-secondary">Thông tin đăng ký</span>
+                        <h3 id="account-detail-dialog-title" className="apple-title2 apple-strong kit-text-primary mt-0.5">
+                          {viewingAccount.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Đóng"
+                      onClick={() => setViewingAccount(null)}
+                      className="soft-button h-10 w-10 flex items-center justify-center shrink-0 cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <dl className="liquid-panel-subtle space-y-3 rounded-2xl p-4 text-left apple-body">
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                      <dt className="kit-text-secondary">Họ và tên</dt>
+                      <dd className="font-semibold kit-text-primary">{viewingAccount.name}</dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-[var(--separator)] pt-2.5">
+                      <dt className="kit-text-secondary">Số phòng đăng ký</dt>
+                      <dd className="font-num font-bold kit-text-primary">Phòng {viewingAccount.roomNumber}</dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-[var(--separator)] pt-2.5">
+                      <dt className="kit-text-secondary">Số điện thoại</dt>
+                      <dd className="font-num font-semibold kit-text-primary">{viewingAccount.phone}</dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-[var(--separator)] pt-2.5">
+                      <dt className="kit-text-secondary">Email liên hệ</dt>
+                      <dd className="break-all font-medium kit-text-primary">{viewingAccount.email || 'Chưa cập nhật'}</dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-[var(--separator)] pt-2.5">
+                      <dt className="kit-text-secondary">Ngày đăng ký</dt>
+                      <dd className="font-num font-medium kit-text-primary">{viewingAccount.createdAt}</dd>
+                    </div>
+                    <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-1 border-t border-[var(--separator)] pt-2.5">
+                      <dt className="kit-text-secondary">Trạng thái</dt>
+                      <dd>
+                        <span className={cn(
+                          "text-xs font-semibold px-2.5 py-1 rounded-full",
+                          viewingAccount.status === 'approved'
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                            : viewingAccount.status === 'rejected'
+                            ? "bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                            : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                        )}>
+                          {viewingAccount.status === 'approved' ? 'Đã xét duyệt' : viewingAccount.status === 'rejected' ? 'Chưa xét duyệt' : 'Chờ xét duyệt'}
+                        </span>
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click');
+                        updateAccountStatus(viewingAccount.id, 'rejected');
+                        setViewingAccount({ ...viewingAccount, status: 'rejected' });
+                        showPortalToast(`Đã đánh dấu chưa duyệt tài khoản ${viewingAccount.name}`, 'info');
+                      }}
+                      className="soft-button min-h-11 px-4 py-2.5 text-rose-600 dark:text-rose-400 font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <X size={17} />
+                      <span>Chưa duyệt</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('success');
+                        updateAccountStatus(viewingAccount.id, 'approved');
+                        setViewingAccount({ ...viewingAccount, status: 'approved' });
+                        showPortalToast(`Đã duyệt tài khoản ${viewingAccount.name} (Phòng ${viewingAccount.roomNumber})`, 'success');
+                      }}
+                      className="primary-button min-h-11 px-4 py-2.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Check size={17} />
+                      <span>Duyệt tài khoản</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
 
       {/* =========================================================================
@@ -3900,7 +4380,7 @@ export function AdminPortal() {
             { key: 'billing', icon: NavIcons.Receipt, label: 'Thu tiền' },
             { key: 'utilities', icon: NavIcons.LayoutGrid, label: 'Tiện ích' }
           ].map(({ key, icon: Icon, label }) => {
-            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry'].includes(activeMenu));
+            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
             return <button type="button" key={key} aria-current={isActive ? 'page' : undefined} onClick={() => { playSound('click'); setActiveMenu(key as any); }} className={cn('kit-nav-item kit-admin-dock-item', isActive && 'kit-nav-active')}>
               <Icon size={21} /><span>{label}</span>
             </button>;

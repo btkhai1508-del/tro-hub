@@ -17,12 +17,11 @@ export function installUiMotion(root: HTMLElement) {
   const visible = (node: Element) => node.isConnected && node.getClientRects().length > 0;
   function leaf(node: Element) {
     if (!visible(node) || node.closest('.ui-spinner,.animate-spin,.sr-only,.invoice-paper,.contract-document-a4') || node.querySelector('.ui-spinner,.animate-spin')) return false;
-    return [node, ...node.querySelectorAll('*')].every(child => {
-      const style = getComputedStyle(child);
-      return !style.backdropFilter || style.backdropFilter === 'none';
-    });
+    // Fast path: avoid expensive getComputedStyle DOM tree crawls
+    if (node.closest('.liquid-panel,.soft-card,.glass-card-3d,.liquid-dock,.kit-dock')) return false;
+    return true;
   }
-  function play(node: Element, from: object | null, to: object, duration = .16, delay = 0, hold = false) {
+  function play(node: Element, from: object | null, to: object, duration = .14, delay = 0, hold = false) {
     cancel(node);
     if (!canAnimate() || !leaf(node)) return;
     const style = (node as HTMLElement).style;

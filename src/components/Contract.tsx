@@ -47,7 +47,7 @@ export function Contract() {
 
   return (
     <div className="kit-page max-w-5xl mx-auto pb-8">
-      <header data-tutorial="contract-header" className="kit-page-header print:hidden">
+      <header data-tutorial="contract-header" className="kit-page-header home-stagger-1 print:hidden">
         <div className="min-w-0">
           <p className="kit-page-kicker">Tài liệu cư trú</p>
           <h1 className="kit-page-title">Hợp đồng & cư trú</h1>
@@ -59,7 +59,7 @@ export function Contract() {
         </button>
       </header>
 
-      <div className="print:hidden liquid-panel p-4 sm:p-5 space-y-4">
+      <div className="print:hidden liquid-panel home-stagger-2 p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2"><span className="badge-paid">✓ Đang hiệu lực</span><span className="apple-callout kit-text-secondary">01/06/2026 — 01/12/2028</span></div>
           <span className="apple-callout kit-text-secondary break-all">Mã: {contractCode}</span>

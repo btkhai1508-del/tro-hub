@@ -274,7 +274,7 @@ export function InteractiveOnboardingTutorial() {
         <div className="relative">
 
           {/* Frosted Glass Card: Không viền (border-none), nguyên card trong suốt kính mờ chuẩn */}
-          <div className="bg-black/40 backdrop-blur-2xl rounded-2xl p-4 text-white shadow-2xl border-none">
+          <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4 text-white shadow-xl border-none">
             
             {/* Top row: Step badge & Dismiss button */}
             <div className="flex items-center justify-between gap-2 mb-2">

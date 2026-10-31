@@ -51,6 +51,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+body:has(.brand-intro-stage[data-intro-phase="assemble"]) .kit-login-window {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce), print {
   .brand-intro-stage { display: none; }
 }

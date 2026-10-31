@@ -16,6 +16,7 @@ import {
 } from './AppIcons';
 import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
+import { DEFAULT_ROOM_NUMBERS } from '../lib/utils';
 import { Background } from './Background';
 import { AppleCheckbox } from './AppleControls';
 
@@ -149,7 +150,7 @@ export function LoginPage() {
     <div className="kit-auth-shell relative isolate flex min-h-svh items-center justify-center px-3 py-6 sm:px-8 sm:py-10">
       <Background />
       <div className="kit-login-window liquid-panel auth-panel relative z-10 mx-auto w-full max-w-[464px] overflow-hidden">
-        <div data-brand-target="brand" className="kit-window-toolbar flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
+        <div data-brand-target="brand" className="kit-window-toolbar border-b-0 flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
           <span data-brand-logo aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
             <IconHome3D size={56} />
           </span>
@@ -320,7 +321,20 @@ export function LoginPage() {
                 </div>
                 <div className="min-w-0">
                   <label htmlFor="register-room" className="mb-2 block apple-headline kit-text-primary">Số phòng thuê</label>
-                  <input id="register-room" type="text" required placeholder="P. 203" value={regRoom} onChange={(e) => setRegRoom(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
+                  <select
+                    id="register-room"
+                    required
+                    value={regRoom}
+                    onChange={(e) => setRegRoom(e.target.value)}
+                    className="kit-field min-h-12 w-full px-3.5 font-num cursor-pointer"
+                  >
+                    <option value="" disabled>Chọn phòng thuê</option>
+                    {DEFAULT_ROOM_NUMBERS.map(rNum => (
+                      <option key={rNum} value={rNum} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
+                        Phòng {rNum}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

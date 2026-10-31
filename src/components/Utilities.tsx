@@ -31,7 +31,6 @@ export function Utilities() {
           <h1 className="kit-page-title">Tiện ích</h1>
           <p className="kit-page-description">Giặt sấy, hồ sơ và trợ giúp trong một nơi.</p>
         </div>
-        <div className="kit-inset rounded-full hidden sm:flex items-center gap-2 px-4 py-2.5 apple-body font-medium kit-text-secondary"><House size={16} strokeWidth={1.7} />{profile.room.roomNumber || 'Phòng của bạn'}</div>
       </header>
 
       <section data-stage="list" data-tutorial="utilities-grid" className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">

@@ -101,6 +101,17 @@ export interface UserProfile {
   totalMonthlyAmount?: number; // Column P (Tổng cộng)
 }
 
+export interface RegisteredAccount {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  roomNumber: string;
+  password?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
 interface AppContextType {
   invoices: Invoice[];
   profile: UserProfile;
@@ -169,12 +180,14 @@ interface AppContextType {
   addNotification: (item: NotificationItem) => void;
   refreshNotifications: () => Promise<void>;
 
-  // Authentication
+  // Authentication & Account Management
   isAuthenticated: boolean;
   currentPassword: string;
   loginUser: (phone: string, pass: string) => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
   loginWithZalo: () => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
-  registerResident: (data: { name: string; phone: string; email?: string; password: string; roomNumber: string }) => { success: boolean; pendingApproval?: boolean; message?: string; error?: string };
+  registerResident: (data: { name: string; phone: string; email?: string; password: string; roomNumber: string; autoApprove?: boolean }) => { success: boolean; pendingApproval?: boolean; message?: string; error?: string };
+  registeredAccounts: RegisteredAccount[];
+  updateAccountStatus: (id: string, status: 'pending' | 'approved' | 'rejected') => void;
   updatePassword: (currentPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
   logoutUser: () => void;
   fetchPaymentStatus: (roomNumber?: string) => Promise<any>;
@@ -745,39 +758,108 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  const registerResident = (data: { name: string; phone: string; email?: string; password: string; roomNumber: string }): { success: boolean; pendingApproval?: boolean; message?: string; error?: string } => {
+  const [registeredAccounts, setRegisteredAccounts] = useState<RegisteredAccount[]>(() => {
+    const defaultAccounts: RegisteredAccount[] = [
+      {
+        id: 'reg-default-1',
+        name: 'Nguyễn Minh Khôi',
+        phone: '0938124567',
+        email: 'minhkhoi.nguyen@gmail.com',
+        roomNumber: '203',
+        password: '123456',
+        status: 'pending',
+        createdAt: '28/10/2026'
+      },
+      {
+        id: 'reg-default-2',
+        name: 'Trần Bảo Ngọc',
+        phone: '0914889234',
+        email: 'baongoc.tran@gmail.com',
+        roomNumber: 'G06',
+        password: '123456',
+        status: 'pending',
+        createdAt: '29/10/2026'
+      },
+      {
+        id: 'reg-default-3',
+        name: 'Lê Hoàng Nam',
+        phone: '0972551890',
+        email: 'hoangnam.le@gmail.com',
+        roomNumber: 'LVC-102',
+        password: '123456',
+        status: 'approved',
+        createdAt: '25/10/2026'
+      }
+    ];
+    try {
+      const raw = storage.getItem('ecostay_registered_users');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((u: any, idx: number) => ({
+            id: u.id || `reg-${idx}-${String(u.phone || '').replace(/\D/g, '')}`,
+            name: u.name || 'Cư dân',
+            phone: u.phone || '',
+            email: u.email || '',
+            roomNumber: u.roomNumber || 'G01',
+            password: u.password || '123456',
+            status: u.status === 'approved' || u.status === 'rejected' ? u.status : 'pending',
+            createdAt: u.createdAt || new Date().toLocaleDateString('vi-VN')
+          }));
+        }
+      }
+    } catch {}
+    storage.setItem('ecostay_registered_users', JSON.stringify(defaultAccounts));
+    return defaultAccounts;
+  });
+
+  const updateAccountStatus = useCallback((id: string, status: 'pending' | 'approved' | 'rejected') => {
+    setRegisteredAccounts(prev => {
+      const next = prev.map(acc => acc.id === id ? { ...acc, status } : acc);
+      storage.setItem('ecostay_registered_users', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const registerResident = (data: { name: string; phone: string; email?: string; password: string; roomNumber: string; autoApprove?: boolean }): { success: boolean; pendingApproval?: boolean; message?: string; error?: string } => {
     const cleanPhone = data.phone.replace(/[\s.-]/g, '').trim();
     if (!data.name.trim() || !cleanPhone || !data.password.trim()) {
       return { success: false, error: 'Vui lòng điền đầy đủ họ tên, số điện thoại và mật khẩu' };
+    }
+    if (!data.roomNumber || !data.roomNumber.trim()) {
+      return { success: false, error: 'Vui lòng chọn phòng thuê' };
     }
     if (data.password.length < 6) {
       return { success: false, error: 'Mật khẩu phải có ít nhất 6 ký tự' };
     }
 
-    const storedUsers = JSON.parse(storage.getItem('ecostay_registered_users') || '[]');
-    const exists = storedUsers.some((u: any) => u.phone?.replace(/[\s.-]/g, '') === cleanPhone);
+    const exists = registeredAccounts.some((u) => u.phone?.replace(/[\s.-]/g, '') === cleanPhone);
     if (exists) {
-      return { success: false, error: 'Số điện thoại này đã gửi yêu cầu đăng ký' };
+      return { success: false, error: 'Số điện thoại này đã được đăng ký trên hệ thống' };
     }
 
-    // New accounts require landlord approval ('pending')
-    const newUser = {
+    const isAutoApproved = Boolean(data.autoApprove);
+    const newUser: RegisteredAccount = {
+      id: `reg-${Date.now()}`,
       name: data.name.trim(),
       phone: data.phone.trim(),
       email: data.email?.trim() || '',
       roomNumber: data.roomNumber.trim(),
       password: data.password.trim(),
-      status: 'pending', // Cần chủ trọ xác nhận
+      status: isAutoApproved ? 'approved' : 'pending',
       createdAt: new Date().toLocaleDateString('vi-VN')
     };
 
-    storedUsers.push(newUser);
-    storage.setItem('ecostay_registered_users', JSON.stringify(storedUsers));
+    const nextUsers = [newUser, ...registeredAccounts];
+    setRegisteredAccounts(nextUsers);
+    storage.setItem('ecostay_registered_users', JSON.stringify(nextUsers));
 
     return { 
       success: true, 
-      pendingApproval: true, 
-      message: 'Đăng ký thành công! Yêu cầu của bạn đã được gửi và đang chờ Chủ trọ / Ban quản lý xác nhận duyệt phòng trước khi có thể đăng nhập.' 
+      pendingApproval: !isAutoApproved, 
+      message: isAutoApproved
+        ? `Đã tạo và kích hoạt tài khoản cho cư dân phòng ${newUser.roomNumber} thành công!`
+        : 'Đăng ký thành công! Yêu cầu của bạn đã được gửi và đang chờ Chủ trọ / Ban quản lý xác nhận duyệt phòng trước khi có thể đăng nhập.' 
     };
   };
 
@@ -1105,6 +1187,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loginUser,
         loginWithZalo,
         registerResident,
+        registeredAccounts,
+        updateAccountStatus,
         logoutUser,
         fetchPaymentStatus,
         currentPassword,

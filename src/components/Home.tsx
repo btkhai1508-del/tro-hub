@@ -19,19 +19,7 @@ export function Home() {
 
   return (
     <div className="kit-page resident-home">
-      <header data-tutorial="resident-welcome" className="kit-page-header">
-        {/* On mobile: "Phòng của bạn" placed ABOVE the "Xin chào" card */}
-        <div className="sm:hidden mb-2 flex items-center justify-start">
-          <div className="kit-inset inline-flex items-center gap-2 px-3 py-1.5 rounded-full">
-            <span className="glass-icon h-5 w-5 rounded-md text-neutral-700 dark:text-neutral-300 icon-plate flex items-center justify-center">
-              <IconHome3D size={22} />
-            </span>
-            <span className="apple-caption font-medium kit-text-secondary">
-              Phòng của bạn: <strong className="kit-text-primary font-bold ml-1">{room}</strong>
-            </span>
-          </div>
-        </div>
-
+      <header data-tutorial="resident-welcome" className="kit-page-header home-stagger-1">
         <div className="min-w-0">
           <p className="kit-page-kicker">Trang chủ</p>
           <h1 className="kit-page-title apple-large-title apple-strong">
@@ -39,17 +27,10 @@ export function Home() {
           </h1>
           <p className="kit-page-description apple-body kit-text-secondary">Thông tin phòng, hóa đơn và tiện ích của bạn.</p>
         </div>
-        <div className="kit-inset hidden sm:flex items-center gap-3 px-3.5 py-2.5 rounded-[20px] shrink-0">
-          <span className="glass-icon h-10 w-10 rounded-2xl text-neutral-700 dark:text-neutral-300 icon-plate"><IconHome3D size={44} /></span>
-          <div>
-            <span className="block apple-callout font-medium kit-text-secondary">Phòng của bạn</span>
-            <span className="apple-headline kit-text-primary">{room}</span>
-          </div>
-        </div>
       </header>
 
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-        <div data-tutorial="billing-card" className="liquid-panel relative overflow-hidden p-4 sm:p-7 lg:col-span-8">
+        <div data-tutorial="billing-card" className="liquid-panel home-stagger-2 relative overflow-hidden p-4 sm:p-7 lg:col-span-8">
           <div className="relative">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -89,7 +70,7 @@ export function Home() {
           </div>
         </div>
 
-        <details className="resident-disclosure resident-room-panel lg:col-span-4 liquid-panel p-4 sm:p-6" open={isRoomOpen} onToggle={event => setIsRoomOpen(event.currentTarget.open)}>
+        <details className="resident-disclosure resident-room-panel home-stagger-3 lg:col-span-4 liquid-panel p-4 sm:p-6" open={isRoomOpen} onToggle={event => setIsRoomOpen(event.currentTarget.open)}>
           <summary className="resident-disclosure-summary min-h-12 gap-3">
             <IconHome3D size={44} />
             <span className="min-w-0 flex-1"><span className="block apple-callout kit-text-secondary">Phòng của bạn</span><span className="block apple-title2 apple-strong kit-text-primary break-words">{room}</span></span>

@@ -98,7 +98,6 @@ export function BrandIntro() {
           return { ...rect, left: rect.left - left, top: rect.top - top, text: node.textContent?.trim() || text, fontSize: parseFloat(style.fontSize), letterSpacing: parseFloat(style.letterSpacing) || 0, fontFamily: style.fontFamily, fontWeight: style.fontWeight, color: style.color };
         }
         const titleBox = textBox(source.title, TITLE, 18, 5);
-        const subtitleBox = textBox(source.subtitle, SUBTITLE, 13, 30);
         const canvas = document.createElement('canvas').getContext('2d');
         function widthFor(text: string, metrics: TextBox) {
           if (!canvas) return metrics.width;
@@ -106,9 +105,9 @@ export function BrandIntro() {
           return canvas.measureText(text).width + Math.max(0, text.length - 1) * metrics.letterSpacing + 2;
         }
         const titleWidth = Math.max(titleBox.width, widthFor(TITLE, titleBox));
-        const subtitleWidth = Math.max(subtitleBox.width, widthFor(SUBTITLE, subtitleBox));
-        const baseWidth = Math.max(logoBox.left + logoBox.width, titleBox.left + titleWidth, subtitleBox.left + subtitleWidth);
-        const baseHeight = Math.max(logoBox.top + logoBox.height, titleBox.top + titleBox.height, subtitleBox.top + subtitleBox.height);
+        // Intro displays logo and title without the subtitle line underneath
+        const baseWidth = Math.max(logoBox.left + logoBox.width, titleBox.left + titleWidth);
+        const baseHeight = Math.max(logoBox.top + logoBox.height, titleBox.top + titleBox.height);
         const factor = Math.max(1, Math.min(2.6, (innerWidth - 48) / baseWidth, (innerHeight - 80) / baseHeight));
         const snap = (value: number) => Math.round(value * devicePixelRatio) / devicePixelRatio;
         const centerX = snap((innerWidth - baseWidth * factor) / 2) - left;
@@ -131,40 +130,93 @@ export function BrandIntro() {
           brand.append(node); return node;
         }
         const title = makeText('brand-intro-title', TITLE, titleBox, titleWidth);
-        const subtitle = makeText('brand-intro-subtitle', SUBTITLE, subtitleBox, subtitleWidth);
         stage.append(veil, aura, brand); document.body.append(stage);
-        hide(source.logo); hide(source.title); hide(source.subtitle);
+        
+        // Hide destination elements and the card initially
+        hide(source.logo); 
+        hide(source.title); 
+        hide(source.subtitle);
+
+        // Hide enclosing card/panel at the beginning of intro
+        const card = target.closest<HTMLElement>('.kit-login-window, .auth-panel, .liquid-panel') 
+          || document.querySelector<HTMLElement>('.kit-login-window')
+          || document.querySelector<HTMLElement>('.resident-home, .admin-workspace');
+        if (card) {
+          hide(card);
+        }
+
         try {
           const ease = 'power3.inOut';
+          const moveDelay = 1.48; // Hold title & logo in center for ~1s
+          const moveDuration = 0.68;
+
           tweens.push(engine.fromTo(brand, { x: centerX, y: centerY }, { x: centerX, y: centerY, duration: .01, force3D: false }));
-          tweens.push(engine.fromTo(logo, { y: 8, scale: .76, rotation: -7, opacity: 0 }, { y: 0, scale: 1, rotation: 0, opacity: 1, duration: .46, delay: .08, ease: 'expo.out', force3D: false }));
+          tweens.push(engine.fromTo(logo, { y: 10, scale: .76, rotation: -7, opacity: 0 }, { y: 0, scale: 1, rotation: 0, opacity: 1, duration: .46, delay: .08, ease: 'expo.out', force3D: false }));
           tweens.push(engine.fromTo(title, { x: 12, opacity: 0 }, { x: 0, opacity: 1, duration: .36, delay: .18, ease: 'power3.out', force3D: false }));
-          tweens.push(engine.fromTo(subtitle, { y: 4, opacity: 0 }, { y: 0, opacity: 1, duration: .28, delay: .32, ease: 'sine.out', force3D: false }));
           tweens.push(engine.fromTo(aura, { opacity: 0, scale: .88 }, { opacity: 1, scale: 1, duration: .5, delay: .08, ease: 'sine.out' }));
-          tweens.push(engine!.to(aura, { opacity: 0, duration: .4, delay: .62, ease: 'sine.in' }));
-          tweens.push(engine!.to(veil, { opacity: 0, duration: .56, delay: .76, ease: 'power2.inOut' }));
-          // Native SVG dimensions and font metrics shrink on this isolated overlay.
-          // No scale-up is applied to a small text/image compositor surface.
-          tweens.push(engine!.to(logo, { autoRound: false, left: logoBox.left, top: logoBox.top, width: source.logo ? logoBox.width : 32, height: source.logo ? logoBox.height : 32, opacity: source.logo ? 1 : 0, duration: .72, delay: .76, ease, force3D: false }));
+          
+          // Aura and veil fade out as transition starts
+          tweens.push(engine!.to(aura, { opacity: 0, duration: .38, delay: moveDelay - 0.22, ease: 'sine.in' }));
+          tweens.push(engine!.to(veil, { opacity: 0, duration: .56, delay: moveDelay, ease: 'power2.inOut' }));
+
+          // Glide logo to destination
+          tweens.push(engine!.to(logo, { autoRound: false, left: logoBox.left, top: logoBox.top, width: source.logo ? logoBox.width : 32, height: source.logo ? logoBox.height : 32, opacity: source.logo ? 1 : 0, duration: moveDuration, delay: moveDelay, ease, force3D: false }));
+          
           function resolveText(node: HTMLDivElement, metrics: TextBox, original: HTMLElement | null, className: string) {
-            const native = { autoRound: false, left: metrics.left, top: metrics.top, width: metrics.width, height: metrics.height, fontSize: `${metrics.fontSize}px`, lineHeight: `${metrics.height}px`, letterSpacing: `${metrics.letterSpacing}px`, duration: .72, delay: .76, ease, force3D: false };
+            const native = { autoRound: false, left: metrics.left, top: metrics.top, width: metrics.width, height: metrics.height, fontSize: `${metrics.fontSize}px`, lineHeight: `${metrics.height}px`, letterSpacing: `${metrics.letterSpacing}px`, duration: moveDuration, delay: moveDelay, ease, force3D: false };
             tweens.push(engine!.to(node, native));
             if (!original) {
-              tweens.push(engine!.to(node, { opacity: 0, duration: .36, delay: .96, ease: 'sine.in' }));
+              tweens.push(engine!.to(node, { opacity: 0, duration: .36, delay: moveDelay + 0.2, ease: 'sine.in' }));
             } else if (metrics.text !== node.textContent) {
               const landing = makeText(className, metrics.text, metrics, metrics.width);
               landing.style.opacity = '0';
               tweens.push(engine!.to(landing, native));
-              tweens.push(engine!.to(node, { opacity: 0, duration: .18, delay: 1.24, ease: 'sine.in' }));
-              tweens.push(engine!.to(landing, { opacity: 1, duration: .18, delay: 1.24, ease: 'sine.out' }));
+              tweens.push(engine!.to(node, { opacity: 0, duration: .18, delay: moveDelay + 0.4, ease: 'sine.in' }));
+              tweens.push(engine!.to(landing, { opacity: 1, duration: .18, delay: moveDelay + 0.4, ease: 'sine.out' }));
             }
           }
           resolveText(title, titleBox, source.title, 'brand-intro-title-destination');
-          resolveText(subtitle, subtitleBox, source.subtitle, 'brand-intro-subtitle-destination');
-          tweens.push(engine!.to(brand, { autoRound: false, x: 0, y: 0, width: endWidth, height: endHeight, opacity: actual.length ? 1 : 0, duration: .72, delay: .76, ease, force3D: false, onStart() { if (stage) stage.dataset.introPhase = 'resolve'; }, onComplete: finish }));
-          failsafe = window.setTimeout(finish, 1750);
+
+          // Transition brand container to target coordinates
+          tweens.push(engine!.to(brand, { 
+            autoRound: false, 
+            x: 0, 
+            y: 0, 
+            width: endWidth, 
+            height: endHeight, 
+            opacity: actual.length ? 1 : 0, 
+            duration: moveDuration, 
+            delay: moveDelay, 
+            ease, 
+            force3D: false, 
+            onStart() { 
+              if (stage) stage.dataset.introPhase = 'resolve'; 
+            }, 
+            onComplete: finish 
+          }));
+
+          // When returning to title, card fades in
+          if (card) {
+            tweens.push(engine!.to(card, {
+              opacity: 1,
+              duration: 0.48,
+              delay: moveDelay + 0.12,
+              ease: 'power2.out'
+            }));
+          }
+          if (source.subtitle) {
+            tweens.push(engine!.to(source.subtitle, {
+              opacity: 1,
+              duration: 0.48,
+              delay: moveDelay + 0.16,
+              ease: 'power2.out'
+            }));
+          }
+
+          failsafe = window.setTimeout(finish, 2750);
         } catch { finish(); }
       }
+
       function schedule() {
         if (disposed || started) return;
         clearTimeout(timer);

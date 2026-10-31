@@ -366,7 +366,7 @@ export function LaundryPage() {
         ) : viewMode === 'activate' && selectedMachine ? (
           <div
             key="laundry-qr-view"
-            className="w-full flex justify-center py-2"
+            className="tab-panel-enter w-full flex justify-center py-2"
           >
             {/* 1. DESKTOP / LAPTOP VIEW (lg and above): 2-Column Container */}
             <main className="liquid-panel hidden lg:block w-full max-w-5xl p-8 lg:p-10 relative">
@@ -644,7 +644,7 @@ export function LaundryPage() {
         ) : viewMode === 'timer' && selectedMachine ? (
           <div
             key="laundry-timer-view"
-            className="w-full flex justify-center py-4"
+            className="tab-panel-enter w-full flex justify-center py-4"
           >
             <main className="w-full max-w-[500px] liquid-panel rounded-[34px] border border-neutral-200/90 dark:border-neutral-800 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] p-6 sm:p-8 flex flex-col items-center relative transition-colors">
 
@@ -806,7 +806,7 @@ export function LaundryPage() {
         ) : (
           <div
             key="laundry-list-view"
-            className="w-full space-y-6"
+            className="tab-panel-enter w-full space-y-6"
           >
             <header className="kit-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -816,9 +816,6 @@ export function LaundryPage() {
                 </div>
                 <h1 className="kit-page-title">Giặt sấy</h1>
                 <p className="kit-page-description">Chọn máy, quét mã và theo dõi chu kỳ ngay tại đây.</p>
-              </div>
-              <div className="liquid-chip inline-flex items-center gap-2 self-start px-3 py-2 apple-callout kit-text-secondary">
-                <Home size={14} className="text-neutral-700" /><span>{profile.room.roomNumber || 'Phòng của bạn'}</span><span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">/</span><span>Tự phục vụ 24/7</span>
               </div>
             </header>
 
@@ -929,7 +926,7 @@ export function LaundryPage() {
 
             {/* Tab 1: Machine Grid */}
             {activeTab === 'machines' && (
-              <div className="space-y-5">
+              <div key="tab-machines" className="tab-panel-enter space-y-5">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                   <div className="kit-segmented flex flex-wrap items-center gap-1 p-1" aria-label="Loại máy">
                     {[
@@ -962,7 +959,7 @@ export function LaundryPage() {
                   </div>
                 </div>
 
-                <div id="laundry-machine-results" data-stage="list" className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                <div key={activeFilter} id="laundry-machine-results" data-stage="list" className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {filteredMachines.map(m => {
                     const isWasher = m.type === 'WASHER';
                     const remaining = getRemainingSeconds(m);
@@ -1096,7 +1093,7 @@ export function LaundryPage() {
 
             {/* Tab 2: Booking Reservation */}
             {activeTab === 'booking' && (
-              <div className="space-y-6">
+              <div key="tab-booking" className="tab-panel-enter space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   <div className="lg:col-span-6 soft-surface p-6 sm:p-7 rounded-[34px] border border-white/80 dark:border-white/10 space-y-5">
                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900/5 dark:border-white/10">
@@ -1243,7 +1240,7 @@ export function LaundryPage() {
 
             {/* Tab 3: Rules & Pricing */}
             {activeTab === 'rules' && (
-              <div className="space-y-4 max-w-3xl">
+              <div key="tab-rules" className="tab-panel-enter space-y-4 max-w-3xl">
                 <div className="soft-surface p-6 rounded-[28px] border border-white/80 dark:border-white/10 space-y-3">
                   <h4 className="type-h3 font-semibold kit-text-primary flex items-center gap-2.5">
                     <span className="w-7 h-7 rounded-full bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 apple-callout flex items-center justify-center font-semibold">1</span>
