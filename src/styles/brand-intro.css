@@ -91,8 +91,8 @@ body:has(.brand-intro-stage[data-intro-phase="assemble"]) .kit-login-window {
 .brand-mark-glow-wrap { filter: blur(calc(9 * var(--u))); }
 .brand-mark-glass {
   background: rgba(62, 160, 254, .35);
-  backdrop-filter: blur(calc(12 * var(--u)));
   -webkit-backdrop-filter: blur(calc(12 * var(--u)));
+  backdrop-filter: blur(calc(12 * var(--u)));
   clip-path: var(--brand-home-front);
   transform-origin: 38% 60%;
 }
@@ -100,8 +100,8 @@ body:has(.brand-intro-stage[data-intro-phase="assemble"]) .kit-login-window {
   inset: 77.7% 47% 13.67% 20.24%;
   background: linear-gradient(268.13deg, #FFFFFF 7.44%, rgba(255, 255, 255, .2) 115.42%);
   box-shadow: calc(5 * var(--u)) calc(5 * var(--u)) calc(12 * var(--u)) rgba(39, 133, 230, .28);
-  backdrop-filter: blur(calc(7.5 * var(--u)));
   -webkit-backdrop-filter: blur(calc(7.5 * var(--u)));
+  backdrop-filter: blur(calc(7.5 * var(--u)));
   border-radius: calc(4 * var(--u));
   transform-origin: left center;
 }
@@ -109,17 +109,19 @@ body:has(.brand-intro-stage[data-intro-phase="assemble"]) .kit-login-window {
 /* Chromium ignores clip-path on backdrop-filter inside a rounded overflow parent, which
    cards and the login window are. Everyday icons therefore frost a blurred copy of the
    layers behind the glass; only the intro, on its own stage, uses a real backdrop blur. */
+/* Keep -webkit-backdrop-filter first: the production minifier drops an earlier unprefixed
+   declaration, and Chromium then shows no blur at all. */
 .brand-mark-cut { clip-path: var(--brand-home-cut); }
 .brand-home-icon .brand-mark-glass {
   background: none;
-  backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .brand-mark-frost { filter: blur(calc(12 * var(--u))); }
 .brand-mark-tint { background: rgba(62, 160, 254, .35); }
 .brand-home-icon .brand-mark-pill {
-  backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Motion only runs on the intro's own copy of the mark. */

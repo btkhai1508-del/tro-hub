@@ -47,7 +47,7 @@
     --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
-    --liquid-fill: rgba(255, 255, 255, 0.45);
+    --liquid-fill: rgba(255, 255, 255, 0.30);
     --liquid-fill-subtle: var(--material-ultrathin);
     --liquid-edge: rgba(255, 255, 255, 0.55);
     --liquid-stroke: var(--separator);
@@ -57,7 +57,7 @@
   }
 
   .dark {
-    --liquid-fill: rgba(12, 12, 16, 0.45);
+    --liquid-fill: rgba(12, 12, 16, 0.30);
     --text-primary: #ffffff;
     --text-secondary: #e5e5e7;
     --text-tertiary: #b8b8bf;
@@ -250,11 +250,11 @@
 .wallpaper-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.18);
   pointer-events: none;
 }
 .dark .wallpaper-overlay {
-  background: rgba(9, 9, 11, 0.30);
+  background: rgba(9, 9, 11, 0.18);
 }
 @media (prefers-reduced-transparency: reduce) {
   .wallpaper-overlay { background: rgba(255, 255, 255, 0.85); }

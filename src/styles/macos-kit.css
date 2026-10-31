@@ -226,12 +226,12 @@
   --motion-standard: 180ms;
   --motion-slow: 220ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --reading-fill: rgba(255, 255, 255, 0.45);
-  --form-fill: rgba(255, 255, 255, 0.45);
+  --reading-fill: rgba(255, 255, 255, 0.30);
+  --form-fill: rgba(255, 255, 255, 0.30);
 }
 .dark {
-  --reading-fill: rgba(24, 24, 28, 0.45);
-  --form-fill: rgba(28, 28, 32, 0.45);
+  --reading-fill: rgba(24, 24, 28, 0.30);
+  --form-fill: rgba(28, 28, 32, 0.30);
 }
 .kit-data-surface, .kit-reading-surface, .kit-form-surface {
   border: 1px solid var(--separator);
