@@ -38,7 +38,7 @@ export function DocumentSheet({ doc, className }: { doc: BuiltDocument | null; c
     <div className={className} style={{ display: 'grid', gap: 12, width: '100%' }}>
       {doc.pages.map((ops, pageIndex) => (
         <svg key={pageIndex} role="img" aria-label={`${doc.title}, trang ${pageIndex + 1}`} viewBox={`0 0 ${width} ${height}`}
-          style={{ display: 'block', width: '100%', height: 'auto', background: '#fff', boxShadow: '0 1px 8px rgba(0,0,0,.18)', fontFamily: 'Tinos, "Times New Roman", serif', fontKerning: 'none', fontVariantLigatures: 'none', textRendering: 'geometricPrecision' }}>
+          style={{ display: 'block', width: '100%', height: 'auto', background: '#fff', boxShadow: '0 1px 8px rgba(0,0,0,.18)', fontFamily: '"Times New Roman", Times, serif', fontKerning: 'none', fontVariantLigatures: 'none', textRendering: 'geometricPrecision' }}>
           {ops.map((op, i) => {
             if (op.t === 'text') {
               return <text key={i} x={op.x} y={op.y} fontSize={op.size} fill="#000" xmlSpace="preserve"

@@ -3,7 +3,7 @@
  * Only blanks change: a known value replaces its blank in bold and an unknown one keeps the printed dots.
  */
 import type { HouseInfo } from '../houses';
-import { BuiltDocument, f, Measurer, PageWriter, Run, sup, t } from './engine';
+import { BuiltDocument, citizenId, f, Measurer, PageWriter, Run, sup, t } from './engine';
 
 export interface Person {
   name?: string;
@@ -64,7 +64,7 @@ export function buildContract(m: Measurer, data: ContractData): BuiltDocument {
   y += LH;
   for (let i = 0; i < 5; i += 1) {
     const person = data.tenants[i] || {};
-    y = w.flow([t(`${i + 1}. Ông/bà:     `), f(person.name, '..............................'), t(' Sinh năm:  '), f(birthYear(person.dob), '........'), t('  Số CCCD/ĐDCN: '), f(person.cccd, '.............................')], { ...para, y });
+    y = w.flow([t(`${i + 1}. Ông/bà:     `), f(person.name, '..............................'), t(' Sinh năm:  '), f(birthYear(person.dob), '........'), t('  Số CCCD/ĐDCN: '), f(citizenId(person.cccd), '.............................')], { ...para, y });
     y = w.flow([t('Nơi đăng ký thường trú: '), f(person.address, '.....................................................................................................')], { ...para, y });
   }
 
@@ -103,7 +103,7 @@ export interface Ct01Data {
 }
 
 function digitBoxes(w: PageWriter, m: Measurer, left: number, step: number, top: number, bottom: number, value: string | undefined) {
-  const digits = (value || '').replace(/\D/g, '').slice(0, 12);
+  const digits = citizenId(value);
   for (let i = 0; i <= 12; i += 1) w.line(left + step * i, top, left + step * i, bottom, 0.48);
   w.line(left, top, left + step * 12, top, 0.48);
   w.line(left, bottom, left + step * 12, bottom, 0.48);
@@ -164,7 +164,7 @@ export function buildCt01(m: Measurer, data: Ct01Data): BuiltDocument {
   digitBoxes(w, m, 284.85, 20.6, 312.45, 338.85, declarant.cccd);
 
   const room = roomLabel(data.room);
-  const request = room ? `Đăng ký tạm trú tại phòng ${room}, ${house.address}.` : '';
+  const request = room ? `Đăng ký tạm trú tại ${house.name}, ${house.address}.` : '';
   const dotsLine = '.'.repeat(145);
   const firstDots = '.'.repeat(126);
   if (request) {
@@ -206,7 +206,7 @@ export function buildCt01(m: Measurer, data: Ct01Data): BuiltDocument {
     w.text(cols[1] + 3, y, person.name || '', 11, 'bold');
     w.center((cols[2] + cols[3]) / 2, y, person.dob || '', 11, 'bold');
     w.center((cols[3] + cols[4]) / 2, y, person.gender || '', 11, 'bold');
-    w.center((cols[4] + cols[5]) / 2, y, person.cccd || '', 11, 'bold');
+    w.center((cols[4] + cols[5]) / 2, y, citizenId(person.cccd), 11, 'bold');
     w.center((cols[5] + cols[6]) / 2, y, person.relation || '', 11, 'bold');
   });
 

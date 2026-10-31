@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 
 /** Original wallpapers extracted from the supplied macOS 26 material boards.
  * Render one theme at a time so hidden artwork doesn't compete with page loads. */
-export function Background() {
+export function Background({ login = false }: { login?: boolean }) {
   const { isDark } = useTheme();
   return (
     <div aria-hidden="true" className="app-wallpaper pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -18,7 +18,7 @@ export function Background() {
         data-theme={isDark ? 'dark' : 'light'}
         className="wallpaper-art"
       />
-      <div className="wallpaper-overlay" />
+      <div className={login ? 'wallpaper-overlay wallpaper-overlay-login' : 'wallpaper-overlay'} />
     </div>
   );
 }

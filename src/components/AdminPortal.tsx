@@ -2977,7 +2977,7 @@ export function AdminPortal() {
                             setDeclarationRows(updated);
                           }}
                           placeholder="DD/MM/YYYY"
-                          className="w-full text-center bg-transparent border-none outline-none font-serif text-xs sm:text-sm"
+                          className="w-full text-center bg-transparent border-none outline-none text-xs sm:text-sm"
                         />
                       </td>
                       <td data-label="Người đóng / Phòng" className="border border-neutral-800 p-2">
@@ -2990,7 +2990,7 @@ export function AdminPortal() {
                             setDeclarationRows(updated);
                           }}
                           placeholder="Nhập tên người thuê hoặc số phòng..."
-                          className="w-full bg-transparent border-none outline-none font-serif text-xs sm:text-sm"
+                          className="w-full bg-transparent border-none outline-none text-xs sm:text-sm"
                         />
                       </td>
                       <td data-label="Số tiền (VNĐ)" className="border border-neutral-800 p-2 text-right">
@@ -3003,7 +3003,7 @@ export function AdminPortal() {
                             setDeclarationRows(updated);
                           }}
                           placeholder="0"
-                          className="w-full text-right bg-transparent border-none outline-none font-serif text-xs sm:text-sm font-bold"
+                          className="w-full text-right bg-transparent border-none outline-none text-xs sm:text-sm font-bold"
                         />
                       </td>
                     </tr>

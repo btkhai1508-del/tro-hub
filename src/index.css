@@ -47,7 +47,7 @@
     --separator: rgba(60, 60, 67, 0.14);
     --liquid-accent: #171717;
     --liquid-accent-rgb: 23, 23, 23;
-    --liquid-fill: rgba(255, 255, 255, 0.30);
+    --liquid-fill: rgba(255, 255, 255, 0.42);
     --liquid-fill-subtle: var(--material-ultrathin);
     --liquid-edge: rgba(255, 255, 255, 0.55);
     --liquid-stroke: var(--separator);
@@ -57,7 +57,7 @@
   }
 
   .dark {
-    --liquid-fill: rgba(12, 12, 16, 0.30);
+    --liquid-fill: rgba(12, 12, 16, 0.42);
     --text-primary: #ffffff;
     --text-secondary: #e5e5e7;
     --text-tertiary: #b8b8bf;
@@ -250,15 +250,17 @@
 .wallpaper-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.30);
   pointer-events: none;
 }
 .dark .wallpaper-overlay {
-  background: rgba(9, 9, 11, 0.18);
+  background: rgba(9, 9, 11, 0.30);
 }
+.wallpaper-overlay-login { background: rgba(255, 255, 255, 0.18); }
+.dark .wallpaper-overlay-login { background: rgba(9, 9, 11, 0.18); }
 @media (prefers-reduced-transparency: reduce) {
-  .wallpaper-overlay { background: rgba(255, 255, 255, 0.85); }
-  .dark .wallpaper-overlay { background: rgba(9, 9, 11, 0.85); }
+  .wallpaper-overlay, .wallpaper-overlay-login { background: rgba(255, 255, 255, 0.85); }
+  .dark .wallpaper-overlay, .dark .wallpaper-overlay-login { background: rgba(9, 9, 11, 0.85); }
 }
 
 
@@ -285,6 +287,15 @@
 }
 
 /* Reading surfaces stay opaque white, independently of the global theme. */
+@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
+/* Paper documents read in Times New Roman on every device; their buttons stay in the app font. */
+.invoice-paper, .invoice-paper *:not(button, button *, .material-symbols-rounded),
+.administrative-document, .administrative-document *:not(button, button *, .material-symbols-rounded) {
+  font-family: "Times New Roman", Times, serif !important;
+}
 .invoice-paper { background: #fff; color: #171717; border: 1px solid #e5e5e5; box-shadow: 0 24px 80px -24px rgba(0, 0, 0, 0.4); }
 .invoice-paper .type-h2, .invoice-paper .type-h3 { color: #171717; }
 .invoice-paper .soft-button { background: #fff; color: #262626; border-color: #d4d4d4; }

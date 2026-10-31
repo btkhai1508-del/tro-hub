@@ -4,8 +4,7 @@
  * A document is a list of draw operations in PDF points, so the file the user downloads is
  * exactly what the preview shows and never depends on the surrounding website.
  *
- * Tinos is the open font with the same glyph widths as Times New Roman, which cannot be
- * redistributed with a web app.
+ * Every document is set in Times New Roman, from the subsets in public/fonts.
  */
 
 export const A4 = { width: 595.44, height: 841.92 };
@@ -55,13 +54,20 @@ export const f = (value: string | undefined, dots: string, size?: number, dotSiz
 export const sup = (text: string, size: number, style?: FontStyle, rise = 4.6): TextRun => ({ text, size, style, rise });
 
 const FONT_FILES: Record<FontStyle, string> = {
-  normal: 'Tinos-Regular.ttf',
-  bold: 'Tinos-Bold.ttf',
-  italic: 'Tinos-Italic.ttf',
-  bolditalic: 'Tinos-BoldItalic.ttf',
+  normal: 'TimesNewRoman-Regular.ttf',
+  bold: 'TimesNewRoman-Bold.ttf',
+  italic: 'TimesNewRoman-Italic.ttf',
+  bolditalic: 'TimesNewRoman-BoldItalic.ttf',
 };
 
-const FONT_FAMILY = 'Tinos';
+const FONT_FAMILY = 'Times New Roman';
+
+/** A personal ID is 12 digits. The sheet drops a leading zero, and anything else, such as a phone number, is no ID. */
+export function citizenId(value?: string) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 12) return digits;
+  return digits.length === 11 ? `0${digits}` : '';
+}
 
 let fontsPromise: Promise<Record<FontStyle, ArrayBuffer>> | null = null;
 

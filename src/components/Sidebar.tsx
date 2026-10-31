@@ -35,7 +35,7 @@ export function Sidebar() {
               <div data-brand-logo className="flex h-11 w-11 shrink-0 items-center justify-center">
                 <IconHome3D size={52} />
               </div>
-              {!isSidebarCollapsed && <div data-brand-copy className="min-w-0"><span data-brand-title className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub.</span><span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate whitespace-nowrap">Nhà trọ Phong Lan</span></div>}
+              {!isSidebarCollapsed && <div data-brand-copy className="min-w-0"><span data-brand-title className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub</span><span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate whitespace-nowrap">Nhà trọ Phong Lan</span></div>}
             </NavLink>
           </div>
 

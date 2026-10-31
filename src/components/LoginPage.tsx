@@ -156,7 +156,7 @@ export function LoginPage() {
 
   return (
     <div className="kit-auth-shell relative isolate flex min-h-svh items-center justify-center px-3 py-6 sm:px-8 sm:py-10">
-      <Background />
+      <Background login />
       <div className="kit-login-window liquid-panel auth-panel relative z-10 mx-auto w-full max-w-[464px] overflow-hidden">
         <div data-brand-target="brand" className="kit-window-toolbar border-b-0 flex min-h-[76px] items-center gap-3 px-5 py-4 sm:px-7">
           <span data-brand-logo aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">

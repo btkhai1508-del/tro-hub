@@ -51,7 +51,7 @@ export function TopHeader() {
       <div data-brand-target="brand" className="flex min-w-0 items-center gap-2.5 lg:hidden">
         <span data-brand-logo className="flex h-10 w-10 shrink-0 items-center justify-center"><IconHome3D size={44} /></span>
         <div data-brand-copy className="min-w-0">
-          <span data-brand-title className="apple-title2 kit-text-primary block font-semibold">Trọ-Hub.</span>
+          <span data-brand-title className="apple-title2 kit-text-primary block font-semibold">Trọ-Hub</span>
           <span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate">{roomSubtitle}</span>
         </div>
       </div>

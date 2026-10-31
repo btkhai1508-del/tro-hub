@@ -5,7 +5,7 @@
  */
 import type { Invoice } from '../../context/AppContext';
 import type { HouseInfo } from '../houses';
-import { A4, BuiltDocument, Measurer, PageWriter, t, f } from './engine';
+import { A4, BuiltDocument, citizenId, Measurer, PageWriter, t, f } from './engine';
 
 const MM = 72 / 25.4;
 const LEFT = 30 * MM;
@@ -100,7 +100,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   y = writeTitle(w, m, y, 'THÔNG BÁO TIỀN PHÒNG TRỌ', `Tháng ${mm} năm ${yyyy}`, pageRight) - 4;
 
   const room = (data.room || '').replace(/^P\.\s*/i, '');
-  y = w.flow([t('Kính gửi: '), filled(data.tenantName, '...............................'), t('     CCCD số: '), filled(data.tenantCccd, '.....................'), t('     Ở phòng số: '), filled(room, '...............')], { x: LEFT, right: pageRight, y, lineHeight: LH, size: BODY }) + PARA;
+  y = w.flow([t('Kính gửi: '), filled(data.tenantName, '...............................'), t('     CCCD số: '), filled(citizenId(data.tenantCccd), '.....................'), t('     Ở phòng số: '), filled(room, '...............')], { x: LEFT, right: pageRight, y, lineHeight: LH, size: BODY }) + PARA;
   y = w.flow([t(`Xin thông báo ông bà biết, tiền thuê phòng và các chi phí dịch vụ khác trong tháng ${mm} năm ${yyyy}. Cụ thể như sau:`)], { x: LEFT, firstX: LEFT + INDENT, right: pageRight, y, lineHeight: LH, size: BODY, align: 'justify' }) + PARA;
 
   // Fee table on the left, payment summary on the right, so one landscape page holds it all.
