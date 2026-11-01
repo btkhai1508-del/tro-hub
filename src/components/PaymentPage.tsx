@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { scanQRCode } from 'zmp-sdk/apis';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { prepareQrImage, saveQrToDevice } from '../lib/qrHelper';
+import { isZaloMiniApp } from '../lib/platform';
 import { soundFx } from '../lib/soundFx';
 import { getMeasurer } from '../lib/documents/engine';
 import { saveDocument } from '../lib/documents/output';
 import { residentInvoice } from '../lib/documents/fromProfile';
-import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from './AppIcons';
+import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ScanLine, ShieldAlert } from './AppIcons';
 
 import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
 
@@ -189,6 +191,23 @@ export function PaymentPage() {
     try {
       const result = await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);
       setQrSaveResult(result.message ? result : null);
+    } finally {
+      setIsSavingQR(false);
+    }
+  };
+
+  /** Zalo's scanner takes no image from an app, so the QR goes to the photo library first for its gallery button. */
+  const handleScanWithZalo = async () => {
+    if (isSavingQR) return;
+    setIsSavingQR(true);
+    try {
+      await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);
+      const { content } = await scanQRCode({});
+      setQrSaveResult(content.startsWith('000201')
+        ? { success: true, message: 'Zalo đã đọc được mã thanh toán. Hãy mở app ngân hàng và chọn ảnh QR vừa lưu để chuyển khoản.' }
+        : { success: false, message: 'Mã vừa quét không phải QR thanh toán.' });
+    } catch (err: any) {
+      if (!/cancel|hủy|huỷ/i.test(String(err?.message))) setQrSaveResult({ success: false, message: 'Chưa mở được trình quét QR của Zalo. Vui lòng thử lại.' });
     } finally {
       setIsSavingQR(false);
     }
@@ -475,6 +494,12 @@ export function PaymentPage() {
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
                     </button>
+                    {isZaloMiniApp && (
+                      <button type="button" onClick={handleScanWithZalo} disabled={isSavingQR} className="soft-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer">
+                        <ScanLine size={15} />
+                        <span>Quét QR bằng Zalo</span>
+                      </button>
+                    )}
                     {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="mt-2 max-w-[260px] text-center apple-callout kit-text-secondary">{qrSaveResult.message}</p>}
                   </div>
                 </div>
@@ -611,6 +636,12 @@ export function PaymentPage() {
                     <ImageDown size={15} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
                   </button>
+                  {isZaloMiniApp && (
+                    <button type="button" onClick={handleScanWithZalo} disabled={isSavingQR} className="soft-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer">
+                      <ScanLine size={15} />
+                      <span>Quét QR bằng Zalo</span>
+                    </button>
+                  )}
                   {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="mt-2 max-w-[260px] text-center apple-callout kit-text-secondary">{qrSaveResult.message}</p>}
                 </div>
               </section>

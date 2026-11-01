@@ -1,45 +1,23 @@
 import React, { useState } from 'react';
 import '../styles/resident-tahoe.css';
 import { useNavigate } from 'react-router-dom';
-import { openWebview, scanQRCode } from 'zmp-sdk/apis';
-import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, LockKeyhole, ReceiptText, ScanLine, WalletCards } from './AppIcons';
+import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, LockKeyhole, ReceiptText, WalletCards } from './AppIcons';
 import { IconWallet3D } from './Icons3D';
 import { useApp, type Invoice } from '../context/AppContext';
 import { PaymentHistoryExportModal } from './PaymentHistoryExportModal';
 import { cn, getCurrentMonthStr, isSameMonth } from '../lib/utils';
-import { isZaloMiniApp } from '../lib/platform';
 
 export function InvoicesAndPayment() {
   const navigate = useNavigate();
   const { invoices, openInvoiceDetailModal, paymentGateStatus } = useApp();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(6);
-  const [scanMessage, setScanMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const filteredInvoices = invoices;
   const unpaidInvoices = invoices.filter(invoice => invoice.status === 'unpaid');
   const currentUnpaidInvoice = unpaidInvoices.find(invoice => isSameMonth(invoice.month, getCurrentMonthStr())) || unpaidInvoices[0];
   const totalUnpaidAmount = unpaidInvoices.reduce((total, invoice) => total + invoice.total, 0);
   const currency = (amount: number) => amount.toLocaleString('vi-VN');
   const handlePay = (invoiceId: string) => navigate(`/payment?invoiceId=${invoiceId}`);
-
-  const handleScanQr = async () => {
-    setScanMessage(null);
-    let content = '';
-    try {
-      content = (await scanQRCode({})).content;
-    } catch (err: any) {
-      // Backing out of the scanner is not a failure worth reporting.
-      if (!/cancel|hủy|huỷ/i.test(String(err?.message))) setScanMessage({ ok: false, text: 'Chưa mở được trình quét QR của Zalo. Vui lòng thử lại.' });
-      return;
-    }
-    if (/^https?:\/\//i.test(content)) {
-      try {
-        await openWebview({ url: content, config: { style: 'normal' } });
-        return;
-      } catch {}
-    }
-    setScanMessage({ ok: true, text: content });
-  };
 
   const statusBadge = (status: Invoice['status']) => {
     if (status === 'paid') return <span className="badge-paid"><CheckCircle2 size={13} />Đã thanh toán</span>;
@@ -55,18 +33,10 @@ export function InvoicesAndPayment() {
           <h1 className="kit-page-title">Hóa đơn & thanh toán</h1>
           <p className="kit-page-description">Xem từng khoản phí và theo dõi lịch sử thanh toán.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 self-start">
-          {isZaloMiniApp && (
-            <button type="button" onClick={handleScanQr} className="primary-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-3 apple-control">
-              <ScanLine size={16} />Quét QR
-            </button>
-          )}
-          <button type="button" onClick={() => setIsExportModalOpen(true)} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-3 apple-control kit-text-secondary">
-            <Download size={16} />Xuất lịch sử PDF
-          </button>
-        </div>
+        <button type="button" onClick={() => setIsExportModalOpen(true)} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 apple-control kit-text-secondary">
+          <Download size={16} />Xuất lịch sử PDF
+        </button>
       </header>
-      {scanMessage && <p role={scanMessage.ok ? 'status' : 'alert'} className={`break-words apple-callout ${scanMessage.ok ? 'kit-text-primary' : 'text-red-700 dark:text-red-400'}`}>{scanMessage.ok ? `Nội dung mã QR: ${scanMessage.text}` : scanMessage.text}</p>}
 
       <section aria-label="Tổng quan hóa đơn" className="liquid-panel overflow-hidden">
         <div className="relative flex flex-col gap-6 p-5 sm:p-7 md:flex-row md:items-center md:justify-between">
