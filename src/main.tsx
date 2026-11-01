@@ -26,6 +26,11 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { installUiMotion } from './lib/uiMotion';
 import './index.css';
+import { reloadOnceForNewBuild } from './lib/chunkRecovery';
+
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceForNewBuild()) event.preventDefault();
+});
 
 const container = document.getElementById('root') || document.getElementById('app');
 if (container) {

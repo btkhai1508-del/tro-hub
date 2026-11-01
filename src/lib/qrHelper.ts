@@ -5,6 +5,59 @@
 import { saveImageToGallery, openShareSheet, showToast } from 'zmp-sdk/apis';
 import { isZaloMiniApp } from './platform';
 
+/** A real PNG with a white margin: gallery apps reject the SVG the QR service can return, and scanners need the margin. */
+async function buildQrPng(qrUrl: string): Promise<Blob> {
+  // The service redirects .png to .svg without CORS on the redirect, so a browser can only read .svg directly.
+  const response = await fetch(qrUrl.replace(/\.png(?=\?|$)/, '.svg'));
+  if (!response.ok) throw new Error('Fetch failed');
+  const objectUrl = URL.createObjectURL(await response.blob());
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('Image failed'));
+      element.src = objectUrl;
+    });
+    const size = 1024;
+    const margin = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, size, size);
+    context.imageSmoothingEnabled = false;
+    context.drawImage(image, margin, margin, size - margin * 2, size - margin * 2);
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Encode failed'))), 'image/png'));
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+const prepared = new Map<string, Promise<Blob>>();
+
+/** Build ahead of the tap: iPhone only opens the share sheet if it comes straight from the tap. */
+export function prepareQrImage(qrUrl: string): Promise<Blob> {
+  let pending = prepared.get(qrUrl);
+  if (!pending) {
+    pending = buildQrPng(qrUrl);
+    pending.catch(() => prepared.delete(qrUrl));
+    prepared.set(qrUrl, pending);
+  }
+  return pending;
+}
+
+const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result));
+  reader.onerror = () => reject(reader.error);
+  reader.readAsDataURL(blob);
+});
+
+/**
+ * Only Zalo can write to the photo library directly. A browser cannot, so phones get the
+ * share sheet, whose "Lưu hình ảnh" puts the QR in Photos; computers get a normal download.
+ */
 export async function saveQrToDevice(
   qrUrl: string,
   fileName: string = 'VietQR_PhongLan.png'
@@ -13,152 +66,48 @@ export async function saveQrToDevice(
     return { success: false, message: 'Không tìm thấy đường dẫn mã QR' };
   }
 
-  // 1. Zalo Mini App Native Storage to Gallery
+  let blob: Blob | null = null;
+  try {
+    blob = await prepareQrImage(qrUrl);
+  } catch (err) {
+    console.warn('[QR] could not build PNG', err);
+  }
+
   if (isZaloMiniApp) {
     try {
-      await saveImageToGallery({ imageUrl: qrUrl });
+      await saveImageToGallery(blob ? { imageBase64Data: await blobToDataUrl(blob) } : { imageUrl: qrUrl });
       try {
         await showToast({ message: 'Đã lưu mã QR vào Thư viện ảnh thành công!' });
       } catch {}
-      return { success: true, message: 'Đã lưu mã QR vào thư viện ảnh!' };
+      return { success: true, message: 'Đã lưu mã QR vào thư viện ảnh.' };
     } catch (err: any) {
       console.warn('[QR] saveImageToGallery failed, attempting browser fallback:', err);
     }
   }
 
-  // 2. Standard Web Browser Download
-  try {
-    const response = await fetch(qrUrl);
-    if (!response.ok) throw new Error('Fetch failed');
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-    return { success: true, message: 'Đã tải mã QR về máy thành công!' };
-  } catch (err) {
-    // 3. Fallback: Open in new window/tab
-    const a = document.createElement('a');
-    a.href = qrUrl;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return { success: true, message: 'Đang mở mã QR để lưu ảnh!' };
-  }
-}
-
-/**
- * Share QR image or document image directly via Zalo chat / friends / My Cloud.
- */
-export async function shareViaZalo(
-  qrUrl: string,
-  description: string = 'Mã VietQR thanh toán tiền phòng Nhà Trọ Phong Lan'
-): Promise<{ success: boolean; message: string }> {
-  if (!qrUrl) {
-    return { success: false, message: 'Không tìm thấy hình ảnh để gửi' };
+  if (!blob) {
+    return { success: false, message: 'Chưa tạo được ảnh QR. Bạn có thể nhấn giữ vào mã để lưu ảnh.' };
   }
 
-  // 1. In Zalo Mini App: use native openShareSheet
-  if (isZaloMiniApp) {
+  const file = new File([blob], fileName, { type: 'image/png' });
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+  if (isTouchDevice && navigator.canShare?.({ files: [file] })) {
     try {
-      await openShareSheet({
-        type: 'image',
-        data: {
-          imageUrls: [qrUrl],
-        },
-      });
-      return { success: true, message: 'Đã mở bảng chia sẻ Zalo!' };
+      await navigator.share({ files: [file] });
+      return { success: true, message: 'Chọn "Lưu hình ảnh" để đưa mã QR vào kho ảnh.' };
     } catch (err: any) {
-      console.warn('[Share] openShareSheet image failed, trying link share:', err);
-      try {
-        await openShareSheet({
-          type: 'link',
-          data: {
-            link: qrUrl,
-            chatOnly: true,
-          },
-        });
-        return { success: true, message: 'Đã mở bảng chia sẻ Zalo!' };
-      } catch (e) {
-        console.warn('[Share] fallback failed:', e);
-      }
+      if (err?.name === 'AbortError') return { success: false, message: '' };
+      console.warn('[QR] share failed, downloading instead:', err);
     }
   }
 
-  // 2. Browser Web Share API fallback
-  if (typeof navigator !== 'undefined' && navigator.share) {
-    try {
-      await navigator.share({
-        title: 'Mã QR Nhà Trọ Phong Lan',
-        text: description,
-        url: qrUrl,
-      });
-      return { success: true, message: 'Đã chia sẻ thành công!' };
-    } catch (e) {
-      // User cancelled
-    }
-  }
-
-  // 3. Fallback: Copy link and inform user
-  try {
-    await navigator.clipboard.writeText(qrUrl);
-    return { success: true, message: 'Đã sao chép link ảnh mã QR! Bạn có thể dán vào khung chat Zalo để gửi.' };
-  } catch {
-    return { success: false, message: 'Không thể sao chép link ảnh QR.' };
-  }
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  return { success: true, message: isTouchDevice ? 'Đã tải mã QR về máy. Mở thư mục Tải về để lưu vào kho ảnh.' : 'Đã tải mã QR về máy.' };
 }
-
-/**
- * Share contract or administrative document directly via Zalo
- */
-export async function shareContractViaZalo(
-  docTitle: string,
-  docText: string
-): Promise<{ success: boolean; message: string }> {
-  // 1. In Zalo Mini App: use native openShareSheet with text
-  if (isZaloMiniApp) {
-    try {
-      await openShareSheet({
-        type: 'text',
-        data: {
-          text: `${docTitle}\n\n${docText}`,
-        },
-      });
-      return { success: true, message: 'Đã mở bảng chia sẻ Zalo!' };
-    } catch (err: any) {
-      console.warn('[Contract Share] openShareSheet failed:', err);
-    }
-  }
-
-  // 2. Web Share API fallback
-  if (typeof navigator !== 'undefined' && navigator.share) {
-    try {
-      await navigator.share({
-        title: docTitle,
-        text: docText,
-      });
-      return { success: true, message: 'Đã chia sẻ thành công!' };
-    } catch (e) {
-      // User cancelled
-    }
-  }
-
-  // 3. Clipboard fallback
-  try {
-    await navigator.clipboard.writeText(`${docTitle}\n\n${docText}`);
-    return { success: true, message: 'Đã sao chép toàn bộ nội dung văn bản! Bạn có thể dán vào Zalo để gửi.' };
-  } catch {
-    return { success: false, message: 'Không thể sao chép văn bản' };
-  }
-}
-
-

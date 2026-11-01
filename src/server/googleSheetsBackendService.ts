@@ -106,6 +106,7 @@ export interface AuthResult {
   invoices?: BackendInvoiceItem[];
 }
 
+import { meterDetail, meterReading } from '../lib/meterDetail';
 import {
   getRoomColumnPStatus,
   getOrCreateRoomColumnPStatus,
@@ -684,47 +685,24 @@ function parseInvoiceFromRoomRow(
   rowIndex?: number,
   liveStatus?: ColumnPStatusResult
 ): BackendInvoiceItem {
-  const electricOld = parseFloat(String(row[1] || '0').replace(/[^\d.]/g, '')) || 1420;
-  const electricNew = parseFloat(String(row[2] || '0').replace(/[^\d.]/g, '')) || 1520;
-  const electricUsage = parseFloat(String(row[3] || '0').replace(/[^\d.]/g, '')) || (electricNew - electricOld);
-  const electricCost = parseSheetVNDAmount(row[7]) || (electricUsage * 3500);
+  // Every figure already has its formula in the sheet, so read the cells and calculate nothing here.
+  const electricOld = meterReading(row[1]);
+  const electricNew = meterReading(row[2]);
+  const electricUsage = meterReading(row[3]);
+  const electricCost = parseSheetVNDAmount(row[7]);
 
-  const waterOld = parseFloat(String(row[4] || '0').replace(/[^\d.]/g, '')) || 85;
-  const waterNew = parseFloat(String(row[5] || '0').replace(/[^\d.]/g, '')) || 90;
-  const waterUsage = parseFloat(String(row[6] || '0').replace(/[^\d.]/g, '')) || (waterNew - waterOld);
-  const waterCost = parseSheetVNDAmount(row[8]) || (waterUsage * 20000);
+  const waterOld = meterReading(row[4]);
+  const waterNew = meterReading(row[5]);
+  const waterUsage = meterReading(row[6]);
+  const waterCost = parseSheetVNDAmount(row[8]);
 
-  const roomRent = parseSheetVNDAmount(row[9]) || 3000000;
-  const trashCost = parseSheetVNDAmount(row[10]) || 0;
-
-  // Tính số lượng người trong phòng để nhân tiền Internet
-  const validOccupants = [
-    sanitizeTenantName(row[16]),
-    sanitizeTenantName(row[20]),
-    sanitizeTenantName(row[24])
-  ].filter(Boolean).length;
-  const soNguoi = parseFloat(String(row[28] || '0')) || (validOccupants > 0 ? validOccupants : 1);
-  const internetCost = parseSheetVNDAmount(row[11]) || (soNguoi * 40000);
-
-  // Tiền giữ xe (Cột M - row[12]): nếu không tick thì không tính thu tiền xe còn nếu tick thì thu
-  const validPlates = [
-    sanitizeVehiclePlate(row[19]),
-    sanitizeVehiclePlate(row[23]),
-    sanitizeVehiclePlate(row[27])
-  ].filter(Boolean).length;
-  const soXe = parseFloat(String(row[29] || '0')) || validPlates;
-  
-  let parkingCost = 0;
-  const rawM = String(row[12] || '').trim().toUpperCase();
-  if (rawM === 'TRUE' || rawM === '1' || rawM === '✓' || rawM === '✔') {
-    parkingCost = (soXe > 0 ? soXe : 1) * 50000;
-  } else if (rawM === 'FALSE') {
-    parkingCost = 0;
-  } else {
-    parkingCost = parseSheetVNDAmount(row[12]) || (soXe > 0 ? soXe * 50000 : 0);
-  }
-
-  const totalCost = parseSheetVNDAmount(row[15]) || (roomRent + electricCost + waterCost + internetCost + trashCost + parkingCost);
+  const roomRent = parseSheetVNDAmount(row[9]);
+  const trashCost = parseSheetVNDAmount(row[10]);
+  const internetCost = parseSheetVNDAmount(row[11]);
+  const parkingCost = parseSheetVNDAmount(row[12]);
+  const otherCost = parseSheetVNDAmount(row[13]);
+  const depositCost = parseSheetVNDAmount(row[14]);
+  const totalCost = parseSheetVNDAmount(row[15]);
 
   const cleanRoom = roomNumber.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
   let status: 'unpaid' | 'paid' | 'pending' = 'unpaid';
@@ -772,12 +750,14 @@ function parseInvoiceFromRoomRow(
     paymentMethod,
     transactionId,
     details: [
-      { name: 'Tiền thuê phòng', amount: roomRent, type: 'room', note: `Phòng ${roomNumber} - Cố định` },
-      { name: 'Tiền điện', amount: electricCost, type: 'electricity', metric: `${electricUsage} kWh (${electricOld} - ${electricNew}) x 3.500₫` },
-      { name: 'Tiền nước sinh hoạt', amount: waterCost, type: 'water', metric: `${waterUsage} m³ (${waterOld} - ${waterNew}) x 20.000₫` },
-      { name: 'Internet cáp quang', amount: internetCost, type: 'internet', note: 'Gói Wi-Fi 6 tốc độ cao 300Mbps' },
-      { name: 'Phí dịch vụ & rác', amount: trashCost, type: 'service', note: 'Miễn phí theo hợp đồng' },
-      { name: 'Phí giữ xe máy', amount: parkingCost, type: 'parking', note: '1 xe máy miễn phí theo phòng' }
+      { name: 'Tiền thuê phòng', amount: roomRent, type: 'room' },
+      { name: 'Tiền điện', amount: electricCost, type: 'electricity', metric: meterDetail(electricOld, electricNew, electricUsage, electricCost) },
+      { name: 'Tiền nước sinh hoạt', amount: waterCost, type: 'water', metric: meterDetail(waterOld, waterNew, waterUsage, waterCost) },
+      { name: 'Internet cáp quang', amount: internetCost, type: 'internet' },
+      { name: 'Phí dịch vụ & rác', amount: trashCost, type: 'service' },
+      { name: 'Phí giữ xe máy', amount: parkingCost, type: 'parking' },
+      { name: 'Khoản khác / giảm trừ', amount: otherCost, type: 'service' },
+      { name: 'Tiền đặt cọc', amount: depositCost, type: 'service' }
     ]
   };
 }

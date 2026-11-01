@@ -968,7 +968,9 @@ async function startServer() {
   } else {
     // Production mode: Serve built static files from dist
     const distPath = path.resolve(__dirname, 'dist');
-    app.use(express.static(distPath));
+    // Hashed files never change. A file from an older build must fail as 404, not get index.html.
+    app.use('/assets', express.static(path.resolve(distPath, 'assets'), { immutable: true, maxAge: '1y', fallthrough: false }));
+    app.use(express.static(distPath, { setHeaders: res => res.setHeader('Cache-Control', 'no-cache') }));
     app.get('*', (req, res) => {
       res.sendFile(path.resolve(distPath, 'index.html'));
     });

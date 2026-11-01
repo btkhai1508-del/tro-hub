@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
-import { saveQrToDevice } from '../lib/qrHelper';
+import { prepareQrImage, saveQrToDevice } from '../lib/qrHelper';
 import { soundFx } from '../lib/soundFx';
 import { getMeasurer } from '../lib/documents/engine';
 import { saveDocument } from '../lib/documents/output';
@@ -176,12 +176,19 @@ export function PaymentPage() {
   const qrUrl = `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${targetInvoice.total}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(recipientName)}`;
 
   const [isSavingQR, setIsSavingQR] = useState(false);
+  const [qrSaveResult, setQrSaveResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (hasInvoice && paymentGateStatus !== 'STOP') prepareQrImage(qrUrl).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrUrl, hasInvoice, paymentGateStatus]);
 
   const handleSaveQR = async () => {
     if (isSavingQR) return;
     setIsSavingQR(true);
     try {
-      await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);
+      const result = await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);
+      setQrSaveResult(result.message ? result : null);
     } finally {
       setIsSavingQR(false);
     }
@@ -347,7 +354,7 @@ export function PaymentPage() {
               <img
                 src="/lock.svg"
                 alt="Cổng thanh toán đang tạm đóng"
-                className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 drop-shadow-[0_10px_25px_rgba(239,68,68,0.22)] select-none pointer-events-none"
+                className="w-28 h-28 sm:w-36 sm:h-36 mb-4 shrink-0 select-none pointer-events-none"
               />
 
               <h2 className="apple-title1 font-semibold kit-text-primary mb-2">
@@ -468,6 +475,7 @@ export function PaymentPage() {
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
                     </button>
+                    {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="mt-2 max-w-[260px] text-center apple-callout kit-text-secondary">{qrSaveResult.message}</p>}
                   </div>
                 </div>
 
@@ -603,6 +611,7 @@ export function PaymentPage() {
                     <ImageDown size={15} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
                   </button>
+                  {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="mt-2 max-w-[260px] text-center apple-callout kit-text-secondary">{qrSaveResult.message}</p>}
                 </div>
               </section>
 

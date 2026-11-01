@@ -290,11 +290,10 @@
 @font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
 @font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
 /* Paper documents read in Times New Roman on every device; their buttons stay in the app font. */
-.invoice-paper, .invoice-paper *:not(button, button *, .material-symbols-rounded),
 .administrative-document, .administrative-document *:not(button, button *, .material-symbols-rounded) {
   font-family: "Times New Roman", Times, serif !important;
 }
-.invoice-paper button, .administrative-document button { font-family: var(--font-sans); }
+.administrative-document button { font-family: var(--font-sans); }
 .invoice-paper { background: #fff; color: #171717; border: 1px solid #e5e5e5; box-shadow: 0 24px 80px -24px rgba(0, 0, 0, 0.4); }
 .invoice-paper .type-h2, .invoice-paper .type-h3 { color: #171717; }
 .invoice-paper .soft-button { background: #fff; color: #262626; border-color: #d4d4d4; }

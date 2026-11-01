@@ -6,6 +6,7 @@ import { routeLoaders } from './lib/routePreload';
 import { Layout } from './components/Layout';
 import { Icons3DDefs } from './components/Icons3D';
 import { BrandIntro } from './components/BrandIntro';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 
 const Home = lazy(() => routeLoaders.home().then(module => ({ default: module.Home })));
 const Utilities = lazy(() => routeLoaders.utilities().then(module => ({ default: module.Utilities })));
@@ -125,17 +126,19 @@ const LAUNDRY_OPEN = false;
 
 export default function App() {
   return (
+    <AppErrorBoundary>
     <ThemeProvider>
       <AppProvider>
         <Icons3DDefs />
         <BrandIntro />
         <HashRouter>
           {/* Match the intro veil while the first route chunk loads. */}
-          <Suspense fallback={<div aria-hidden="true" className="fixed inset-0 bg-[#f7f8fa] dark:bg-[#101114]" />}>
+          <Suspense fallback={<div role="status" aria-label="Đang tải" className="route-loading fixed inset-0 flex items-center justify-center bg-[#f7f8fa] dark:bg-[#101114]"><span aria-hidden="true" className="route-loading-spinner"><span className="ui-spinner h-6 w-6" /></span></div>}>
             <AppRoutes />
           </Suspense>
         </HashRouter>
       </AppProvider>
     </ThemeProvider>
+    </AppErrorBoundary>
   );
 }

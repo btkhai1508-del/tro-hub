@@ -1,5 +1,6 @@
 import type { Invoice, InvoiceDetailItem, UserProfile } from '../../context/AppContext';
 import { houseFromRoom } from '../houses';
+import { meterDetail } from '../meterDetail';
 import type { Measurer } from './engine';
 import { buildContract, buildCt01, Person } from './legalForms';
 import { buildInvoiceNotice, buildPaymentHistory } from './stateFormat';
@@ -55,8 +56,8 @@ const roomIsPaid = (status: string) => (status === 'paid' ? 'paid' : status === 
 export function roomInvoice(m: Measurer, room: any, month: string) {
   const details: InvoiceDetailItem[] = [
     { name: 'Tiền thuê phòng', amount: room.tienPhong || 0, type: 'room' },
-    { name: 'Tiền điện', amount: room.tienDien || 0, type: 'electricity', metric: `${room.dienUsed || 0} kWh (${room.dienCu || 0} - ${room.dienMoi || 0})` },
-    { name: 'Tiền nước sinh hoạt', amount: room.tienNuoc || 0, type: 'water', metric: `${room.nuocUsed || 0} m³ (${room.nuocCu || 0} - ${room.nuocMoi || 0})` },
+    { name: 'Tiền điện', amount: room.tienDien || 0, type: 'electricity', metric: meterDetail(room.dienCu || 0, room.dienMoi || 0, room.dienUsed || 0, room.tienDien || 0) },
+    { name: 'Tiền nước sinh hoạt', amount: room.tienNuoc || 0, type: 'water', metric: meterDetail(room.nuocCu || 0, room.nuocMoi || 0, room.nuocUsed || 0, room.tienNuoc || 0) },
     { name: 'Internet cáp quang', amount: room.tienNet || 0, type: 'internet' },
     { name: 'Tiền rác & dịch vụ', amount: room.tienRac || 0, type: 'service' },
     { name: 'Phí giữ phương tiện', amount: room.tienXe || 0, type: 'parking' },

@@ -1,3 +1,4 @@
+import { meterDetail, meterReading } from './meterDetail';
 import { Invoice, InvoiceDetailItem, UserProfile } from '../context/AppContext';
 import { apiUrl } from './api';
 
@@ -870,13 +871,13 @@ export async function fetchMonthlyInvoicesFromSheet(
               };
 
               const roomNumber = String(getCellVal(0)).trim() || cleanTargetRoom || '203';
-              const electricOld = parseSheetNumber(getCellVal(1));
-              const electricNew = parseSheetNumber(getCellVal(2));
-              const electricUsage = parseSheetNumber(getCellVal(3)) || (electricNew > electricOld ? electricNew - electricOld : 0);
+              const electricOld = meterReading(getCellVal(1));
+              const electricNew = meterReading(getCellVal(2));
+              const electricUsage = meterReading(getCellVal(3));
 
-              const waterOld = parseSheetNumber(getCellVal(4));
-              const waterNew = parseSheetNumber(getCellVal(5));
-              const waterUsage = parseSheetNumber(getCellVal(6)) || (waterNew > waterOld ? waterNew - waterOld : 0);
+              const waterOld = meterReading(getCellVal(4));
+              const waterNew = meterReading(getCellVal(5));
+              const waterUsage = meterReading(getCellVal(6));
 
               const electricCost = parseSheetVNDAmount(getCellVal(7));
               const waterCost = parseSheetVNDAmount(getCellVal(8));
@@ -886,7 +887,7 @@ export async function fetchMonthlyInvoicesFromSheet(
               const vehicleCost = parseSheetVNDAmount(getCellVal(12));
               const otherCost = parseSheetVNDAmount(getCellVal(13));
               const depositCost = parseSheetVNDAmount(getCellVal(14));
-              const totalCost = parseSheetVNDAmount(getCellVal(15)) || (roomCost + electricCost + waterCost + trashCost + internetCost + vehicleCost + otherCost);
+              const totalCost = parseSheetVNDAmount(getCellVal(15));
 
               const totalCell = cells[15];
               const bgColor = totalCell?.userEnteredFormat?.backgroundColor || totalCell?.effectiveFormat?.backgroundColor;
@@ -914,8 +915,8 @@ export async function fetchMonthlyInvoicesFromSheet(
 
               const details: InvoiceDetailItem[] = [
                 { name: 'Tiền thuê phòng', amount: roomCost, type: 'room', note: `Phòng ${roomNumber}` },
-                { name: 'Tiền điện', amount: electricCost, type: 'electricity', metric: `${electricUsage} kWh (${electricOld} - ${electricNew})`, note: 'Chỉ số đo công tơ' },
-                { name: 'Tiền nước sinh hoạt', amount: waterCost, type: 'water', metric: `${waterUsage} m³ (${waterOld} - ${waterNew})`, note: 'Chỉ số đồng hồ nước' },
+                { name: 'Tiền điện', amount: electricCost, type: 'electricity', metric: meterDetail(electricOld, electricNew, electricUsage, electricCost) },
+                { name: 'Tiền nước sinh hoạt', amount: waterCost, type: 'water', metric: meterDetail(waterOld, waterNew, waterUsage, waterCost) },
                 { name: 'Internet cáp quang', amount: internetCost, type: 'internet', note: 'Gói Wi-Fi phòng' },
                 { name: 'Tiền rác & dịch vụ', amount: trashCost, type: 'service', note: 'Vệ sinh & thu gom rác' },
                 { name: 'Phí giữ phương tiện', amount: vehicleCost, type: 'parking', note: 'Xe đã đăng ký' }
@@ -952,6 +953,8 @@ export async function fetchMonthlyInvoicesFromSheet(
       if (res.ok) {
         const csvText = await res.text();
         const rows = parseCSV(csvText);
+        // gviz answers a tab that does not exist with the first sheet: that month simply has no bill yet.
+        if (!rows[0] || rows[0].length < 20 || String(rows[0][0] || '').includes('Họ và Tên')) return null;
 
         if (rows.length > 0) {
           let targetRow: string[] | null = null;
@@ -995,13 +998,13 @@ export async function fetchMonthlyInvoicesFromSheet(
 
           if (targetRow) {
             const roomNumber = targetRow[0] || cleanTargetRoom || '203';
-            const electricOld = parseSheetNumber(targetRow[1]);
-            const electricNew = parseSheetNumber(targetRow[2]);
-            const electricUsage = parseSheetNumber(targetRow[3]) || (electricNew > electricOld ? electricNew - electricOld : 0);
+            const electricOld = meterReading(targetRow[1]);
+            const electricNew = meterReading(targetRow[2]);
+            const electricUsage = meterReading(targetRow[3]);
 
-            const waterOld = parseSheetNumber(targetRow[4]);
-            const waterNew = parseSheetNumber(targetRow[5]);
-            const waterUsage = parseSheetNumber(targetRow[6]) || (waterNew > waterOld ? waterNew - waterOld : 0);
+            const waterOld = meterReading(targetRow[4]);
+            const waterNew = meterReading(targetRow[5]);
+            const waterUsage = meterReading(targetRow[6]);
 
             const electricCost = parseSheetVNDAmount(targetRow[7]);
             const waterCost = parseSheetVNDAmount(targetRow[8]);
@@ -1011,7 +1014,7 @@ export async function fetchMonthlyInvoicesFromSheet(
             const vehicleCost = parseSheetVNDAmount(targetRow[12]);
             const otherCost = parseSheetVNDAmount(targetRow[13]);
             const depositCost = parseSheetVNDAmount(targetRow[14]);
-            const totalCost = parseSheetVNDAmount(targetRow[15]) || (roomCost + electricCost + waterCost + trashCost + internetCost + vehicleCost + otherCost);
+            const totalCost = parseSheetVNDAmount(targetRow[15]);
 
             const statusInfo = resolvePaymentStatus(undefined, String(targetRow[15]));
             let invoiceMonth = curTab.trim();
@@ -1036,8 +1039,8 @@ export async function fetchMonthlyInvoicesFromSheet(
 
             const details: InvoiceDetailItem[] = [
               { name: 'Tiền thuê phòng', amount: roomCost, type: 'room', note: `Phòng ${roomNumber}` },
-              { name: 'Tiền điện', amount: electricCost, type: 'electricity', metric: `${electricUsage} kWh (${electricOld} - ${electricNew})`, note: 'Chỉ số đo công tơ' },
-              { name: 'Tiền nước sinh hoạt', amount: waterCost, type: 'water', metric: `${waterUsage} m³ (${waterOld} - ${waterNew})`, note: 'Chỉ số đồng hồ nước' },
+              { name: 'Tiền điện', amount: electricCost, type: 'electricity', metric: meterDetail(electricOld, electricNew, electricUsage, electricCost) },
+              { name: 'Tiền nước sinh hoạt', amount: waterCost, type: 'water', metric: meterDetail(waterOld, waterNew, waterUsage, waterCost) },
               { name: 'Internet cáp quang', amount: internetCost, type: 'internet', note: 'Gói Wi-Fi phòng' },
               { name: 'Tiền rác & dịch vụ', amount: trashCost, type: 'service', note: 'Vệ sinh & thu gom rác' },
               { name: 'Phí giữ phương tiện', amount: vehicleCost, type: 'parking', note: 'Xe đã đăng ký' }
