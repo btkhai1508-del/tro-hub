@@ -8,6 +8,8 @@ function zaloMiniAppAutoConfigPlugin(): Plugin {
   let entryFileName: string | undefined;
   return {
     name: 'zalo-mini-app-auto-config',
+    // A dev server has no fresh bundle to describe, so it must not rewrite the config.
+    apply: 'build',
     generateBundle(_options, bundle) {
       const entry = Object.values(bundle).find(item => item.type === 'chunk' && item.isEntry);
       if (entry?.type === 'chunk') entryFileName = path.basename(entry.fileName);

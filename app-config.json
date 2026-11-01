@@ -21,10 +21,13 @@
     "selfControlLoading": false
   },
   "listCSS": [
-    "assets/index.B3324suN.css"
+    "assets/AdminPortal.BZV56RWs.css",
+    "assets/AppIcons.DDT4fWeL.css",
+    "assets/index.BcZVYUpq.css",
+    "assets/resident-tahoe.C86L73bY.css"
   ],
   "listSyncJS": [
-    "assets/index.BQy3Vttd.module.js"
+    "assets/index.B9aJ29XK.module.js"
   ],
   "listAsyncJS": []
 }

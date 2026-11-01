@@ -10,6 +10,7 @@ import { apiFetch } from '../lib/api';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
+import { AddressFields } from './AddressFields';
 import { CccdQrScanner } from './CccdQrScanner';
 
 function ProfileField({ label, value, onChange, type = 'text', placeholder, inputMode, maxLength }: { label: string; value?: string; onChange?: (value: string) => void; type?: string; placeholder?: string; inputMode?: 'numeric'; maxLength?: number }) {
@@ -192,7 +193,9 @@ export function Profile() {
             <ProfileField label="CCCD / Hộ chiếu" value={profile.cccd} {...editable('cccd')} />
             <ProfileField label="Ngày sinh" value={profile.dob} {...editable('dob')} {...(isEditing ? { onChange: (value: string) => setDraft(prev => ({ ...prev, dob: formatDobInput(value, prev.dob) })) } : {})} placeholder="dd/mm/yyyy" inputMode="numeric" maxLength={10} />
             {isEditing ? <div className="kit-profile-field min-w-0 border-b border-black/[0.06] py-3.5 dark:border-white/[0.08]"><dt className="apple-callout font-medium kit-text-secondary">Giới tính</dt><dd role="group" aria-label="Giới tính" className="kit-segmented mt-1.5 grid grid-cols-2 gap-1">{['Nam', 'Nữ'].map(option => <button key={option} type="button" aria-pressed={draft.gender === option} onClick={() => setDraft(prev => ({ ...prev, gender: option }))} className={cn('kit-segment', draft.gender === option && 'kit-segment-active')}>{option}</button>)}</dd></div> : <ProfileField label="Giới tính" value={profile.gender} />}
-            <ProfileField label="Địa chỉ thường trú" value={profile.address} {...editable('address')} />
+            {isEditing
+              ? <AddressFields value={draft.address} onChange={address => setDraft(prev => ({ ...prev, address }))} />
+              : <ProfileField label="Địa chỉ thường trú" value={profile.address} />}
           </ProfileSection>
           <ProfileSection icon={IconHome3D} editing={isEditing} title="Không gian sống" summary={`${roomLabel}${profile.room.floor ? ` · ${profile.room.floor}` : ''}`}>
             <ProfileField label="Phòng đang thuê" value={profile.room.roomNumber ? roomLabel : ''} />

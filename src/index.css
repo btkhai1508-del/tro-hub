@@ -285,10 +285,10 @@
 }
 
 /* Reading surfaces stay opaque white, independently of the global theme. */
-@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
-@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
-@font-face { font-family: "Times New Roman"; src: url("/fonts/TimesNewRoman-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("./assets/fonts/TimesNewRoman-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("./assets/fonts/TimesNewRoman-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("./assets/fonts/TimesNewRoman-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Times New Roman"; src: url("./assets/fonts/TimesNewRoman-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
 /* Paper documents read in Times New Roman on every device; their buttons stay in the app font. */
 .administrative-document, .administrative-document *:not(button, button *, .material-symbols-rounded) {
   font-family: "Times New Roman", Times, serif !important;

@@ -233,7 +233,6 @@ export function LoginPage() {
                       type="tel"
                       autoComplete="tel"
                       required
-                      placeholder="Ví dụ: 0902 371 800"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="kit-field min-h-12 w-full pl-11 pr-3.5 font-num"
@@ -259,7 +258,6 @@ export function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       required
-                      placeholder="Nhập mật khẩu"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="kit-field min-h-12 w-full pl-11 pr-12"
@@ -318,7 +316,7 @@ export function LoginPage() {
                 <label htmlFor="register-name" className="mb-2 block apple-headline kit-text-primary">Họ và tên cư dân</label>
                 <div className="relative flex items-center">
                   <User aria-hidden="true" size={18} className="pointer-events-none absolute left-3.5 text-neutral-500 dark:text-neutral-400" />
-                  <input id="register-name" type="text" autoComplete="name" required placeholder="Họ và tên của bạn" value={regName} onChange={(e) => setRegName(e.target.value)} className="kit-field min-h-12 w-full pl-11 pr-3.5" />
+                  <input id="register-name" type="text" autoComplete="name" required value={regName} onChange={(e) => setRegName(e.target.value)} className="kit-field min-h-12 w-full pl-11 pr-3.5" />
                 </div>
               </div>
 
@@ -337,7 +335,7 @@ export function LoginPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
                   <label htmlFor="register-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
-                  <input id="register-phone" type="tel" autoComplete="tel" required placeholder="09xx xxx xxx" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
+                  <input id="register-phone" type="tel" autoComplete="tel" required value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
                 </div>
                 <div className="min-w-0">
                   <label htmlFor="register-room" className="mb-2 block apple-headline kit-text-primary">Số phòng thuê</label>
@@ -360,17 +358,17 @@ export function LoginPage() {
 
               <div>
                 <label htmlFor="register-email" className="mb-2 block apple-headline kit-text-primary">Email liên hệ (tùy chọn)</label>
-                <input id="register-email" type="email" autoComplete="email" placeholder="ban@example.com" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
+                <input id="register-email" type="email" autoComplete="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="min-w-0">
                   <label htmlFor="register-password" className="mb-2 block apple-headline kit-text-primary">Mật khẩu</label>
-                  <input id="register-password" minLength={6} type="password" autoComplete="new-password" required placeholder="Ít nhất 6 ký tự" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
+                  <input id="register-password" minLength={6} type="password" autoComplete="new-password" required value={regPassword} onChange={(e) => setRegPassword(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
                 <div className="min-w-0">
                   <label htmlFor="register-confirm" className="mb-2 block apple-headline kit-text-primary">Nhập lại mật khẩu</label>
-                  <input id="register-confirm" type="password" autoComplete="new-password" required placeholder="Nhập lại mật khẩu" value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
+                  <input id="register-confirm" type="password" autoComplete="new-password" required value={regConfirmPass} onChange={(e) => setRegConfirmPass(e.target.value)} className="kit-field min-h-12 w-full px-3.5" />
                 </div>
               </div>
 
@@ -427,7 +425,7 @@ export function LoginPage() {
               <p className="apple-callout kit-text-secondary">Nhập số điện thoại đã đăng ký với Ban Quản Lý Nhà Trọ Phong Lan. Chúng tôi sẽ gửi mã OTP đặt lại mật khẩu cho bạn.</p>
               <div>
                 <label htmlFor="forgot-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
-                <input id="forgot-phone" type="tel" autoComplete="tel" placeholder="Ví dụ: 0902 371 800" value={forgotInput} onChange={(e) => setForgotInput(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
+                <input id="forgot-phone" type="tel" autoComplete="tel" value={forgotInput} onChange={(e) => setForgotInput(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
               </div>
               <button
                 type="button"

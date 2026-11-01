@@ -1,3 +1,4 @@
+import { downloadFile } from 'zmp-sdk/apis';
 import { isZaloMiniApp } from '../platform';
 import { BuiltDocument, renderPdfBlob } from './engine';
 
@@ -14,10 +15,23 @@ function downloadBlob(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-/** Saves the generated file itself. Zalo's webview ignores `download`, so it goes through the share sheet. */
+const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result));
+  reader.onerror = () => reject(reader.error);
+  reader.readAsDataURL(blob);
+});
+
+/** Saves the generated file itself. Zalo's webview ignores `download`, so it goes through Zalo's own save, then the share sheet. */
 export async function saveDocument(doc: BuiltDocument): Promise<DeliverResult> {
   const blob = await renderPdfBlob(doc);
   if (isZaloMiniApp) {
+    try {
+      await downloadFile({ fileBase64Data: await blobToDataUrl(new Blob([blob], { type: 'application/pdf' })) });
+      return { ok: true, message: 'Đã lưu tệp PDF về máy.' };
+    } catch (err) {
+      console.warn('[documents] Zalo downloadFile failed', err);
+    }
     const file = new File([blob], doc.fileName, { type: 'application/pdf' });
     if (navigator.canShare?.({ files: [file] })) {
       try {

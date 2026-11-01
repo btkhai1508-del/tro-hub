@@ -4,7 +4,7 @@
  * A document is a list of draw operations in PDF points, so the file the user downloads is
  * exactly what the preview shows and never depends on the surrounding website.
  *
- * Every document is set in Times New Roman, from the subsets in public/fonts.
+ * Every document is set in Times New Roman, from the subsets in src/assets/fonts.
  */
 
 export const A4 = { width: 595.44, height: 841.92 };
@@ -69,26 +69,28 @@ export function citizenId(value?: string) {
   return digits.length === 11 ? `0${digits}` : '';
 }
 
-let fontsPromise: Promise<Record<FontStyle, ArrayBuffer>> | null = null;
+let fontsPromise: Promise<Record<FontStyle, string>> | null = null;
 
 function loadFontFiles() {
   if (!fontsPromise) {
-    const styles = Object.keys(FONT_FILES) as FontStyle[];
-    fontsPromise = Promise.all(
-      styles.map(async style => {
-        const res = await fetch(`${import.meta.env.BASE_URL}fonts/${FONT_FILES[style]}`);
-        if (!res.ok) throw new Error(`Font ${FONT_FILES[style]} ${res.status}`);
-        const buffer = await res.arrayBuffer();
-        // Same font for the SVG preview, so its text lines up with the measured layout.
-        const face = new FontFace(FONT_FAMILY, buffer.slice(0), {
-          weight: style.includes('bold') ? '700' : '400',
-          style: style.includes('italic') ? 'italic' : 'normal',
-        });
-        document.fonts.add(await face.load());
-        return [style, buffer] as const;
+    fontsPromise = import('./fontData')
+      .then(async ({ FONT_BASE64 }) => {
+        await Promise.all((Object.keys(FONT_FILES) as FontStyle[]).map(async style => {
+          // Same font for the SVG preview, so its text lines up with the measured layout.
+          // The preview can fall back to the page's font, so a refusal here must not stop the document.
+          try {
+            const bytes = Uint8Array.from(atob(FONT_BASE64[style]), char => char.charCodeAt(0));
+            const face = new FontFace(FONT_FAMILY, bytes.buffer, {
+              weight: style.includes('bold') ? '700' : '400',
+              style: style.includes('italic') ? 'italic' : 'normal',
+            });
+            document.fonts.add(await face.load());
+          } catch (err) {
+            console.warn('[documents] preview font not loaded', err);
+          }
+        }));
+        return FONT_BASE64;
       })
-    )
-      .then(entries => Object.fromEntries(entries) as Record<FontStyle, ArrayBuffer>)
       .catch(err => {
         fontsPromise = null;
         throw err;
@@ -97,20 +99,11 @@ function loadFontFiles() {
   return fontsPromise;
 }
 
-function toBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binary);
-}
-
 async function createPdf(landscape = false) {
   const [{ jsPDF }, fonts] = await Promise.all([import('jspdf'), loadFontFiles()]);
   const pdf = new jsPDF({ unit: 'pt', format: [A4.width, A4.height], orientation: landscape ? 'landscape' : 'portrait' });
   (Object.keys(FONT_FILES) as FontStyle[]).forEach(style => {
-    pdf.addFileToVFS(FONT_FILES[style], toBase64(fonts[style]));
+    pdf.addFileToVFS(FONT_FILES[style], fonts[style]);
     pdf.addFont(FONT_FILES[style], FONT_FAMILY, style);
   });
   return pdf;

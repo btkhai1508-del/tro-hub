@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { scanQRCode } from 'zmp-sdk/apis';
 import { useDialogFocus } from '../lib/useDialogFocus';
+import { isZaloMiniApp } from '../lib/platform';
 import { CccdQrData, parseCccdQr, readQrFromImage } from '../lib/cccdQr';
 import { X } from './AppIcons';
 
@@ -9,6 +11,21 @@ interface CccdQrScannerProps {
 }
 
 const NOT_CCCD = 'Mã này không phải QR trên CCCD. Vui lòng thử lại.';
+
+interface QrDetector {
+  detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>>;
+}
+
+/** The browser's own QR reader copes with glare and blur better than jsQR, where it exists. */
+function createDetector(): QrDetector | null {
+  const Detector = (window as any).BarcodeDetector;
+  if (!Detector) return null;
+  try {
+    return new Detector({ formats: ['qr_code'] });
+  } catch {
+    return null;
+  }
+}
 
 /** Scans on the device itself: no CCCD photo or frame ever leaves the phone. */
 export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
@@ -26,36 +43,70 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
     let lastScan = 0;
     const canvas = document.createElement('canvas');
 
+    const handleText = (text: string) => {
+      const data = parseCccdQr(text);
+      if (data) {
+        stopped = true;
+        resultRef.current(data);
+      } else {
+        setMessage(NOT_CCCD);
+      }
+    };
+
     const start = async () => {
+      // Zalo's own scanner reads small codes best. Cancelling or being refused falls through to the camera below.
+      if (isZaloMiniApp) {
+        try {
+          const { content } = await scanQRCode({});
+          if (stopped) return;
+          handleText(content);
+          if (stopped) return;
+        } catch {
+          if (stopped) return;
+        }
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setCameraError('Thiết bị này chưa mở được camera. Bạn có thể chọn ảnh CCCD bên dưới.');
         return;
       }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        // The CCCD code is dense, so ask for more than the 640x480 a phone gives by default.
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
+        });
         if (stopped) return;
+        stream.getVideoTracks()[0]?.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] }).catch(() => {});
         const video = videoRef.current!;
         video.srcObject = stream;
         await video.play();
+        const detector = createDetector();
         const { default: jsQR } = await import('jsqr');
-        const scan = (time: number) => {
+        const scan = async (time: number) => {
           if (stopped) return;
           // A few reads a second is enough and keeps the phone cool.
           if (time - lastScan > 200 && video.videoWidth) {
             lastScan = time;
-            const scale = Math.min(1, 900 / video.videoWidth);
-            canvas.width = Math.round(video.videoWidth * scale);
-            canvas.height = Math.round(video.videoHeight * scale);
-            const context = canvas.getContext('2d', { willReadFrequently: true })!;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const code = jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-            if (code?.data) {
-              const data = parseCccdQr(code.data);
-              if (data) {
-                resultRef.current(data);
-                return;
-              }
-              setMessage(NOT_CCCD);
+            let text = '';
+            if (detector) {
+              try {
+                text = (await detector.detect(video))[0]?.rawValue || '';
+              } catch {}
+              if (stopped) return;
+            }
+            if (!text) {
+              // Read only the square the user sees, at full camera detail.
+              const side = Math.min(video.videoWidth, video.videoHeight);
+              const size = Math.min(side, 1000);
+              canvas.width = size;
+              canvas.height = size;
+              const context = canvas.getContext('2d', { willReadFrequently: true })!;
+              context.drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2, side, side, 0, 0, size, size);
+              text = jsQR(context.getImageData(0, 0, size, size).data, size, size)?.data || '';
+            }
+            if (text) {
+              handleText(text);
+              if (stopped) return;
             }
           }
           frame = requestAnimationFrame(scan);
@@ -95,7 +146,7 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="cccd-qr-title" className="apple-title2 kit-text-primary font-semibold">Quét QR CCCD</h2>
-            <p className="apple-callout kit-text-secondary mt-1">Đưa mã QR ở mặt trước CCCD vào khung hình.</p>
+            <p className="apple-callout kit-text-secondary mt-1">Đưa mã QR ở mặt trước CCCD vào giữa khung, giữ yên và tránh lóa.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Đóng" className="kit-dialog-close"><X size={18} /></button>
         </div>

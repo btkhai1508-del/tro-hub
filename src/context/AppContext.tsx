@@ -208,6 +208,9 @@ interface AppContextType {
 
 const initialInvoices: Invoice[] = [];
 
+// Kept per phone on this device, outside the session keys, so it survives logging out.
+const avatarKey = (phone: string) => `ecostay_avatar:${String(phone).replace(/\D/g, '').slice(-9)}`;
+
 const initialEmptyProfile: UserProfile = {
   name: '',
   phone: '',
@@ -716,7 +719,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentPassword(cleanPass);
       storage.setItem('ecostay_current_password', cleanPass);
 
-      const updatedProfile = { ...authService.mapToUserProfile(res.user, profile.avatar), isAdmin: isRoomAdmin };
+      const updatedProfile = { ...authService.mapToUserProfile(res.user, storage.getItem(avatarKey(res.user.phone)) || profile.avatar), isAdmin: isRoomAdmin };
       setProfile(updatedProfile);
       storage.setItem(STORAGE_KEYS.PROFILE_SYNCED, JSON.stringify(updatedProfile));
 
@@ -756,7 +759,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         String(res.user.phone || '').replace(/\D/g, '').endsWith('902371800') || 
         res.user.roomNumber === 'admin';
       setIsAuthenticated(true);
-      const updatedProfile = { ...authService.mapToUserProfile(res.user, profile.avatar), isAdmin: isRoomAdmin };
+      const updatedProfile = { ...authService.mapToUserProfile(res.user, storage.getItem(avatarKey(res.user.phone)) || profile.avatar), isAdmin: isRoomAdmin };
       setProfile(updatedProfile);
       storage.setItem(STORAGE_KEYS.PROFILE_SYNCED, JSON.stringify(updatedProfile));
 
@@ -1079,6 +1082,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       };
       storage.setItem(STORAGE_KEYS.PROFILE_SYNCED, JSON.stringify(next));
+      if (updated.avatar?.startsWith('data:')) storage.setItem(avatarKey(next.phone), updated.avatar);
       return next;
     });
   };
