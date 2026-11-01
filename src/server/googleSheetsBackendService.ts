@@ -879,8 +879,8 @@ export async function authenticateUser(
       const phoneIdx = cleanPhones.findIndex(p => p === cleanPhone || (cleanDigits.length >= 9 && p.endsWith(cleanDigits.slice(-9))));
       
       const isSinglePhoneMatch = Boolean(
-        cellDigits &&
-        cleanDigits &&
+        // A short cell like "1" would otherwise match every phone ending in that digit.
+        cellDigits.length >= 9 &&
         cleanDigits.length >= 9 &&
         (cellDigits === cleanDigits ||
           cellDigits.endsWith(cleanDigits.slice(-9)) ||
@@ -1094,7 +1094,7 @@ export async function authenticateUser(
       return {
         success: false,
         errorCode: isRejected ? 'AUTH_REJECTED' : 'AUTH_PENDING_APPROVAL',
-        error: isRejected ? 'Tài khoản này chưa được duyệt.' : 'Tài khoản của bạn đang chờ chủ trọ xét duyệt.'
+        error: isRejected ? 'Tài khoản tạm khoá. Vui lòng liên hệ Ban quản lý.' : 'Tài khoản của bạn đang chờ chủ trọ xét duyệt.'
       };
     }
 

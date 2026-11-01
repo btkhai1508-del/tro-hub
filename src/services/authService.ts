@@ -19,7 +19,9 @@ export type AuthErrorCode =
   | 'AUTH_NO_ROOM_FOUND'
   | 'AUTH_ROOM_NOT_IN_MONTHLY'
   | 'AUTH_TENANT_NOT_MAPPED'
-  | 'AUTH_DATA_INCOMPLETE';
+  | 'AUTH_DATA_INCOMPLETE'
+  | 'AUTH_PENDING_APPROVAL'
+  | 'AUTH_REJECTED';
 
 export interface AuthenticatedTenantUser {
   roomNumber: string;
@@ -95,6 +97,8 @@ export const authService = {
     }
 
     // 1. Authenticate via Backend API (issues JWT token for all roles including Admin)
+    // A token left by an earlier session (e.g. admin) must not outlive this login.
+    setAuthToken(null);
     try {
       const response = await apiFetch('/api/auth/login', {
         method: 'POST',
@@ -205,8 +209,8 @@ export const authService = {
             if (matchedReg.status === 'rejected') {
               return {
                 success: false,
-                errorCode: 'AUTH_INVALID_CREDENTIALS',
-                error: 'Yêu cầu đăng ký tài khoản này chưa được duyệt. Vui lòng liên hệ Ban quản lý.'
+                errorCode: 'AUTH_REJECTED',
+                error: 'Tài khoản tạm khoá. Vui lòng liên hệ Ban quản lý.'
               };
             }
             if (matchedReg.status === 'approved') {
@@ -266,7 +270,7 @@ export const authService = {
           const qDigits = cleanPhone.replace(/\D/g, '');
           const qRoom = cleanPhone.toLowerCase();
           return (rPhone && rPhone === qDigits) ||
-                 (rRoom && rRoom === qRoom) ||
+                 (rRoom && rRoom !== 'admin' && rRoom === qRoom) ||
                  (rCccd && rCccd === qDigits);
         });
 
@@ -279,6 +283,14 @@ export const authService = {
             cleanPassword === match.phone;
 
           if (isPassValid) {
+            // The server checks column P too; this fallback runs when the server is unreachable.
+            const accountStatus = String(match.accountStatus || '').toUpperCase();
+            if (accountStatus === 'TẠM NGƯNG' || accountStatus === 'TỪ CHỐI') {
+              return { success: false, errorCode: 'AUTH_REJECTED', error: 'Tài khoản tạm khoá. Vui lòng liên hệ Ban quản lý.' };
+            }
+            if (accountStatus === 'ĐANG CHỜ DUYỆT' || accountStatus === 'CHỜ DUYỆT') {
+              return { success: false, errorCode: 'AUTH_PENDING_APPROVAL', error: 'Tài khoản của bạn đang chờ chủ trọ xét duyệt.' };
+            }
             storage.setItem(STORAGE_KEYS.AUTH, 'true');
             storage.setItem(STORAGE_KEYS.USER_PHONE, match.phone || cleanPhone);
             const userProfile: AuthenticatedTenantUser = {

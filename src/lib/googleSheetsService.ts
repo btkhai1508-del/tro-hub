@@ -400,6 +400,7 @@ export interface SheetResidentAccount {
   emergencyRelation: string;
   emergencyPhone: string;
   password: string;
+  accountStatus?: string;      // Column P of the personal tab: Tình trạng
   contractUrl?: string;        // Column N (14th column): Hợp đồng thuê
   rentPrice?: number;          // Column J (Tiền phòng)
   depositAmount?: number;      // Column O (Tiền cọc)
@@ -478,7 +479,7 @@ export async function fetchAllResidentsFromSheet(
   for (const currentTab of candidateTabs) {
     if (accessToken) {
       try {
-        const range = `${currentTab}!A2:M100`;
+        const range = `${currentTab}!A2:P100`;
         const res = await fetch(
           `https://sheets.googleapis.com/v4/spreadsheets/${cleanId}/values/${encodeURIComponent(range)}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -534,6 +535,7 @@ export async function fetchAllResidentsFromSheet(
         emergencyRelation: String(row[11] || '').trim(),
         emergencyPhone: String(row[12] || '').trim(),
         password: String(row[13] || '').trim() || '180505',
+        accountStatus: String(row[15] || '').trim(),
         rowIndex: idx + 2
       });
     }

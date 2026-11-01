@@ -413,6 +413,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // 1. Live Profile Update (Only if user is not currently editing in modal)
           if (data.profile && !profileEditOpenRef.current) {
             setProfile(prev => {
+              // Never paint the admin's profile onto a resident session.
+              if (!prev.isAdmin && String(data.profile.roomNumber).toLowerCase() === 'admin') return prev;
               const updated = {
                 ...prev,
                 name: data.profile.name || prev.name,
