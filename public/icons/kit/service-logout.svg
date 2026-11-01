@@ -1,1 +1,16 @@
-<svg width="64" height="64" viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-[0_6px_14px_rgba(239,68,68,0.22)]"><defs><linearGradient id="_R_0_-fg_logout_bg" x1="40" y1="40" x2="140" y2="140" gradientUnits="userSpaceOnUse"><stop stop-color="#F87171"></stop><stop offset="1" stop-color="#DC2626"></stop></linearGradient></defs><path d="M96 52H60C54 52 50 56 50 62V122C50 128 54 132 60 132H96" stroke="url(#_R_0_-fg_logout_bg)" stroke-width="10" stroke-linecap="round"></path><rect x="76" y="60" width="56" height="64" rx="14" fill="#FECDD3" fill-opacity="0.75" stroke="white" stroke-width="1.5"></rect><path d="M102 92H136M136 92L124 80M136 92L124 104" stroke="white" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<linearGradient id="back" x1="90" y1="5" x2="20" y2="80" gradientUnits="userSpaceOnUse"><stop stop-color="#FF759F"/><stop offset="1" stop-color="#FF196E"/></linearGradient>
+<linearGradient id="edge" x1="10" y1="20" x2="90" y2="95" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="white" x1="92" y1="50" x2="8" y2="53" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".55"/></linearGradient>
+<filter id="glow" x="-40" y="-40" width="180" height="180" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="8"/></filter>
+<filter id="frost" x="-60" y="-60" width="220" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9"/></filter>
+<filter id="lift" x="-30" y="-30" width="170" height="170" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="rgb(255,82,140)" flood-opacity=".55"/></filter>
+<clipPath id="glass"><rect x="8" y="16" width="62" height="80" rx="20" /></clipPath>
+<clipPath id="backclip"><rect x="40" y="4" width="52" height="70" rx="18" transform="rotate(12 66.0 39.0)" /></clipPath>
+</defs>
+<g id="behind"><rect x="40" y="4" width="52" height="70" rx="18" transform="rotate(12 66.0 39.0)" fill="url(#back)"/><g clip-path="url(#backclip)"><g opacity=".5" filter="url(#glow)"><rect x="40" y="4" width="52" height="70" rx="18" transform="rotate(12 66.0 39.0)" fill="#E31352"/></g></g></g>
+<g clip-path="url(#glass)"><use xlink:href="#behind" filter="url(#frost)"/></g>
+<rect x="8" y="16" width="62" height="80" rx="20" fill="rgba(255,116,159,.35)" stroke="url(#edge)" stroke-width="1.5"/>
+<g filter="url(#lift)"><path d="M24 56H60" stroke-width="7" stroke="url(#white)" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M48 42L62 56L48 70" stroke-width="7" stroke="url(#white)" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+</svg>

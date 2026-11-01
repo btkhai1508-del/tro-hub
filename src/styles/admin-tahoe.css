@@ -145,3 +145,13 @@
   .admin-declaration-table tbody td, .admin-declaration-table tfoot td { display: table-cell; padding: 8px; border: 1px solid #262626; }
   .admin-declaration-table input { min-height: 0; font-size: 12px; text-align: inherit; }
 }
+
+/* Phone admin: nothing under 13px, so tables and captions stay readable at arm's length. */
+@media screen and (max-width: 767px) {
+  .admin-portal-root :is(.text-\[9px\], .text-\[10px\], .text-\[11px\], .apple-caption, .apple-caption1, .apple-caption2, .apple-footnote, .apple-subheadline) { font-size: 13px; line-height: 18px; }
+  .admin-portal-root :is(.text-xs, .apple-callout, .type-label, .type-caption) { font-size: 14px; line-height: 20px; }
+  .admin-portal-root .text-sm { font-size: 15px; line-height: 21px; }
+  .admin-portal-root .admin-role-badge { font-size: 11px; line-height: 16px; }
+  .admin-portal-root .admin-declaration-table input { font-size: 14px; }
+  .admin-portal-root .kit-admin-dock-item > span:last-child { font-size: 12px; }
+}

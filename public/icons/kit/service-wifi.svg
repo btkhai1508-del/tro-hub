@@ -1,1 +1,16 @@
-<svg width="64" height="64" viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-[0_6px_14px_rgba(2,132,199,0.22)]"><defs><linearGradient id="_R_0_-fg_wifi_bg" x1="40" y1="40" x2="140" y2="140" gradientUnits="userSpaceOnUse"><stop stop-color="#38BDF8"></stop><stop offset="100%" stop-color="#0284C7"></stop></linearGradient></defs><circle cx="92" cy="132" r="10" fill="url(#_R_0_-fg_wifi_bg)" stroke="white" stroke-width="1.5"></circle><path d="M68 112C81 99 103 99 116 112" stroke="#38BDF8" stroke-width="8" stroke-linecap="round"></path><path d="M52 94C74 72 110 72 132 94" stroke="#0284C7" stroke-width="8" stroke-linecap="round"></path><path d="M36 76C67 45 117 45 148 76" stroke="url(#_R_0_-fg_wifi_bg)" stroke-width="8" stroke-linecap="round"></path><path d="M40 76C70 48 114 48 144 76" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.8"></path></svg>
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<linearGradient id="back" x1="90" y1="5" x2="20" y2="80" gradientUnits="userSpaceOnUse"><stop stop-color="#39AFFD"/><stop offset="1" stop-color="#477FFF"/></linearGradient>
+<linearGradient id="edge" x1="10" y1="20" x2="90" y2="95" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="white" x1="92" y1="50" x2="8" y2="53" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity=".55"/></linearGradient>
+<filter id="glow" x="-40" y="-40" width="180" height="180" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="8"/></filter>
+<filter id="frost" x="-60" y="-60" width="220" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="9"/></filter>
+<filter id="lift" x="-30" y="-30" width="170" height="170" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="rgb(39,133,230)" flood-opacity=".55"/></filter>
+<clipPath id="glass"><rect x="8" y="26" width="72" height="70" rx="24" /></clipPath>
+<clipPath id="backclip"><rect x="32" y="5" width="60" height="60" rx="20" transform="rotate(15 62.0 35.0)" /></clipPath>
+</defs>
+<g id="behind"><rect x="32" y="5" width="60" height="60" rx="20" transform="rotate(15 62.0 35.0)" fill="url(#back)"/><g clip-path="url(#backclip)"><g opacity=".5" filter="url(#glow)"><rect x="32" y="5" width="60" height="60" rx="20" transform="rotate(15 62.0 35.0)" fill="#0062FF"/></g></g></g>
+<g clip-path="url(#glass)"><use xlink:href="#behind" filter="url(#frost)"/></g>
+<rect x="8" y="26" width="72" height="70" rx="24" fill="rgba(62,160,254,.35)" stroke="url(#edge)" stroke-width="1.5"/>
+<g filter="url(#lift)"><path d="M23 54C34 43 54 43 65 54" stroke-width="6.500" stroke="url(#white)" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M32 65C38.500 59 49.500 59 56 65" stroke-width="6.500" stroke="url(#white)" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="44" cy="77" r="5" fill="url(#white)"/></g>
+</svg>
