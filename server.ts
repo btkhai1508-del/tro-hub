@@ -131,6 +131,29 @@ async function startServer() {
     }
   });
 
+  // The new password goes to column N of the signed-in user's own row.
+  app.post('/api/auth/change-password', requireAuth, async (req: AuthedRequest, res) => {
+    try {
+      const currentPassword = String(req.body?.currentPassword || '').trim();
+      const newPassword = String(req.body?.newPassword || '').trim();
+      if (newPassword.length < 6) {
+        return res.status(400).json({ success: false, error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+      }
+      const check = await authenticateUser(req.tenant!.phone, currentPassword);
+      if (!check.success || !check.user) {
+        return res.status(400).json({ success: false, error: 'Mật khẩu hiện tại không chính xác' });
+      }
+      // The landlord login is hardcoded and never reads column N.
+      if (normalizePhone(check.user.phone).endsWith('902371800')) {
+        return res.status(400).json({ success: false, error: 'Tài khoản chủ trọ dùng mật khẩu cố định, chưa đổi được ở đây.' });
+      }
+      await callAccountScript('update_password', { phone: check.user.phone, name: check.user.name, room: check.user.roomNumber, password: newPassword });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(502).json({ success: false, error: e.message });
+    }
+  });
+
   // =========================================================================
   // ZALO MINI APP LOGIN
   // Mini App sends: accessToken (zmp-sdk getAccessToken) + phoneToken (zmp-sdk getPhoneNumber)

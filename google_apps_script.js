@@ -76,6 +76,9 @@ function handleRequest(e) {
     if (action === "register_account") {
       return createJsonResponse(taoTaiKhoan_(ss, params));
     }
+    if (action === "update_password") {
+      return createJsonResponse(capNhatMatKhau_(ss, params));
+    }
     if (action === "update_account_status") {
       return createJsonResponse(capNhatTrangThaiTaiKhoan_(ss, params));
     }
@@ -669,6 +672,20 @@ function taoTaiKhoan_(ss, params) {
   range.setValues([[params.name || '', params.gender || '', phone, '', params.email || '', '', '', '', 'Xe máy', params.room || '', '', '', '', params.password || '', ngay, tinhTrang]]);
   dongBoCuDan_(ss, false, true);
   return { success: true, action: 'register_account', row: dong, joinedAt: ngay, status: tinhTrang };
+}
+
+/** Đổi mật khẩu: ghi vào cột N của đúng dòng người dùng. */
+function capNhatMatKhau_(ss, params) {
+  var sheet = ss.getSheetByName(TAB_CA_NHAN);
+  if (!sheet) return { success: false, action: 'update_password', error: 'Không tìm thấy tab ' + TAB_CA_NHAN };
+  var matKhau = String(params.password === undefined ? '' : params.password).trim();
+  if (!matKhau) return { success: false, action: 'update_password', error: 'Thiếu mật khẩu mới' };
+  var dong = timDongCuDan_(sheet.getDataRange().getValues(), params.phone, params.name, params.room);
+  if (dong === -1) return { success: false, action: 'update_password', error: 'Không tìm thấy tài khoản' };
+  var cell = sheet.getRange(dong + 1, 14);
+  cell.setNumberFormat('@');
+  cell.setValue(matKhau);
+  return { success: true, action: 'update_password' };
 }
 
 function capNhatTrangThaiTaiKhoan_(ss, params) {

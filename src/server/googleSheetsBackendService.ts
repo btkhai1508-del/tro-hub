@@ -1035,7 +1035,6 @@ export async function authenticateUser(
       verifiedPhone ||
       (matchedPassword && matchedPassword === cleanPassword) ||
       (!matchedPassword && (cleanPassword === '1' || cleanPassword === '180505')) ||
-      (cleanPassword === '1' && (matchedPassword.includes('1') || !matchedPassword)) ||
       (matchedPassword === '180505' && cleanPassword === '180505')
     );
 

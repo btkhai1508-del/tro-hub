@@ -634,12 +634,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const trimmedCur = currentPass.trim();
     const trimmedNew = newPass.trim();
 
-    if (trimmedCur !== currentPassword && currentPassword !== '1' && trimmedCur !== '1') {
-      return { success: false, error: 'Mật khẩu hiện tại không chính xác' };
-    }
-
     if (!trimmedNew || trimmedNew.length < 6) {
       return { success: false, error: 'Mật khẩu mới phải có ít nhất 6 ký tự' };
+    }
+
+    // Column N of the user's row holds the password, so the server checks and writes it.
+    try {
+      const res = await apiFetch('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: trimmedCur, newPassword: trimmedNew })
+      });
+      const data = await res.json().catch(() => null);
+      if (!data?.success) return { success: false, error: data?.error || 'Chưa cập nhật được mật khẩu. Vui lòng thử lại.' };
+    } catch {
+      return { success: false, error: 'Chưa cập nhật được mật khẩu. Vui lòng kiểm tra kết nối mạng.' };
     }
 
     storage.setItem('ecostay_current_password', trimmedNew);
