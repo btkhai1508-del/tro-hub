@@ -90,6 +90,8 @@ export interface BackendTenantDataResponse {
 }
 
 export type AuthErrorCode =
+  | 'AUTH_PENDING_APPROVAL'
+  | 'AUTH_REJECTED'
   | 'AUTH_INVALID_CREDENTIALS'
   | 'AUTH_NO_ROOM_FOUND'
   | 'AUTH_ROOM_NOT_IN_MONTHLY'
@@ -122,8 +124,9 @@ export const DEFAULT_SPREADSHEET_ID = '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNs
 export const DEFAULT_PROFILE_TAB = 'THÔNG TIN CÁ NHÂN';
 /** Column Q of the profile tab, optional: "Giới tính". */
 // Tab THÔNG TIN CÁ NHÂN: A Họ tên, B Giới tính, C SĐT, D CCCD, E Email, F Ngày sinh, G Địa chỉ,
-// H Biển số, I Loại xe, J Phòng, K-M Liên hệ khẩn, N Password, O Hợp đồng.
+// H Biển số, I Loại xe, J Phòng, K-M Liên hệ khẩn, N Password, O Ngày tham gia, P Tình trạng.
 const PROFILE_GENDER_COLUMN = 1;
+const PROFILE_STATUS_COLUMN = 15;
 export const DEFAULT_MONTHLY_TAB = '10/2026';
 export const DEFAULT_LOGS_TAB = 'Logs';
 
@@ -398,11 +401,7 @@ export function findUserRoom(phone: string, profileRows: string[][]): { roomNumb
     );
 
     if (isMatch) {
-      let rawRoom = String(row[9] || '').trim();
-      if (!rawRoom && row[14]) {
-        const hdMatch = String(row[14]).match(/HĐ-P?([A-Za-z0-9-]+)/i);
-        if (hdMatch) rawRoom = hdMatch[1];
-      }
+      const rawRoom = String(row[9] || '').trim();
       const cleanRoom = normalizeRoom(rawRoom);
       return { roomNumber: cleanRoom || rawRoom, userRow: row };
     }
@@ -873,7 +872,6 @@ export async function authenticateUser(
       const rowName = String(row[0] || '').trim();
       const rowCccd = String(row[3] || '').trim();
       const rowRoom = normalizeRoom(row[9]);
-      const rowContract = String(row[14] || '').trim();
 
       // Check Phone match
       const phones = phoneCell.match(/(?:0|\+?84)[0-9]{8,11}/g) || [];
@@ -892,8 +890,7 @@ export async function authenticateUser(
       // Check Room match (e.g. user entered "102" or "LVC101" or "G01")
       const isRoomMatch = Boolean(
         cleanRoomQuery && (
-          (rowRoom && matchRoom(rowRoom, cleanRoomQuery)) ||
-          (rowContract && rowContract.toUpperCase().includes(cleanRoomQuery.toUpperCase()))
+          (rowRoom && matchRoom(rowRoom, cleanRoomQuery))
         )
       );
 
@@ -939,13 +936,9 @@ export async function authenticateUser(
           matchedCccd = rowCccd;
         }
 
-        // Check Column J (row[9]) or Column O (row[14])
+        // Room comes from column J
         const roomTokens = String(row[9] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim().split(/\s+/).filter(Boolean);
         let r = (phoneIdx !== -1 && roomTokens[phoneIdx]) ? normalizeRoom(roomTokens[phoneIdx]) : rowRoom;
-        if (!r && rowContract) {
-          const hdMatch = rowContract.match(/HĐ-P?([A-Za-z0-9-]+)/i);
-          if (hdMatch) r = normalizeRoom(hdMatch[1]);
-        }
 
         // If Column J is empty (common for G01-G07 and LVC101-LVC204), resolve room from monthly rows
         if (!r && lookupRows && lookupRows.length > 0) {
@@ -993,7 +986,8 @@ export async function authenticateUser(
     }
 
     // Fallback 1: Dò tìm trong MONTHLY SHEET nếu chưa tìm thấy trong profileRows
-    if (!matchedUserRow && lookupRows && lookupRows.length > 0) {
+    // Only when the personal tab could not be read: a deleted account must not sign in from a month tab.
+    if (!matchedUserRow && profileRows.length === 0 && lookupRows && lookupRows.length > 0) {
       for (let mIdx = 0; mIdx < lookupRows.length; mIdx++) {
         const mRow = lookupRows[mIdx];
         const p1Phone = String(mRow[18] || '').replace(/\D/g, '');
@@ -1090,6 +1084,16 @@ export async function authenticateUser(
         success: false,
         errorCode: 'AUTH_INVALID_CREDENTIALS',
         error: 'Số điện thoại hoặc mật khẩu không chính xác.'
+      };
+    }
+
+    // Column P: an account waiting for approval or rejected cannot sign in.
+    const accountStatus = String(matchedUserRow[PROFILE_STATUS_COLUMN] || '').trim().toUpperCase();
+    if (accountStatus === 'CHỜ DUYỆT' || accountStatus === 'TỪ CHỐI') {
+      return {
+        success: false,
+        errorCode: accountStatus === 'TỪ CHỐI' ? 'AUTH_REJECTED' : 'AUTH_PENDING_APPROVAL',
+        error: accountStatus === 'TỪ CHỐI' ? 'Tài khoản này chưa được duyệt.' : 'Tài khoản của bạn đang chờ chủ trọ xét duyệt.'
       };
     }
 
@@ -1294,10 +1298,6 @@ export async function fetchFreshTenantDataFromSheet(params: {
           const roomCell = String(row[9] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim();
           const roomTokens = roomCell.split(/\s+/).filter(Boolean);
           userRoom = normalizeRoom(roomTokens[phoneIdx] || roomTokens[0] || '');
-          if (!userRoom && row[14]) {
-            const hdMatch = String(row[14]).match(/HĐ-P?([A-Za-z0-9-]+)/i);
-            if (hdMatch) userRoom = normalizeRoom(hdMatch[1]);
-          }
 
           const plateCell = String(row[7] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim();
           const plateTokens = plateCell.split(/\s+/).filter(Boolean);
@@ -1435,7 +1435,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
       emergencyRelation: userRow ? String(userRow[11] || '').trim() : '',
       emergencyPhone: userRow ? String(userRow[12] || '').trim() : '',
       password: userRow ? String(userRow[13] || '').trim() || '180505' : '180505',
-      contractUrl: userRow ? String(userRow[14] || '').trim() : '',
+      contractUrl: '',
       rentPrice: roomRowData ? parseSheetVNDAmount(roomRowData[9]) : 0,
       depositAmount: roomRowData ? parseSheetVNDAmount(roomRowData[14]) : 0,
       totalMonthlyAmount: roomRowData ? parseSheetVNDAmount(roomRowData[15]) : 0

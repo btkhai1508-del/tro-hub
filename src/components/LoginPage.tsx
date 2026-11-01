@@ -122,8 +122,8 @@ export function LoginPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      const res = registerResident({
+    setTimeout(async () => {
+      const res = await registerResident({
         name: regName,
         phone: regPhone,
         email: regEmail,

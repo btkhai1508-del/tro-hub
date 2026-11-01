@@ -59,6 +59,7 @@ import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleShee
 import { ModernLineGraph } from './ModernLineGraph';
 import { Background } from './Background';
 import { useSidebarLabels } from '../lib/useSidebarLabels';
+import { AccountDeleteDialog, AccountDeleteMode } from './AccountDeleteDialog';
 import {
   IconHome3D,
   IconWallet3D,
@@ -138,7 +139,7 @@ function AdminEmptyState({ filtered, title }: { filtered: boolean; title: string
 
 export function AdminPortal() {
   const navigate = useNavigate();
-  const { logoutUser, addNotification, registerResident, registeredAccounts, updateAccountStatus } = useApp();
+  const { logoutUser, addNotification, registerResident, registeredAccounts, updateAccountStatus, forgetRegisteredAccount } = useApp();
   const { mode, isDark, toggleTheme } = useTheme();
 
   // Active Menu
@@ -149,6 +150,10 @@ export function AdminPortal() {
   // Account Management (Quản lý tài khoản) state
   const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create'>('approval');
   const [viewingAccount, setViewingAccount] = useState<RegisteredAccount | null>(null);
+  const [sheetAccounts, setSheetAccounts] = useState<(RegisteredAccount & { isAdmin?: boolean })[]>([]);
+  const [accountSearch, setAccountSearch] = useState('');
+  const [accountDeletion, setAccountDeletion] = useState<{ account: RegisteredAccount; mode: AccountDeleteMode } | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [adminRegName, setAdminRegName] = useState('');
   const [adminRegPhone, setAdminRegPhone] = useState('');
   const [adminRegRoom, setAdminRegRoom] = useState('');
@@ -589,6 +594,84 @@ export function AdminPortal() {
       clearInterval(interval);
     };
   }, [selectedMonth, activeMenu]);
+
+  const loadAccounts = () => {
+    apiFetch('/api/admin/accounts')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.success) setSheetAccounts(data.accounts);
+        else setAdminLoadError(data?.error || 'Chưa tải được danh sách tài khoản.');
+      })
+      .catch(() => setAdminLoadError('Chưa tải được danh sách tài khoản.'));
+  };
+
+  useEffect(() => {
+    if (activeMenu === 'accountManagement') loadAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMenu]);
+
+  // The sheet is the source of truth, newest requests first; accounts only on this device follow it.
+  const allAccounts = useMemo(() => {
+    const digits = (phone: string) => phone.replace(/\D/g, '').slice(-9);
+    const known = new Set(sheetAccounts.map(acc => digits(acc.phone)));
+    const order = { pending: 0, rejected: 1, approved: 2 };
+    return [...sheetAccounts, ...registeredAccounts.filter(acc => !known.has(digits(acc.phone)))]
+      .sort((a, b) => order[a.status] - order[b.status]);
+  }, [sheetAccounts, registeredAccounts]);
+  const shownAccounts = useMemo(() => {
+    const query = accountSearch.trim().toLowerCase();
+    return query ? allAccounts.filter(acc => [acc.name, acc.phone, acc.roomNumber].some(value => String(value || '').toLowerCase().includes(query))) : allAccounts;
+  }, [allAccounts, accountSearch]);
+  const pendingAccountCount = allAccounts.filter(acc => acc.status === 'pending').length;
+
+  const setAccountStatus = async (account: RegisteredAccount, status: RegisteredAccount['status'], message: string) => {
+    updateAccountStatus(account.id, status);
+    setSheetAccounts(prev => prev.map(acc => (acc.id === account.id ? { ...acc, status } : acc)));
+    if (!account.id.startsWith('sheet-')) {
+      showPortalToast(message, 'success');
+      return;
+    }
+    try {
+      const res = await apiFetch('/api/admin/accounts/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: account.phone, name: account.name, room: account.roomNumber, status })
+      });
+      const data = await res.json();
+      if (!data?.success) throw new Error(data?.error);
+      showPortalToast(message, 'success');
+    } catch (err: any) {
+      showPortalToast(err?.message || 'Chưa cập nhật được trạng thái.', 'error');
+      loadAccounts();
+    }
+  };
+
+  const confirmAccountDeletion = async () => {
+    if (!accountDeletion) return;
+    const { account, mode } = accountDeletion;
+    setIsDeletingAccount(true);
+    try {
+      if (account.id.startsWith('sheet-')) {
+        const res = await apiFetch('/api/admin/accounts/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: account.phone, name: account.name, room: account.roomNumber, mode })
+        });
+        const data = await res.json();
+        if (!data?.success) throw new Error(data?.error);
+      }
+      if (mode === 'account') forgetRegisteredAccount(account.phone);
+      showPortalToast(mode === 'account' ? `Đã xoá tài khoản ${account.name}` : `Đã xoá ${account.name} khỏi phòng`, 'success');
+      setAccountDeletion(null);
+      setViewingAccount(null);
+      loadAccounts();
+      fetchRooms(selectedMonth, true);
+    } catch (err: any) {
+      showPortalToast(err?.message || 'Chưa xoá được. Vui lòng thử lại.', 'error');
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
 
   const loadPaymentGateStatus = (m: string) => {
     // If Admin clicked toggle within last 20 seconds, ignore background polling so UI doesn't flicker or flip back
@@ -3809,9 +3892,9 @@ export function AdminPortal() {
                   className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'approval' && "kit-segment-active")}
                 >
                   <span>Xét duyệt tài khoản</span>
-                  {registeredAccounts.filter(a => a.status === 'pending').length > 0 && (
+                  {pendingAccountCount > 0 && (
                     <span className="ml-1 inline-flex items-center justify-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold font-num text-amber-700 dark:text-amber-300">
-                      {registeredAccounts.filter(a => a.status === 'pending').length}
+                      {pendingAccountCount}
                     </span>
                   )}
                 </button>
@@ -3840,18 +3923,20 @@ export function AdminPortal() {
                       Bấm vào từng tài khoản để xem thông tin chi tiết trước khi xét duyệt. Sử dụng nút dấu tích (✓) để duyệt hoặc dấu (✕) để từ chối / hủy duyệt.
                     </p>
                     <span className="apple-callout font-medium kit-text-secondary font-num">
-                      Tổng cộng: {registeredAccounts.length} tài khoản
+                      Tổng cộng: {allAccounts.length} tài khoản
                     </span>
                   </div>
 
-                  {registeredAccounts.length === 0 ? (
+                  <input type="search" value={accountSearch} onChange={e => setAccountSearch(e.target.value)} placeholder="Tìm theo tên, số điện thoại hoặc phòng" aria-label="Tìm tài khoản" className="kit-field px-3" />
+
+                  {shownAccounts.length === 0 ? (
                     <div className="kit-data-surface rounded-2xl p-6 text-center">
                       <p className="apple-headline kit-text-primary">Chưa có yêu cầu tài khoản nào</p>
                       <p className="mt-1 apple-callout kit-text-secondary">Các tài khoản đăng ký mới sẽ hiển thị tại đây để bạn xét duyệt.</p>
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {registeredAccounts.map((acc) => {
+                      {shownAccounts.map((acc) => {
                         const isApproved = acc.status === 'approved';
                         const isRejected = acc.status === 'rejected';
                         return (
@@ -3897,7 +3982,7 @@ export function AdminPortal() {
                                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 apple-callout kit-text-secondary">
                                   <span className="font-num">SĐT: {acc.phone}</span>
                                   {acc.email && <span className="truncate">· {acc.email}</span>}
-                                  <span className="font-num">· Ngày ĐK: {acc.createdAt}</span>
+                                  <span className="font-num">· Ngày tham gia: {acc.createdAt || 'Chưa có'}</span>
                                 </div>
                               </div>
                             </div>
@@ -3908,8 +3993,7 @@ export function AdminPortal() {
                                 type="button"
                                 onClick={() => {
                                   playSound('success');
-                                  updateAccountStatus(acc.id, 'approved');
-                                  showPortalToast(`Đã duyệt tài khoản ${acc.name} (Phòng ${acc.roomNumber})`, 'success');
+                                  setAccountStatus(acc, 'approved', `Đã duyệt tài khoản ${acc.name} (Phòng ${acc.roomNumber})`);
                                 }}
                                 aria-label={`Duyệt tài khoản ${acc.name}`}
                                 title="Xét duyệt tài khoản"
@@ -3927,8 +4011,7 @@ export function AdminPortal() {
                                 type="button"
                                 onClick={() => {
                                   playSound('click');
-                                  updateAccountStatus(acc.id, 'rejected');
-                                  showPortalToast(`Đã đánh dấu chưa duyệt tài khoản ${acc.name}`, 'info');
+                                  setAccountStatus(acc, 'rejected', `Đã đánh dấu chưa duyệt tài khoản ${acc.name}`);
                                 }}
                                 aria-label={`Từ chối hoặc hủy duyệt tài khoản ${acc.name}`}
                                 title="Chưa xét duyệt / Từ chối"
@@ -3941,6 +4024,29 @@ export function AdminPortal() {
                               >
                                 <X size={18} className="stroke-[2.5]" />
                               </button>
+                              {!(acc as any).isAdmin && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAccountDeletion({ account: acc, mode: 'resident' })}
+                                    disabled={!acc.roomNumber}
+                                    aria-label={`Xoá người ở ${acc.name}`}
+                                    title="Xoá người ở khỏi phòng"
+                                    className="h-10 w-10 rounded-xl flex items-center justify-center border bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700 disabled:opacity-40 cursor-pointer"
+                                  >
+                                    <NavIcons.UserMinus size={18} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAccountDeletion({ account: acc, mode: 'account' })}
+                                    aria-label={`Xoá tài khoản ${acc.name}`}
+                                    title="Xoá tài khoản"
+                                    className="h-10 w-10 rounded-xl flex items-center justify-center border bg-white dark:bg-neutral-800 text-rose-600 dark:text-rose-400 border-neutral-200 dark:border-neutral-700 cursor-pointer"
+                                  >
+                                    <NavIcons.Trash2 size={18} />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -3954,7 +4060,7 @@ export function AdminPortal() {
               {accountSubTab === 'create' && (
                 <div className="max-w-xl">
                   <form
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                       e.preventDefault();
                       setAdminRegError('');
                       setAdminRegSuccess('');
@@ -3968,7 +4074,7 @@ export function AdminPortal() {
                         return;
                       }
 
-                      const res = registerResident({
+                      const res = await registerResident({
                         name: adminRegName,
                         phone: adminRegPhone,
                         email: adminRegEmail,
@@ -3987,6 +4093,7 @@ export function AdminPortal() {
                         setAdminRegEmail('');
                         setAdminRegPassword('');
                         setAdminRegConfirmPass('');
+                        loadAccounts();
                       } else {
                         playSound('alert');
                         setAdminRegError(res.error || 'Không thể tạo tài khoản');
@@ -4111,6 +4218,16 @@ export function AdminPortal() {
             </div>
 
             {/* Modal xem chi tiết thông tin tài khoản trước khi xét duyệt */}
+            {accountDeletion && (
+              <AccountDeleteDialog
+                name={accountDeletion.account.name}
+                room={accountDeletion.account.roomNumber}
+                mode={accountDeletion.mode}
+                busy={isDeletingAccount}
+                onCancel={() => setAccountDeletion(null)}
+                onConfirm={confirmAccountDeletion}
+              />
+            )}
             {viewingAccount && (
               <div
                 className="tahoe-dialog-overlay fixed inset-0 z-[70] flex items-center justify-center p-4 bg-neutral-950/30"

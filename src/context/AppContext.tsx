@@ -187,9 +187,10 @@ interface AppContextType {
   currentPassword: string;
   loginUser: (phone: string, pass: string) => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
   loginWithZalo: () => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
-  registerResident: (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }) => { success: boolean; pendingApproval?: boolean; message?: string; error?: string };
+  registerResident: (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }) => Promise<{ success: boolean; pendingApproval?: boolean; message?: string; error?: string }>;
   registeredAccounts: RegisteredAccount[];
   updateAccountStatus: (id: string, status: 'pending' | 'approved' | 'rejected') => void;
+  forgetRegisteredAccount: (phone: string) => void;
   updatePassword: (currentPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
   logoutUser: () => void;
   fetchPaymentStatus: (roomNumber?: string) => Promise<any>;
@@ -821,7 +822,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const registerResident = (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }): { success: boolean; pendingApproval?: boolean; message?: string; error?: string } => {
+  // The sheet decides, so this device forgets the account too once it is deleted there.
+  const forgetRegisteredAccount = useCallback((phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+    setRegisteredAccounts(prev => {
+      const next = prev.filter(acc => acc.phone.replace(/\D/g, '') !== digits);
+      storage.setItem('ecostay_registered_users', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const registerResident = async (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }): Promise<{ success: boolean; pendingApproval?: boolean; message?: string; error?: string }> => {
     const cleanPhone = data.phone.replace(/[\s.-]/g, '').trim();
     if (!data.name.trim() || !cleanPhone || !data.password.trim()) {
       return { success: false, error: 'Vui lòng điền đầy đủ họ tên, số điện thoại và mật khẩu' };
@@ -833,12 +844,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'Mật khẩu phải có ít nhất 6 ký tự' };
     }
 
-    const exists = registeredAccounts.some((u) => u.phone?.replace(/[\s.-]/g, '') === cleanPhone);
-    if (exists) {
-      return { success: false, error: 'Số điện thoại này đã được đăng ký trên hệ thống' };
+    const isAutoApproved = Boolean(data.autoApprove);
+    let joinedAt = '';
+    try {
+      const res = await apiFetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: data.name.trim(), phone: cleanPhone, email: data.email?.trim() || '', gender: data.gender || '', password: data.password.trim(), roomNumber: data.roomNumber.trim() })
+      });
+      const saved = await res.json().catch(() => null);
+      if (!saved?.success) return { success: false, error: saved?.error || 'Chưa tạo được tài khoản. Vui lòng thử lại.' };
+      joinedAt = saved.joinedAt || '';
+    } catch {
+      return { success: false, error: 'Chưa tạo được tài khoản. Vui lòng kiểm tra kết nối mạng.' };
     }
 
-    const isAutoApproved = Boolean(data.autoApprove);
     const newUser: RegisteredAccount = {
       id: `reg-${Date.now()}`,
       name: data.name.trim(),
@@ -848,7 +868,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       roomNumber: data.roomNumber.trim(),
       password: data.password.trim(),
       status: isAutoApproved ? 'approved' : 'pending',
-      createdAt: new Date().toLocaleDateString('vi-VN')
+      createdAt: joinedAt || new Date().toLocaleDateString('vi-VN')
     };
 
     const nextUsers = [newUser, ...registeredAccounts];
@@ -1192,6 +1212,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registerResident,
         registeredAccounts,
         updateAccountStatus,
+        forgetRegisteredAccount,
         logoutUser,
         fetchPaymentStatus,
         currentPassword,

@@ -9,6 +9,8 @@ import { fileURLToPath } from 'url';
 import { fetchFreshTenantDataFromSheet, DEFAULT_SPREADSHEET_ID, setInvoicePaidByWebhook, setInvoiceUnpaid, authenticateUser, normalizePhone } from './src/server/googleSheetsBackendService.js';
 import { getRoomColumnPStatus, setRoomColumnPStatus } from './src/server/columnPStatusStore.js';
 import { getLiveRoomPaymentStatus, fetchAllSheetColumnPStatuses } from './src/server/googleSheetColorService.js';
+import { listAccounts, callAccountScript } from './src/server/accountService';
+import { normalizeRoom } from './src/server/googleSheetsBackendService';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
 import { getZaloProfile, getZaloPhoneNumber } from './src/server/zaloService.js';
 import {
@@ -108,6 +110,24 @@ async function startServer() {
         success: false,
         error: error.message || 'Lỗi xử lý đăng nhập'
       });
+    }
+  });
+
+  // Registration writes the personal tab; column O gets the day the account was created.
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { name, phone, email, gender, password, roomNumber } = req.body || {};
+      const room = normalizeRoom(roomNumber);
+      if (!String(name || '').trim() || !normalizePhone(phone) || String(password || '').length < 6 || !room) {
+        return res.status(400).json({ success: false, error: 'Vui lòng điền đầy đủ họ tên, số điện thoại, phòng và mật khẩu từ 6 ký tự.' });
+      }
+      // Only a signed-in admin can create an account that is approved straight away.
+      const bearer = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      const approved = Boolean(bearer && verifyTenantToken(bearer)?.isAdmin);
+      const data = await callAccountScript('register_account', { name: String(name).trim(), phone: normalizePhone(phone), email: email || '', gender: gender || '', password, room, approved });
+      res.json({ success: true, approved, joinedAt: data.joinedAt });
+    } catch (e: any) {
+      res.status(502).json({ success: false, error: e.message });
     }
   });
 
@@ -901,6 +921,40 @@ async function startServer() {
     } catch (e: any) {
       console.error('[API /api/admin/sync] Error:', e);
       res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // =========================================================================
+  // ACCOUNT MANAGEMENT (personal tab)
+  // =========================================================================
+  app.get('/api/admin/accounts', requireAdmin, async (_req, res) => {
+    try {
+      res.json({ success: true, accounts: await listAccounts() });
+    } catch (e: any) {
+      res.status(502).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/admin/accounts/status', requireAdmin, async (req, res) => {
+    try {
+      const { phone, name, room, status } = req.body || {};
+      await callAccountScript('update_account_status', { phone, name, room, status });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(502).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post('/api/admin/accounts/delete', requireAdmin, async (req, res) => {
+    try {
+      const { phone, name, room, mode } = req.body || {};
+      if (mode !== 'account' && mode !== 'resident') {
+        return res.status(400).json({ success: false, error: 'Thao tác xoá không hợp lệ.' });
+      }
+      await callAccountScript(mode === 'account' ? 'delete_account' : 'delete_resident', { phone, name, room });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(502).json({ success: false, error: e.message });
     }
   });
 

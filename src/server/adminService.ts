@@ -420,7 +420,7 @@ export function computeParkingFee(mCell: any, soXe: number, unitPriceXe: number 
  * Get Room List for a given month
  */
 /** Excel stores dates as day counts from 1899-12-30. */
-function sheetDate(cell: any): string {
+export function sheetDate(cell: any): string {
   const num = cell?.num;
   if (typeof num === 'number' && num > 10000) {
     const d = new Date(Date.UTC(1899, 11, 30) + num * 86400000);
