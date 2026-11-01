@@ -990,9 +990,8 @@ function paidDateFromLogs(logsRows: string[][], room: string, month: string): st
 }
 
 /**
- * Payment Gate (Cổng thanh toán Q2)
- * Reads cell Q2 directly from the Google Sheet tab for that month.
- * Row 1 (Excel row 2), Column Q (index 16).
+ * Payment Gate (Cổng thanh toán)
+ * Stored per month on the server and toggled from the admin portal; the sheet is not involved.
  */
 export async function getPaymentGate(month: string = getCurrentMonthStr()): Promise<string> {
   const fileData = loadPaymentGateFile();
@@ -1017,32 +1016,6 @@ export function setPaymentGate(month: string = getCurrentMonthStr(), value: stri
     source: 'admin'
   };
   savePaymentGateFile(fileData);
-
-  // 2-Way Direct Sync to Google Sheet Cell Q2 via Google Apps Script Web App
-  try {
-    const qParams = new URLSearchParams({
-      action: 'update_q2',
-      month,
-      value: normVal,
-      status: normVal,
-      cell: 'Q2'
-    });
-    fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
-
-    fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: 'update_q2',
-        month,
-        value: normVal,
-        status: normVal,
-        cell: 'Q2'
-      })
-    }).catch(() => {});
-  } catch (e) {
-    console.warn('[setPaymentGate] Error pushing Q2 to Google Sheet:', e);
-  }
 
   return normVal;
 }

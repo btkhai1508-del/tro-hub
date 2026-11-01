@@ -1,11 +1,10 @@
 /**
  * GOOGLE APPS SCRIPT CHO NHÀ TRỌ PHONG LAN (TRO-HUB)
  * Tự động đồng bộ 2 chiều:
- * 1. Ô Q2: Đóng/Mở cổng thanh toán (START / STOP)
- * 2. Tab "Notifications": Lưu thông báo từ Admin (Cột A: Date, B: Phòng, C: Loại, D: Nội dung)
- * 3. Cập nhật thanh toán (Cột P: ĐÃ ĐÓNG / CHƯA ĐÓNG)
- * 4. Cập nhật chỉ số điện/nước
- * 5. Đồng bộ một chiều tab THÔNG TIN CÁ NHÂN sang các tab tháng (cột Q:AB)
+ * 1. Tab "Notifications": Lưu thông báo từ Admin (Cột A: Date, B: Phòng, C: Loại, D: Nội dung)
+ * 2. Cập nhật thanh toán (Cột P: ĐÃ ĐÓNG / CHƯA ĐÓNG)
+ * 3. Cập nhật chỉ số điện/nước
+ * 4. Đồng bộ một chiều tab THÔNG TIN CÁ NHÂN sang các tab tháng (cột Q:AB)
  */
 
 var DEFAULT_SPREADSHEET_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
@@ -82,54 +81,6 @@ function handleRequest(e) {
     }
     if (action === "delete_resident" || action === "delete_account") {
       return createJsonResponse(xoaCuDan_(ss, params, action));
-    }
-
-    // ----------------------------------------------------
-    // ACTION 1: CẬP NHẬT Ô Q2 (CỔNG THANH TOÁN START / STOP)
-    // ----------------------------------------------------
-    if (action === "update_q2" || action === "set_payment_gate") {
-      var month = String(params.month || "").trim();
-      var status = String(params.status || params.value || "STOP").toUpperCase().trim();
-      if (status !== "START" && status !== "STOP") {
-        status = "STOP";
-      }
-
-      var sheet = null;
-      // Tìm sheet theo tên tháng (10/2026, 102026, Tháng 10/2026, T10/2026...)
-      if (month) {
-        var rawDigits = month.replace(/\D/g, "");
-        sheet = ss.getSheetByName(month) || 
-                ss.getSheetByName(rawDigits) || 
-                ss.getSheetByName("Tháng " + month) || 
-                ss.getSheetByName("T" + month) || 
-                ss.getSheetByName("Tháng " + rawDigits);
-      }
-      if (!sheet) {
-        // Mặc định lấy sheet đầu tiên có chứa chữ số tháng
-        var sheets = ss.getSheets();
-        for (var i = 0; i < sheets.length; i++) {
-          var name = sheets[i].getName();
-          if (/^\d+$/.test(name) || name.indexOf("/") !== -1) {
-            sheet = sheets[i];
-            break;
-          }
-        }
-      }
-
-      if (sheet) {
-        // Ghi trực tiếp vào ô Q2 (Cột Q, dòng 2)
-        sheet.getRange("Q2").setValue(status);
-        SpreadsheetApp.flush(); // Áp dụng ngay lập tức trên Google Sheet
-        return createJsonResponse({
-          success: true,
-          message: "Đã cập nhật ô Q2 thành " + status + " trên sheet " + sheet.getName(),
-          sheet: sheet.getName(),
-          cell: "Q2",
-          value: status
-        });
-      } else {
-        return createJsonResponse({ success: false, error: "Không tìm thấy sheet cho tháng: " + month });
-      }
     }
 
     // ----------------------------------------------------
