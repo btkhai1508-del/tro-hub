@@ -35,3 +35,12 @@ export function isSameMonth(a?: string, b?: string): boolean {
   const [m2, y2] = parts(b);
   return Boolean(m1 && y1) && m1 === m2 && y1 === y2;
 }
+
+/** Types dd/mm/yyyy from digits alone. The slash after a part only appears while typing forward, so backspace still works. */
+export function formatDobInput(next: string, previous = ''): string {
+  const digits = next.replace(/\D/g, '').slice(0, 8);
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)].filter(Boolean);
+  const text = parts.join('/');
+  const growing = next.length > previous.length;
+  return growing && (digits.length === 2 || digits.length === 4) ? `${text}/` : text;
+}

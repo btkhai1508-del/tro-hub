@@ -5,20 +5,20 @@ import { IconProfile3D, IconHome3D, IconVehicle3D, IconSupport3D, IconSettings3D
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
-import { cn } from '../lib/utils';
+import { cn, formatDobInput } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
 import { CccdQrScanner } from './CccdQrScanner';
 
-function ProfileField({ label, value, onChange, type = 'text', placeholder }: { label: string; value?: string; onChange?: (value: string) => void; type?: string; placeholder?: string }) {
+function ProfileField({ label, value, onChange, type = 'text', placeholder, inputMode, maxLength }: { label: string; value?: string; onChange?: (value: string) => void; type?: string; placeholder?: string; inputMode?: 'numeric'; maxLength?: number }) {
   return (
     <div className="kit-profile-field min-w-0 border-b border-black/[0.06] py-3.5 dark:border-white/[0.08]">
       <dt className="apple-callout font-medium kit-text-secondary">{onChange ? <label>{label}</label> : label}</dt>
       <dd className={cn('mt-1.5 break-words apple-body', onChange || value?.trim() ? 'font-medium kit-text-primary' : 'kit-text-secondary')}>
         {onChange
-          ? <input type={type} value={value || ''} aria-label={label} placeholder={placeholder} onChange={event => onChange(event.target.value)} className="kit-field px-3" />
+          ? <input type={type} value={value || ''} aria-label={label} placeholder={placeholder} inputMode={inputMode} maxLength={maxLength} onChange={event => onChange(event.target.value)} className="kit-field px-3" />
           : value?.trim() || 'Chưa cập nhật'}
       </dd>
     </div>
@@ -39,6 +39,9 @@ function ProfileSection({ icon: Icon, title, summary, editing, children }: { ico
   );
 }
 
+// Residents only register motorbikes, so this is not editable.
+const VEHICLE_TYPE = 'Xe máy';
+
 const emptyDraft = { name: '', phone: '', email: '', cccd: '', dob: '', gender: '', address: '', avatar: '', vehicleType: '', plateNumber: '', emergencyName: '', emergencyPhone: '', emergencyRelation: '' };
 
 export function Profile() {
@@ -57,7 +60,7 @@ export function Profile() {
     setDraft({
       name: profile.name || '', phone: profile.phone || '', email: profile.email || '', cccd: profile.cccd || '',
       dob: profile.dob || '', gender: profile.gender || '', address: profile.address || '', avatar: profile.avatar || '',
-      vehicleType: profile.vehicle?.type || 'Xe máy', plateNumber: profile.vehicle?.plateNumber || '',
+      vehicleType: VEHICLE_TYPE, plateNumber: profile.vehicle?.plateNumber || '',
       emergencyName: profile.emergencyContact?.name || '', emergencyPhone: profile.emergencyContact?.phone || '', emergencyRelation: profile.emergencyContact?.relationship || '',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,7 +99,7 @@ export function Profile() {
   };
 
   const handleSave = async () => {
-    const clean = { ...draft, name: draft.name.trim(), phone: draft.phone.trim(), email: draft.email.trim(), cccd: draft.cccd.trim(), dob: draft.dob.trim(), address: draft.address.trim(), plateNumber: draft.plateNumber.trim(), vehicleType: draft.vehicleType.trim() || 'Xe máy', emergencyName: draft.emergencyName.trim(), emergencyPhone: draft.emergencyPhone.trim(), emergencyRelation: draft.emergencyRelation.trim() };
+    const clean = { ...draft, name: draft.name.trim(), phone: draft.phone.trim(), email: draft.email.trim(), cccd: draft.cccd.trim(), dob: draft.dob.trim(), address: draft.address.trim(), plateNumber: draft.plateNumber.trim(), vehicleType: VEHICLE_TYPE, emergencyName: draft.emergencyName.trim(), emergencyPhone: draft.emergencyPhone.trim(), emergencyRelation: draft.emergencyRelation.trim() };
     if (!clean.name) {
       setStatus({ ok: false, text: 'Vui lòng nhập họ và tên.' });
       return;
@@ -187,7 +190,7 @@ export function Profile() {
             <ProfileField label="Số điện thoại" value={profile.phone} {...editable('phone')} />
             <ProfileField label="Email" value={profile.email} {...editable('email')} />
             <ProfileField label="CCCD / Hộ chiếu" value={profile.cccd} {...editable('cccd')} />
-            <ProfileField label="Ngày sinh" value={profile.dob} {...editable('dob')} placeholder="dd/mm/yyyy" />
+            <ProfileField label="Ngày sinh" value={profile.dob} {...editable('dob')} {...(isEditing ? { onChange: (value: string) => setDraft(prev => ({ ...prev, dob: formatDobInput(value, prev.dob) })) } : {})} placeholder="dd/mm/yyyy" inputMode="numeric" maxLength={10} />
             {isEditing ? <div className="kit-profile-field min-w-0 border-b border-black/[0.06] py-3.5 dark:border-white/[0.08]"><dt className="apple-callout font-medium kit-text-secondary">Giới tính</dt><dd role="group" aria-label="Giới tính" className="kit-segmented mt-1.5 grid grid-cols-2 gap-1">{['Nam', 'Nữ'].map(option => <button key={option} type="button" aria-pressed={draft.gender === option} onClick={() => setDraft(prev => ({ ...prev, gender: option }))} className={cn('kit-segment', draft.gender === option && 'kit-segment-active')}>{option}</button>)}</dd></div> : <ProfileField label="Giới tính" value={profile.gender} />}
             <ProfileField label="Địa chỉ thường trú" value={profile.address} {...editable('address')} />
           </ProfileSection>
@@ -199,7 +202,7 @@ export function Profile() {
           </ProfileSection>
           <ProfileSection icon={IconVehicle3D} editing={isEditing} title="Phương tiện đã đăng ký" summary={profile.vehicle.plateNumber || 'Chưa cập nhật biển số xe'}>
             <ProfileField label="Biển số xe" value={profile.vehicle.plateNumber} {...editable('plateNumber')} />
-            <ProfileField label="Loại phương tiện" value={profile.vehicle.type} {...editable('vehicleType')} />
+            <ProfileField label="Loại phương tiện" value={VEHICLE_TYPE} />
           </ProfileSection>
           <ProfileSection icon={IconSupport3D} editing={isEditing} title="Liên hệ khẩn cấp" summary={profile.emergencyContact.name || 'Thêm người liên hệ khi cần'}>
             <ProfileField label="Họ và tên" value={profile.emergencyContact.name} {...editable('emergencyName')} />
