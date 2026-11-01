@@ -22,16 +22,13 @@ const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
   reader.readAsDataURL(blob);
 });
 
-/** Saves the generated file itself. Zalo's webview ignores `download`, so it goes through Zalo's own save, then the share sheet. */
+/**
+ * Saves the generated file itself, as one file. Zalo's webview ignores `download`. Its own save
+ * cannot name the file and may report failure after saving, so it is only used without a share sheet.
+ */
 export async function saveDocument(doc: BuiltDocument): Promise<DeliverResult> {
   const blob = await renderPdfBlob(doc);
   if (isZaloMiniApp) {
-    try {
-      await downloadFile({ fileBase64Data: await blobToDataUrl(new Blob([blob], { type: 'application/pdf' })) });
-      return { ok: true, message: 'Đã lưu tệp PDF về máy.' };
-    } catch (err) {
-      console.warn('[documents] Zalo downloadFile failed', err);
-    }
     const file = new File([blob], doc.fileName, { type: 'application/pdf' });
     if (navigator.canShare?.({ files: [file] })) {
       try {
@@ -40,6 +37,12 @@ export async function saveDocument(doc: BuiltDocument): Promise<DeliverResult> {
       } catch (err: any) {
         if (err?.name === 'AbortError') return { ok: false, message: '' };
       }
+    }
+    try {
+      await downloadFile({ fileBase64Data: await blobToDataUrl(new Blob([blob], { type: 'application/pdf' })) });
+      return { ok: true, message: 'Đã lưu tệp PDF về máy.' };
+    } catch (err) {
+      console.warn('[documents] Zalo downloadFile failed', err);
     }
     return { ok: false, message: 'Zalo chưa cho tải tệp trực tiếp. Vui lòng mở bằng trình duyệt trên điện thoại để tải PDF.' };
   }
