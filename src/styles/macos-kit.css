@@ -236,13 +236,13 @@
   --motion-standard: 180ms;
   --motion-slow: 220ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --reading-fill: rgba(255, 255, 255, 0.40);
-  --form-fill: rgba(255, 255, 255, 0.40);
+  --reading-fill: rgba(255, 255, 255, 0.60);
+  --form-fill: rgba(255, 255, 255, 0.60);
   --dialog-fill: rgba(255, 255, 255, 0.86);
 }
 .dark {
-  --reading-fill: rgba(24, 24, 28, 0.40);
-  --form-fill: rgba(28, 28, 32, 0.40);
+  --reading-fill: rgba(24, 24, 28, 0.60);
+  --form-fill: rgba(28, 28, 32, 0.60);
   --dialog-fill: rgba(22, 22, 26, 0.86);
 }
 .kit-data-surface, .kit-reading-surface, .kit-form-surface {
