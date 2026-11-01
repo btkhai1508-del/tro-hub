@@ -5,7 +5,7 @@ import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download,
 import { IconWallet3D } from './Icons3D';
 import { useApp, type Invoice } from '../context/AppContext';
 import { PaymentHistoryExportModal } from './PaymentHistoryExportModal';
-import { cn } from '../lib/utils';
+import { cn, getCurrentMonthStr, isSameMonth } from '../lib/utils';
 
 export function InvoicesAndPayment() {
   const navigate = useNavigate();
@@ -53,7 +53,7 @@ export function InvoicesAndPayment() {
             </p>
           </div>
           {unpaidInvoices.length > 0 && (
-            <button type="button" onClick={() => handlePay(unpaidInvoices[0].id)} className="primary-button relative inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control md:self-end">
+            <button type="button" onClick={() => handlePay((unpaidInvoices.find(i => isSameMonth(i.month, getCurrentMonthStr())) || unpaidInvoices[0]).id)} className="primary-button relative inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control md:self-end">
               {paymentGateStatus === 'STOP' ? <LockKeyhole size={17} /> : <CreditCard size={17} />}
               {paymentGateStatus === 'STOP' ? 'Xem thông tin thanh toán' : 'Thanh toán ngay'}<ArrowUpRight size={17} />
             </button>
@@ -69,7 +69,7 @@ export function InvoicesAndPayment() {
         {invoices.length === 0 ? (
           <div className="flex flex-col items-center px-6 py-12 text-center">
             <span className="glass-icon mb-5 h-16 w-16 text-neutral-700 icon-plate"><IconWallet3D size={64} /></span>
-            <h3 className="apple-title2 font-semibold kit-text-primary">Chưa có hóa đơn</h3>
+            <h3 className="apple-title2 font-semibold kit-text-primary">Chưa có dữ liệu</h3>
             <p className="mt-2 max-w-xs apple-body leading-relaxed kit-text-secondary">Khi có khoản phí mới, bạn có thể xem chi tiết và theo dõi thanh toán tại đây.</p>
           </div>
         ) : filteredInvoices.slice(0, visibleCount).map(invoice => (

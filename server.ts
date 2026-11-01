@@ -402,11 +402,13 @@ async function startServer() {
       const roomNumber = req.tenant!.room;
       const profileData = req.body || {};
 
-      // Push profile updates to Google Apps Script Web App for 2-way Google Sheet sync
+      // Push profile updates to the personal tab; Apps Script then syncs the month tabs.
+      let sheetSynced = false;
       try {
         const qParams = new URLSearchParams({
           action: 'update_profile',
           room: String(roomNumber),
+          currentPhone: String(req.tenant!.phone || ''),
           name: profileData.name || '',
           phone: profileData.phone || '',
           cccd: profileData.cccd || profileData.citizenId || '',
@@ -420,14 +422,19 @@ async function startServer() {
           emergencyPhone: profileData.emergencyPhone || (profileData.emergencyContact?.phone) || '',
           emergencyRelation: profileData.emergencyRelation || (profileData.emergencyContact?.relationship) || ''
         });
-        fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`).catch(() => {});
+        const scriptRes = await fetch(`${GOOGLE_APPS_SCRIPT_WEBAPP_URL}?${qParams.toString()}`, { signal: AbortSignal.timeout(20000) });
+        const scriptData: any = await scriptRes.json().catch(() => null);
+        // A script deployed before update_profile existed answers success without this action.
+        sheetSynced = Boolean(scriptData?.success && scriptData?.action === 'update_profile');
+        if (!sheetSynced) console.warn('[ProfileUpdate] Sheet not updated:', scriptData?.error || 'unknown action');
       } catch (err) {
         console.warn('[ProfileUpdate] Error calling Apps Script:', err);
       }
 
       res.json({
         success: true,
-        message: 'Đã lưu thông tin cá nhân và đồng bộ với Google Sheet thành công',
+        sheetSynced,
+        message: sheetSynced ? 'Đã lưu thông tin cá nhân và đồng bộ với Google Sheet thành công' : 'Đã lưu trên ứng dụng, chưa ghi được vào Google Sheet',
         profile: profileData
       });
     } catch (error: any) {
@@ -900,13 +907,13 @@ async function startServer() {
   // =========================================================================
   // NOTIFICATION SYSTEM (Admin Broadcast & Resident Notifications)
   // =========================================================================
-  app.post('/api/admin/notifications', (req, res) => {
+  app.post('/api/admin/notifications', async (req, res) => {
     try {
       const { title, desc, type, target, customRooms, scheduledAt, time, sender, id } = req.body || {};
       if (!title || !desc) {
         return res.status(400).json({ success: false, error: 'Thiếu tiêu đề hoặc nội dung thông báo' });
       }
-      const newNotif = addNotification({
+      const newNotif = await addNotification({
         id: id || `notif-${Date.now()}`,
         title: title.trim(),
         desc: desc.trim(),

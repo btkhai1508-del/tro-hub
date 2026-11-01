@@ -5,6 +5,7 @@
  * 2. Tab "Notifications": Lưu thông báo từ Admin (Cột A: Date, B: Phòng, C: Loại, D: Nội dung)
  * 3. Cập nhật thanh toán (Cột P: ĐÃ ĐÓNG / CHƯA ĐÓNG)
  * 4. Cập nhật chỉ số điện/nước
+ * 5. Đồng bộ một chiều tab THÔNG TIN CÁ NHÂN sang các tab tháng (cột Q:AB)
  */
 
 var DEFAULT_SPREADSHEET_ID = "1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A";
@@ -64,6 +65,13 @@ function handleRequest(e) {
     }
 
     // ----------------------------------------------------
+    // ACTION 0: APP LƯU HỒ SƠ CƯ DÂN VÀO TAB THÔNG TIN CÁ NHÂN
+    // ----------------------------------------------------
+    if (action === "update_profile") {
+      return createJsonResponse(capNhatHoSoCuDan_(ss, params));
+    }
+
+    // ----------------------------------------------------
     // ACTION 1: CẬP NHẬT Ô Q2 (CỔNG THANH TOÁN START / STOP)
     // ----------------------------------------------------
     if (action === "update_q2" || action === "set_payment_gate") {
@@ -118,6 +126,7 @@ function handleRequest(e) {
     // Cột B: Phòng
     // Cột C: Loại thông báo
     // Cột D: Nội dung
+    // Cột E: Giờ hẹn gửi
     // ----------------------------------------------------
     if (action === "add_notification") {
       var notifSheet = ss.getSheetByName("Notifications");
@@ -132,7 +141,8 @@ function handleRequest(e) {
       var typeVal = params.type || "Thông báo";
       var contentVal = params.content || "";
 
-      notifSheet.appendRow([dateVal, roomVal, typeVal, contentVal]);
+      // Cột E: giờ hẹn gửi (để trống là gửi ngay)
+      notifSheet.appendRow([dateVal, roomVal, typeVal, contentVal, params.scheduledAt || ""]);
       SpreadsheetApp.flush();
 
       return createJsonResponse({
@@ -408,19 +418,15 @@ function createJsonResponse(data) {
 // ----------------------------------------------------
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🏢 Nhà Trọ Phong Lan')
-    .addItem('➡️ 1. Tự Động Chuyển Cư Dân (Q-AB) Sang Tab THÔNG TIN CÁ NHÂN', 'chuyenCuDanSangTabCaNhan')
+    .addItem('👀 Xem trước đồng bộ cư dân', 'xemTruocDongBo')
+    .addItem('🔄 Đồng bộ tab cá nhân sang tháng hiện tại', 'dongBoThangHienTai')
+    .addItem('🗂 Đồng bộ tất cả các tháng', 'dongBoTatCaThang')
     .addSeparator()
-    .addItem('✅ 2. Đánh dấu ĐÃ THANH TOÁN (Màu xanh lá Cột P)', 'markRowPaid')
-    .addItem('⏳ 3. Đánh dấu CHƯA THANH TOÁN (Màu đỏ Cột P)', 'markRowUnpaid')
+    .addItem('✅ Đánh dấu ĐÃ THANH TOÁN (Màu xanh lá Cột P)', 'markRowPaid')
+    .addItem('⏳ Đánh dấu CHƯA THANH TOÁN (Màu đỏ Cột P)', 'markRowUnpaid')
     .addToUi();
 }
 
-/**
- * Tự động chuyển cư dân từ cột Q-AB sang tab THÔNG TIN CÁ NHÂN
- * Person 1: Q (Họ tên), R (CCCD), S (SĐT), T (Biển số xe)
- * Person 2: U (Họ tên), V (CCCD), W (SĐT), X (Biển số xe)
- * Person 3: Y (Họ tên), Z (CCCD), AA (SĐT), AB (Biển số xe)
- */
 function showAlertSafely(msg) {
   try {
     SpreadsheetApp.getUi().alert(msg);
@@ -441,104 +447,256 @@ function getSafeSpreadsheet() {
   return ss;
 }
 
-/**
- * Tự động chuyển cư dân từ cột Q-AB sang tab THÔNG TIN CÁ NHÂN
- * Person 1: Q (Họ tên), R (CCCD), S (SĐT), T (Biển số xe)
- * Person 2: U (Họ tên), V (CCCD), W (SĐT), X (Biển số xe)
- * Person 3: Y (Họ tên), Z (CCCD), AA (SĐT), AB (Biển số xe)
- */
-function chuyenCuDanSangTabCaNhan() {
-  var ss = getSafeSpreadsheet();
-  if (!ss) {
-    showAlertSafely('⚠️ Không thể kết nối tới Google Spreadsheet.');
-    return;
-  }
-  var activeSheet = ss.getActiveSheet();
-  var monthSheet = (activeSheet && (activeSheet.getName().indexOf('/') !== -1 || /^\d{6}$/.test(activeSheet.getName()))) 
-    ? activeSheet 
-    : (ss.getSheetByName('10/2026') || ss.getSheetByName('102026') || ss.getSheets()[0]);
-    
-  var profileSheet = ss.getSheetByName('THÔNG TIN CÁ NHÂN');
-  if (!profileSheet) {
-    profileSheet = ss.insertSheet('THÔNG TIN CÁ NHÂN');
-    profileSheet.getRange(1, 1, 1, 14).setValues([[
-      'Họ và Tên', 'SĐT', 'CCCD', 'Email Liên Hệ', 'Ngày sinh', 'Địa chỉ thường trú', 
-      'Biển số xe', 'Loại xe dòng xe', 'Phòng số', 'Người liên hệ', 'Mối quan hệ', 
-      'Số điện thoại khẩn', 'Password', 'Hợp đồng'
-    ]]);
-  }
+// ----------------------------------------------------
+// ĐỒNG BỘ TAB "THÔNG TIN CÁ NHÂN" -> CÁC TAB THÁNG
+//   Cá nhân A (Họ tên)    -> Tháng Q / U / Y
+//   Cá nhân C (SĐT)       -> Tháng S / W / AA
+//   Cá nhân D (CCCD)      -> Tháng R / V / Z
+//   Cá nhân H (Biển số)   -> Tháng T / X / AB
+//   Cá nhân J (Phòng)     -> Tháng A (tìm đúng dòng phòng)
+// Chỉ ghi vào Q:AB. Ô bên tab cá nhân để trống thì giữ nguyên giá trị đang có ở tab tháng.
+// Mặc định chỉ ghi tháng hiện tại trở đi để không đổi dữ liệu các tháng đã qua.
+// Tháng hiện tại chưa có tab thì không ghi gì.
+// ----------------------------------------------------
+var TAB_CA_NHAN = 'THÔNG TIN CÁ NHÂN';
+var COT_Q = 17;
 
-  var lastRow = Math.min(monthSheet.getLastRow(), 60);
-  if (lastRow < 7) {
-    showAlertSafely('⚠️ Không tìm thấy dữ liệu phòng từ dòng 7 trở đi!');
-    return;
-  }
-  
-  var data = monthSheet.getRange(7, 1, lastRow - 6, 28).getValues();
-  var out = [];
+// false: người có ở tab tháng mà không có ở tab cá nhân được giữ lại và ghi vào báo cáo.
+// Chỉ đổi thành true sau khi đã bổ sung đủ người vào tab cá nhân (người đã rời phòng sẽ bị xoá khỏi tab tháng).
+var XOA_NGUOI_KHONG_CO_O_TAB_CA_NHAN = false;
 
-  for (var i = 0; i < data.length; i++) {
-    var r = data[i];
-    var rawA = (r[0] || '').toString().trim();
-    var sheetRowNumber = i + 7;
-    var room = rawA;
+function chuanHoaPhong_(value) {
+  var room = String(value === null || value === undefined ? '' : value).trim().toUpperCase();
+  room = room.replace(/^(PHÒNG|P\.|P)\s*/, '').replace(/\.0+$/, '').replace(/[\s-]/g, '');
+  return /^(G\d+|LVC\d+|\d{3})$/.test(room) ? room : '';
+}
 
-    if (!room) {
-      if (sheetRowNumber >= 7 && sheetRowNumber <= 13) {
-        room = 'G0' + (sheetRowNumber - 6);
-      }
-    }
-    if (!room) continue;
-    if (!room.startsWith('P.') && !room.startsWith('P. ')) room = 'P. ' + room;
+function chuanHoaTen_(value) {
+  return String(value === null || value === undefined ? '' : value).trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
-    var contractCode = 'HĐ-' + room.replace(/[^0-9A-Za-z]/g, '');
+/** Ô tên chỉ chứa số (1, 2.0...) là số đếm người, không phải tên. */
+function laTenThat_(value) {
+  var text = String(value === null || value === undefined ? '' : value).trim();
+  return Boolean(text) && !/^[\d.,\s]+$/.test(text);
+}
 
-    // Cột Q-T (Index 16-19): Người 1
-    // Cột U-X (Index 20-23): Người 2
-    // Cột Y-AB (Index 24-27): Người 3
-    var tenants = [
-      { name: r[16], cccd: r[17], phone: r[18], plate: r[19] },
-      { name: r[20], cccd: r[21], phone: r[22], plate: r[23] },
-      { name: r[24], cccd: r[25], phone: r[26], plate: r[27] }
-    ];
+function chuanHoaCccd_(value) {
+  var text = String(value === null || value === undefined ? '' : value).trim();
+  var digits = text.replace(/\D/g, '');
+  return digits.length === 11 ? '0' + digits : (digits.length === 12 ? digits : text);
+}
 
-    tenants.forEach(function(t) {
-      var tName = (t.name || '').toString().trim();
-      var isNumeric = /^\d+(\.\d+)?$/.test(tName);
-      var isHeader = /^họ\s*(?:và\s*)?tên/i.test(tName);
-      if (tName && tName !== '1' && !isNumeric && !isHeader) {
-        var rawPhone = t.phone ? t.phone.toString().trim() : '';
-        var isPhoneNumericOnly = /^[0-9](\.0+)?$/.test(rawPhone);
-        var phone = (rawPhone && rawPhone !== '' && rawPhone !== '0' && !isPhoneNumericOnly) ? rawPhone : '1';
-        var pass = (phone !== '1' && phone.length >= 6) ? phone.slice(-6) : '180505';
-        
-        out.push([
-          tName,
-          phone,
-          t.cccd && !/^[0-9](\.0+)?$/.test(t.cccd.toString().trim()) ? t.cccd.toString().trim() : '',
-          '',
-          '',
-          '',
-          t.plate && !/^\d+(\.\d+)?$/.test(t.plate.toString().trim()) ? t.plate.toString().trim() : '',
-          'Xe máy',
-          room,
-          '',
-          '',
-          '',
-          pass,
-          contractCode
-        ]);
-      }
+function chuanHoaSdt_(value) {
+  var text = String(value === null || value === undefined ? '' : value).trim();
+  var digits = text.replace(/\D/g, '');
+  return digits.length === 9 ? '0' + digits : (digits.length === 10 ? digits : text);
+}
+
+/** "10/2026" hoặc "102026" -> số để so sánh thứ tự tháng; tab khác trả về 0. */
+function kyCuaTab_(name) {
+  var match = String(name).trim().match(/^(\d{1,2})\/?(\d{4})$/);
+  if (!match || Number(match[1]) < 1 || Number(match[1]) > 12) return 0;
+  return Number(match[2]) * 12 + Number(match[1]);
+}
+
+function layTabThang_(ss, tatCa) {
+  var tabs = ss.getSheets().filter(function (sheet) { return kyCuaTab_(sheet.getName()) > 0; });
+  if (tatCa) return tabs;
+  var now = new Date();
+  var hienTai = now.getFullYear() * 12 + now.getMonth() + 1;
+  return tabs.filter(function (sheet) { return kyCuaTab_(sheet.getName()) >= hienTai; });
+}
+
+/** Gom cư dân theo phòng, giữ thứ tự dòng; dòng Admin/TEST không phải phòng nên tự bị bỏ qua. */
+function docCuDanTheoPhong_(ss) {
+  var sheet = ss.getSheetByName(TAB_CA_NHAN);
+  if (!sheet) throw new Error('Không tìm thấy tab ' + TAB_CA_NHAN);
+  var rows = sheet.getDataRange().getValues();
+  var byRoom = {};
+  for (var i = 1; i < rows.length; i++) {
+    var room = chuanHoaPhong_(rows[i][9]);
+    if (!room || !laTenThat_(rows[i][0])) continue;
+    var key = chuanHoaTen_(rows[i][0]);
+    byRoom[room] = byRoom[room] || [];
+    if (byRoom[room].some(function (p) { return p.key === key; })) continue;
+    byRoom[room].push({
+      key: key,
+      name: String(rows[i][0]).trim(),
+      cccd: chuanHoaCccd_(rows[i][3]),
+      phone: chuanHoaSdt_(rows[i][2]),
+      plate: String(rows[i][7] === null || rows[i][7] === undefined ? '' : rows[i][7]).trim()
     });
   }
+  return byRoom;
+}
 
-  if (out.length > 0) {
-    profileSheet.getRange(2, 1, out.length, 14).setValues(out);
-    SpreadsheetApp.flush();
-    showAlertSafely('🎉 Thành công! Đã tự động cập nhật ' + out.length + ' cư dân từ tab \"' + monthSheet.getName() + '\" sang tab \"THÔNG TIN CÁ NHÂN\"!');
-  } else {
-    showAlertSafely('⚠️ Không tìm thấy thông tin cư dân ở cột Q - AB!');
+/** Thứ tự trong mỗi người ở Q:AB là Họ tên, CCCD, SĐT, Biển số. */
+function ghepPhong_(oCu, nguoi, phong, tenTab, baoCao) {
+  var o = oCu.map(function (v) { return v === null || v === undefined ? '' : v; });
+  var conLai = nguoi.slice();
+  var slots = [0, 1, 2].map(function (i) { return { start: i * 4, person: null, name: o[i * 4] }; });
+
+  slots.forEach(function (slot) {
+    if (!laTenThat_(slot.name)) return;
+    var key = chuanHoaTen_(slot.name);
+    var idx = -1;
+    conLai.forEach(function (p, j) { if (idx === -1 && p.key === key) idx = j; });
+    if (idx !== -1) {
+      slot.person = conLai.splice(idx, 1)[0];
+    } else if (XOA_NGUOI_KHONG_CO_O_TAB_CA_NHAN) {
+      [0, 1, 2, 3].forEach(function (k) { o[slot.start + k] = ''; });
+      baoCao.push(tenTab + ' - phòng ' + phong + ': đã xoá "' + slot.name + '" vì không có ở tab cá nhân.');
+    } else {
+      baoCao.push(tenTab + ' - phòng ' + phong + ': "' + slot.name + '" chưa có ở tab cá nhân, giữ nguyên.');
+    }
+  });
+
+  // Người mới vào ô trống, kể cả ô chỉ chứa số đếm.
+  slots.forEach(function (slot) {
+    if (slot.person || laTenThat_(o[slot.start]) || conLai.length === 0) return;
+    slot.person = conLai.shift();
+    [1, 2, 3].forEach(function (k) { o[slot.start + k] = ''; });
+  });
+  conLai.forEach(function (p) {
+    baoCao.push(tenTab + ' - phòng ' + phong + ': "' + p.name + '" chưa có chỗ vì phòng đã đủ 3 người.');
+  });
+
+  slots.forEach(function (slot) {
+    if (!slot.person) return;
+    o[slot.start] = slot.person.name;
+    if (slot.person.cccd) o[slot.start + 1] = slot.person.cccd;
+    if (slot.person.phone) o[slot.start + 2] = slot.person.phone;
+    if (slot.person.plate) o[slot.start + 3] = slot.person.plate;
+  });
+  return o;
+}
+
+function dongBoMotTab_(sheet, byRoom, ghiThat, ketQua) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 1) return;
+  var phong = sheet.getRange(1, 1, lastRow, 1).getValues();
+  var seen = {};
+  for (var i = 0; i < lastRow; i++) {
+    var room = chuanHoaPhong_(phong[i][0]);
+    if (!room) continue;
+    seen[room] = true;
+    if (!byRoom[room] && !XOA_NGUOI_KHONG_CO_O_TAB_CA_NHAN) continue;
+    var range = sheet.getRange(i + 1, COT_Q, 1, 12);
+    var cu = range.getValues()[0];
+    var moi = ghepPhong_(cu, byRoom[room] || [], room, sheet.getName(), ketQua.baoCao);
+    var doi = moi.some(function (v, k) { return String(v) !== String(cu[k] === null || cu[k] === undefined ? '' : cu[k]); });
+    if (!doi) continue;
+    ketQua.soDong += 1;
+    if (ghiThat) {
+      // Dạng văn bản để không mất số 0 đầu của CCCD và SĐT.
+      range.setNumberFormat('@');
+      range.setValues([moi.map(String)]);
+    }
   }
+  Object.keys(byRoom).forEach(function (room) {
+    if (!seen[room]) ketQua.baoCao.push(sheet.getName() + ': không có dòng cho phòng ' + room + '.');
+  });
+}
+
+function dongBoCuDan_(ss, tatCa, ghiThat) {
+  var ketQua = { soDong: 0, baoCao: [], tabs: [] };
+  var byRoom = docCuDanTheoPhong_(ss);
+  layTabThang_(ss, tatCa).forEach(function (sheet) {
+    ketQua.tabs.push(sheet.getName());
+    dongBoMotTab_(sheet, byRoom, ghiThat, ketQua);
+  });
+  return ketQua;
+}
+
+function hienKetQuaDongBo_(tieuDe, ketQua) {
+  var dong = [tieuDe, 'Tab: ' + (ketQua.tabs.join(', ') || 'chưa có tab tháng này, chưa có dữ liệu để đồng bộ'), 'Số phòng thay đổi: ' + ketQua.soDong];
+  if (ketQua.baoCao.length) dong.push('', 'Cần xem lại:', ketQua.baoCao.slice(0, 30).join('\n'));
+  Logger.log(dong.join('\n'));
+  showAlertSafely(dong.join('\n'));
+}
+
+function xemTruocDongBo() {
+  hienKetQuaDongBo_('XEM TRƯỚC (chưa ghi gì vào Sheet)', dongBoCuDan_(getSafeSpreadsheet(), false, false));
+}
+
+function dongBoThangHienTai() {
+  hienKetQuaDongBo_('ĐÃ ĐỒNG BỘ', dongBoCuDan_(getSafeSpreadsheet(), false, true));
+}
+
+/** Ghi đè cả các tháng đã qua, nên phải xác nhận trước khi chạy. */
+function dongBoTatCaThang() {
+  var ui = SpreadsheetApp.getUi();
+  var traLoi = ui.alert('Đồng bộ tất cả các tháng?', 'Thông tin cư dân của các tháng đã qua cũng sẽ bị thay đổi.', ui.ButtonSet.YES_NO);
+  if (traLoi !== ui.Button.YES) return;
+  hienKetQuaDongBo_('ĐÃ ĐỒNG BỘ TẤT CẢ', dongBoCuDan_(getSafeSpreadsheet(), true, true));
+}
+
+/** Sửa tên, SĐT, CCCD, biển số hoặc phòng ở tab cá nhân thì tab tháng tự cập nhật. */
+function onEdit(e) {
+  if (!e || !e.range || e.range.getSheet().getName() !== TAB_CA_NHAN || e.range.getLastRow() < 2) return;
+  var cotDau = e.range.getColumn();
+  var cotCuoi = e.range.getLastColumn();
+  var coCotLienQuan = [1, 3, 4, 8, 10].some(function (cot) { return cot >= cotDau && cot <= cotCuoi; });
+  if (!coCotLienQuan) return;
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    var ss = e.source;
+    var ketQua = dongBoCuDan_(ss, false, true);
+    if (ketQua.soDong) ss.toast('Đã cập nhật ' + ketQua.soDong + ' phòng ở tab ' + ketQua.tabs.join(', '), 'Đồng bộ cư dân', 5);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Gắn vào trigger "Khi có thay đổi": tạo, nhân bản hoặc đổi tên tab tháng thì tự đồng bộ. */
+function khiBangThayDoi(e) {
+  if (e && e.changeType === 'EDIT') return;
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    dongBoCuDan_(getSafeSpreadsheet(), false, true);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** App lưu hồ sơ vào tab cá nhân rồi đồng bộ sang tab tháng. Ô để trống không xoá dữ liệu cũ. */
+function capNhatHoSoCuDan_(ss, params) {
+  var sheet = ss.getSheetByName(TAB_CA_NHAN);
+  if (!sheet) return { success: false, action: 'update_profile', error: 'Không tìm thấy tab ' + TAB_CA_NHAN };
+  var rows = sheet.getDataRange().getValues();
+  var so = function (v) { return String(v === null || v === undefined ? '' : v).replace(/\D/g, '').slice(-9); };
+  var phoneCu = so(params.currentPhone || params.phone);
+  var phong = chuanHoaPhong_(params.room);
+  var ten = chuanHoaTen_(params.name);
+  var dong = -1;
+  var i;
+  // Tên và SĐT cùng khớp trước vì có SĐT dùng chung nhiều người; sau đó SĐT, cuối cùng là tên trong đúng phòng.
+  for (i = 1; i < rows.length && dong === -1; i++) {
+    if (phoneCu.length === 9 && so(rows[i][2]) === phoneCu && chuanHoaTen_(rows[i][0]) === ten) dong = i;
+  }
+  for (i = 1; i < rows.length && dong === -1; i++) {
+    if (phoneCu.length === 9 && so(rows[i][2]) === phoneCu) dong = i;
+  }
+  for (i = 1; i < rows.length && dong === -1; i++) {
+    if (ten && phong && chuanHoaTen_(rows[i][0]) === ten && chuanHoaPhong_(rows[i][9]) === phong) dong = i;
+  }
+  if (dong === -1) return { success: false, action: 'update_profile', error: 'Không tìm thấy cư dân trong tab cá nhân' };
+
+  var cot = { name: 1, gender: 2, phone: 3, cccd: 4, email: 5, dob: 6, address: 7, plateNumber: 8, vehicleType: 9, emergencyName: 11, emergencyRelation: 12, emergencyPhone: 13 };
+  Object.keys(cot).forEach(function (field) {
+    var value = String(params[field] === undefined ? '' : params[field]).trim();
+    if (!value) return;
+    if (field === 'phone') value = chuanHoaSdt_(value);
+    if (field === 'cccd') value = chuanHoaCccd_(value);
+    var cell = sheet.getRange(dong + 1, cot[field]);
+    cell.setNumberFormat('@');
+    cell.setValue(value);
+  });
+  var ketQua = dongBoCuDan_(ss, false, true);
+  return { success: true, action: 'update_profile', row: dong + 1, roomsChanged: ketQua.soDong };
 }
 
 function markRowPaid() {

@@ -299,18 +299,18 @@ export async function fetchResidentProfileFromSheet(
   }
 
   const name = String(row[0] || '').trim();
-  const phone = String(row[1] || '').trim();
-  const cccd = String(row[2] || '').trim();
-  const email = String(row[3] || '').trim();
-  const dob = String(row[4] || '').trim();
-  const address = String(row[5] || '').trim();
-  const plateNumber = String(row[6] || '').trim();
-  const vehicleType = String(row[7] || '').trim();
-  const roomNumber = String(row[8] || '').trim();
-  const emergencyName = String(row[9] || '').trim();
-  const emergencyRelationship = String(row[10] || '').trim();
-  const emergencyPhone = String(row[11] || '').trim();
-  const password = String(row[12] || '').trim();
+  const phone = String(row[2] || '').trim();
+  const cccd = String(row[3] || '').trim();
+  const email = String(row[4] || '').trim();
+  const dob = String(row[5] || '').trim();
+  const address = String(row[6] || '').trim();
+  const plateNumber = String(row[7] || '').trim();
+  const vehicleType = String(row[8] || '').trim();
+  const roomNumber = String(row[9] || '').trim();
+  const emergencyName = String(row[10] || '').trim();
+  const emergencyRelationship = String(row[11] || '').trim();
+  const emergencyPhone = String(row[12] || '').trim();
+  const password = String(row[13] || '').trim();
 
   return {
     name: name || 'Cư dân Nhà Trọ Phong Lan',
@@ -444,7 +444,7 @@ export interface SheetRoomInfo {
 /**
  * Reads all residents by synchronizing both THÔNG TIN CÁ NHÂN and monthly tab 10/2026
  * Columns in THÔNG TIN CÁ NHÂN (A-M):
- * A: Họ và Tên, B: SĐT, C: CCCD, D: Email, E: Ngày sinh, F: Địa chỉ thường trú,
+ * A: Họ và Tên, B: Giới tính, C: SĐT, D: CCCD, E: Email, F: Ngày sinh, G: Địa chỉ thường trú,
  * G: Biển số xe, H: Loại xe, I: Phòng số, J: Người liên hệ, K: Mối quan hệ, L: SĐT khẩn, M: Password
  *
  * Columns in 10/2026 (A-AD):
@@ -517,23 +517,23 @@ export async function fetchAllResidentsFromSheet(
   // Populate from profile tab
   profileRows.forEach((row, idx) => {
     const name = String(row[0] || '').trim();
-    const phone = String(row[1] || '').trim();
+    const phone = String(row[2] || '').trim();
     if (name || phone) {
       residents.push({
         name,
         phone: phone || '1',
-        cccd: String(row[2] || '').trim(),
-        email: String(row[3] || '').trim(),
-        dob: String(row[4] || '').trim(),
-        address: String(row[5] || '').trim(),
-        plateNumber: String(row[6] || '').trim(),
-        vehicleType: String(row[7] || '').trim() || 'Xe máy',
-        roomNumber: String(row[8] || '').trim(),
-        emergencyName: String(row[9] || '').trim(),
-        emergencyRelation: String(row[10] || '').trim(),
-        emergencyPhone: String(row[11] || '').trim(),
-        password: String(row[12] || '').trim() || '180505',
-        contractUrl: String(row[13] || '').trim(), // Column N: Hợp đồng thuê
+        cccd: String(row[3] || '').trim(),
+        email: String(row[4] || '').trim(),
+        dob: String(row[5] || '').trim(),
+        address: String(row[6] || '').trim(),
+        plateNumber: String(row[7] || '').trim(),
+        vehicleType: String(row[8] || '').trim() || 'Xe máy',
+        roomNumber: String(row[9] || '').trim(),
+        emergencyName: String(row[10] || '').trim(),
+        emergencyRelation: String(row[11] || '').trim(),
+        emergencyPhone: String(row[12] || '').trim(),
+        password: String(row[13] || '').trim() || '180505',
+        contractUrl: String(row[14] || '').trim(), // Column O: Hợp đồng thuê
         rowIndex: idx + 2
       });
     }
@@ -643,6 +643,7 @@ export async function updateResidentProfileToSheet(
   accessToken: string,
   profileData: {
     name: string;
+    gender?: string;
     phone: string;
     cccd?: string;
     email?: string;
@@ -683,7 +684,7 @@ export async function updateResidentProfileToSheet(
 
   // 2. Locate the resident row index by matching phone, room, CCCD or name
   let targetRow = 2;
-  const getRange = `${effectiveTab}!A2:I50`;
+  const getRange = `${effectiveTab}!A2:J100`;
   const getRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${cleanId}/values/${encodeURIComponent(getRange)}`,
     {
@@ -700,10 +701,10 @@ export async function updateResidentProfileToSheet(
     const cleanCccd = String(profileData.cccd || '').trim();
 
     const foundIdx = rows.findIndex((r) => {
-      const rPhone = String(r[1] || '').replace(/[\s.-]/g, '');
+      const rPhone = String(r[2] || '').replace(/[\s.-]/g, '');
       const rName = String(r[0] || '').trim().toLowerCase();
-      const rCccd = String(r[2] || '').trim();
-      const rRoom = String(r[8] || '').replace(/[^\d]/g, '');
+      const rCccd = String(r[3] || '').trim();
+      const rRoom = String(r[9] || '').replace(/[^\d]/g, '');
 
       return (
         (cleanPhone && rPhone === cleanPhone) ||
@@ -723,9 +724,10 @@ export async function updateResidentProfileToSheet(
   // Clean room representation (strip 'P.' prefix if needed or store clean)
   const cleanRoom = (profileData.roomNumber || '').replace(/^P\.\s*/i, '').trim();
 
-  // 3. Prepare 14 columns (A through N)
+  // 3. Prepare 15 columns (A through O)
   const rowValues = [
     profileData.name || '',
+    profileData.gender || '',
     profileData.phone || '',
     profileData.cccd || '',
     profileData.email || '',
@@ -741,7 +743,7 @@ export async function updateResidentProfileToSheet(
     profileData.contractUrl || (cleanRoom ? `HĐ-${cleanRoom.replace(/[^\w]/g, '')}` : '')
   ];
 
-  const updateRange = `${effectiveTab}!A${targetRow}:N${targetRow}`;
+  const updateRange = `${effectiveTab}!A${targetRow}:O${targetRow}`;
   const updateRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${cleanId}/values/${encodeURIComponent(updateRange)}?valueInputOption=USER_ENTERED`,
     {
@@ -764,103 +766,6 @@ export async function updateResidentProfileToSheet(
   }
 
   return { success: true, rowIndex: targetRow, sheetName: effectiveTab };
-}
-
-/**
- * Copies and synchronizes all occupants from monthly tab (Q to AB) into THÔNG TIN CÁ NHÂN (Columns A through N)
- */
-export async function syncAllOccupantsToProfileTabInGoogleSheet(
-  spreadsheetId: string,
-  accessToken: string,
-  monthlyTab: string = DEFAULT_MONTHLY_TAB,
-  profileTab: string = DEFAULT_PROFILE_TAB
-): Promise<{ success: boolean; totalRows: number }> {
-  if (!spreadsheetId || !accessToken) {
-    throw new Error('Cần cấp quyền truy cập Google để chỉnh sửa Google Sheet trực tiếp.');
-  }
-
-  // 1. Fetch monthly tab data
-  const range = `${monthlyTab}!A6:AB50`;
-  const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  if (!res.ok) {
-    throw new Error(`Không thể đọc dữ liệu từ tab ${monthlyTab}`);
-  }
-
-  const data = await res.json();
-  const rows: string[][] = data.values || [];
-
-  const rowsToWrite: string[][] = [];
-
-  rows.forEach((r, idx) => {
-    let room = r[0] ? r[0].trim() : '';
-    if (!room) {
-      if (idx < 7) room = `G0${idx + 1}`;
-      else room = `40${idx - 35}`;
-    }
-    const cleanRoom = room.startsWith('P.') ? room : `P. ${room}`;
-
-    const tenants = [
-      { name: String(r[16] || '').trim(), cccd: String(r[17] || '').trim(), phone: String(r[18] || '').trim(), plateNumber: String(r[19] || '').trim() },
-      { name: String(r[20] || '').trim(), cccd: String(r[21] || '').trim(), phone: String(r[22] || '').trim(), plateNumber: String(r[23] || '').trim() },
-      { name: String(r[24] || '').trim(), cccd: String(r[25] || '').trim(), phone: String(r[26] || '').trim(), plateNumber: String(r[27] || '').trim() }
-    ];
-
-    tenants.forEach(t => {
-      if (t.name && t.name !== '1') {
-        const effPhone = t.phone || '1';
-        const password = effPhone !== '1' ? effPhone.slice(-6) : '180505';
-        rowsToWrite.push([
-          t.name,               // A: Họ và Tên
-          effPhone,             // B: SĐT
-          t.cccd || '',         // C: CCCD
-          '',                   // D: Email Liên Hệ
-          '',                   // E: Ngày sinh
-          '',                   // F: Địa chỉ thường trú
-          t.plateNumber || '',  // G: Biển số xe
-          'Xe máy',             // H: Loại xe dòng xe
-          cleanRoom,            // I: Phòng số
-          '',                   // J: Người liên hệ
-          '',                   // K: Mối quan hệ
-          '',                   // L: Số điện thoại khẩn
-          password,             // M: Password
-          `HĐ-${cleanRoom.replace(/[^\w]/g, '')}` // N: Hợp đồng thuê
-        ]);
-      }
-    });
-  });
-
-  if (rowsToWrite.length === 0) {
-    return { success: true, totalRows: 0 };
-  }
-
-  // 2. Write to THÔNG TIN CÁ NHÂN starting at row 2
-  const writeRange = `${profileTab}!A2:N${rowsToWrite.length + 1}`;
-  const writeRes = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(writeRange)}?valueInputOption=USER_ENTERED`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        range: writeRange,
-        majorDimension: 'ROWS',
-        values: rowsToWrite
-      })
-    }
-  );
-
-  if (!writeRes.ok) {
-    const err = await writeRes.json().catch(() => ({}));
-    throw new Error(err?.error?.message || 'Không thể ghi vào tab THÔNG TIN CÁ NHÂN');
-  }
-
-  return { success: true, totalRows: rowsToWrite.length };
 }
 
 /**
@@ -900,14 +805,8 @@ export async function fetchMonthlyInvoicesFromSheet(
   const cleanTargetRoom = normalizeRoomId(effectiveRoom || '203');
   const cleanTargetPhone = (effectivePhone || '').replace(/[^\d]/g, '');
 
-  const candidateTabs = Array.from(new Set([
-    tabName,
-    '10/2026',
-    'T10/2026',
-    '10',
-    'Tháng 10',
-    'Tháng 10/2026'
-  ]));
+  // Only the requested month: a month with no tab has no data yet.
+  const candidateTabs = [tabName];
 
   // 1. Try Google Sheets API v4 if accessToken provided
   if (accessToken) {

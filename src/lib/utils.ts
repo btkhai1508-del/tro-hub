@@ -27,3 +27,11 @@ export const DEFAULT_ROOM_NUMBERS = [
   'LVC-101', 'LVC-102', 'LVC-103', 'LVC-104',
   'LVC-201', 'LVC-202', 'LVC-203', 'LVC-204'
 ];
+
+/** "9/2026" and "09/2026" name the same month. */
+export function isSameMonth(a?: string, b?: string): boolean {
+  const parts = (month?: string) => String(month || '').split('/').map(Number);
+  const [m1, y1] = parts(a);
+  const [m2, y2] = parts(b);
+  return Boolean(m1 && y1) && m1 === m2 && y1 === y2;
+}

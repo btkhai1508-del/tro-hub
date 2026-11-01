@@ -21,7 +21,6 @@ import {
   getSpreadsheetDetails,
   fetchResidentProfileFromSheet,
   fetchMonthlyInvoicesFromSheet,
-  syncAllOccupantsToProfileTabInGoogleSheet
 } from '../lib/googleSheetsService';
 
 export function GoogleSheetModal() {
@@ -46,14 +45,12 @@ export function GoogleSheetModal() {
 
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isBatchSyncing, setIsBatchSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({
     type: 'idle',
     message: ''
   });
   const [showSchemaGuide, setShowSchemaGuide] = useState(false);
   const [showSepayGuide, setShowSepayGuide] = useState(false);
-  const [copiedScript, setCopiedScript] = useState(false);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [isTestingSepay, setIsTestingSepay] = useState(false);
 
@@ -91,211 +88,7 @@ export function GoogleSheetModal() {
     }
   };
 
-  const appsScriptCode = `/* =====================================================
-   ECOSTAY - LVC GOOGLE APPS SCRIPT
-   - Chuyển cư dân từ Cột Q-AB sang THÔNG TIN CÁ NHÂN
-   - Tự động đổi màu cột P: Xanh lá (#d4edda) = Đã thanh toán, Vàng (#fff3cd) = Chờ xác nhận
-   - Tự động quét tab "Logs" để cập nhật Cột P sang Xanh lá
-===================================================== */
 
-var SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
-
-function onOpen() {
-  SpreadsheetApp.getUi().createMenu('🏢 Nhà Trọ Phong Lan')
-    .addItem('➡️ 1. Tự Động Chuyển Cư Dân (Q-AB) Sang Tab THÔNG TIN CÁ NHÂN', 'chuyenCuDanSangTabCaNhan')
-    .addSeparator()
-    .addItem('🔄 2. Tự Động Quét Tab Logs & Đổi Màu Cột P (Xanh lá)', 'tuDongDongBoTuLogs')
-    .addSeparator()
-    .addItem('✅ 3. Đánh dấu ĐÃ THANH TOÁN phòng đang chọn (Màu xanh lá)', 'markRowPaid')
-    .addItem('⏳ 4. Đánh dấu CHỜ XÁC NHẬN phòng đang chọn (Màu vàng)', 'markRowPending')
-    .addToUi();
-}
-
-function chuyenCuDanSangTabCaNhan() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Tự động tìm tab tháng hiện tại (vd: 10/2026 hoặc 102026 hoặc tab active)
-  var activeSheet = ss.getActiveSheet();
-  var monthSheet = (activeSheet.getName().includes('/') || activeSheet.getName().includes('10'))
-    ? activeSheet
-    : (ss.getSheetByName('10/2026') || ss.getSheetByName('102026') || ss.getSheets()[1] || ss.getSheets()[0]);
-
-  var profileSheet = ss.getSheetByName('THÔNG TIN CÁ NHÂN');
-  if (!profileSheet) {
-    profileSheet = ss.insertSheet('THÔNG TIN CÁ NHÂN');
-    profileSheet.getRange(1, 1, 1, 14).setValues([[
-      'Họ và Tên', 'SĐT', 'CCCD', 'Email Liên Hệ', 'Ngày sinh', 'Địa chỉ thường trú',
-      'Biển số xe', 'Loại xe dòng xe', 'Phòng số', 'Người liên hệ', 'Mối quan hệ',
-      'Số điện thoại khẩn', 'Password', 'Hợp đồng'
-    ]]);
-  }
-
-  // Đọc từ dòng 6 đến hết dữ liệu các phòng (G01..G07, 101..502, LVC101..LVC204)
-  var lastRow = Math.min(monthSheet.getLastRow(), 60);
-  if (lastRow < 6) {
-    SpreadsheetApp.getUi().alert('⚠️ Không tìm thấy dữ liệu phòng từ dòng 6 trở đi!');
-    return;
-  }
-
-  var data = monthSheet.getRange(6, 1, lastRow - 5, 28).getValues();
-  var out = [];
-
-  for (var i = 0; i < data.length; i++) {
-    var r = data[i];
-    var rawA = (r[0] || '').toString().trim();
-    var sheetRowNumber = i + 6;
-    var room = rawA;
-
-    // Dò phòng nếu Cột A để trống:
-    if (!room) {
-      if (sheetRowNumber >= 6 && sheetRowNumber <= 12) {
-        room = 'G0' + (sheetRowNumber - 5);
-      } else if (sheetRowNumber >= 42 && sheetRowNumber <= 45) {
-        room = 'LVC10' + (sheetRowNumber - 41);
-      } else if (sheetRowNumber >= 46 && sheetRowNumber <= 49) {
-        room = 'LVC20' + (sheetRowNumber - 45);
-      }
-    }
-
-    if (!room) continue;
-    if (!room.startsWith('P.') && !room.startsWith('P. ')) room = 'P. ' + room;
-
-    var contractCode = 'HĐ-' + room.replace(/[^0-9A-Za-z]/g, '');
-
-    // Cột Q-T (Index 16-19): Người 1
-    // Cột U-X (Index 20-23): Người 2
-    // Cột Y-AB (Index 24-27): Người 3
-    var tenants = [
-      { name: r[16], cccd: r[17], phone: r[18], plate: r[19] },
-      { name: r[20], cccd: r[21], phone: r[22], plate: r[23] },
-      { name: r[24], cccd: r[25], phone: r[26], plate: r[27] }
-    ];
-
-    tenants.forEach(function(t) {
-      var tName = (t.name || '').toString().trim();
-      var isNumeric = /^\d+(\.\d+)?$/.test(tName);
-      var isHeader = /^họ\s*(?:và\s*)?tên/i.test(tName);
-      if (tName && tName !== '1' && !isNumeric && !isHeader) {
-        var rawPhone = t.phone ? t.phone.toString().trim() : '';
-        var isPhoneNumericOnly = /^[0-9](\.0+)?$/.test(rawPhone);
-        var phone = (rawPhone && rawPhone !== '' && rawPhone !== '0' && !isPhoneNumericOnly) ? rawPhone : '1';
-        var pass = (phone !== '1' && phone.length >= 6) ? phone.slice(-6) : '180505';
-
-        out.push([
-          tName,
-          phone,
-          t.cccd && !/^[0-9](\.0+)?$/.test(t.cccd.toString().trim()) ? t.cccd.toString().trim() : '',
-          '',
-          '',
-          '',
-          t.plate && !/^\d+(\.\d+)?$/.test(t.plate.toString().trim()) ? t.plate.toString().trim() : '',
-          'Xe máy',
-          room,
-          '',
-          '',
-          '',
-          pass,
-          contractCode
-        ]);
-      }
-    });
-  }
-
-  if (out.length > 0) {
-    // Ghi trực tiếp vào tab THÔNG TIN CÁ NHÂN từ dòng 2
-    profileSheet.getRange(2, 1, out.length, 14).setValues(out);
-    SpreadsheetApp.getUi().alert('🎉 Thành công! Đã tự động bưng ' + out.length + ' cư dân từ tab \"' + monthSheet.getName() + '\" sang tab \"THÔNG TIN CÁ NHÂN\"!');
-  } else {
-    SpreadsheetApp.getUi().alert('⚠️ Không tìm thấy thông tin cư dân ở cột Q - AB!');
-  }
-}
-
-// Tự động quét tab Logs và đổi màu Cột P sang Xanh lá (#d4edda) cho các phòng đã chuyển khoản
-function tuDongDongBoTuLogs() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var logsSheet = ss.getSheetByName('Logs');
-  if (!logsSheet) {
-    SpreadsheetApp.getUi().alert('⚠️ Không tìm thấy tab \"Logs\"!');
-    return;
-  }
-
-  var activeSheet = ss.getActiveSheet();
-  var monthSheet = (activeSheet.getName().includes('/') || activeSheet.getName().includes('10'))
-    ? activeSheet
-    : (ss.getSheetByName('10/2026') || ss.getSheetByName('102026') || ss.getSheets()[1]);
-
-  var logsLastRow = logsSheet.getLastRow();
-  if (logsLastRow < 2) {
-    SpreadsheetApp.getUi().alert('Tab Logs chưa có giao dịch nào.');
-    return;
-  }
-
-  var logsData = logsSheet.getRange(2, 1, logsLastRow - 1, 10).getValues();
-  var monthLastRow = Math.min(monthSheet.getLastRow(), 60);
-  var monthData = monthSheet.getRange(6, 1, monthLastRow - 5, 28).getValues();
-
-  var updatedCount = 0;
-
-  for (var i = 0; i < monthData.length; i++) {
-    var r = monthData[i];
-    var sheetRowNumber = i + 6;
-    var rawA = (r[0] || '').toString().trim();
-    var room = rawA;
-
-    if (!room) {
-      if (sheetRowNumber >= 6 && sheetRowNumber <= 12) room = 'G0' + (sheetRowNumber - 5);
-      else if (sheetRowNumber >= 42 && sheetRowNumber <= 45) room = 'LVC10' + (sheetRowNumber - 41);
-      else if (sheetRowNumber >= 46 && sheetRowNumber <= 49) room = 'LVC20' + (sheetRowNumber - 45);
-    }
-    if (!room) continue;
-
-    var cleanRoom = room.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
-    var currentPColor = monthSheet.getRange(sheetRowNumber, 16).getBackground();
-
-    // Check if logs contain this room
-    for (var l = 0; l < logsData.length; l++) {
-      var logContent = (logsData[l][5] || '').toString().toUpperCase();
-      var logType = (logsData[l][6] || '').toString().toLowerCase();
-      if (logType && !logType.includes('vào') && !logType.includes('in')) continue;
-
-      if (logContent.includes(cleanRoom) || logContent.includes(cleanRoom + 'T10')) {
-        // Đổi màu Cột P sang Xanh lá
-        monthSheet.getRange(sheetRowNumber, 16).setBackground('#d4edda');
-        updatedCount++;
-        break;
-      }
-    }
-  }
-
-  SpreadsheetApp.getUi().alert('✅ Đã đồng bộ từ Logs: Cập nhật ' + updatedCount + ' phòng sang ĐÃ THANH TOÁN (Màu xanh lá)!');
-}
-
-// Cập nhật trạng thái thanh toán sang màu xanh lá (#d4edda)
-function markRowPaid() {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var row = sheet.getActiveCell().getRow();
-  if (row < 6) {
-    SpreadsheetApp.getUi().alert('Vui lòng chọn một ô trong hàng của phòng cần duyệt!');
-    return;
-  }
-  sheet.getRange(row, 16).setBackground('#d4edda'); // Cột P màu xanh lá
-  SpreadsheetApp.getUi().alert('✅ Đã đánh dấu ĐÃ THANH TOÁN (Màu xanh lá #d4edda) cho hàng ' + row);
-}
-
-// Cập nhật trạng thái chờ xác nhận sang màu vàng (#fff3cd)
-function markRowPending() {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var row = sheet.getActiveCell().getRow();
-  if (row < 5) return;
-  sheet.getRange(row, 16).setBackground('#fff3cd'); // Cột P màu vàng
-  SpreadsheetApp.getUi().alert('⏳ Đã đánh dấu CHỜ XÁC NHẬN (Màu vàng #fff3cd) cho hàng ' + row);
-}`;
-
-  const handleCopyScript = () => {
-    navigator.clipboard.writeText(appsScriptCode);
-    setCopiedScript(true);
-    setTimeout(() => setCopiedScript(false), 3000);
-  };
 
   useEffect(() => {
     const unsubscribe = initAuth(
@@ -333,48 +126,6 @@ function markRowPending() {
     setCurrentUser(null);
     setAvailableTabs([]);
     setSyncStatus({ type: 'idle', message: 'Đã đăng xuất Google' });
-  };
-
-  const handleBatchSyncToSheet = async () => {
-    const rawId = extractSpreadsheetId(sheetInput);
-    if (!rawId) {
-      setSyncStatus({ type: 'error', message: 'Vui lòng nhập Link hoặc ID Google Sheet hợp lệ' });
-      return;
-    }
-
-    try {
-      setIsBatchSyncing(true);
-      setSyncStatus({ type: 'idle', message: '' });
-      let token = await getAccessToken();
-
-      if (!token && !currentUser) {
-        setSyncStatus({
-          type: 'error',
-          message: 'Để ghi trực tiếp vào Google Sheet, bạn cần bấm nút "Đăng nhập với Google" ở trên để cấp quyền ghi cho tài khoản Google của bạn.'
-        });
-        setIsBatchSyncing(false);
-        return;
-      }
-
-      const res = await syncAllOccupantsToProfileTabInGoogleSheet(
-        rawId,
-        token || '',
-        selectedInvoiceTab || '10/2026',
-        selectedProfileTab || 'THÔNG TIN CÁ NHÂN'
-      );
-
-      setSyncStatus({
-        type: 'success',
-        message: `Đã tự động chuyển và điền thành công ${res.totalRows} cư dân (Cột Q - AB) sang tab "${selectedProfileTab}" trực tiếp trên Google Sheet!`
-      });
-    } catch (err: any) {
-      setSyncStatus({
-        type: 'error',
-        message: err.message || 'Không thể chỉnh sửa Google Sheet trực tiếp. Cần cấp quyền truy cập tài khoản Google.'
-      });
-    } finally {
-      setIsBatchSyncing(false);
-    }
   };
 
   const fetchTabs = async (tokenOverride?: string) => {
@@ -588,16 +339,6 @@ function markRowPending() {
               <label className="text-xs font-bold text-slate-700">Đường dẫn Google Sheet hoặc Spreadsheet ID</label>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleBatchSyncToSheet}
-                  disabled={isBatchSyncing || isSyncing}
-                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-                  title="Chuyển toàn bộ danh sách cư dân (Cột Q-AB) sang Tab Thông Tin Cá Nhân"
-                >
-                  <RefreshCw size={12} className={isBatchSyncing ? 'animate-spin text-emerald-600' : 'text-emerald-600'} />
-                  <span>{isBatchSyncing ? 'Đang chuyển...' : '⚡ Chuyển cư dân sang Tab Cá Nhân'}</span>
-                </button>
 
                 <button
                   type="button"
@@ -710,9 +451,9 @@ function markRowPending() {
               </div>
 
               <div className="space-y-1.5">
-                <div className="font-semibold text-slate-800">1. Tab thông tin cá nhân (12 cột):</div>
+                <div className="font-semibold text-slate-800">1. Tab thông tin cá nhân (13 cột):</div>
                 <p className="text-slate-600 font-mono text-[11px] bg-white p-2 rounded-lg border border-indigo-100">
-                  Họ và Tên, SĐT, CCCD, Email Liên Hệ, Ngày sinh, Địa chỉ thường trú, Biển soó xe, Loại xe dòng xe, Phòng số, Người liên hệ, Mối quan hệ, Số điện thoại khẩn
+                  Họ và Tên, Giới tính, SĐT, CCCD, Email Liên Hệ, Ngày sinh, Địa chỉ thường trú, Biển soó xe, Loại xe dòng xe, Phòng số, Người liên hệ, Mối quan hệ, Số điện thoại khẩn
                 </p>
               </div>
 
@@ -729,41 +470,6 @@ function markRowPending() {
                   <li><strong>Cột Y - AB:</strong> Họ tên, CCCD, SĐT, Biển số xe người 3</li>
                   <li><strong>Cột AC - AD:</strong> Tổng số người, Tổng số xe</li>
                 </ul>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-indigo-100">
-                <div className="font-semibold text-slate-800 flex items-center justify-between">
-                  <span>3. Tạo nút bấm trực tiếp bên trong Google Sheets (Kế bên nút Trợ giúp / Help):</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyScript}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1 transition-all cursor-pointer shadow-xs"
-                  >
-                    {copiedScript ? (
-                      <>
-                        <Check size={12} />
-                        <span>Đã chép mã!</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>📋 Sao chép mã Apps Script</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <p className="text-slate-600 text-[11px] leading-relaxed">
-                  <strong>Hướng dẫn 3 bước:</strong>
-                  <br />1. Trong Google Sheets, vào menu <strong>Tiện ích mở rộng (Extensions) $\rightarrow$ Apps Script</strong>.
-                  <br />2. Xóa code cũ, dán đoạn mã bên dưới và bấm nút <strong>Lưu (Save)</strong>.
-                  <br />3. Tải lại (F5) Google Sheets, bạn sẽ thấy xuất hiện thêm menu <strong>🏢 Nhà Trọ Phong Lan</strong> ngay bên cạnh nút Help để chuyển dữ liệu trực tiếp bất cứ lúc nào!
-                </p>
-
-                <div className="relative group">
-                  <pre className="text-[10px] font-mono bg-slate-900 text-emerald-300 p-3 rounded-xl overflow-x-auto leading-relaxed border border-slate-800 max-h-[160px] overflow-y-auto">
-{appsScriptCode}
-                  </pre>
-                </div>
               </div>
             </div>
           )}
@@ -865,21 +571,11 @@ function markRowPending() {
           </button>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={handleBatchSyncToSheet}
-              disabled={isBatchSyncing || isSyncing}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-              title="Bưng toàn bộ cư dân từ cột Q-AB của tab Tháng sang Tab Thông tin cá nhân trên Google Sheet"
-            >
-              <RefreshCw size={13} className={isBatchSyncing ? 'animate-spin' : ''} />
-              <span>{isBatchSyncing ? 'Đang ghi vào Sheet...' : 'Bưng cư dân sang Tab Cá Nhân (Ghi vào Sheet)'}</span>
-            </button>
 
             <button
               type="button"
               onClick={handleSyncData}
-              disabled={isSyncing || isBatchSyncing}
+              disabled={isSyncing}
               className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
             >
               <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />

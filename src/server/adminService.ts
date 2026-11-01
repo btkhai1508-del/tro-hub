@@ -219,6 +219,9 @@ export async function parseSheetXmlRows(zip: AdmZip, sheetName: string): Promise
   const sheetTag = (workbookXml.match(new RegExp(`<sheet[^>]*name="${sheetName.replace('/', '\\/')}"[^>]*>`, 'i')) || [])[0]
     || (workbookXml.match(new RegExp(`<sheet[^>]*name="[^"]*${cleanName}[^"]*"[^>]*>`, 'i')) || [])[0];
   
+  // A month with no tab has no data; never read the first sheet in its place.
+  if (!sheetTag) return { rows: [], sharedStrings } as any;
+
   if (sheetTag) {
     const rId = sheetTag.match(/r:id="([^"]+)"/)?.[1];
     if (rId) {
@@ -432,17 +435,26 @@ async function loadPersonalInfo(zip: AdmZip) {
   const digits = (v: any) => String(v ?? '').replace(/\D/g, '').replace(/^0+/, '');
   const name = (v: any) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
   const people = rows.filter((r: any) => r.rowNumber >= 2 && r.cells.A?.value).map((r: any) => ({
-    phone: digits(r.cells.B?.value),
+    phone: digits(r.cells.C?.value),
     name: name(r.cells.A?.value),
     info: {
-      email: String(r.cells.D?.value ?? '').trim(),
-      dob: sheetDate(r.cells.E),
-      address: String(r.cells.F?.value ?? '').trim(),
-      gender: String(r.cells.Q?.value ?? '').trim()
+      email: String(r.cells.E?.value ?? '').trim(),
+      dob: sheetDate(r.cells.F),
+      address: String(r.cells.G?.value ?? '').trim(),
+      gender: String(r.cells.B?.value ?? '').trim(),
+      cccd: sanitizeCitizenId(r.cells.D?.value),
+      phone: sanitizeTenantPhone(r.cells.C?.value),
+      plate: sanitizeVehiclePlate(r.cells.H?.value)
     }
   }));
-  return (personName: any, phone: any) =>
-    (people.find((p: any) => p.phone && p.phone === digits(phone)) || people.find((p: any) => p.name === name(personName)))?.info;
+  // Name and phone together first: some people in the tab share a phone number or a name.
+  return (personName: any, phone: any) => {
+    const wantedPhone = digits(phone);
+    const wantedName = name(personName);
+    return (people.find((p: any) => p.name === wantedName && p.phone && p.phone === wantedPhone)
+      || people.find((p: any) => p.name === wantedName)
+      || people.find((p: any) => p.phone && p.phone === wantedPhone))?.info;
+  };
 }
 
 export async function getRoomListByMonth(month: string = '10/2026') {
@@ -561,7 +573,13 @@ export async function getRoomListByMonth(month: string = '10/2026') {
       const lookup = await loadPersonalInfo(zip);
       rooms.forEach(room => {
         [1, 2, 3].forEach(i => {
-          if (room[`nguoi${i}`]) room[`info${i}`] = lookup(room[`nguoi${i}`], room[`sdt${i}`]);
+          if (!room[`nguoi${i}`]) return;
+          const info = lookup(room[`nguoi${i}`], room[`sdt${i}`]);
+          room[`info${i}`] = info;
+          // The personal tab is the source of truth; a month tab only fills what it leaves blank.
+          if (info?.cccd) room[`cccd${i}`] = info.cccd;
+          if (info?.phone) room[`sdt${i}`] = info.phone;
+          if (info?.plate) room[`xe${i}`] = info.plate;
         });
       });
     } catch {}

@@ -120,6 +120,7 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
       const rawRoom = String(row[1] || '').trim();
       const rawType = String(row[2] || '').trim().toLowerCase();
       const rawContent = String(row[3] || '').trim();
+      const rawSchedule = String(row[4] || '').trim();
 
       if (!rawDate && !rawRoom && !rawContent) continue;
 
@@ -187,6 +188,8 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
         type,
         target,
         customRooms,
+        // The admin picks a time in Vietnam; the server may run in another timezone.
+        scheduledAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(rawSchedule) ? `${rawSchedule}:00+07:00` : rawSchedule || null,
         sender: target === 'ALL' ? 'Ban Quản Lý Nhà Trọ Phong Lan' : `Ban Quản Lý (${rawRoom})`,
         unread: true
       });
@@ -212,64 +215,34 @@ export async function fetchNotificationsFromGoogleSheet(sheetId: string = DEFAUL
 }
 
 /**
- * Add a notification and sync directly to Google Sheet tab "Notifications"
+ * Admin -> tab "Notifications" -> resident. Sent only when the script confirms the row was written.
  */
-export function addNotification(item: Omit<ServerNotificationItem, 'createdAt'> & { createdAt?: string }): ServerNotificationItem {
-  // Prevent any laundry notifications from being added or synced to Google Sheet
+export async function addNotification(item: Omit<ServerNotificationItem, 'createdAt'> & { createdAt?: string }): Promise<ServerNotificationItem> {
   if (isLaundryNotification(item)) {
-    console.log('[notificationStore] 🚫 Suppressed laundry notification per user preference:', item.title);
-    return {
-      ...item,
-      createdAt: new Date().toISOString()
-    };
+    throw new Error('Thông báo về giặt sấy đang tạm tắt.');
   }
 
-  const notif: ServerNotificationItem = {
-    ...item,
-    createdAt: item.createdAt || new Date().toISOString()
-  };
+  const roomStr = item.target === 'ALL'
+    ? 'Tất cả'
+    : item.target === 'LVC'
+      ? 'LVC'
+      : item.target === 'TRUNG_KIM'
+        ? 'Trung Kim'
+        : (Array.isArray(item.customRooms) ? item.customRooms.join(', ') : '');
+  const typeStr = item.type === 'alert' ? 'Nhắc nhở' : item.type === 'invoice' ? 'Thanh toán' : 'Thông báo';
+  const fullContent = item.title ? `[${item.title}] ${item.desc}` : item.desc;
+  const dateStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
-  // 1. Add to local cache immediately
-  notificationsCache = [notif, ...notificationsCache.filter(n => n.id !== notif.id)];
-  saveNotificationsStore();
+  const res = await fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'add_notification', date: dateStr, room: roomStr, type: typeStr, content: fullContent, scheduledAt: item.scheduledAt || '' }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const data: any = await res.json().catch(() => null);
+  if (!data?.success) throw new Error(data?.error || 'Chưa ghi được vào tab Notifications.');
 
-  // 2. Push directly to Google Sheet tab "Notifications" via Google Apps Script Web App (Single POST request to prevent duplicate rows)
-  try {
-    const roomStr = item.target === 'ALL' 
-      ? 'Tất cả' 
-      : item.target === 'LVC' 
-        ? 'LVC' 
-        : item.target === 'TRUNG_KIM' 
-          ? 'Trung Kim' 
-          : (Array.isArray(item.customRooms) && item.customRooms.length > 0 ? item.customRooms.join(', ') : 'Tùy chọn');
-
-    const typeStr = item.type === 'alert' 
-      ? 'Nhắc nhở' 
-      : item.type === 'invoice' 
-        ? 'Thanh toán' 
-        : 'Thông báo';
-
-    const fullContent = item.title ? `[${item.title}] ${item.desc}` : item.desc;
-    const dateStr = item.time && item.time !== 'Vừa xong' ? item.time : new Date().toLocaleString('vi-VN');
-
-    fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: 'add_notification',
-        date: dateStr,
-        room: roomStr,
-        type: typeStr,
-        content: fullContent
-      })
-    }).catch((e) => {
-      console.warn('[notificationStore] Apps Script push error:', e);
-    });
-  } catch (e) {
-    console.warn('[notificationStore] Error pushing notification to Google Sheet:', e);
-  }
-
-  return notif;
+  return { ...item, createdAt: item.createdAt || new Date().toISOString() };
 }
 
 /**
@@ -277,17 +250,8 @@ export function addNotification(item: Omit<ServerNotificationItem, 'createdAt'> 
  * "chỉ lại phòng đó mới được đọc cái phòng tin nhắn cái phòng đó thôi, dựa vào Google Sheet"
  */
 export async function getNotificationsForResident(roomNumber?: string, building?: string): Promise<ServerNotificationItem[]> {
-  // Fetch live notifications directly from Google Sheet tab Notifications
-  const sheetNotifs = await fetchNotificationsFromGoogleSheet();
-  const localList = loadNotificationsStore();
-
-  // Merge unique items by content/desc, strictly excluding any laundry notifications
-  const combined = sheetNotifs.filter(n => !isLaundryNotification(n));
-  for (const loc of localList) {
-    if (isLaundryNotification(loc)) continue;
-    const isDup = combined.some(s => s.desc === loc.desc || (s.title === loc.title && s.desc === loc.desc));
-    if (!isDup) combined.push(loc);
-  }
+  // The Notifications tab is the only source: delete a row there and residents stop seeing it.
+  const combined = await fetchNotificationsFromGoogleSheet();
 
   const now = Date.now();
   const room = (roomNumber || '').trim().toUpperCase();

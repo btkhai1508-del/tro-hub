@@ -72,7 +72,7 @@ export function buildContract(m: Measurer, data: ContractData): BuiltDocument {
   y += LH;
   const indent = { ...para, firstX: 84.6 };
   y = w.flow([t('Bên A đồng ý cho bên B được thuê/mượn/ở nhờ nhà, phòng trọ số '), f(roomLabel(data.room), '................'), t(' tại căn nhà số nhà '), f(house.houseNumber, '.............'), t(' Đường '), f(house.street, '..................'), t(', Khu phố '), f(house.quarter, '.........'), t(', Phường '), f(house.ward, '….……………'), t(', TP. Hồ Chí Minh')], { ...indent, y });
-  y = w.flow([t('Thời hạn thuê (mượn, ở nhờ nhà): '), f(data.termMonths, '_ _'), t(' tháng kể từ ngày ký họp đồng')], { ...indent, y });
+  y = w.flow([t('Thời hạn thuê (mượn, ở nhờ nhà): '), f(data.termMonths, '.....'), t(' tháng kể từ ngày ký họp đồng')], { ...indent, y });
   y = w.flow([t('Bên B chỉ được quyền ở và đăng ký tạm trú vào địa chỉ nhà bên A, bên B không được tranh chấp nhà, yêu cầu gì về tài sản của bên A.')], { ...indent, y });
   y = w.flow([t('Hợp đồng này được lập thành 02 bản có giá trị như nhau mỗi bên giữ 01 bản./.')], { ...indent, y });
 
@@ -164,7 +164,7 @@ export function buildCt01(m: Measurer, data: Ct01Data): BuiltDocument {
   digitBoxes(w, m, 284.85, 20.6, 312.45, 338.85, declarant.cccd);
 
   const room = roomLabel(data.room);
-  const request = room ? `Đăng ký tạm trú tại ${house.name}, ${house.address}.` : '';
+  const request = room ? `Đăng ký tạm trú tại ${house.address}.` : '';
   const dotsLine = '.'.repeat(145);
   const firstDots = '.'.repeat(126);
   if (request) {
@@ -245,7 +245,7 @@ export function buildCt01(m: Measurer, data: Ct01Data): BuiltDocument {
     w.span(x + 16.9, x + 74, 772.3, 'định danh cá nhân:', 6.96);
     w.at(x + 75.5, 772.3, [f(id, '………………………', 7.92, 5.2)], 7.92);
   };
-  signer(189.1, house.landlord, house.landlordCccd);
+  signer(189.1);
   signer(329.8);
 
   return { title: 'Tờ khai thay đổi thông tin cư trú (CT01)', fileName: `To_khai_CT01_${safeName(room || 'mau')}.pdf`, pages: w.pages };

@@ -9,6 +9,8 @@ import { saveDocument } from '../lib/documents/output';
 import { residentInvoice } from '../lib/documents/fromProfile';
 import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Lock, PhoneCall, ShieldAlert } from './AppIcons';
 
+import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
+
 export function PaymentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -18,8 +20,8 @@ export function PaymentPage() {
 
   // Active targeted invoice
   const selectedInvoice = (invoiceIdParam
-    ? invoices.find(i => i.id === invoiceIdParam) || invoices[0]
-    : invoices.find(i => i.status === 'unpaid') || invoices[0]);
+    ? invoices.find(i => i.id === invoiceIdParam)
+    : invoices.find(i => isSameMonth(i.month, getCurrentMonthStr())));
   const hasInvoice = Boolean(selectedInvoice);
   const targetInvoice = selectedInvoice || {
     id: '', month: '', issueDate: '', dueDate: '', total: 0,

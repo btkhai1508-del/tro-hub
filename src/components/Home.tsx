@@ -4,13 +4,13 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowRight, CheckCircle2, ChevronRight, Clock3, CreditCard, LockKeyhole } from './AppIcons';
 import { IconHome3D, IconWallet3D, IconContract3D, IconVehicle3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
-import { cn } from '../lib/utils';
+import { cn, getCurrentMonthStr, isSameMonth } from '../lib/utils';
 
 export function Home() {
   const navigate = useNavigate();
   const [isRoomOpen, setIsRoomOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
   const { profile, invoices, openInvoiceDetailModal, openContractModal, paymentGateStatus } = useApp();
-  const currentInvoice = invoices[0];
+  const currentInvoice = invoices.find(invoice => isSameMonth(invoice.month, getCurrentMonthStr()));
   const isPaid = currentInvoice?.status === 'paid';
   const isPending = currentInvoice?.status === 'pending';
   const isUnpaid = currentInvoice?.status === 'unpaid';
@@ -37,7 +37,7 @@ export function Home() {
                 <span className="glass-icon h-11 w-11 rounded-[16px] text-neutral-700 dark:text-neutral-300 icon-plate"><IconWallet3D size={48} /></span>
                 <div>
                   <h2 className="kit-card-heading apple-title2 apple-strong">Chi phí phòng thuê</h2>
-                  <p className="mt-0.5 apple-callout kit-text-secondary">{currentInvoice ? `Kỳ tháng ${currentInvoice.month}` : 'Hóa đơn của bạn'}</p>
+                  <p className="mt-0.5 apple-callout kit-text-secondary">{currentInvoice ? `Kỳ tháng ${currentInvoice.month}` : 'Chưa có dữ liệu tháng này'}</p>
                 </div>
               </div>
               {currentInvoice && <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 apple-callout font-medium', isPaid ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : isPending ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-neutral-500/10 text-neutral-700 dark:text-neutral-300')}>
@@ -47,7 +47,7 @@ export function Home() {
             </div>
 
             <div className="py-5 sm:py-9">
-              <p className="apple-body kit-text-secondary mb-2">{!currentInvoice ? 'Chưa có hóa đơn' : isPaid ? 'Số tiền đã thanh toán' : isPending ? 'Số tiền chờ xác nhận' : 'Số tiền cần thanh toán'}</p>
+              <p className="apple-body kit-text-secondary mb-2">{!currentInvoice ? 'Chưa có dữ liệu' : isPaid ? 'Số tiền đã thanh toán' : isPending ? 'Số tiền chờ xác nhận' : 'Số tiền cần thanh toán'}</p>
               {currentInvoice ? <div className="flex items-baseline gap-2 text-neutral-950 dark:text-white">
                 <span data-stage="amount" className="apple-amount font-num">{currentInvoice.total.toLocaleString('vi-VN')}</span>
                 <span className="apple-title2 font-normal kit-text-secondary">₫</span>

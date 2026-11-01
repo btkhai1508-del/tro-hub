@@ -296,6 +296,7 @@
 .administrative-document, .administrative-document *:not(button, button *, .material-symbols-rounded) {
   font-family: "Times New Roman", Times, serif !important;
 }
+.invoice-paper button, .administrative-document button { font-family: var(--font-sans); }
 .invoice-paper { background: #fff; color: #171717; border: 1px solid #e5e5e5; box-shadow: 0 24px 80px -24px rgba(0, 0, 0, 0.4); }
 .invoice-paper .type-h2, .invoice-paper .type-h3 { color: #171717; }
 .invoice-paper .soft-button { background: #fff; color: #262626; border-color: #d4d4d4; }

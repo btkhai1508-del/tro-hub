@@ -6,7 +6,7 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { apiFetch, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
-import { getCurrentMonthStr } from '../lib/utils';
+import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
 
 export interface InvoiceDetailItem {
   name: string;
@@ -330,6 +330,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return {
           ...defaultVal,
           ...parsed,
+          // Always bill the month we are in; a saved tab from last month must not stick.
+          monthlyTab: defaultVal.monthlyTab,
           spreadsheetId: parsed.spreadsheetId || defaultVal.spreadsheetId,
           profileTab: parsed.profileTab || defaultVal.profileTab
         };
@@ -519,11 +521,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // Sync invoice in local state to ensure UI consistency after refresh
           setInvoices(prev => {
             if (!prev || prev.length === 0) return prev;
-            const inv = prev[0];
+            // This answer is about one month only; never paint it onto another month's bill.
+            const index = prev.findIndex(item => isSameMonth(item.month, month));
+            if (index === -1) return prev;
+            const inv = prev[index];
             const paymentMethod = data.paymentMethod === 'cash' ? ('cash' as const) : (data.paymentStatus === 'paid' ? ('qr' as const) : inv.paymentMethod);
             const paidAt = data.paymentStatus === 'paid' ? (inv.paidAt || data.label) : undefined;
             if (inv.status === data.paymentStatus && inv.paymentMethod === paymentMethod && inv.paidAt === paidAt) return prev;
-            return [{ ...inv, status: data.paymentStatus, paymentMethod, paidAt }, ...prev.slice(1)];
+            return prev.map((item, i) => (i === index ? { ...inv, status: data.paymentStatus, paymentMethod, paidAt } : item));
           });
           return data;
         }
@@ -537,6 +542,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Live Payment Gate State from server (Admin controls this gate directly)
   const [paymentGateStatus, setPaymentGateStatus] = useState<'START' | 'STOP'>('STOP');
+  const gateMonthRef = useRef('');
+  const gateCandidateRef = useRef<'START' | 'STOP' | null>(null);
 
   const fetchPaymentGateStatus = useCallback(async (targetMonth?: string): Promise<'START' | 'STOP'> => {
     const month = targetMonth || sheetConfig.monthlyTab || getCurrentMonthStr();
@@ -546,8 +553,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data && data.success && data.value) {
-          const val = data.value === 'START' ? 'START' : 'STOP';
-          setPaymentGateStatus(val);
+          const val: 'START' | 'STOP' = data.value === 'START' ? 'START' : 'STOP';
+          // After the first answer, require the same answer twice so one odd reply cannot flip the screen.
+          if (gateMonthRef.current !== month || val === gateCandidateRef.current) {
+            gateMonthRef.current = month;
+            setPaymentGateStatus(val);
+          }
+          gateCandidateRef.current = val;
           return val;
         }
       }
@@ -568,6 +580,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Continuous polling every 5 seconds for real-time sheet reflection
     const interval = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
+      // The app can stay open across midnight on the 1st: move on to the new month by itself.
+      const month = getCurrentMonthStr();
+      if (sheetConfigRef.current.monthlyTab !== month) updateSheetConfig({ monthlyTab: month });
       refreshTenantDataFromSheet(true);
       fetchPaymentStatus();
       fetchPaymentGateStatus();
@@ -595,7 +610,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [refreshTenantDataFromSheet, fetchPaymentStatus, fetchPaymentGateStatus]);
+  }, [refreshTenantDataFromSheet, fetchPaymentStatus, fetchPaymentGateStatus, updateSheetConfig]);
 
   const openGoogleSheetModal = () => {
     if (lastSyncedRef.current) updateSheetConfig({ lastSynced: lastSyncedRef.current });
@@ -951,8 +966,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsContractModalOpen(false);
   };
 
+  // Editing happens on the profile cards themselves, wherever the button was pressed.
   const openProfileEditModal = () => {
     setIsProfileEditModalOpen(true);
+    window.location.hash = '#/profile';
   };
 
   const closeProfileEditModal = () => {

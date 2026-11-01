@@ -7,7 +7,6 @@ import { TopHeader } from './TopHeader';
 import { NotificationModal } from './NotificationModal';
 import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { ContractModal } from './ContractModal';
-import { ProfileEditModal } from './ProfileEditModal';
 import { GoogleSheetModal } from './GoogleSheetModal';
 import { InteractiveOnboardingTutorial } from './InteractiveOnboardingTutorial';
 import { OfflineBanner } from './OfflineBanner';
@@ -33,9 +32,15 @@ function PageLoading() {
 }
 
 export function Layout() {
-  const { isSidebarCollapsed, profile } = useApp();
+  const { isSidebarCollapsed, profile, isProfileEditModalOpen, closeProfileEditModal } = useApp();
   const location = useLocation();
   const isPaymentPage = location.pathname.startsWith('/payment');
+
+  // Leaving the profile page ends editing, so background updates resume.
+  useEffect(() => {
+    if (isProfileEditModalOpen && location.pathname !== '/profile') closeProfileEditModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!profile.isAdmin) return warmResidentRoutes();
@@ -66,7 +71,6 @@ export function Layout() {
       <NotificationModal />
       <InvoiceDetailModal />
       <ContractModal />
-      <ProfileEditModal />
       <GoogleSheetModal />
       
       {/* Interactive Resident Onboarding Tour Guide */}

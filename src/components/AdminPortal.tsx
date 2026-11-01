@@ -32,7 +32,6 @@ import {
   Bell,
   Sun,
   Moon,
-  Send,
   Check,
   AlertTriangle,
   WashingMachine,
@@ -223,17 +222,7 @@ export function AdminPortal() {
       sender: `BQL Phong Lan (${targetDesc})`
     };
 
-    try {
-      addNotification(newNotifItem);
-      const savedNotifs = JSON.parse(storage.getItem('ecostay_notifications') || '[]');
-      const updated = [newNotifItem, ...savedNotifs];
-      storage.setItem('ecostay_notifications', JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Could not save notification to storage', e);
-    }
-
-    // Push to backend store for realtime distribution to residents
-
+    // Admin -> tab Notifications -> resident; success only once the row is in the sheet.
     apiFetch('/api/admin/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -243,18 +232,24 @@ export function AdminPortal() {
         customRooms: selectedCustomRooms,
         scheduledAt: notifScheduleMode === 'scheduled' ? notifScheduledDate : null
       })
-    }).catch(() => {});
-
-    setTimeout(() => {
-      setIsSendingNotif(false);
-      playSound('success');
-      setNotifSuccessMsg(`Đã tạo và gửi thông báo thành công đến: ${targetDesc}!`);
-    }, 350);
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!data?.success) throw new Error(data?.error);
+        playSound('success');
+        setNotifSuccessMsg(`Đã ghi vào tab Notifications và gửi đến: ${targetDesc}.`);
+      })
+      .catch(err => showPortalToast(err?.message || 'Chưa gửi được thông báo. Vui lòng thử lại.', 'error'))
+      .finally(() => setIsSendingNotif(false));
   };
 
   // Months
   const [months, setMonths] = useState<string[]>(DEFAULT_MONTH_TABS);
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthStr());
+  const selectedMonthRef = useRef(selectedMonth);
+  selectedMonthRef.current = selectedMonth;
+  const lastLoadedMonthRef = useRef(selectedMonth);
+  const [roomsLoadedMonth, setRoomsLoadedMonth] = useState('');
 
   // Sidebar Collapse
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -573,18 +568,26 @@ export function AdminPortal() {
 
   // Realtime Google Sheet sync for all rooms and payment gate status
   useEffect(() => {
-    loadTabContent(activeMenu, selectedMonth);
-    loadPaymentGateStatus(selectedMonth);
+    // Skimming through months loads only the one the admin stops on.
+    const monthChanged = lastLoadedMonthRef.current !== selectedMonth;
+    lastLoadedMonthRef.current = selectedMonth;
+    const loadTimer = window.setTimeout(() => {
+      loadTabContent(activeMenu, selectedMonth);
+      loadPaymentGateStatus(selectedMonth);
+    }, monthChanged ? 250 : 0);
 
     // Periodic auto-polling for Google Sheet updates (every 8 seconds)
     const interval = setInterval(() => {
       if (activeMenu === 'dashboard' || activeMenu === 'rooms' || activeMenu === 'billing') {
-        fetchRooms(selectedMonth);
+        fetchRooms(selectedMonth, true);
       }
       loadPaymentGateStatus(selectedMonth);
     }, 8000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(loadTimer);
+      clearInterval(interval);
+    };
   }, [selectedMonth, activeMenu]);
 
   const loadPaymentGateStatus = (m: string) => {
@@ -598,7 +601,7 @@ export function AdminPortal() {
         return res.json();
       })
       .then(data => {
-        if (Date.now() - lastGateToggleTimeRef.current < 20000) return;
+        if (m !== selectedMonthRef.current || Date.now() - lastGateToggleTimeRef.current < 20000) return;
         if (data.success && data.value) setPaymentGate(data.value);
       })
       .catch(() => {});
@@ -637,6 +640,8 @@ export function AdminPortal() {
           return res.json();
         })
         .then(d => {
+          // A slower answer for a month the admin already left must not repaint the screen.
+          if (month !== selectedMonthRef.current) return;
           setIsLoading(false);
           if (d.success && d.data) {
             setDashboardData((prev: any) => ({
@@ -657,6 +662,8 @@ export function AdminPortal() {
           return res.json();
         })
         .then(d => {
+          // A slower answer for a month the admin already left must not repaint the screen.
+          if (month !== selectedMonthRef.current) return;
           if (d.success && Array.isArray(d.billing)) setBillingList(d.billing);
           else if (d.success === false) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
         })
@@ -673,6 +680,8 @@ export function AdminPortal() {
           return res.json();
         })
         .then(d => {
+          // A slower answer for a month the admin already left must not repaint the screen.
+          if (month !== selectedMonthRef.current) return;
           if (d.success && d.config) setUnitConfig(d.config);
         })
         .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
@@ -686,14 +695,16 @@ export function AdminPortal() {
           return res.json();
         })
         .then(d => {
+          // A slower answer for a month the admin already left must not repaint the screen.
+          if (month !== selectedMonthRef.current) return;
           if (d.success) setContractHistory(d.history || []);
         })
         .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
     }
   };
 
-  const fetchRooms = (month: string) => {
-    setIsLoading(true);
+  const fetchRooms = (month: string, background = false) => {
+    if (!background) setIsLoading(true);
     apiFetch(`/api/admin/rooms?month=${month}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
@@ -701,8 +712,10 @@ export function AdminPortal() {
         return res.json();
       })
       .then(d => {
+        if (month !== selectedMonthRef.current) return;
         setIsLoading(false);
         if (d.success && Array.isArray(d.rooms)) {
+          setRoomsLoadedMonth(month);
           setRoomsList(d.rooms);
           setBillingList(d.rooms);
           updateDashboardStats(d.rooms, month);
@@ -1634,6 +1647,9 @@ export function AdminPortal() {
             </button>
           </div>
         </header>
+        {!adminLoadError && roomsLoadedMonth === selectedMonth && roomsList.length === 0 && (
+          <p role="status" className="soft-card mb-5 p-4 apple-body kit-text-secondary">Chưa có dữ liệu tháng {selectedMonth}.</p>
+        )}
 
         {adminLoadError && <div role="alert" className="admin-load-error kit-data-surface rounded-[18px] p-4 mb-4"><div><p className="apple-headline kit-text-primary">Không thể cập nhật dữ liệu</p><p className="apple-callout kit-text-secondary mt-1">{adminLoadError}</p></div><button type="button" className="soft-button min-h-11 px-4" onClick={() => { setAdminLoadError(''); loadTabContent(activeMenu, selectedMonth); }}><RefreshCw size={18} />Thử lại</button></div>}
         {(activeMenu === 'rooms' || activeMenu === 'billing') && <div className="admin-list-toolbar kit-data-surface rounded-[20px] p-3 mb-4">
@@ -3285,7 +3301,7 @@ export function AdminPortal() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <IconNotification3D size={26} />
+                          <NavIcons.Bell size={20} strokeWidth={1.8} />
                           <span className="text-xs font-bold">Thông báo</span>
                         </div>
                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thong_bao' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
@@ -3311,7 +3327,7 @@ export function AdminPortal() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <IconAlert3D size={26} />
+                          <NavIcons.AlertTriangle size={20} strokeWidth={1.8} />
                           <span className="text-xs font-bold">Nhắc nhở</span>
                         </div>
                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'nhac_nho' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
@@ -3337,7 +3353,7 @@ export function AdminPortal() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <IconWallet3D size={26} />
+                          <NavIcons.Wallet size={20} strokeWidth={1.8} />
                           <span className="text-xs font-bold">Thanh toán</span>
                         </div>
                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", notifType === 'thanh_toan' ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
@@ -3351,7 +3367,7 @@ export function AdminPortal() {
                   {/* Banner tự động báo của Thanh toán */}
                   {notifType === 'thanh_toan' && (
                     <div className="p-3.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex items-center gap-3 text-xs text-neutral-800 dark:text-neutral-200 duration-200">
-                      <IconWallet3D size={26} className="shrink-0" />
+                      <NavIcons.Wallet size={20} strokeWidth={1.8} className="shrink-0" />
                       <div>
                         <span className="font-bold">Hệ thống tự động kích hoạt:</span> Cư dân khi nhận thông báo này sẽ có nút liên kết quét mã VietQR tự động kèm số tiền và đúng cú pháp chuyển khoản của phòng họ.
                       </div>
@@ -3478,7 +3494,7 @@ export function AdminPortal() {
                     {isSendingNotif ? (
                       <RefreshCw size={15} className="animate-spin" />
                     ) : (
-                      <Send size={15} />
+                      <NavIcons.Send size={15} strokeWidth={2} />
                     )}
                     <span>{notifScheduleMode === 'scheduled' ? 'Lên Lịch Thông Báo' : 'Gửi Thông Báo Ngay'}</span>
                   </button>

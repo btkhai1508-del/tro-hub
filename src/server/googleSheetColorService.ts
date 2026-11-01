@@ -308,21 +308,13 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
   }
 
   if (!currentMonthSheet) {
-    const now = new Date();
-    const m = now.getMonth() + 1;
-    currentMonthSheet = sheets.find(s => {
-      const lower = s.name.toLowerCase();
-      return (
-        (lower.includes(String(m)) || lower.includes(`tháng ${m}`)) &&
-        !lower.includes('log') &&
-        !lower.includes('thông tin') &&
-        !lower.includes('profile')
-      );
-    });
-  }
-
-  if (!currentMonthSheet) {
-    currentMonthSheet = sheets.find(s => /^\d{6}$/.test(s.name) || /^\d{2}\/\d{4}$/.test(s.name))
+    // No tab for this month yet: use the newest month tab rather than the oldest.
+    const period = (name: string) => {
+      const match = name.trim().match(/^(\d{1,2})\/?(\d{4})$/);
+      return match ? Number(match[2]) * 12 + Number(match[1]) : 0;
+    };
+    currentMonthSheet = sheets.reduce((best: typeof sheets[number] | undefined, sheet) =>
+      period(sheet.name) > (best ? period(best.name) : 0) ? sheet : best, undefined)
       || sheets[sheets.length - 2] || sheets[1] || sheets[0];
   }
 

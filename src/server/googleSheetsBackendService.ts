@@ -97,6 +97,7 @@ export type AuthErrorCode =
   | 'AUTH_DATA_INCOMPLETE';
 
 export interface AuthResult {
+  message?: string;
   success: boolean;
   isAdmin?: boolean;
   errorCode?: AuthErrorCode;
@@ -119,7 +120,9 @@ import { getLiveRoomPaymentStatus, ColumnPStatusResult, normalizeMonthFormat } f
 export const DEFAULT_SPREADSHEET_ID = '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
 export const DEFAULT_PROFILE_TAB = 'THÔNG TIN CÁ NHÂN';
 /** Column Q of the profile tab, optional: "Giới tính". */
-const PROFILE_GENDER_COLUMN = 16;
+// Tab THÔNG TIN CÁ NHÂN: A Họ tên, B Giới tính, C SĐT, D CCCD, E Email, F Ngày sinh, G Địa chỉ,
+// H Biển số, I Loại xe, J Phòng, K-M Liên hệ khẩn, N Password, O Hợp đồng.
+const PROFILE_GENDER_COLUMN = 1;
 export const DEFAULT_MONTHLY_TAB = '10/2026';
 export const DEFAULT_LOGS_TAB = 'Logs';
 
@@ -386,7 +389,7 @@ export function findUserRoom(phone: string, profileRows: string[][]): { roomNumb
   if (!cleanTargetPhone && !targetDigits) return { roomNumber: '', userRow: null };
 
   for (const row of profileRows) {
-    const rowPhone = normalizePhone(row[1]);
+    const rowPhone = normalizePhone(row[2]);
     const rowDigits = rowPhone.replace(/\D/g, '');
     const isMatch = Boolean(
       (rowPhone && rowPhone === cleanTargetPhone) ||
@@ -394,9 +397,9 @@ export function findUserRoom(phone: string, profileRows: string[][]): { roomNumb
     );
 
     if (isMatch) {
-      let rawRoom = String(row[8] || '').trim();
-      if (!rawRoom && row[13]) {
-        const hdMatch = String(row[13]).match(/HĐ-P?([A-Za-z0-9-]+)/i);
+      let rawRoom = String(row[9] || '').trim();
+      if (!rawRoom && row[14]) {
+        const hdMatch = String(row[14]).match(/HĐ-P?([A-Za-z0-9-]+)/i);
         if (hdMatch) rawRoom = hdMatch[1];
       }
       const cleanRoom = normalizeRoom(rawRoom);
@@ -410,35 +413,40 @@ export function findUserRoom(phone: string, profileRows: string[][]): { roomNumb
 /**
  * PHẦN 3: Tự động xác định TAB THÁNG HIỆN TẠI
  */
-export async function getCurrentMonthSheet(spreadsheetId: string): Promise<{ tabName: string; rows: string[][] }> {
-  const now = new Date();
-  const m = now.getMonth() + 1; // 10
-  const y = now.getFullYear(); // 2026
+const monthTabCandidates = (date: Date) => {
+  const m = date.getMonth() + 1;
+  const y = date.getFullYear();
+  const mm = String(m).padStart(2, '0');
+  return Array.from(new Set([`${m}/${y}`, `${mm}/${y}`, `${mm}${y}`, `${m}, ${y}`, `Tháng ${m}/${y}`, `Tháng ${m}, ${y}`, `T${m}/${y}`, `${m}-${y}`]));
+};
 
-  const candidateMonthlyTabs = [
-    `${m}/${y}`,          // '10/2026'
-    `${m}, ${y}`,         // '10, 2026'
-    `Tháng ${m}/${y}`,    // 'Tháng 10/2026'
-    `Tháng ${m}, ${y}`,   // 'Tháng 10, 2026'
-    `T${m}/${y}`,         // 'T10/2026'
-    `${m}`,               // '10'
-    `Tháng ${m}`,         // 'Tháng 10'
-    `${m}-${y}`           // '10-2026'
-  ];
-
-  for (const tab of candidateMonthlyTabs) {
+async function readMonthTab(spreadsheetId: string, date: Date): Promise<{ tabName: string; rows: string[][] } | null> {
+  for (const tab of monthTabCandidates(date)) {
     try {
       const rows = await fetchSheetDataViaGviz(spreadsheetId, tab);
-      if (rows && rows.length > 0) {
-        // Genuine monthly billing sheet has >= 20 columns and does not start with resident profile headers
-        const isInvoiceTab = rows[0]?.length >= 20 && !String(rows[0][0] || '').includes('Họ và Tên');
-        if (isInvoiceTab) {
-          return { tabName: tab, rows };
-        }
-      }
+      // gviz answers an unknown tab with the first sheet, so check this really is a billing tab.
+      const isInvoiceTab = rows?.[0]?.length >= 20 && !String(rows[0][0] || '').includes('Họ và Tên');
+      if (isInvoiceTab) return { tabName: tab, rows };
     } catch {}
   }
-  return { tabName: '10/2026', rows: [] };
+  return null;
+}
+
+/** The current month only. No tab yet means no data: rows stays empty and no bill is shown. */
+export async function getCurrentMonthSheet(spreadsheetId: string): Promise<{ tabName: string; rows: string[][] }> {
+  const now = new Date();
+  const found = await readMonthTab(spreadsheetId, now);
+  return found || { tabName: `${now.getMonth() + 1}/${now.getFullYear()}`, rows: [] };
+}
+
+/** gviz blanks text rooms (G01, LVC-101) in the personal tab, so a past tab can still say whose room it is. */
+async function getLatestMonthRows(spreadsheetId: string): Promise<string[][]> {
+  const now = new Date();
+  for (let back = 1; back <= 12; back += 1) {
+    const found = await readMonthTab(spreadsheetId, new Date(now.getFullYear(), now.getMonth() - back, 1));
+    if (found) return found.rows;
+  }
+  return [];
 }
 
 /**
@@ -868,6 +876,7 @@ export async function authenticateUser(
     }
 
     const { tabName: currentMonthTab, rows: monthlyRows } = await getCurrentMonthSheet(spreadsheetId);
+    const lookupRows = monthlyRows.length > 0 ? monthlyRows : await getLatestMonthRows(spreadsheetId);
 
     let matchedUserRow: string[] | null = null;
     let matchedPassword = '';
@@ -879,12 +888,12 @@ export async function authenticateUser(
     // QUÉT TOÀN BỘ 70 DÒNG TAB "THÔNG TIN CÁ NHÂN"
     for (let rIdx = 0; rIdx < profileRows.length; rIdx++) {
       const row = profileRows[rIdx];
-      const phoneCell = String(row[1] || '').trim();
+      const phoneCell = String(row[2] || '').trim();
       const cellDigits = phoneCell.replace(/\D/g, '');
       const rowName = String(row[0] || '').trim();
-      const rowCccd = String(row[2] || '').trim();
-      const rowRoom = normalizeRoom(row[8]);
-      const rowContract = String(row[13] || '').trim();
+      const rowCccd = String(row[3] || '').trim();
+      const rowRoom = normalizeRoom(row[9]);
+      const rowContract = String(row[14] || '').trim();
 
       // Check Phone match
       const phones = phoneCell.match(/(?:0|\+?84)[0-9]{8,11}/g) || [];
@@ -925,13 +934,13 @@ export async function authenticateUser(
 
       if (isMatched) {
         matchedUserRow = row;
-        matchedPassword = String(row[12] || '').replace(/^(Password|Mật khẩu|Pass)\s*/i, '').trim();
+        matchedPassword = String(row[13] || '').replace(/^(Password|Mật khẩu|Pass)\s*/i, '').trim();
         
         if (phoneIdx !== -1) {
           const passTokens = matchedPassword.split(/\s+/).filter(Boolean);
           matchedPassword = passTokens[phoneIdx] || passTokens[0] || '1';
 
-          const plateTokens = String(row[6] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim().split(/\s+/).filter(Boolean);
+          const plateTokens = String(row[7] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim().split(/\s+/).filter(Boolean);
           matchedPlate = plateTokens[phoneIdx] || plateTokens[0] || '';
 
           const cccdTokens = rowCccd.replace(/^(CCCD|CMND)\s*/i, '').trim().split(/\s+/).filter(Boolean);
@@ -946,24 +955,24 @@ export async function authenticateUser(
           }
         } else {
           matchedName = rowName;
-          matchedPlate = String(row[6] || '').trim();
+          matchedPlate = String(row[7] || '').trim();
           matchedCccd = rowCccd;
         }
 
-        // Check Column I (row[8]) or Column N (row[13])
-        const roomTokens = String(row[8] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim().split(/\s+/).filter(Boolean);
+        // Check Column J (row[9]) or Column O (row[14])
+        const roomTokens = String(row[9] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim().split(/\s+/).filter(Boolean);
         let r = (phoneIdx !== -1 && roomTokens[phoneIdx]) ? normalizeRoom(roomTokens[phoneIdx]) : rowRoom;
         if (!r && rowContract) {
           const hdMatch = rowContract.match(/HĐ-P?([A-Za-z0-9-]+)/i);
           if (hdMatch) r = normalizeRoom(hdMatch[1]);
         }
 
-        // If Column I is empty (common for G01-G07 and LVC101-LVC204), resolve room from monthly rows
-        if (!r && monthlyRows && monthlyRows.length > 0) {
-          const targetPhoneClean = normalizePhone(row[1]) || cleanPhone;
+        // If Column J is empty (common for G01-G07 and LVC101-LVC204), resolve room from monthly rows
+        if (!r && lookupRows && lookupRows.length > 0) {
+          const targetPhoneClean = normalizePhone(row[2]) || cleanPhone;
           const targetNameClean = (row[0] || '').toLowerCase().trim();
-          for (let mIdx = 0; mIdx < monthlyRows.length; mIdx++) {
-            const mRow = monthlyRows[mIdx];
+          for (let mIdx = 0; mIdx < lookupRows.length; mIdx++) {
+            const mRow = lookupRows[mIdx];
             const p1 = normalizePhone(mRow[18]);
             const p2 = normalizePhone(mRow[22]);
             const p3 = normalizePhone(mRow[26]);
@@ -984,9 +993,10 @@ export async function authenticateUser(
               );
               const nameMatches = Boolean(
                 targetNameClean && targetNameClean.length >= 3 &&
-                (n1.includes(targetNameClean) || targetNameClean.includes(n1) ||
-                 n2.includes(targetNameClean) || targetNameClean.includes(n2) ||
-                 n3.includes(targetNameClean) || targetNameClean.includes(n3))
+                // An empty slot must not count: every name "includes" an empty string.
+                ((n1 && (n1.includes(targetNameClean) || targetNameClean.includes(n1))) ||
+                 (n2 && (n2.includes(targetNameClean) || targetNameClean.includes(n2))) ||
+                 (n3 && (n3.includes(targetNameClean) || targetNameClean.includes(n3))))
               );
 
               if (phoneMatches || nameMatches) {
@@ -1003,9 +1013,9 @@ export async function authenticateUser(
     }
 
     // Fallback 1: Dò tìm trong MONTHLY SHEET nếu chưa tìm thấy trong profileRows
-    if (!matchedUserRow && monthlyRows && monthlyRows.length > 0) {
-      for (let mIdx = 0; mIdx < monthlyRows.length; mIdx++) {
-        const mRow = monthlyRows[mIdx];
+    if (!matchedUserRow && lookupRows && lookupRows.length > 0) {
+      for (let mIdx = 0; mIdx < lookupRows.length; mIdx++) {
+        const mRow = lookupRows[mIdx];
         const p1Phone = String(mRow[18] || '').replace(/\D/g, '');
         const p2Phone = String(mRow[22] || '').replace(/\D/g, '');
         const p3Phone = String(mRow[26] || '').replace(/\D/g, '');
@@ -1049,17 +1059,17 @@ export async function authenticateUser(
             matchedPlate = String(mRow[27] || '').trim();
           }
           matchedPassword = '1';
-          matchedUserRow = [matchedName, cleanPhone || '1', matchedCccd, '', '', '', matchedPlate, 'Xe máy', matchedRoom, '', '', '', '1', `HĐ-P${matchedRoom}`];
+          matchedUserRow = [matchedName, '', cleanPhone || '1', matchedCccd, '', '', '', matchedPlate, 'Xe máy', matchedRoom, '', '', '', '1', `HĐ-P${matchedRoom}`];
           break;
         }
       }
     }
 
     // Fallback 2: Khớp phòng qua Họ tên cư dân nếu matchedRoom chưa có
-    if (matchedUserRow && !matchedRoom && monthlyRows && monthlyRows.length > 0) {
+    if (matchedUserRow && !matchedRoom && lookupRows && lookupRows.length > 0) {
       const uName = (matchedName || '').toLowerCase().trim();
-      for (let mIdx = 0; mIdx < monthlyRows.length; mIdx++) {
-        const mRow = monthlyRows[mIdx];
+      for (let mIdx = 0; mIdx < lookupRows.length; mIdx++) {
+        const mRow = lookupRows[mIdx];
         const colA = normalizeRoom(mRow[0]);
         let rDetect = colA;
         if (!rDetect && mIdx >= 5 && mIdx <= 11) rDetect = `G0${mIdx - 4}`;
@@ -1069,7 +1079,7 @@ export async function authenticateUser(
         const n1 = String(mRow[16] || '').toLowerCase().trim();
         const n2 = String(mRow[20] || '').toLowerCase().trim();
         const n3 = String(mRow[24] || '').toLowerCase().trim();
-        if (rDetect && uName && (n1.includes(uName) || n2.includes(uName) || n3.includes(uName) || uName.includes(n1) || uName.includes(n2))) {
+        if (rDetect && uName && ((n1 && (n1.includes(uName) || uName.includes(n1))) || (n2 && (n2.includes(uName) || uName.includes(n2))) || (n3 && (n3.includes(uName) || uName.includes(n3))))) {
           matchedRoom = rDetect;
           break;
         }
@@ -1103,31 +1113,31 @@ export async function authenticateUser(
       };
     }
 
-    // 0) CHECK CỘT I (index 8) TAB "THÔNG TIN CÁ NHÂN":
-    // Column I may be a Sheets checkbox (TRUE/1) or an explicit admin marker.
-    const effectiveRoomCheck = (matchedRoom || String(matchedUserRow[8] || '')).trim().toLowerCase();
+    // 0) CHECK CỘT J (index 9) TAB "THÔNG TIN CÁ NHÂN":
+    // Column J may be a Sheets checkbox (TRUE/1) or an explicit admin marker.
+    const effectiveRoomCheck = (matchedRoom || String(matchedUserRow[9] || '')).trim().toLowerCase();
     const isColumnIAdmin = ['true', '1', 'yes', '✓', '✔'].includes(effectiveRoomCheck) || effectiveRoomCheck.includes('admin') || cleanPhone === '0902371800';
 
     if (isColumnIAdmin) {
       const adminName = matchedName || String(matchedUserRow[0] || '').replace(/^(Họ và Tên|Họ tên)\s*/i, '').trim() || 'Quản Lý Chủ Trọ';
       const adminPhone = cleanPhone;
-      const adminCccd = matchedCccd || String(matchedUserRow[2] || '').trim();
-      const adminPlate = matchedPlate || String(matchedUserRow[6] || '').trim();
+      const adminCccd = matchedCccd || String(matchedUserRow[3] || '').trim();
+      const adminPlate = matchedPlate || String(matchedUserRow[7] || '').trim();
 
       const adminProfile: BackendTenantProfile = {
         name: adminName,
         phone: adminPhone,
         cccd: adminCccd,
-        email: String(matchedUserRow[3] || '').trim(),
-        dob: String(matchedUserRow[4] || '').trim(),
-        address: String(matchedUserRow[5] || '').trim(),
+        email: String(matchedUserRow[4] || '').trim(),
+        dob: String(matchedUserRow[5] || '').trim(),
+        address: String(matchedUserRow[6] || '').trim(),
         plateNumber: adminPlate,
-        vehicleType: String(matchedUserRow[7] || '').trim(),
+        vehicleType: String(matchedUserRow[8] || '').trim(),
         roomNumber: 'admin',
         personType: 'person1',
-        emergencyName: String(matchedUserRow[9] || '').trim(),
-        emergencyRelation: String(matchedUserRow[10] || '').trim(),
-        emergencyPhone: String(matchedUserRow[11] || '').trim(),
+        emergencyName: String(matchedUserRow[10] || '').trim(),
+        emergencyRelation: String(matchedUserRow[11] || '').trim(),
+        emergencyPhone: String(matchedUserRow[12] || '').trim(),
         rentPrice: 0,
         depositAmount: 0,
         totalMonthlyAmount: 0,
@@ -1143,7 +1153,7 @@ export async function authenticateUser(
     }
 
     // 2) Scenario 2: No room found
-    const rawRoom = matchedRoom || String(matchedUserRow[8] || '').trim();
+    const rawRoom = matchedRoom || String(matchedUserRow[9] || '').trim();
     let roomNumber = normalizeRoom(rawRoom);
     if (!roomNumber) {
       return {
@@ -1153,17 +1163,12 @@ export async function authenticateUser(
       };
     }
 
-    // 3) Scenario 3: Room row missing in monthly sheet
-    if (!monthlyRows || monthlyRows.length === 0) {
-      return {
-        success: false,
-        errorCode: 'AUTH_ROOM_NOT_IN_MONTHLY',
-        error: 'Không tìm thấy dữ liệu phòng trong tháng hiện tại.'
-      };
-    }
+    // 3) Scenario 3: the current month's tab does not exist yet, so log in with no bill.
+    const hasMonthTab = monthlyRows.length > 0;
 
     // Dò dòng của phòng trong tab tháng hiện tại
-    const roomMatch = findRoomRow(monthlyRows, roomNumber, cleanPhone, matchedName);
+    const roomMatch = findRoomRow(lookupRows, roomNumber, cleanPhone, matchedName)
+      || (hasMonthTab ? null : { rowIndex: -1, rowData: [] as string[], detectedRoom: roomNumber });
     if (!roomMatch) {
       return {
         success: false,
@@ -1181,7 +1186,7 @@ export async function authenticateUser(
 
     // 5) Construct profile
     const personData = getPersonData(roomMatch.rowData, personType, roomNumber);
-    const resolvedName = personData.name || matchedName || String(matchedUserRow[0] || '').trim();
+    const resolvedName = matchedName || String(matchedUserRow[0] || '').trim() || personData.name;
 
     if (!resolvedName) {
       return {
@@ -1191,31 +1196,35 @@ export async function authenticateUser(
       };
     }
 
-    const effectiveLicensePlate = personData.licensePlate || matchedPlate || String(matchedUserRow[6] || '').trim();
+    // The personal tab is the source of truth; a month tab only fills what it leaves blank.
+    const effectiveLicensePlate = matchedPlate || String(matchedUserRow[7] || '').trim() || personData.licensePlate;
 
     // Construct final user profile
     const userProfile: BackendTenantProfile = {
-      name: personData.name || matchedName || String(matchedUserRow[0] || '').trim(),
-      phone: personData.phone || cleanPhone || String(matchedUserRow[1] || '').trim() || '0902371800',
-      cccd: personData.citizenId || matchedCccd || String(matchedUserRow[2] || '').trim(),
+      name: matchedName || String(matchedUserRow[0] || '').trim() || personData.name,
+      phone: cleanPhone || normalizePhone(matchedUserRow[2]) || personData.phone || '0902371800',
+      cccd: matchedCccd || String(matchedUserRow[3] || '').trim() || personData.citizenId,
       plateNumber: effectiveLicensePlate,
       roomNumber,
       personType,
-      email: String(matchedUserRow[3] || '').replace(/^(Email Liên Hệ|Email)\s*/i, '').trim(),
-      dob: String(matchedUserRow[4] || '').replace(/^(Ngày sinh)\s*/i, '').trim(),
+      email: String(matchedUserRow[4] || '').replace(/^(Email Liên Hệ|Email)\s*/i, '').trim(),
+      dob: String(matchedUserRow[5] || '').replace(/^(Ngày sinh)\s*/i, '').trim(),
       gender: String(matchedUserRow[PROFILE_GENDER_COLUMN] || '').trim(),
-      address: String(matchedUserRow[5] || '').replace(/^(Địa chỉ thường trú|Địa chỉ)\s*/i, '').trim(),
-      vehicleType: String(matchedUserRow[7] || '').includes('Xe máy') ? 'Xe máy' : (String(matchedUserRow[7] || '').trim() || 'Xe máy'),
-      emergencyName: String(matchedUserRow[9] || '').replace(/^(Người liên hệ)\s*/i, '').trim(),
-      emergencyRelation: String(matchedUserRow[10] || '').replace(/^(Mối quan hệ)\s*/i, '').trim(),
-      emergencyPhone: String(matchedUserRow[11] || '').replace(/^(Số điện thoại khẩn)\s*/i, '').trim(),
+      address: String(matchedUserRow[6] || '').replace(/^(Địa chỉ thường trú|Địa chỉ)\s*/i, '').trim(),
+      vehicleType: String(matchedUserRow[8] || '').includes('Xe máy') ? 'Xe máy' : (String(matchedUserRow[8] || '').trim() || 'Xe máy'),
+      emergencyName: String(matchedUserRow[10] || '').replace(/^(Người liên hệ)\s*/i, '').trim(),
+      emergencyRelation: String(matchedUserRow[11] || '').replace(/^(Mối quan hệ)\s*/i, '').trim(),
+      emergencyPhone: String(matchedUserRow[12] || '').replace(/^(Số điện thoại khẩn)\s*/i, '').trim(),
       contractUrl: `HĐ-P${roomNumber.replace(/[^\w]/g, '')}`,
-      rentPrice: parseSheetVNDAmount(roomMatch.rowData[9]) || 3000000,
-      depositAmount: parseSheetVNDAmount(roomMatch.rowData[14]) || 3000000,
-      totalMonthlyAmount: parseSheetVNDAmount(roomMatch.rowData[15]) || 3550000
+      rentPrice: parseSheetVNDAmount(roomMatch.rowData[9]) || 0,
+      depositAmount: parseSheetVNDAmount(roomMatch.rowData[14]) || 0,
+      totalMonthlyAmount: hasMonthTab ? parseSheetVNDAmount(roomMatch.rowData[15]) || 0 : 0
     };
 
     // Parse active room invoice strictly from Google Sheet Column P
+    if (!hasMonthTab) {
+      return { success: true, user: userProfile, invoices: [], message: 'Chưa có dữ liệu tháng này' };
+    }
     const liveStatus = await getLiveRoomPaymentStatus(spreadsheetId, roomNumber);
     const invoice = parseInvoiceFromRoomRow(roomMatch.rowData, roomNumber, currentMonthTab, roomMatch.rowIndex, liveStatus);
 
@@ -1296,25 +1305,25 @@ export async function fetchFreshTenantDataFromSheet(params: {
 
     if (targetPhone) {
       for (const row of profileRows) {
-        const phoneCell = String(row[1] || '').trim();
+        const phoneCell = String(row[2] || '').trim();
         const phones = phoneCell.match(/(?:0|\+?84)[0-9]{8,11}/g) || [];
         const cleanPhones = phones.map(p => normalizePhone(p));
         const phoneIdx = cleanPhones.findIndex(p => p === targetPhone || (targetPhone.length >= 8 && p.endsWith(targetPhone.slice(-9))));
         if (phoneIdx !== -1) {
           userRow = row;
-          const roomCell = String(row[8] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim();
+          const roomCell = String(row[9] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim();
           const roomTokens = roomCell.split(/\s+/).filter(Boolean);
-          userRoom = normalizeRoom(roomTokens[phoneIdx] || roomTokens[0] || 'G01');
-          if (!userRoom && row[13]) {
-            const hdMatch = String(row[13]).match(/HĐ-P?([A-Za-z0-9-]+)/i);
+          userRoom = normalizeRoom(roomTokens[phoneIdx] || roomTokens[0] || '');
+          if (!userRoom && row[14]) {
+            const hdMatch = String(row[14]).match(/HĐ-P?([A-Za-z0-9-]+)/i);
             if (hdMatch) userRoom = normalizeRoom(hdMatch[1]);
           }
 
-          const plateCell = String(row[6] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim();
+          const plateCell = String(row[7] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim();
           const plateTokens = plateCell.split(/\s+/).filter(Boolean);
           userPlate = plateTokens[phoneIdx] || plateTokens[0] || '';
 
-          const cccdCell = String(row[2] || '').replace(/^(CCCD|CMND)\s*/i, '').trim();
+          const cccdCell = String(row[3] || '').replace(/^(CCCD|CMND)\s*/i, '').trim();
           const cccdTokens = cccdCell.split(/\s+/).filter(Boolean);
           userCccd = cccdTokens[phoneIdx] || cccdTokens[0] || '';
 
@@ -1324,7 +1333,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
       }
     }
 
-    let effectiveRoom = targetRoomInput || userRoom || 'G02';
+    let effectiveRoom = targetRoomInput || userRoom;
 
     // 2. Fetch Tab "Logs" (SePAY / Bank transfer logs)
     let logsRows: string[][] = [];
@@ -1378,6 +1387,16 @@ export async function fetchFreshTenantDataFromSheet(params: {
     let personData: PersonData | null = null;
     let roomRowData: string[] | null = null;
 
+    if (monthlyRows.length === 0) {
+      const lookupRows = await getLatestMonthRows(spreadsheetId);
+      const lookup = findRoomRow(lookupRows, effectiveRoom, targetPhone, userName);
+      if (lookup) {
+        if (lookup.detectedRoom) effectiveRoom = lookup.detectedRoom;
+        const personType = identifyPersonByPhone(lookup.rowData, targetPhone, userName, userCccd) || 'person1';
+        personData = getPersonData(lookup.rowData, personType, effectiveRoom);
+      }
+    }
+
     if (monthlyRows.length > 0) {
       // Build room to row map from Column A
       const roomRowMap: Record<string, number> = {};
@@ -1403,7 +1422,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
           effectiveRoom = roomMatch.detectedRoom;
         }
         // Identify person 1/2/3
-        const personType = identifyPersonByPhone(roomRowData, targetPhone) || 'person1';
+        const personType = identifyPersonByPhone(roomRowData, targetPhone, userName, userCccd) || 'person1';
         personData = getPersonData(roomRowData, personType, effectiveRoom);
 
         // Live Column P status directly from Google Sheet (Google Sheet is Source of Truth)
@@ -1417,30 +1436,29 @@ export async function fetchFreshTenantDataFromSheet(params: {
 
     // Build matched profile strictly for this user
     let matchedProfile: BackendTenantProfile | null = null;
-    const effectivePlate = (personData && personData.licensePlate)
-      ? personData.licensePlate
-      : (userRow ? String(userRow[6] || '').trim() : '');
+    // The personal tab is the source of truth; a month tab only fills what it leaves blank.
+    const effectivePlate = userPlate || (personData && personData.licensePlate) || '';
 
     matchedProfile = {
-      name: (personData && personData.name) ? personData.name : (userRow ? String(userRow[0] || '').trim() : 'Cư dân Nhà Trọ Phong Lan'),
-      phone: (personData && personData.phone) ? personData.phone : targetPhone,
-      cccd: (personData && personData.citizenId) ? personData.citizenId : (userRow ? String(userRow[2] || '').trim() : ''),
+      name: userName || (personData && personData.name) || 'Cư dân Nhà Trọ Phong Lan',
+      phone: targetPhone || (personData && personData.phone) || '',
+      cccd: userCccd || (personData && personData.citizenId) || '',
       plateNumber: effectivePlate,
       roomNumber: effectiveRoom,
       personType: personData?.personType || 'person1',
-      email: userRow ? String(userRow[3] || '').trim() : '',
-      dob: userRow ? String(userRow[4] || '').trim() : '',
+      email: userRow ? String(userRow[4] || '').trim() : '',
+      dob: userRow ? String(userRow[5] || '').trim() : '',
       gender: userRow ? String(userRow[PROFILE_GENDER_COLUMN] || '').trim() : '',
-      address: userRow ? String(userRow[5] || '').trim() : '',
-      vehicleType: userRow ? String(userRow[7] || '').trim() || 'Xe máy' : 'Xe máy',
-      emergencyName: userRow ? String(userRow[9] || '').trim() : '',
-      emergencyRelation: userRow ? String(userRow[10] || '').trim() : '',
-      emergencyPhone: userRow ? String(userRow[11] || '').trim() : '',
-      password: userRow ? String(userRow[12] || '').trim() || '180505' : '180505',
-      contractUrl: userRow ? String(userRow[13] || '').trim() : '',
-      rentPrice: roomRowData ? parseSheetVNDAmount(roomRowData[9]) : 3000000,
-      depositAmount: roomRowData ? parseSheetVNDAmount(roomRowData[14]) : 3000000,
-      totalMonthlyAmount: roomRowData ? parseSheetVNDAmount(roomRowData[15]) : activeInvoices[0].total
+      address: userRow ? String(userRow[6] || '').trim() : '',
+      vehicleType: userRow ? String(userRow[8] || '').trim() || 'Xe máy' : 'Xe máy',
+      emergencyName: userRow ? String(userRow[10] || '').trim() : '',
+      emergencyRelation: userRow ? String(userRow[11] || '').trim() : '',
+      emergencyPhone: userRow ? String(userRow[12] || '').trim() : '',
+      password: userRow ? String(userRow[13] || '').trim() || '180505' : '180505',
+      contractUrl: userRow ? String(userRow[14] || '').trim() : '',
+      rentPrice: roomRowData ? parseSheetVNDAmount(roomRowData[9]) : 0,
+      depositAmount: roomRowData ? parseSheetVNDAmount(roomRowData[14]) : 0,
+      totalMonthlyAmount: roomRowData ? parseSheetVNDAmount(roomRowData[15]) : 0
     };
 
     return {
