@@ -521,10 +521,10 @@ function layTabThang_(ss, tatCa) {
   return tabs.filter(function (sheet) { return kyCuaTab_(sheet.getName()) >= hienTai; });
 }
 
-/** Tài khoản đang chờ duyệt hoặc bị từ chối chưa phải người ở, nên chưa vào tab tháng. */
+/** Tài khoản đang chờ duyệt hoặc tạm ngưng chưa phải người ở, nên chưa vào tab tháng. */
 function daDuyet_(tinhTrang) {
   var text = String(tinhTrang === null || tinhTrang === undefined ? '' : tinhTrang).trim().toUpperCase();
-  return text !== 'CHỜ DUYỆT' && text !== 'TỪ CHỐI';
+  return ['ĐANG CHỜ DUYỆT', 'TẠM NGƯNG', 'CHỜ DUYỆT', 'TỪ CHỐI'].indexOf(text) === -1;
 }
 
 /** Gom cư dân theo phòng, giữ thứ tự dòng; dòng Admin/TEST không phải phòng nên tự bị bỏ qua. */
@@ -711,7 +711,7 @@ function taoTaiKhoan_(ss, params) {
   var trung = rows.slice(1).some(function (row) { return String(row[2] === null || row[2] === undefined ? '' : row[2]).replace(/\D/g, '').slice(-9) === soMoi; });
   if (trung) return ketQuaLoi('Số điện thoại này đã được đăng ký trên hệ thống');
   var ngay = Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy');
-  var tinhTrang = params.approved === true || params.approved === 'true' ? 'ĐÃ DUYỆT' : 'CHỜ DUYỆT';
+  var tinhTrang = params.approved === true || params.approved === 'true' ? 'ĐÃ DUYỆT' : 'ĐANG CHỜ DUYỆT';
   var dong = sheet.getLastRow() + 1;
   var range = sheet.getRange(dong, 1, 1, 16);
   range.setNumberFormat('@');
@@ -725,7 +725,7 @@ function capNhatTrangThaiTaiKhoan_(ss, params) {
   if (!sheet) return { success: false, action: 'update_account_status', error: 'Không tìm thấy tab ' + TAB_CA_NHAN };
   var dong = timDongCuDan_(sheet.getDataRange().getValues(), params.phone, params.name, params.room);
   if (dong === -1) return { success: false, action: 'update_account_status', error: 'Không tìm thấy tài khoản' };
-  sheet.getRange(dong + 1, 16).setValue(params.status === 'rejected' ? 'TỪ CHỐI' : params.status === 'pending' ? 'CHỜ DUYỆT' : 'ĐÃ DUYỆT');
+  sheet.getRange(dong + 1, 16).setValue(params.status === 'rejected' ? 'TẠM NGƯNG' : params.status === 'pending' ? 'ĐANG CHỜ DUYỆT' : 'ĐÃ DUYỆT');
   dongBoCuDan_(ss, false, true);
   return { success: true, action: 'update_account_status' };
 }

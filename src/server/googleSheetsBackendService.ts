@@ -1089,11 +1089,12 @@ export async function authenticateUser(
 
     // Column P: an account waiting for approval or rejected cannot sign in.
     const accountStatus = String(matchedUserRow[PROFILE_STATUS_COLUMN] || '').trim().toUpperCase();
-    if (accountStatus === 'CHỜ DUYỆT' || accountStatus === 'TỪ CHỐI') {
+    const isRejected = accountStatus === 'TẠM NGƯNG' || accountStatus === 'TỪ CHỐI';
+    if (isRejected || accountStatus === 'ĐANG CHỜ DUYỆT' || accountStatus === 'CHỜ DUYỆT') {
       return {
         success: false,
-        errorCode: accountStatus === 'TỪ CHỐI' ? 'AUTH_REJECTED' : 'AUTH_PENDING_APPROVAL',
-        error: accountStatus === 'TỪ CHỐI' ? 'Tài khoản này chưa được duyệt.' : 'Tài khoản của bạn đang chờ chủ trọ xét duyệt.'
+        errorCode: isRejected ? 'AUTH_REJECTED' : 'AUTH_PENDING_APPROVAL',
+        error: isRejected ? 'Tài khoản này chưa được duyệt.' : 'Tài khoản của bạn đang chờ chủ trọ xét duyệt.'
       };
     }
 

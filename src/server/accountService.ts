@@ -7,7 +7,8 @@ export type AccountStatus = 'pending' | 'approved' | 'rejected';
 const cellText = (cell: any) => String(cell?.value ?? '').trim();
 const statusFrom = (text: string): AccountStatus => {
   const upper = text.toUpperCase();
-  return upper === 'CHỜ DUYỆT' ? 'pending' : upper === 'TỪ CHỐI' ? 'rejected' : 'approved';
+  if (upper === 'ĐANG CHỜ DUYỆT' || upper === 'CHỜ DUYỆT') return 'pending';
+  return upper === 'TẠM NGƯNG' || upper === 'TỪ CHỐI' ? 'rejected' : 'approved';
 };
 
 /** Every account in the personal tab. Passwords (column N) never leave the server. */
