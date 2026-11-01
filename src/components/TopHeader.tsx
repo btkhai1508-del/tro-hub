@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Bell as LineBell } from 'lucide-react';
 import { Bell, CheckCheck, Receipt, AlertTriangle, CheckCircle2, MessageSquare, X, Sun, Moon, Monitor, ChevronRight } from './AppIcons';
 import { IconClock3D, IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
@@ -84,7 +85,7 @@ export function TopHeader() {
           aria-controls="header-notification-panel"
           title="Thông báo"
         >
-          <Bell size={19} strokeWidth={1.85} className="transition-transform" />
+          <LineBell size={19} strokeWidth={1.85} className="transition-transform" />
           {unreadNotiCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-xs ring-2 ring-white dark:ring-neutral-900">
               {unreadNotiCount > 9 ? '9+' : unreadNotiCount}

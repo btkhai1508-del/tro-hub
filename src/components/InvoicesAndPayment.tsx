@@ -14,6 +14,7 @@ export function InvoicesAndPayment() {
   const [visibleCount, setVisibleCount] = useState(6);
   const filteredInvoices = invoices;
   const unpaidInvoices = invoices.filter(invoice => invoice.status === 'unpaid');
+  const currentUnpaidInvoice = unpaidInvoices.find(invoice => isSameMonth(invoice.month, getCurrentMonthStr())) || unpaidInvoices[0];
   const totalUnpaidAmount = unpaidInvoices.reduce((total, invoice) => total + invoice.total, 0);
   const currency = (amount: number) => amount.toLocaleString('vi-VN');
   const handlePay = (invoiceId: string) => navigate(`/payment?invoiceId=${invoiceId}`);
@@ -52,11 +53,16 @@ export function InvoicesAndPayment() {
               {unpaidInvoices.length ? `${unpaidInvoices.length} hóa đơn đang chờ thanh toán` : invoices.length ? 'Bạn không có hóa đơn chưa thanh toán.' : 'Hóa đơn sẽ xuất hiện khi được phát hành.'}
             </p>
           </div>
-          {unpaidInvoices.length > 0 && (
-            <button type="button" onClick={() => handlePay((unpaidInvoices.find(i => isSameMonth(i.month, getCurrentMonthStr())) || unpaidInvoices[0]).id)} className="primary-button relative inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control md:self-end">
-              {paymentGateStatus === 'STOP' ? <LockKeyhole size={17} /> : <CreditCard size={17} />}
-              {paymentGateStatus === 'STOP' ? 'Xem thông tin thanh toán' : 'Thanh toán ngay'}<ArrowUpRight size={17} />
-            </button>
+          {currentUnpaidInvoice && (
+            <div className="relative flex flex-col gap-2.5 sm:flex-row md:self-end">
+              <button type="button" onClick={() => openInvoiceDetailModal(currentUnpaidInvoice)} className="soft-button inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control kit-text-secondary">
+                <ReceiptText size={17} />Xem hóa đơn
+              </button>
+              <button type="button" onClick={() => handlePay(currentUnpaidInvoice.id)} className="primary-button inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control">
+                {paymentGateStatus === 'STOP' ? <LockKeyhole size={17} /> : <CreditCard size={17} />}
+                {paymentGateStatus === 'STOP' ? 'Xem thông tin thanh toán' : 'Thanh toán ngay'}<ArrowUpRight size={17} />
+              </button>
+            </div>
           )}
         </div>
       </section>
@@ -86,13 +92,14 @@ export function InvoicesAndPayment() {
             </button>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200/50 pt-4 dark:border-white/10 md:border-0 md:pt-0">
               <span className="font-num apple-title1 font-semibold tracking-tight kit-text-primary">{currency(invoice.total)} <span className="apple-body font-normal kit-text-secondary">₫</span></span>
-              {invoice.status === 'unpaid' ? (
-                <button type="button" onClick={() => handlePay(invoice.id)} className="primary-button inline-flex min-h-11 items-center gap-2 px-4 py-2.5 apple-control">
-                  {paymentGateStatus === 'STOP' ? <LockKeyhole size={14} /> : <CreditCard size={14} />}{paymentGateStatus === 'STOP' ? 'Xem thanh toán' : 'Thanh toán'}
-                </button>
-              ) : (
-                <button type="button" onClick={() => openInvoiceDetailModal(invoice)} className="soft-button inline-flex min-h-11 items-center gap-1 px-4 py-2.5 apple-control kit-text-secondary">Chi tiết<ChevronRight size={15} /></button>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => openInvoiceDetailModal(invoice)} className="soft-button inline-flex min-h-11 items-center gap-1 px-4 py-2.5 apple-control kit-text-secondary">Hóa đơn<ChevronRight size={15} /></button>
+                {invoice.status === 'unpaid' && (
+                  <button type="button" onClick={() => handlePay(invoice.id)} className="primary-button inline-flex min-h-11 items-center gap-2 px-4 py-2.5 apple-control">
+                    {paymentGateStatus === 'STOP' ? <LockKeyhole size={14} /> : <CreditCard size={14} />}{paymentGateStatus === 'STOP' ? 'Xem thanh toán' : 'Thanh toán'}
+                  </button>
+                )}
+              </div>
             </div>
           </article>
         ))}
