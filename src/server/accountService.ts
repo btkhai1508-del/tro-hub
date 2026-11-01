@@ -42,8 +42,10 @@ export async function callAccountScript(action: string, params: Record<string, u
     signal: AbortSignal.timeout(25000),
   });
   const data: any = await res.json().catch(() => null);
-  // A script deployed before this action existed answers success without naming it.
-  if (data?.action !== action) throw new Error('Apps Script chưa có bản mới. Vui lòng triển khai lại script.');
+  if (!data) throw new Error('Apps Script không trả về dữ liệu hợp lệ. Vui lòng thử lại.');
+  // Lock timeouts and script errors also come back without the action name, so check failure first.
   if (!data.success) throw new Error(data.error || 'Chưa ghi được vào Google Sheet.');
+  // A script deployed before this action existed answers success without naming it.
+  if (data.action !== action) throw new Error('Apps Script chưa có bản mới. Vui lòng triển khai lại script.');
   return data;
 }
