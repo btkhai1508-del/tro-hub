@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/resident-tahoe.css';
-import { Camera, Check, ChevronRight, Edit3, House, KeyRound, LogOut, Moon, QrCode, Sun, Sunrise, X } from './AppIcons';
+import { CameraLine, Check, ChevronRight, Edit3, House, KeyRound, LogOut, Moon, QrCode, Sun, Sunrise, X } from './AppIcons';
 import { IconProfile3D, IconHome3D, IconVehicle3D, IconSupport3D, IconSettings3D, IconKey3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -10,6 +10,7 @@ import { apiFetch } from '../lib/api';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
+import { convertScannedAddress } from '../lib/vnAddress';
 import { AddressFields } from './AddressFields';
 import { CccdQrScanner } from './CccdQrScanner';
 
@@ -72,9 +73,10 @@ export function Profile() {
     : {};
   const shownAvatar = isEditing ? draft.avatar : profile.avatar;
 
-  const handleQrResult = (data: CccdQrData) => {
+  const handleQrResult = async (data: CccdQrData) => {
     setIsScanning(false);
-    setDraft(prev => ({ ...prev, name: data.name, cccd: data.cccd, address: data.address || prev.address, dob: data.dob || prev.dob, gender: data.gender || prev.gender }));
+    const address = await convertScannedAddress(data.address).catch(() => data.address);
+    setDraft(prev => ({ ...prev, name: data.name, cccd: data.cccd, address: address || prev.address, dob: data.dob || prev.dob, gender: data.gender || prev.gender }));
     setStatus({ ok: true, text: 'Đã điền từ CCCD. QR không có số điện thoại nên bạn tự kiểm tra ô này, rồi bấm Lưu thay đổi.' });
   };
 
@@ -152,7 +154,7 @@ export function Profile() {
             ) : (
               <div aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-white/50 dark:bg-white/5 text-2xl font-semibold tracking-tight shadow-sm ring-4 ring-white/60 dark:ring-white/10 icon-plate"><IconProfile3D size={76} /></div>
             )}
-              {isEditing && <button type="button" onClick={() => setShowAvatarPicker(open => !open)} aria-label="Đổi ảnh đại diện" title="Đổi ảnh đại diện" className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"><Camera size={15} /></button>}
+              {isEditing && <button type="button" onClick={() => setShowAvatarPicker(open => !open)} aria-label="Đổi ảnh đại diện" title="Đổi ảnh đại diện" className="absolute -bottom-1 -right-1 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"><CameraLine size={17} /></button>}
             </div>
             <div className="min-w-0">
               <span className="liquid-chip mb-2 inline-flex items-center gap-1.5 text-xs text-neutral-700 dark:text-neutral-300"><House size={12} />Cư dân Trọ-Hub</span>

@@ -37,6 +37,8 @@ import {
   Phone as LucidePhone,
   Download as LucideDownload,
   ImageDown as LucideImageDown,
+  Camera as LucideCamera,
+  ScanLine as LucideScanLine,
   Save as LucideSave,
   RefreshCw as LucideRefreshCw,
   Search as LucideSearch,
@@ -91,6 +93,8 @@ export const Sparkles = createKitIcon('Star');
 export const Play = createKitIcon('Play');
 export const Download = LucideDownload;
 export const ImageDown = LucideImageDown;
+export const CameraLine = LucideCamera;
+export const ScanLine = LucideScanLine;
 export const Save = LucideSave;
 export const Copy = LucideCopy;
 

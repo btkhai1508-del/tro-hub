@@ -43,7 +43,7 @@ export function AddressFields({ value, onChange }: { value: string; onChange: (v
           </select>
         </label>
         <label className="apple-callout kit-text-secondary block min-w-0 sm:col-span-2">
-          Số nhà, tên đường, khu phố
+          Địa chỉ
           <input type="text" value={parts.detail} onChange={event => update({ ...parts, detail: event.target.value })} className="kit-field mt-1 w-full px-3" />
         </label>
       </dd>

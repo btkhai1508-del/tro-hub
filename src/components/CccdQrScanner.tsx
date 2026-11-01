@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { scanQRCode } from 'zmp-sdk/apis';
 import { useDialogFocus } from '../lib/useDialogFocus';
 import { isZaloMiniApp } from '../lib/platform';
-import { CccdQrData, parseCccdQr, readQrFromImage } from '../lib/cccdQr';
+import { CccdQrData, createQrDetector, parseCccdQr, readQrFromImage } from '../lib/cccdQr';
 import { X } from './AppIcons';
 
 interface CccdQrScannerProps {
@@ -12,20 +12,8 @@ interface CccdQrScannerProps {
 
 const NOT_CCCD = 'Mã này không phải QR trên CCCD. Vui lòng thử lại.';
 
-interface QrDetector {
-  detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>>;
-}
-
-/** The browser's own QR reader copes with glare and blur better than jsQR, where it exists. */
-function createDetector(): QrDetector | null {
-  const Detector = (window as any).BarcodeDetector;
-  if (!Detector) return null;
-  try {
-    return new Detector({ formats: ['qr_code'] });
-  } catch {
-    return null;
-  }
-}
+/** Apps that register as a camera but show their own picture, such as OBS on a computer. */
+const VIRTUAL_CAMERA = /obs|virtual|manycam|xsplit|snap camera/i;
 
 /** Scans on the device itself: no CCCD photo or frame ever leaves the phone. */
 export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
@@ -35,6 +23,9 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
   resultRef.current = onResult;
   const [cameraError, setCameraError] = useState('');
   const [message, setMessage] = useState('');
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [deviceId, setDeviceId] = useState('');
+  const triedZaloScanner = useRef(false);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -55,7 +46,8 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
 
     const start = async () => {
       // Zalo's own scanner reads small codes best. Cancelling or being refused falls through to the camera below.
-      if (isZaloMiniApp) {
+      if (isZaloMiniApp && !triedZaloScanner.current) {
+        triedZaloScanner.current = true;
         try {
           const { content } = await scanQRCode({});
           if (stopped) return;
@@ -71,16 +63,26 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
       }
       try {
         // The CCCD code is dense, so ask for more than the 640x480 a phone gives by default.
+        setCameraError('');
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } }), width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false
         });
         if (stopped) return;
+        // Device names are only readable once the camera is allowed.
+        const found = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'videoinput');
+        if (stopped) return;
+        setCameras(found);
+        const realCamera = found.find(device => !VIRTUAL_CAMERA.test(device.label));
+        if (!deviceId && realCamera && VIRTUAL_CAMERA.test(stream.getVideoTracks()[0]?.label || '')) {
+          setDeviceId(realCamera.deviceId);
+          return;
+        }
         stream.getVideoTracks()[0]?.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] }).catch(() => {});
         const video = videoRef.current!;
         video.srcObject = stream;
         await video.play();
-        const detector = createDetector();
+        const detector = createQrDetector();
         const { default: jsQR } = await import('jsqr');
         const scan = async (time: number) => {
           if (stopped) return;
@@ -123,7 +125,7 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
       cancelAnimationFrame(frame);
       stream?.getTracks().forEach(track => track.stop());
     };
-  }, []);
+  }, [deviceId]);
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -131,9 +133,10 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
     if (!file) return;
     setMessage('');
     try {
-      const data = parseCccdQr(await readQrFromImage(file));
+      const text = await readQrFromImage(file);
+      const data = parseCccdQr(text);
       if (data) onResult(data);
-      else setMessage('Chưa đọc được QR trong ảnh này. Hãy chụp rõ và gần mã QR hơn.');
+      else setMessage(text ? NOT_CCCD : 'Chưa đọc được QR trong ảnh này. Hãy chụp rõ và gần mã QR hơn.');
     } catch {
       setMessage('Chưa đọc được ảnh này. Vui lòng chọn ảnh khác.');
     }
@@ -153,6 +156,15 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
         {cameraError
           ? <p role="alert" className="apple-callout kit-text-secondary rounded-2xl bg-black/5 p-4 dark:bg-white/5">{cameraError}</p>
           : <video ref={videoRef} muted playsInline aria-label="Hình ảnh từ camera" className="aspect-square w-full rounded-[22px] bg-black object-cover" />}
+        {cameras.length > 1 && (
+          <label className="apple-callout kit-text-secondary mt-3 block">
+            Camera
+            <select value={deviceId} onChange={event => setDeviceId(event.target.value)} className="kit-field mt-1 w-full px-3">
+              {!deviceId && <option value="">Tự động</option>}
+              {cameras.map((camera, index) => <option key={camera.deviceId} value={camera.deviceId}>{camera.label || `Camera ${index + 1}`}</option>)}
+            </select>
+          </label>
+        )}
         {message && <p role="alert" className="apple-callout mt-3 text-red-700 dark:text-red-400">{message}</p>}
         <label className="soft-button mt-4 flex min-h-11 w-full cursor-pointer items-center justify-center px-4 focus-within:ring-2">
           Chọn ảnh có mã QR
