@@ -141,43 +141,6 @@ export function mapColorToPaymentStatus(hexColor: string): {
 }
 
 /**
- * Fetch real-time rows from tab "Logs" via GViz
- */
-async function fetchLogsData(sheetId: string): Promise<string[][]> {
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Logs&t=${Date.now()}`;
-    const res = await fetch(url, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    });
-    if (!res.ok) return [];
-    const text = await res.text();
-    return text.split('\n').map(line => {
-      const parts: string[] = [];
-      let cur = '';
-      let inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') {
-          inQ = !inQ;
-        } else if (c === ',' && !inQ) {
-          parts.push(cur.trim().replace(/^"|"$/g, ''));
-          cur = '';
-        } else {
-          cur += c;
-        }
-      }
-      parts.push(cur.trim().replace(/^"|"$/g, ''));
-      return parts;
-    });
-  } catch {
-    return [];
-  }
-}
-
-/**
  * Checks if a room has a confirmed incoming transfer in tab "Logs"
  */
 export function checkRoomTransferInLogs(
@@ -223,9 +186,14 @@ export function checkRoomTransferInLogs(
   return { found: false };
 }
 
+/** One cell's XML; an empty self-closing cell must not run into the cell after it. */
+function cellXml(rowXml: string, ref: string): string {
+  return rowXml.match(new RegExp(`<c r="${ref}"(?:[^>]*/>|[^>]*>[\\s\\S]*?</c>)`))?.[0] || '';
+}
+
 /**
  * Downloads and parses Google Sheet XLSX to read all room statuses from Column P of the current month tab.
- * Also cross-checks real-time incoming transfers from tab "Logs".
+ * The cell's background color alone decides the status.
  * Always formats month as MM/YYYY (e.g. "10/2026").
  */
 export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, targetMonth?: string): Promise<{
@@ -236,15 +204,12 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
   const cleanId = spreadsheetId.replace(/.*\/spreadsheets\/d\/([a-zA-Z0-9-_]+).*/, '$1');
   const exportUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&t=${Date.now()}`;
 
-  const [sheetRes, logsRows] = await Promise.all([
-    fetch(exportUrl, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
-      }
-    }),
-    fetchLogsData(cleanId)
-  ]);
+  const sheetRes = await fetch(exportUrl, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    }
+  });
 
   if (!sheetRes.ok) {
     throw new Error(`Failed to export Google Sheet as XLSX (HTTP ${sheetRes.status})`);
@@ -366,7 +331,7 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
     const rInt = parseInt(rMatch[1], 10);
 
     // Read Column A (Room number)
-    const cellAPart = chunk.split(`<c r="A${rInt}"`)[1]?.split('</c>')[0] || '';
+    const cellAPart = cellXml(chunk, `A${rInt}`);
     let roomA = '';
     if (cellAPart) {
       const isString = cellAPart.includes('t="s"');
@@ -391,7 +356,7 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
     const cleanRoomKey = normalizeRoomId(roomA).replace(/[^0-9A-Z]/g, '');
 
     // Read Column P (Payment status cell)
-    const cellPPart = chunk.split(`<c r="P${rInt}"`)[1]?.split('</c>')[0] || '';
+    const cellPPart = cellXml(chunk, `P${rInt}`);
     let pColorHex = '#FFFFFF';
     let pAmount = 0;
 
@@ -409,27 +374,6 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
     }
 
     const mapped = mapColorToPaymentStatus(pColorHex);
-    let finalPaymentStatus = mapped.paymentStatus;
-    let finalPaymentMethod = mapped.paymentMethod;
-    let finalLabel = mapped.label;
-    let finalSheetColor = mapped.normalizedColor;
-    let finalTxnId: string | undefined = undefined;
-    let finalPaidAt: string | undefined = undefined;
-
-    if (finalPaymentStatus !== 'paid') {
-      // Cross-check real-time transfers in tab "Logs"
-      // If Column P is not yet green on sheet but money was received in Logs:
-      const transfer = checkRoomTransferInLogs(logsRows, roomA, formattedMonth);
-      if (transfer.found) {
-        finalPaymentStatus = 'paid';
-        finalPaymentMethod = 'bank_transfer';
-        finalSheetColor = '#CEEAD5'; // GREEN
-        finalLabel = 'Đã thanh toán';
-        finalTxnId = transfer.txnCode;
-        finalPaidAt = transfer.date;
-      }
-    }
-
     const result: ColumnPStatusResult = {
       success: true,
       roomNumber: roomA,
@@ -437,13 +381,11 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
       cellAddress: `P${rInt}`,
       tabName: formattedMonth, // Strictly MM/YYYY
       rawTabName,
-      paymentStatus: finalPaymentStatus,
-      paymentMethod: finalPaymentMethod,
-      sheetColor: finalSheetColor,
-      label: finalLabel,
-      amount: pAmount,
-      transactionId: finalTxnId,
-      paidAt: finalPaidAt
+      paymentStatus: mapped.paymentStatus,
+      paymentMethod: mapped.paymentMethod,
+      sheetColor: mapped.normalizedColor,
+      label: mapped.label,
+      amount: pAmount
     };
 
     roomStatuses[cleanRoomKey] = result;
@@ -458,8 +400,7 @@ export async function fetchAllSheetColumnPStatuses(spreadsheetId: string, target
 }
 
 /**
- * Reads the payment status for a specific room directly from Google Sheet Column P
- * with real-time transfer cross-checking from tab "Logs".
+ * Reads the payment status for a specific room directly from Google Sheet Column P.
  * Always formats month as MM/YYYY (e.g. "10/2026").
  */
 export async function getLiveRoomPaymentStatus(

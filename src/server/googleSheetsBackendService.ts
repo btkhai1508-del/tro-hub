@@ -130,9 +130,6 @@ const PROFILE_STATUS_COLUMN = 15;
 export const DEFAULT_MONTHLY_TAB = '10/2026';
 export const DEFAULT_LOGS_TAB = 'Logs';
 
-// In-memory payment overrides (e.g. from SePAY webhook)
-const invoiceStatusOverrides: Record<string, { status: 'paid' | 'pending'; paidAt: string; transactionId: string; method?: 'qr' }> = {};
-
 export function setInvoicePaidByWebhook(
   roomOrCode: string,
   transactionId: string,
@@ -148,18 +145,10 @@ export function setInvoicePaidByWebhook(
     transactionId: transactionId || `TXN-${Date.now()}`,
     paidAt: now
   });
-
-  invoiceStatusOverrides[cleanKey] = {
-    status: 'paid',
-    paidAt: now,
-    transactionId: transactionId || `SP-${Date.now()}`,
-    method
-  };
 }
 
 export function setInvoiceUnpaid(roomOrCode: string) {
   const cleanKey = roomOrCode.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
-  delete invoiceStatusOverrides[cleanKey];
   setRoomColumnPStatus(cleanKey, 'RED');
 }
 
@@ -736,31 +725,13 @@ function parseInvoiceFromRoomRow(
   let paidAt: string | undefined = undefined;
   let transactionId: string | undefined = undefined;
 
-  // 1. PRIMARY SOURCE OF TRUTH: Live Column P Background Color from Google Sheet
+  // Source of truth: the background color of column P on the room's row.
   if (liveStatus && liveStatus.success) {
     status = liveStatus.paymentStatus;
     if (liveStatus.paymentStatus === 'paid') {
       paymentMethod = 'qr';
       paidAt = liveStatus.label;
       transactionId = `SHEET-${cleanRoom}-${liveStatus.cellAddress}`;
-    }
-  } else {
-    // 2. Secondary fallback only if liveStatus is unavailable
-    const columnP = getRoomColumnPStatus(cleanRoom);
-    const override = invoiceStatusOverrides[cleanRoom];
-
-    if (columnP && columnP.color === 'GREEN') {
-      status = 'paid';
-      paymentMethod = 'qr';
-      paidAt = columnP.paidAt || 'Đã thanh toán (Chuyển khoản)';
-      transactionId = columnP.transactionId;
-    } else if (override && override.status === 'paid') {
-      status = 'paid';
-      paymentMethod = override.method || 'qr';
-      paidAt = override.paidAt;
-      transactionId = override.transactionId;
-    } else {
-      status = 'unpaid';
     }
   }
 
@@ -1388,7 +1359,7 @@ export async function fetchFreshTenantDataFromSheet(params: {
         // Live Column P status directly from Google Sheet (Google Sheet is Source of Truth)
         const liveStatus = await getLiveRoomPaymentStatus(spreadsheetId, effectiveRoom);
 
-        // Parse room invoice (status strictly follows Cột P and real-time incoming transfer logs)
+        // Parse room invoice (status strictly follows the color of Cột P)
         const currentInvoice = parseInvoiceFromRoomRow(roomRowData, effectiveRoom, liveStatus.tabName || monthTabName, roomMatch.rowIndex, liveStatus);
         activeInvoices.push(currentInvoice);
       }
