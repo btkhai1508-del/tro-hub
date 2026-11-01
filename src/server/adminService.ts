@@ -234,13 +234,14 @@ export async function parseSheetXmlRows(zip: AdmZip, sheetName: string): Promise
   }
 
   const sheetXml = zip.getEntry(targetFile) ? zip.readAsText(targetFile) : zip.readAsText('xl/worksheets/sheet1.xml');
-  const rowMatches = sheetXml.match(/<row[^>]*>[\s\S]*?<\/row>/g) || [];
+  // Self-closing tags go first, or an empty cell or row swallows the one after it.
+  const rowMatches = sheetXml.match(/<row\b[^>]*\/>|<row\b[^>]*>[\s\S]*?<\/row>/g) || [];
   const parsedRows: any[] = [];
 
   rowMatches.forEach(rowStr => {
     const rIdx = parseInt(rowStr.match(/r="(\d+)"/)?.[1] || '0', 10);
     const cells: Record<string, { value: string; num: number; sIdx?: number; fillHex?: string }> = {};
-    const cMatches = rowStr.match(/<c[^>]*>[\s\S]*?<\/c>|<c[^>]*\/>/g) || [];
+    const cMatches = rowStr.match(/<c\b[^>]*\/>|<c\b[^>]*>[\s\S]*?<\/c>/g) || [];
 
     cMatches.forEach(cStr => {
       const ref = cStr.match(/r="([A-Z]+)\d+"/)?.[1] || '';

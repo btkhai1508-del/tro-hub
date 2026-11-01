@@ -343,9 +343,11 @@ export function parseSheetVNDAmount(val: any): number {
 /**
  * Fetch raw sheet data via Google Visualization API
  */
-export async function fetchSheetDataViaGviz(sheetId: string, tabName: string): Promise<string[][]> {
+export async function fetchSheetDataViaGviz(sheetId: string, tabName: string, headerRows?: number): Promise<string[][]> {
   const cleanId = extractSpreadsheetId(sheetId);
-  const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}&t=${Date.now()}`;
+  // Without headerRows, gviz may merge the top data rows into one header cell.
+  const headers = headerRows === undefined ? '' : `&headers=${headerRows}`;
+  const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}${headers}&t=${Date.now()}`;
   
   const response = await fetch(url, {
     headers: {
@@ -360,6 +362,31 @@ export async function fetchSheetDataViaGviz(sheetId: string, tabName: string): P
 
   const text = await response.text();
   return parseCSV(text);
+}
+
+/**
+ * Reads the personal tab one sheet row per array, columns A to P.
+ * Gviz is only the fallback: it merges the top rows into its header and blanks
+ * text rooms like "G01" or "Admin" because the column is mostly numbers.
+ */
+export async function fetchProfileRows(spreadsheetId: string): Promise<string[][]> {
+  try {
+    const { fetchSheetXlsx, parseSheetXmlRows } = await import('./adminService.js');
+    const zip = await fetchSheetXlsx(spreadsheetId);
+    if (zip) {
+      const { rows } = await parseSheetXmlRows(zip, DEFAULT_PROFILE_TAB);
+      if (rows.length > 0) {
+        return rows.map((row: any) => 'ABCDEFGHIJKLMNOP'.split('').map(col => String(row.cells[col]?.value ?? '')));
+      }
+    }
+  } catch (e) {
+    console.warn('[fetchProfileRows] XLSX read failed, falling back to gviz:', e);
+  }
+  try {
+    return await fetchSheetDataViaGviz(spreadsheetId, DEFAULT_PROFILE_TAB, 1);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -842,17 +869,7 @@ export async function authenticateUser(
     }
 
     // 1. Fetch tab "Thông tin cá nhân" and monthly tab
-    let profileRows: string[][] = [];
-    const candidateProfileTabs = [DEFAULT_PROFILE_TAB, 'THÔNG TIN CÁ NHÂN', 'Thông tin cá nhân', 'THONG TIN CA NHAN'];
-    for (const tab of candidateProfileTabs) {
-      try {
-        const rows = await fetchSheetDataViaGviz(spreadsheetId, tab);
-        if (rows && rows.length > 0) {
-          profileRows = rows;
-          break;
-        }
-      } catch {}
-    }
+    const profileRows = await fetchProfileRows(spreadsheetId);
 
     const { tabName: currentMonthTab, rows: monthlyRows } = await getCurrentMonthSheet(spreadsheetId);
     const lookupRows = monthlyRows.length > 0 ? monthlyRows : await getLatestMonthRows(spreadsheetId);
@@ -913,32 +930,13 @@ export async function authenticateUser(
         matchedUserRow = row;
         matchedPassword = String(row[13] || '').replace(/^(Password|Mật khẩu|Pass)\s*/i, '').trim();
         
-        if (phoneIdx !== -1) {
-          const passTokens = matchedPassword.split(/\s+/).filter(Boolean);
-          matchedPassword = passTokens[phoneIdx] || passTokens[0] || '1';
-
-          const plateTokens = String(row[7] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim().split(/\s+/).filter(Boolean);
-          matchedPlate = plateTokens[phoneIdx] || plateTokens[0] || '';
-
-          const cccdTokens = rowCccd.replace(/^(CCCD|CMND)\s*/i, '').trim().split(/\s+/).filter(Boolean);
-          matchedCccd = cccdTokens[phoneIdx] || cccdTokens[0] || '';
-
-          if (rIdx === 0) {
-            const knownRow0Names = ['Bùi Trung Khải', 'Lê Thành Liêm', 'Nguyễn Bảo Tiên', 'Trương Đình Trường An'];
-            matchedName = knownRow0Names[phoneIdx] || rowName;
-          } else {
-            const nameTokens = rowName.replace(/^(Họ và Tên|Họ tên)\s*/i, '').trim().split(/\s+/).filter(Boolean);
-            matchedName = nameTokens[phoneIdx] || rowName;
-          }
-        } else {
-          matchedName = rowName;
-          matchedPlate = String(row[7] || '').trim();
-          matchedCccd = rowCccd;
-        }
+        // One person per row: every field comes from the row that holds this phone.
+        matchedName = rowName;
+        matchedPlate = String(row[7] || '').trim();
+        matchedCccd = rowCccd;
 
         // Room comes from column J
-        const roomTokens = String(row[9] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim().split(/\s+/).filter(Boolean);
-        let r = (phoneIdx !== -1 && roomTokens[phoneIdx]) ? normalizeRoom(roomTokens[phoneIdx]) : rowRoom;
+        let r = rowRoom;
 
         // If Column J is empty (common for G01-G07 and LVC101-LVC204), resolve room from monthly rows
         if (!r && lookupRows && lookupRows.length > 0) {
@@ -1269,19 +1267,9 @@ export async function fetchFreshTenantDataFromSheet(params: {
 
   try {
     // 1. Fetch Profile Tab
-    let profileRows: string[][] = [];
-    const candidateProfileTabs = [DEFAULT_PROFILE_TAB, 'THÔNG TIN CÁ NHÂN', 'Thông tin cá nhân', 'THONG TIN CA NHAN'];
-    for (const tab of candidateProfileTabs) {
-      try {
-        const rows = await fetchSheetDataViaGviz(spreadsheetId, tab);
-        if (rows && rows.length > 0) {
-          profileRows = rows;
-          break;
-        }
-      } catch {}
-    }
+    const profileRows = await fetchProfileRows(spreadsheetId);
 
-    // Find user room by phone across all profile rows (including row 0 multi-entry tokens)
+    // Find the user's row by phone; one person per row.
     let userRoom = '';
     let userPlate = '';
     let userCccd = '';
@@ -1296,19 +1284,10 @@ export async function fetchFreshTenantDataFromSheet(params: {
         const phoneIdx = cleanPhones.findIndex(p => p === targetPhone || (targetPhone.length >= 8 && p.endsWith(targetPhone.slice(-9))));
         if (phoneIdx !== -1) {
           userRow = row;
-          const roomCell = String(row[9] || '').replace(/^(Phòng số|Phòng|Room)\s*/i, '').trim();
-          const roomTokens = roomCell.split(/\s+/).filter(Boolean);
-          userRoom = normalizeRoom(roomTokens[phoneIdx] || roomTokens[0] || '');
-
-          const plateCell = String(row[7] || '').replace(/^(Biển soó xe|Biển số xe)\s*/i, '').trim();
-          const plateTokens = plateCell.split(/\s+/).filter(Boolean);
-          userPlate = plateTokens[phoneIdx] || plateTokens[0] || '';
-
-          const cccdCell = String(row[3] || '').replace(/^(CCCD|CMND)\s*/i, '').trim();
-          const cccdTokens = cccdCell.split(/\s+/).filter(Boolean);
-          userCccd = cccdTokens[phoneIdx] || cccdTokens[0] || '';
-
-          userName = String(row[0] || '').replace(/^(Họ và Tên|Họ tên)\s*/i, '').trim();
+          userRoom = normalizeRoom(row[9]);
+          userPlate = String(row[7] || '').trim();
+          userCccd = String(row[3] || '').trim();
+          userName = String(row[0] || '').trim();
           break;
         }
       }

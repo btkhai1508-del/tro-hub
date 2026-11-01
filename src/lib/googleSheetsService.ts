@@ -497,7 +497,7 @@ export async function fetchAllResidentsFromSheet(
     }
 
     try {
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(currentTab)}`;
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(currentTab)}`;
       const res = await fetch(csvUrl);
       if (res.ok) {
         const csvText = await res.text();
