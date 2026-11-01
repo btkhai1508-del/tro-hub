@@ -618,6 +618,7 @@ export function AdminPortal() {
       showPortalToast(message, 'success');
     } catch (err: any) {
       showPortalToast(err?.message || 'Chưa cập nhật được trạng thái.', 'error');
+      setViewingAccount(prev => (prev?.id === account.id ? { ...prev, status: account.status } : prev));
       loadAccounts();
     }
   };
@@ -4268,9 +4269,8 @@ export function AdminPortal() {
                       type="button"
                       onClick={() => {
                         playSound('click');
-                        updateAccountStatus(viewingAccount.id, 'rejected');
                         setViewingAccount({ ...viewingAccount, status: 'rejected' });
-                        showPortalToast(`Đã đánh dấu chưa duyệt tài khoản ${viewingAccount.name}`, 'info');
+                        setAccountStatus(viewingAccount, 'rejected', `Đã đánh dấu chưa duyệt tài khoản ${viewingAccount.name}`);
                       }}
                       className="soft-button min-h-11 px-4 py-2.5 text-rose-600 dark:text-rose-400 font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                     >
@@ -4281,9 +4281,8 @@ export function AdminPortal() {
                       type="button"
                       onClick={() => {
                         playSound('success');
-                        updateAccountStatus(viewingAccount.id, 'approved');
                         setViewingAccount({ ...viewingAccount, status: 'approved' });
-                        showPortalToast(`Đã duyệt tài khoản ${viewingAccount.name} (Phòng ${viewingAccount.roomNumber})`, 'success');
+                        setAccountStatus(viewingAccount, 'approved', `Đã duyệt tài khoản ${viewingAccount.name} (Phòng ${viewingAccount.roomNumber})`);
                       }}
                       className="primary-button min-h-11 px-4 py-2.5 font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                     >
