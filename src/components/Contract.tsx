@@ -29,16 +29,17 @@ export function Contract() {
   );
 
   return (
-    <div className="kit-page pb-8">
-      <header data-tutorial="contract-header" className="kit-page-header home-stagger-1">
-        <div className="min-w-0">
-          <p className="kit-page-kicker">Tài liệu cư trú</p>
-          <h1 className="kit-page-title">Hợp đồng & cư trú</h1>
-          <p className="kit-page-description">Xem hợp đồng thuê phòng và tờ khai cư trú.</p>
-        </div>
-      </header>
-
+    <div className="kit-page pb-8 md:pb-0">
       <div className="resident-document-workspace">
+        <div className="resident-document-rail">
+        <header data-tutorial="contract-header" className="kit-page-header home-stagger-1">
+          <div className="min-w-0">
+            <p className="kit-page-kicker">Tài liệu cư trú</p>
+            <h1 className="kit-page-title">Hợp đồng & cư trú</h1>
+            <p className="kit-page-description">Xem hợp đồng thuê phòng và tờ khai cư trú.</p>
+          </div>
+        </header>
+
         <aside className="resident-document-options liquid-panel home-stagger-2 p-4 sm:p-5 space-y-4">
           <dl className="grid w-full grid-cols-2 gap-3"><div><dt className="apple-callout kit-text-secondary">Người thuê</dt><dd className="mt-1 break-words apple-body font-medium kit-text-primary">{profile.name || 'Chưa cập nhật'}</dd></div><div><dt className="apple-callout kit-text-secondary">Phòng</dt><dd className="mt-1 break-words apple-body font-medium kit-text-primary">{cleanRoom}</dd></div></dl>
           <div role="group" aria-label="Loại tài liệu" className="resident-document-types kit-segmented flex w-full items-stretch gap-1">
@@ -66,6 +67,7 @@ export function Contract() {
           </div>
           <DocumentActions doc={doc} />
         </aside>
+        </div>
 
         <details className="resident-disclosure resident-document-disclosure min-w-0" open={isDocumentOpen} onToggle={event => setIsDocumentOpen(event.currentTarget.open)}>
           <summary className="resident-disclosure-summary kit-inset min-h-16 gap-3 rounded-[20px] px-4 py-3">
