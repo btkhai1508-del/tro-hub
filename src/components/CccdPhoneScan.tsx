@@ -49,7 +49,7 @@ export default function CccdPhoneScan() {
           </>
         )}
       </section>
-      {state === 'scan' && <CccdQrScanner phoneHandoff={false} onClose={() => setState('idle')} onResult={send} />}
+      {state === 'scan' && <CccdQrScanner phoneHandoff={false} autoScan onClose={() => setState('idle')} onResult={send} />}
     </main>
   );
 }

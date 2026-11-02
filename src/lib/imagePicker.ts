@@ -44,4 +44,25 @@ export async function pickImageInZalo(source: 'album' | 'camera'): Promise<strin
   return imageToAvatarDataUrl(filePaths[0]);
 }
 
+/**
+ * Zalo only: a photo from the album at full size, for reading a QR (shrinking would lose its dots).
+ * Returns null when the user cancels.
+ */
+export async function pickPhotoFileInZalo(): Promise<Blob | null> {
+  const { filePaths } = await chooseImage({ count: 1, sourceType: ['album'] });
+  const path = filePaths?.[0];
+  if (!path) return null;
+  try {
+    return await (await fetch(path)).blob();
+  } catch {
+    // Some Zalo versions hand back a path fetch cannot read; an image element still can.
+    const img = await loadImage(path);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d')!.drawImage(img, 0, 0);
+    return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Không đọc được ảnh')), 'image/png'));
+  }
+}
+
 export const usesZaloImagePicker = isZaloMiniApp;

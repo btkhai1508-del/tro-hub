@@ -4,13 +4,16 @@ import { useDialogFocus } from '../lib/useDialogFocus';
 import { isZaloMiniApp } from '../lib/platform';
 import { apiFetch } from '../lib/api';
 import { CccdQrData, createQrDetector, parseCccdQr, readQrFromImage } from '../lib/cccdQr';
-import { X } from './AppIcons';
+import { pickPhotoFileInZalo } from '../lib/imagePicker';
+import { ImageDown, QrCode, X } from './AppIcons';
 
 interface CccdQrScannerProps {
   onClose: () => void;
   onResult: (data: CccdQrData) => void;
   /** Offer scanning with a phone instead of the webcam; off on the phone page itself. */
   phoneHandoff?: boolean;
+  /** In Zalo, open Zalo's scanner straight away, as when a computer's QR brought the user here. */
+  autoScan?: boolean;
 }
 
 const ZALO_MINI_APP_ID = import.meta.env.VITE_ZALO_MINI_APP_ID || '3354263289394442966';
@@ -38,7 +41,7 @@ const VIRTUAL_CAMERA = /obs|virtual|manycam|xsplit|snap camera/i;
 const SCAN_SIZE = 1000;
 
 /** Scans on the device itself: no CCCD photo or frame ever leaves the phone. */
-export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQrScannerProps) {
+export function CccdQrScanner({ onClose, onResult, phoneHandoff = true, autoScan = false }: CccdQrScannerProps) {
   const dialogRef = useDialogFocus(true, onClose);
   const videoRef = useRef<HTMLVideoElement>(null);
   const resultRef = useRef(onResult);
@@ -47,10 +50,11 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
   const [message, setMessage] = useState('');
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('');
-  const triedZaloScanner = useRef(false);
-  // A computer's webcam rarely reads the dense CCCD code, so with a mouse only Zalo on a phone and a photo are offered.
+  // In Zalo: Zalo's own QR scanner or a photo. A computer's webcam rarely reads the dense CCCD code, so with
+  // a mouse only Zalo on a phone and a photo are offered. A phone browser keeps its camera.
   const canHandoff = phoneHandoff && !isZaloMiniApp;
-  const [mode] = useState<'phone' | 'camera'>(() => canHandoff && window.matchMedia?.('(pointer: fine)').matches ? 'phone' : 'camera');
+  const [mode] = useState<'zalo' | 'phone' | 'camera'>(() => isZaloMiniApp ? 'zalo' : canHandoff && window.matchMedia?.('(pointer: fine)').matches ? 'phone' : 'camera');
+  const triedAutoScan = useRef(false);
   const [handoffQr, setHandoffQr] = useState('');
   const [handoffRound, setHandoffRound] = useState(0);
   const [handoffExpired, setHandoffExpired] = useState(false);
@@ -121,18 +125,6 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
     };
 
     const start = async () => {
-      // Zalo's own scanner reads small codes best. Cancelling or being refused falls through to the camera below.
-      if (isZaloMiniApp && !triedZaloScanner.current) {
-        triedZaloScanner.current = true;
-        try {
-          const { content } = await scanQRCode({});
-          if (stopped) return;
-          handleText(content);
-          if (stopped) return;
-        } catch {
-          if (stopped) return;
-        }
-      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setCameraError('Thiết bị này chưa mở được camera. Bạn có thể chọn ảnh CCCD bên dưới.');
         return;
@@ -223,13 +215,10 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
     return () => devices.removeEventListener('devicechange', refresh);
   }, []);
 
-  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
+  const readPhoto = async (photo: Blob) => {
     setMessage('');
     try {
-      const text = await readQrFromImage(file);
+      const text = await readQrFromImage(photo);
       const data = parseCccdQr(text);
       if (data) onResult(data);
       else setMessage(text ? NOT_CCCD : 'Chưa đọc được QR trong ảnh này. Hãy chụp rõ và gần mã QR hơn.');
@@ -237,6 +226,39 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
       setMessage('Chưa đọc được ảnh này. Vui lòng chọn ảnh khác.');
     }
   };
+
+  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) readPhoto(file);
+  };
+
+  // Zalo: its own scanner, which reads the small dense code far better than a web camera. Cancelling just returns here.
+  const scanWithZalo = async () => {
+    setMessage('');
+    try {
+      const { content } = await scanQRCode({});
+      const data = parseCccdQr(content);
+      if (data) resultRef.current(data);
+      else if (content) setMessage(NOT_CCCD);
+    } catch {}
+  };
+
+  const pickPhotoInZalo = async () => {
+    try {
+      const photo = await pickPhotoFileInZalo();
+      if (photo) readPhoto(photo);
+    } catch {
+      setMessage('Zalo chưa được cấp quyền truy cập ảnh. Vui lòng cho phép trong cài đặt Zalo rồi thử lại.');
+    }
+  };
+
+  useEffect(() => {
+    if (mode !== 'zalo' || !autoScan || triedAutoScan.current) return;
+    triedAutoScan.current = true;
+    scanWithZalo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="tahoe-dialog-overlay fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-3 sm:p-4" onClick={onClose}>
@@ -246,12 +268,23 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
           <div>
             <h2 id="cccd-qr-title" className="apple-title2 kit-text-primary font-semibold">Quét QR CCCD</h2>
             <p className="apple-callout kit-text-secondary mt-1">
-              {mode === 'phone' ? 'Quét bằng camera Zalo trên điện thoại, thông tin tự điền vào đây.' : 'Đưa CCCD lại gần để mã QR nằm gọn trong ô vuông, giữ yên và tránh lóa.'}
+              {mode === 'zalo' ? 'Quét mã QR ở mặt trước CCCD, hoặc chọn ảnh CCCD có mã QR.'
+                : mode === 'phone' ? 'Quét bằng camera Zalo trên điện thoại, thông tin tự điền vào đây.'
+                : 'Đưa CCCD lại gần để mã QR nằm gọn trong ô vuông, giữ yên và tránh lóa.'}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Đóng" className="kit-dialog-close"><X size={18} /></button>
         </div>
-        {mode === 'phone' ? (
+        {mode === 'zalo' ? (
+          <div className="grid gap-2.5">
+            <button type="button" onClick={scanWithZalo} className="primary-button flex min-h-12 w-full items-center justify-center gap-2 px-4 apple-control font-semibold">
+              <QrCode size={18} /><span>Quét mã QR</span>
+            </button>
+            <button type="button" onClick={pickPhotoInZalo} className="soft-button flex min-h-12 w-full items-center justify-center gap-2 px-4 apple-control font-semibold">
+              <ImageDown size={18} /><span>Tải ảnh CCCD lên</span>
+            </button>
+          </div>
+        ) : mode === 'phone' ? (
           <div className="flex flex-col items-center text-center">
             {handoffExpired ? (
               <div className="flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-[22px] bg-black/5 p-4 dark:bg-white/5">
@@ -287,10 +320,12 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
           </label>
         )}
         {message && <p role="alert" className="apple-callout mt-3 text-red-700 dark:text-red-400">{message}</p>}
-        <label className="soft-button mt-4 flex min-h-11 w-full cursor-pointer items-center justify-center px-4 focus-within:ring-2">
-          {canHandoff ? 'Tải ảnh CCCD lên' : 'Chọn ảnh có mã QR'}
-          <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
-        </label>
+        {mode !== 'zalo' && (
+          <label className="soft-button mt-4 flex min-h-11 w-full cursor-pointer items-center justify-center px-4 focus-within:ring-2">
+            {canHandoff ? 'Tải ảnh CCCD lên' : 'Chọn ảnh có mã QR'}
+            <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
+          </label>
+        )}
       </div>
     </div>
   );
