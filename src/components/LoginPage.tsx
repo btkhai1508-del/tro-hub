@@ -168,8 +168,8 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="px-5 pb-7 pt-6 sm:px-7 sm:pb-8 sm:pt-7">
-          <div className="mb-6">
+        <div className="kit-login-body px-5 pb-7 pt-6 sm:px-7 sm:pb-8 sm:pt-7">
+          <div className="kit-login-intro mb-6">
             <h1 className="apple-large-title apple-strong kit-text-primary">
               {mode === 'register' ? 'Bắt đầu với Trọ-Hub' : mode === 'forgot' ? 'Lấy lại quyền truy cập' : mode === 'pending_approval' ? 'Chào mừng bạn' : 'Chào bạn trở lại.'}
             </h1>
@@ -179,7 +179,7 @@ export function LoginPage() {
           </div>
 
           {mode !== 'forgot' && mode !== 'pending_approval' && (
-            <div className="kit-segmented mb-6 grid grid-cols-2 gap-1 p-1" aria-label="Chọn đăng nhập hoặc đăng ký">
+            <div className="kit-login-tabs kit-segmented mb-6 grid grid-cols-2 gap-1 p-1" aria-label="Chọn đăng nhập hoặc đăng ký">
               <button
                 type="button"
                 aria-pressed={mode === 'login'}
@@ -232,6 +232,7 @@ export function LoginPage() {
                       id="login-phone" name="username" enterKeyHint="next"
                       type="tel"
                       autoComplete="tel"
+                      placeholder="Nhập số điện thoại"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -257,6 +258,7 @@ export function LoginPage() {
                       id="login-password" name="password" enterKeyHint="go"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
+                      placeholder="Nhập mật khẩu"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}

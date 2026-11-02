@@ -1,5 +1,6 @@
 import * as NavIcons from 'lucide-react';
 import '../styles/admin-tahoe.css';
+import '../styles/resident-tahoe.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -2623,9 +2624,10 @@ export function AdminPortal() {
               </div>
             </div>
 
-            {/* Action Bar */}
-            <div className="soft-card p-4 flex flex-wrap items-center justify-between gap-4">
-              <div role="group" aria-label="Loại tài liệu" className="admin-document-switch kit-segmented flex w-full max-w-lg items-stretch gap-1">
+            {/* Options beside the document, as on the resident contract page */}
+            <div className="resident-document-workspace">
+            <aside className="resident-document-options soft-card p-4 space-y-4">
+              <div role="group" aria-label="Loại tài liệu" className="resident-document-types kit-segmented flex w-full items-stretch gap-1">
                 <button type="button" aria-pressed={contractDocType === 'contract'} onClick={() => setContractDocType('contract')}
                   className={cn('kit-segment min-w-0 flex-1 gap-2 px-3 py-2.5 apple-body', contractDocType === 'contract' && 'kit-segment-active')}>
                   <IconContract3D size={25} />
@@ -2638,11 +2640,11 @@ export function AdminPortal() {
                 </button>
               </div>
 
-              <div className="admin-document-actions flex flex-wrap items-center gap-3">
+              <div className="admin-document-actions flex flex-col gap-3">
                 <select
                   value={contractHouse}
                   onChange={e => { setContractHouse(e.target.value as any); setContractRoom(''); }}
-                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+                  className="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
                   <option value="TRUNG_KIM" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ Trung Kim (116/32)</option>
                   <option value="LVC" className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Nhà trọ 109/6 (Lê Văn Chí)</option>
@@ -2651,17 +2653,20 @@ export function AdminPortal() {
                   aria-label="Chọn phòng để điền tài liệu"
                   value={contractRoom}
                   onChange={e => setContractRoom(e.target.value)}
-                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+                  className="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
                   <option value="">Mẫu trống</option>
                   {contractRooms.map((r: any) => <option key={r.room} value={r.room}>Phòng {r.room}{r.nguoi1 ? ` – ${r.nguoi1}` : ''}</option>)}
                 </select>
                 <DocumentActions doc={adminDoc} />
               </div>
-            </div>
+            </aside>
 
-            <div className="mx-auto w-full max-w-3xl">
-              <DocumentSheet doc={adminDoc} />
+            <div className="resident-document-scroll min-w-0 overflow-x-auto">
+              <div className="resident-document-sheet">
+                <DocumentSheet doc={adminDoc} />
+              </div>
+            </div>
             </div>
           </div>
         )}

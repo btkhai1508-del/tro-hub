@@ -297,6 +297,28 @@
 @media (max-height: 700px) {
   .kit-auth-shell { align-items: flex-start; }
 }
+/* Laptop and phone windows: tighten the login card so it fits without scrolling. */
+@media (max-height: 880px) {
+  .kit-auth-shell { padding-block: max(12px, env(safe-area-inset-top)); }
+  .kit-login-window .kit-window-toolbar { min-height: 60px; padding-block: 10px; }
+  .kit-login-body { padding-top: 14px; padding-bottom: 18px; }
+  .kit-login-intro, .kit-login-tabs { margin-bottom: 14px; }
+  .kit-login-body .space-y-4 > :not(:last-child) { margin-block-end: 12px; }
+  .kit-login-body :is(.kit-field, .primary-button) { min-height: 44px; }
+  .kit-login-body .soft-button { min-height: 46px; }
+  .kit-login-window .kit-login-footer { padding-block: 4px; }
+}
+/* Phones with the browser bar showing: drop the intro line and tighten further. */
+@media (max-height: 720px) {
+  .kit-auth-shell { padding-block: max(8px, env(safe-area-inset-top)); }
+  .kit-login-window .kit-window-toolbar { min-height: 52px; padding-block: 6px; }
+  .kit-login-body { padding-top: 10px; padding-bottom: 14px; }
+  .kit-login-intro > p { display: none; }
+  .kit-login-intro, .kit-login-tabs { margin-bottom: 10px; }
+  .kit-login-body .space-y-4 > :not(:last-child) { margin-block-end: 10px; }
+  .kit-login-body :is(.kit-field, .primary-button, .soft-button) { min-height: 42px; }
+  .kit-login-body .min-h-10 { min-height: 32px; }
+}
 @media (max-width: 639px) {
   .kit-login-window { border-radius: 28px; }
   .kit-login-window .kit-window-toolbar { min-height: 64px; padding-block: 12px; }
