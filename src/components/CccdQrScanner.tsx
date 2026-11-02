@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { scanQRCode } from 'zmp-sdk/apis';
 import { useDialogFocus } from '../lib/useDialogFocus';
 import { isZaloMiniApp } from '../lib/platform';
-import { API_BASE_URL, apiFetch } from '../lib/api';
+import { apiFetch } from '../lib/api';
 import { CccdQrData, createQrDetector, parseCccdQr, readQrFromImage } from '../lib/cccdQr';
 import { X } from './AppIcons';
 
@@ -13,12 +13,19 @@ interface CccdQrScannerProps {
   phoneHandoff?: boolean;
 }
 
-/** The phone opens the app on the server that also answers the API; a local dev page falls back to itself. */
+const ZALO_MINI_APP_ID = import.meta.env.VITE_ZALO_MINI_APP_ID || '3354263289394442966';
+/** Extra query for an unreleased build, e.g. "env=TESTING&version=12"; empty opens the live Mini App. */
+const ZALO_LINK_QUERY = import.meta.env.VITE_ZALO_LINK_QUERY || '';
+
+/**
+ * The phone opens the session in the Zalo Mini App, which goes straight to Zalo's own camera scanner,
+ * far quicker on the dense CCCD code than a browser camera. A local dev page links to itself instead.
+ */
 function handoffLink(id: string): string {
-  const server = /^https?:\/\//.test(API_BASE_URL) && !/localhost|127\.0\.0\.1/.test(API_BASE_URL)
-    ? API_BASE_URL.replace(/\/+$/, '') + '/'
-    : window.location.origin + window.location.pathname;
-  return `${server}#/cccd-scan/${encodeURIComponent(id)}`;
+  if (/localhost|127\.0\.0\.1/.test(window.location.hostname)) {
+    return `${window.location.origin}${window.location.pathname}#/cccd-scan/${encodeURIComponent(id)}`;
+  }
+  return `https://zalo.me/s/${ZALO_MINI_APP_ID}/?${ZALO_LINK_QUERY ? `${ZALO_LINK_QUERY}&` : ''}cccdScan=${encodeURIComponent(id)}`;
 }
 
 const NOT_CCCD = 'Mã này không phải QR trên CCCD. Vui lòng thử lại.';
@@ -239,14 +246,14 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
           <div>
             <h2 id="cccd-qr-title" className="apple-title2 kit-text-primary font-semibold">Quét QR CCCD</h2>
             <p className="apple-callout kit-text-secondary mt-1">
-              {mode === 'phone' ? 'Dùng camera điện thoại để quét, thông tin tự điền vào đây.' : 'Đưa CCCD lại gần để mã QR nằm gọn trong ô vuông, giữ yên và tránh lóa.'}
+              {mode === 'phone' ? 'Quét bằng camera Zalo trên điện thoại, thông tin tự điền vào đây.' : 'Đưa CCCD lại gần để mã QR nằm gọn trong ô vuông, giữ yên và tránh lóa.'}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Đóng" className="kit-dialog-close"><X size={18} /></button>
         </div>
         {canHandoff && (
           <div role="group" aria-label="Cách quét" className="mb-3 grid grid-cols-2 gap-2">
-            {([['phone', 'Điện thoại'], ['camera', 'Webcam']] as const).map(([value, label]) => (
+            {([['phone', 'Camera Zalo'], ['camera', 'Webcam']] as const).map(([value, label]) => (
               <button key={value} type="button" aria-pressed={mode === value} onClick={() => { setMessage(''); setMode(value); }}
                 className={`${mode === value ? 'primary-button' : 'soft-button'} min-h-11 px-3 apple-control text-sm font-semibold`}>
                 {label}
@@ -262,13 +269,13 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
                 <button type="button" onClick={() => setHandoffRound(round => round + 1)} className="primary-button min-h-11 px-4">Tạo mã mới</button>
               </div>
             ) : handoffQr ? (
-              <img src={handoffQr} alt="Mã QR để mở trang quét CCCD trên điện thoại" className="aspect-square w-full max-w-[240px] rounded-2xl bg-white p-2" />
+              <img src={handoffQr} alt="Mã QR để mở camera Zalo trên điện thoại" className="aspect-square w-full max-w-[240px] rounded-2xl bg-white p-2" />
             ) : (
               <div role="status" className="flex aspect-square w-full max-w-[240px] items-center justify-center rounded-2xl bg-black/5 apple-callout kit-text-secondary dark:bg-white/5">Đang tạo mã...</div>
             )}
             <ol className="apple-callout kit-text-secondary mt-3 list-decimal space-y-1 pl-5 text-left">
-              <li>Mở camera điện thoại, quét mã trên và mở liên kết.</li>
-              <li>Trên điện thoại, quét QR ở mặt trước CCCD.</li>
+              <li>Trên điện thoại, mở Zalo, bấm biểu tượng quét QR và quét mã trên.</li>
+              <li>Camera Zalo tự mở, quét QR ở mặt trước CCCD.</li>
               <li>Thông tin tự điền vào hồ sơ trên máy tính.</li>
             </ol>
           </div>
@@ -291,7 +298,7 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
         )}
         {message && <p role="alert" className="apple-callout mt-3 text-red-700 dark:text-red-400">{message}</p>}
         <label className="soft-button mt-4 flex min-h-11 w-full cursor-pointer items-center justify-center px-4 focus-within:ring-2">
-          Chọn ảnh có mã QR
+          {canHandoff ? 'Tải ảnh CCCD lên' : 'Chọn ảnh có mã QR'}
           <input type="file" accept="image/*" onChange={handleFile} className="sr-only" />
         </label>
       </div>

@@ -1,5 +1,7 @@
-import React, { lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { getRouteParams } from 'zmp-sdk/apis';
+import { isZaloMiniApp } from './lib/platform';
 import { AppProvider, useApp } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { routeLoaders } from './lib/routePreload';
@@ -58,8 +60,26 @@ function PublicAuthRoute({ children }: { children: React.ReactElement }) {
   return children;
 }
 
+/** The computer's QR opens "zalo.me/s/<app>/?cccdScan=<id>": go straight to the CCCD scan for that session. */
+function CccdScanLink() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    let id = new URLSearchParams(window.location.search).get('cccdScan') || '';
+    if (!id && isZaloMiniApp) {
+      try {
+        id = getRouteParams()?.cccdScan || '';
+      } catch {}
+    }
+    if (id) navigate(`/cccd-scan/${encodeURIComponent(id)}`, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 function AppRoutes() {
   return (
+    <>
+    <CccdScanLink />
     <Routes>
       {/* Login & Registration Gateway */}
       <Route 
@@ -122,6 +142,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }
 
