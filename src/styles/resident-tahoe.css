@@ -11,6 +11,19 @@
 .resident-invoice-filter { max-width: 100%; }
 .resident-invoice-filter select { width: auto; min-width: 148px; font-size: 13px; }
 .resident-document-scroll { overscroll-behavior-inline: contain; }
+.resident-document-workspace { display: flex; flex-direction: column; gap: 24px; }
+.resident-document-sheet { width: min(100%, 820px); margin-inline: auto; }
+.resident-document-disclosure[open] > .resident-disclosure-summary { margin-bottom: 16px; }
+@media (min-width: 768px) {
+  /* Options card beside the document; at 100% a whole A4 page (1:1.414) fits the column and the window height. */
+  .resident-document-workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); align-items: start; gap: 20px; }
+  .resident-document-options { position: sticky; top: 24px; }
+  .resident-document-types { flex-direction: column; }
+  .resident-document-types .kit-segment { flex: none; justify-content: flex-start; }
+  .resident-document-disclosure > .resident-disclosure-summary { display: none; }
+  .resident-document-sheet { width: calc(min(100%, (100dvh - 48px) * 0.7071) * var(--document-zoom, 1)); }
+  .contract-modal-sheet { width: min(100%, calc((92dvh - 191px) * 0.7071)); margin-inline: auto; }
+}
 @media (max-width: 639px) {
   .resident-home { gap: 18px; }
   .resident-home .apple-amount { font-size: clamp(28px, 9vw, 38px); overflow-wrap: anywhere; }

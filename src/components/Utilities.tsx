@@ -31,7 +31,7 @@ export function Utilities() {
         <div>
           <p className="kit-page-kicker">Dành cho cư dân</p>
           <h1 className="kit-page-title">Tiện ích</h1>
-          <p className="kit-page-description">Giặt sấy, hồ sơ và trợ giúp trong một nơi.</p>
+          <p className="kit-page-description">Các tiện ích của ứng dụng.</p>
         </div>
       </header>
 

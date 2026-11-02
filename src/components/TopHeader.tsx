@@ -44,7 +44,7 @@ export function TopHeader() {
     };
   }, [setIsNotificationPanelOpen, isNotificationPanelOpen]);
 
-  const themeLabel = mode === 'light' ? 'Giao diện sáng' : mode === 'dark' ? 'Giao diện tối' : 'Giao diện tự động';
+  const themeLabel = mode === 'light' ? 'Chế độ màn hình sáng' : mode === 'dark' ? 'Chế độ màn hình tối' : 'Chế độ màn hình tự động';
   const ThemeIcon = mode === 'light' ? Sun : mode === 'dark' ? Moon : Monitor;
 
   return (

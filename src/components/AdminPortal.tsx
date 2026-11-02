@@ -1430,7 +1430,7 @@ export function AdminPortal() {
                     type="button"
                     onClick={toggleTheme}
                     className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group"
-                    title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
+                    title={`Chế độ màn hình: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động'}`}
                   >
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                     {mode === 'light' ? (
@@ -1519,7 +1519,7 @@ export function AdminPortal() {
                   type="button"
                   onClick={toggleTheme}
                   className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer"
-                  title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
+                  title={`Chế độ màn hình: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
                 >
                   {mode === 'light' ? (
                     <NavIcons.Sun size={18} className="text-amber-500 drop-shadow-[0_2px_4px_rgba(245,158,11,0.3)]" />
@@ -1668,7 +1668,7 @@ export function AdminPortal() {
                 toggleTheme();
               }}
               className="admin-header-theme soft-button min-h-11 px-3 rounded-2xl flex items-center gap-1.5 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer"
-              title={`Giao diện: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
+              title={`Chế độ màn hình: ${mode === 'light' ? 'Chế độ Sáng' : mode === 'dark' ? 'Chế độ Tối' : 'Tự động (Theo giờ)'}`}
             >
               {mode === 'light' ? (
                 <Sun size={15} className="text-amber-500" />

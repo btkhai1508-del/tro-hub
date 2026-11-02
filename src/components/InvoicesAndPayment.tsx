@@ -31,7 +31,7 @@ export function InvoicesAndPayment() {
         <div>
           <p className="kit-page-kicker">Quản lý chi phí</p>
           <h1 className="kit-page-title">Hóa đơn & thanh toán</h1>
-          <p className="kit-page-description">Xem từng khoản phí và theo dõi lịch sử thanh toán.</p>
+          <p className="kit-page-description">Khoản phí và lịch sử thanh toán.</p>
         </div>
         <button type="button" onClick={() => setIsExportModalOpen(true)} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 apple-control kit-text-secondary">
           <Download size={16} />Xuất lịch sử PDF

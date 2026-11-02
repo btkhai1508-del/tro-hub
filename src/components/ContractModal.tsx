@@ -1,4 +1,5 @@
 import { useDialogFocus } from '../lib/useDialogFocus';
+import '../styles/resident-tahoe.css';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ExternalLink } from './AppIcons';
@@ -34,7 +35,7 @@ export function ContractModal() {
       onClick={closeContractModal}
     >
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="contract-dialog-title"
-        className="tahoe-dialog w-full max-w-3xl bg-white dark:bg-[#0f172a] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200"
+        className="tahoe-dialog w-full max-w-3xl md:max-w-5xl bg-white dark:bg-[#0f172a] rounded-3xl border border-white/90 dark:border-slate-800 shadow-[0_25px_60px_-15px_rgba(15,23,42,0.4)] flex flex-col max-h-[92vh] overflow-hidden relative duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -69,8 +70,9 @@ export function ContractModal() {
           </div>
         </div>
 
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row">
         {/* Tab selection */}
-        <div className="shrink-0 px-5 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-900/40 flex gap-2">
+        <div className="shrink-0 px-5 pt-3 pb-2 md:w-60 md:p-4 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-900/40 flex md:flex-col gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('contract')}
@@ -98,9 +100,10 @@ export function ContractModal() {
         </div>
 
         {/* Body Container: Scrollable A4 Document Sheet */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-100 dark:bg-[#070b14]">
+        <div className="flex-1 min-w-0 min-h-0 overflow-y-auto p-3 sm:p-6 bg-slate-100 dark:bg-[#070b14]">
           {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-          {!error && <DocumentSheet doc={doc} />}
+          {!error && <div className="contract-modal-sheet"><DocumentSheet doc={doc} /></div>}
+        </div>
         </div>
 
         {/* Footer */}

@@ -241,14 +241,13 @@ export function Profile() {
           <section className="liquid-panel p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-2.5">
               <span className="glass-icon h-9 w-9 text-neutral-700 dark:text-neutral-200 icon-plate"><IconSettings3D size={44} /></span>
-              <h2 className="apple-title2 apple-strong kit-text-primary">Giao diện</h2>
+              <h2 className="apple-title2 apple-strong kit-text-primary">Chế độ màn hình</h2>
             </div>
             <div role="group" aria-label="Chế độ giao diện" className="kit-segmented flex gap-1">
               {([{ value: 'light', label: 'Sáng', icon: Sun }, { value: 'dark', label: 'Tối', icon: Moon }, { value: 'auto', label: 'Tự động', icon: Sunrise }] as const).map(({ value, label, icon: Icon }) => (
                 <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)} className={cn('kit-segment min-h-16 min-w-0 flex-1 flex-col gap-1.5 px-1 py-2 text-xs', mode === value && 'kit-segment-active')}><Icon size={18} strokeWidth={1.7} />{label}</button>
               ))}
             </div>
-            <p className="mt-3 hidden apple-callout kit-text-secondary sm:block">{mode === 'auto' ? 'Tự chuyển sáng và tối theo thời gian trong ngày.' : mode === 'dark' ? 'Dịu mắt trong không gian thiếu sáng.' : 'Trong trẻo, rõ ràng trong từng chi tiết.'}</p>
           </section>
         </div>
       </div>

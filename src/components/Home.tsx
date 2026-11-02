@@ -25,7 +25,6 @@ export function Home() {
           <h1 className="kit-page-title apple-large-title apple-strong">
             Xin chào{firstName ? `, ${firstName}` : ''}<span className="text-neutral-950 dark:text-white">.</span>
           </h1>
-          <p className="kit-page-description apple-body kit-text-secondary">Thông tin phòng, hóa đơn và tiện ích của bạn.</p>
         </div>
       </header>
 
