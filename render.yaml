@@ -16,3 +16,7 @@ services:
         value: "61954560911870422"
       - key: ZALO_APP_SECRET
         value: "O1V2j2lf2G6hWQnJEXQN"
+      - key: ZALO_CHECKOUT_PRIVATE_KEY
+        sync: false
+      - key: ZALO_CHECKOUT_METHOD_ID
+        value: BANK_SANDBOX

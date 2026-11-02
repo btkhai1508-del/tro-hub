@@ -75,11 +75,7 @@ export const HOUSES_CONFIG: Record<string, any> = {
   }
 };
 
-// In-memory store for payment gate and configurations
-let paymentGateState: Record<string, string> = {
-  '10/2026': 'STOP',
-  '09/2026': 'STOP'
-};
+// In-memory store for configurations
 
 let unitConfigState: Record<string, any> = {
   '10/2026': { dien: 3500, nuoc: 20000, rac: 30000, net: 40000, xe: 50000 },
@@ -992,32 +988,69 @@ function paidDateFromLogs(logsRows: string[][], room: string, month: string): st
 
 /**
  * Payment Gate (Cổng thanh toán)
- * Stored per month on the server and toggled from the admin portal; the sheet is not involved.
+ * Toggled from the admin portal and kept in Apps Script properties, not on the sheet: Render's disk
+ * goes back to the deployed files on every restart, which used to close the gate by itself.
  */
-export async function getPaymentGate(month: string = getCurrentMonthStr()): Promise<string> {
-  const fileData = loadPaymentGateFile();
-  const existing = fileData[month];
+let gateRecords: Record<string, GateRecord> = {};
+let gatesLoaded = false;
+let gateLoad: Promise<void> | null = null;
+let lastGateLoadFailure = 0;
 
-  if (existing && (existing.value === 'START' || existing.value === 'STOP')) {
-    paymentGateState[month] = existing.value;
-    return existing.value;
-  }
-
-  return paymentGateState[month] || 'STOP';
+async function callGateScript(action: string, params: Record<string, unknown> = {}): Promise<Record<string, GateRecord> | null> {
+  const res = await fetch(GOOGLE_APPS_SCRIPT_WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action, ...params }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const data: any = await res.json();
+  if (!data?.success) throw new Error(data?.error || 'Apps Script error');
+  // A script deployed before this action existed answers success without naming it.
+  return data.action === action ? data.gates || {} : null;
 }
 
-export function setPaymentGate(month: string = getCurrentMonthStr(), value: string = 'STOP'): string {
+const newerGate = (a?: GateRecord, b?: GateRecord) => (!a || (b && (b.updatedAt || 0) > (a.updatedAt || 0)) ? b : a);
+
+function loadGates() {
+  if (gatesLoaded) return Promise.resolve();
+  if (!gateLoad) {
+    gateLoad = callGateScript('get_payment_gates')
+      .then(saved => {
+        const merged = { ...loadPaymentGateFile(), ...gateRecords };
+        for (const [month, record] of Object.entries(saved || {})) merged[month] = newerGate(merged[month], record)!;
+        gateRecords = merged;
+        gatesLoaded = true;
+      })
+      .catch(err => {
+        lastGateLoadFailure = Date.now();
+        console.warn('[paymentGate] could not read Apps Script:', err);
+      })
+      .finally(() => { gateLoad = null; });
+  }
+  return gateLoad;
+}
+
+/** The month's setting, else the latest one so a new month keeps the gate as it was. Null while the setting cannot be read. */
+export async function getPaymentGate(month: string = getCurrentMonthStr()): Promise<string | null> {
+  // Residents poll every few seconds, so a failing script is not retried on each one.
+  if (!gatesLoaded && Date.now() - lastGateLoadFailure > 30000) await loadGates();
+  if (gateRecords[month]) return gateRecords[month].value;
+  if (!gatesLoaded) return null;
+  const latest = Object.values(gateRecords).reduce<GateRecord | undefined>(newerGate, undefined);
+  return latest?.value || 'STOP';
+}
+
+export async function setPaymentGate(month: string = getCurrentMonthStr(), value: string = 'STOP'): Promise<string> {
   const normVal = String(value).toUpperCase() === 'START' ? 'START' : 'STOP';
-  paymentGateState[month] = normVal;
+  const record: GateRecord = { value: normVal, updatedAt: Date.now(), source: 'admin' };
+  gateRecords[month] = record;
 
   const fileData = loadPaymentGateFile();
-  fileData[month] = {
-    value: normVal,
-    updatedAt: Date.now(),
-    source: 'admin'
-  };
+  fileData[month] = record;
   savePaymentGateFile(fileData);
 
+  const saved = await callGateScript('set_payment_gate', { month, value: normVal, updatedAt: record.updatedAt });
+  if (!saved) throw new Error('Apps Script chưa có bản mới. Vui lòng triển khai lại script.');
   return normVal;
 }
 

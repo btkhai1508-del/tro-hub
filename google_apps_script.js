@@ -22,6 +22,14 @@ function testPermission() {
   Logger.log("Tab hiện tại: " + sheet.getName());
 }
 
+function docCongThanhToan_() {
+  try {
+    return JSON.parse(PropertiesService.getScriptProperties().getProperty("PAYMENT_GATES") || "{}");
+  } catch (err) {
+    return {};
+  }
+}
+
 function doGet(e) {
   return handleRequest(e);
 }
@@ -84,6 +92,19 @@ function handleRequest(e) {
     }
     if (action === "delete_resident" || action === "delete_account") {
       return createJsonResponse(xoaCuDan_(ss, params, action));
+    }
+
+    // ----------------------------------------------------
+    // ACTION 0C: CỔNG THANH TOÁN (LƯU TRONG SCRIPT, KHÔNG DÙNG Ô NÀO TRÊN SHEET)
+    // ----------------------------------------------------
+    if (action === "get_payment_gates") {
+      return createJsonResponse({ success: true, action: action, gates: docCongThanhToan_() });
+    }
+    if (action === "set_payment_gate") {
+      var gates = docCongThanhToan_();
+      gates[params.month] = { value: params.value === "START" ? "START" : "STOP", updatedAt: Number(params.updatedAt) || Date.now(), source: "admin" };
+      PropertiesService.getScriptProperties().setProperty("PAYMENT_GATES", JSON.stringify(gates));
+      return createJsonResponse({ success: true, action: action, gates: gates });
     }
 
     // ----------------------------------------------------

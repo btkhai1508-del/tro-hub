@@ -12,7 +12,7 @@ import { getLiveRoomPaymentStatus, fetchAllSheetColumnPStatuses } from './src/se
 import { listAccounts, callAccountScript } from './src/server/accountService';
 import { normalizeRoom } from './src/server/googleSheetsBackendService';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
-import { getZaloProfile, getZaloPhoneNumber } from './src/server/zaloService.js';
+import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
 import {
   getMonthList,
   getDashboardData,
@@ -367,6 +367,23 @@ async function startServer() {
 
   // Backend API: Update payment status to Column P (GREEN for QR/transfer)
   // Requires session; a tenant can only mark their OWN room.
+  // Zalo Checkout bank transfer: the key stays here, and arrival is still confirmed by the bank webhook above.
+  app.post('/api/payment/zalo-order', requireAuth, (req: AuthedRequest, res) => {
+    const privateKey = process.env.ZALO_CHECKOUT_PRIVATE_KEY;
+    if (!privateKey) return res.status(503).json({ success: false, error: 'Chuyển khoản nhanh chưa được cấu hình.' });
+    const { amount, desc, invoiceId } = req.body || {};
+    if (!Number.isInteger(amount) || amount <= 0 || !desc) return res.status(400).json({ success: false, error: 'Thiếu số tiền hoặc nội dung chuyển khoản.' });
+    const extradata = JSON.stringify({ invoiceId: String(invoiceId || '') });
+    res.json({ success: true, order: signZaloBankOrder(amount, String(desc), extradata, privateKey, process.env.ZALO_CHECKOUT_METHOD_ID || 'BANK') });
+  });
+
+  app.post('/api/zalo/checkout-notify', (req, res) => {
+    const { data = {}, mac } = req.body || {};
+    const privateKey = process.env.ZALO_CHECKOUT_PRIVATE_KEY;
+    if (!privateKey || !isValidZaloNotify(data, mac, privateKey)) return res.json({ returnCode: 0, returnMessage: 'Invalid mac' });
+    res.json({ returnCode: 1, returnMessage: 'Success' });
+  });
+
   app.post('/api/payment/mark-paid', requireAuth, async (req: AuthedRequest, res) => {
     try {
       const { method = 'qr', amount, month = '10/2026', transactionId } = req.body || {};
@@ -877,20 +894,25 @@ async function startServer() {
   app.get('/api/admin/payment-gate', async (req, res) => {
     const month = (req.query.month as string) || getCurrentMonthStr();
     const value = await getPaymentGate(month);
-    res.json({ success: true, month, value });
+    res.json({ success: value !== null, month, value });
   });
 
-  app.post('/api/admin/payment-gate', (req, res) => {
+  app.post('/api/admin/payment-gate', async (req, res) => {
     const { month = getCurrentMonthStr(), value = 'STOP' } = req.body || {};
-    const updated = setPaymentGate(month, value);
-    res.json({ success: true, month, value: updated });
+    try {
+      const updated = await setPaymentGate(month, value);
+      res.json({ success: true, month, value: updated });
+    } catch (error: any) {
+      console.error('[API /api/admin/payment-gate] Error:', error);
+      res.status(502).json({ success: false, month, error: error?.message || 'Chưa lưu được cổng thanh toán.' });
+    }
   });
 
   // Public endpoint for residents to check if payment gate is open
   app.get('/api/payment/gate', async (req, res) => {
     const month = (req.query.month as string) || getCurrentMonthStr();
     const value = await getPaymentGate(month);
-    res.json({ success: true, month, value });
+    res.json({ success: value !== null, month, value });
   });
 
   app.get('/api/admin/config', async (req, res) => {

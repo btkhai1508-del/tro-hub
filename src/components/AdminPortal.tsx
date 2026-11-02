@@ -680,13 +680,15 @@ export function AdminPortal() {
         body: JSON.stringify({ month: selectedMonth, value: nextVal })
       });
       const data = await res.json();
-      if (data && data.success && data.value) {
-        setPaymentGate(data.value);
-      }
-    } catch (e) {
+      if (!data?.success) throw new Error(data?.error);
+      setPaymentGate(data.value);
+      playSound('success');
+    } catch (e: any) {
       console.warn('Payment gate toggle error:', e);
+      lastGateToggleTimeRef.current = 0;
+      setPaymentGate(nextVal === 'START' ? 'STOP' : 'START');
+      alert(e?.message || 'Chưa lưu được cổng thanh toán. Vui lòng thử lại.');
     }
-    playSound('success');
   };
 
   const loadTabContent = async (menuKey: string, month: string) => {

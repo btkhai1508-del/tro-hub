@@ -38,7 +38,7 @@ import {
   Download as LucideDownload,
   ImageDown as LucideImageDown,
   Camera as LucideCamera,
-  ScanLine as LucideScanLine,
+  Landmark as LucideLandmark,
   Save as LucideSave,
   RefreshCw as LucideRefreshCw,
   Search as LucideSearch,
@@ -94,7 +94,7 @@ export const Play = createKitIcon('Play');
 export const Download = LucideDownload;
 export const ImageDown = LucideImageDown;
 export const CameraLine = LucideCamera;
-export const ScanLine = LucideScanLine;
+export const Landmark = LucideLandmark;
 export const Save = LucideSave;
 export const Copy = LucideCopy;
 

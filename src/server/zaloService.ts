@@ -71,3 +71,17 @@ export async function getZaloPhoneNumber(accessToken: string, phoneToken: string
   }
   return String(number);
 }
+
+const zaloMac = (data: string, privateKey: string) => crypto.createHmac('sha256', privateKey).update(data).digest('hex');
+
+/** A Zalo Checkout order limited to bank transfer, with params in the sorted form Zalo signs. */
+export function signZaloBankOrder(amount: number, desc: string, extradata: string, privateKey: string, methodId = 'BANK') {
+  const item = [{ id: 'invoice', amount }];
+  const method = JSON.stringify({ id: methodId, isCustom: false });
+  const data = `amount=${amount}&desc=${desc}&extradata=${extradata}&item=${JSON.stringify(item)}&method=${method}`;
+  return { amount, desc, item, extradata, method, mac: zaloMac(data, privateKey) };
+}
+
+export function isValidZaloNotify(data: { appId?: unknown; orderId?: unknown; method?: unknown }, mac: unknown, privateKey: string) {
+  return mac === zaloMac(`appId=${data.appId}&orderId=${data.orderId}&method=${data.method}`, privateKey);
+}
