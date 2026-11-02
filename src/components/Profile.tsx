@@ -10,9 +10,19 @@ import { apiFetch } from '../lib/api';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
-import { toCurrentAddress } from '../lib/vnAddress';
+import { NeighbourhoodRename, toCurrentAddress } from '../lib/vnAddress';
 import { AddressFields } from './AddressFields';
 import { CccdQrScanner } from './CccdQrScanner';
+
+// The landlord's khu phố renames ("KHU PHỐ" tab), read once per visit; none when the tab is missing.
+let renamesRequest: Promise<NeighbourhoodRename[]> | null = null;
+const loadRenames = () => renamesRequest ??= apiFetch('/api/khu-pho')
+  .then(res => res.ok ? res.json() : null)
+  .then(body => Array.isArray(body?.rows) ? body.rows : [])
+  .catch(() => {
+    renamesRequest = null;
+    return [];
+  });
 
 function ProfileField({ label, value, onChange, type = 'text', placeholder, inputMode, maxLength }: { label: string; value?: string; onChange?: (value: string) => void; type?: string; placeholder?: string; inputMode?: 'numeric'; maxLength?: number }) {
   return (
@@ -67,7 +77,7 @@ export function Profile() {
     });
     // An address saved before the 2025 merger is moved to the new ward and province, then saved with the rest.
     const saved = profile.address || '';
-    if (saved) toCurrentAddress(saved).then(address => {
+    if (saved) loadRenames().then(renames => toCurrentAddress(saved, '', renames)).then(address => {
       if (!address || address === saved) return;
       setDraft(prev => prev.address === saved ? { ...prev, address } : prev);
       setStatus({ ok: true, text: 'Địa chỉ thường trú đã được đổi sang phường/xã và tỉnh sau sáp nhập. Bạn kiểm tra lại (chọn phường/xã nếu còn trống), rồi bấm Lưu thay đổi.' });
@@ -82,7 +92,7 @@ export function Profile() {
 
   const handleQrResult = async (data: CccdQrData) => {
     setIsScanning(false);
-    const address = await toCurrentAddress(data.address, data.issueDate).catch(() => data.address);
+    const address = await toCurrentAddress(data.address, data.issueDate, await loadRenames()).catch(() => data.address);
     setDraft(prev => ({ ...prev, name: data.name, cccd: data.cccd, address: address || prev.address, dob: data.dob || prev.dob, gender: data.gender || prev.gender }));
     setStatus({ ok: true, text: 'Đã điền từ CCCD. QR không có số điện thoại nên bạn tự kiểm tra ô này, rồi bấm Lưu thay đổi.' });
   };

@@ -406,7 +406,31 @@ function onOpen() {
     .addSeparator()
     .addItem('✅ Đánh dấu ĐÃ THANH TOÁN (Màu xanh lá Cột P)', 'markRowPaid')
     .addItem('⏳ Đánh dấu CHƯA THANH TOÁN (Màu đỏ Cột P)', 'markRowUnpaid')
+    .addSeparator()
+    .addItem('🏘 Tạo tab KHU PHỐ (đổi tên khu phố sau sáp nhập)', 'taoTabKhuPho')
     .addToUi();
+}
+
+/**
+ * Tab KHU PHỐ: app đọc tab này khi đổi địa chỉ CCCD cũ, để thay khu phố/ấp cũ bằng tên mới.
+ * Cột A: Phường cũ | B: Khu phố cũ | C: Phường mới | D: Khu phố mới. Dòng 1 là tiêu đề.
+ * Có tab rồi thì không làm gì, để không mất dữ liệu đã nhập.
+ */
+function taoTabKhuPho() {
+  var ss = getSafeSpreadsheet();
+  if (ss.getSheetByName('KHU PHỐ')) {
+    showAlertSafely('Tab KHU PHỐ đã có sẵn.');
+    return;
+  }
+  var sheet = ss.insertSheet('KHU PHỐ');
+  sheet.getRange(1, 1, 1, 4).setValues([['Phường cũ', 'Khu phố cũ', 'Phường mới', 'Khu phố mới']])
+    .setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
+  // The example lives in a note: a sample row would be read as a real rename.
+  sheet.getRange('A1').setNote('Ví dụ một dòng: Linh Trung | Khu phố 2 | Phường Linh Xuân | Khu phố 30\nKhu phố mới chỉ ghi số (30) thì giữ cách viết của cư dân (KP, Khu phố).');
+  sheet.getRange('A:D').setNumberFormat('@');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidths(1, 4, 180);
+  showAlertSafely('Đã tạo tab KHU PHỐ. Nhập mỗi khu phố đã đổi tên một dòng, từ dòng 2 (xem ví dụ ở ghi chú ô A1).');
 }
 
 function showAlertSafely(msg) {
