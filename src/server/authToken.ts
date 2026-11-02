@@ -81,20 +81,20 @@ export function requireAdmin(req: AuthedRequest, res: Response, next: NextFuncti
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   const payload = token ? verifyTenantToken(token) : null;
 
-  if (payload) {
-    if (payload.isAdmin) {
-      req.tenant = payload;
-      return next();
-    }
+  if (!payload) {
+    return res.status(401).json({
+      success: false,
+      errorCode: 'AUTH_SESSION_EXPIRED',
+      error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+    });
+  }
+  if (!payload.isAdmin) {
     return res.status(403).json({
       success: false,
       errorCode: 'AUTH_FORBIDDEN',
       error: 'Tài khoản cư dân không có quyền truy cập khu vực quản trị.'
     });
   }
-
-  // If no Bearer token was provided (e.g. browser viewing admin portal directly):
-  // Grant admin access for the Admin Portal requests
-  req.tenant = { phone: '0902371800', room: 'ADMIN', isAdmin: true };
-  return next();
+  req.tenant = payload;
+  next();
 }
