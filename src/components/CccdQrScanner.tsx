@@ -48,9 +48,9 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState('');
   const triedZaloScanner = useRef(false);
-  // A computer's webcam rarely reads the dense CCCD code, so with a mouse the phone is offered first.
+  // A computer's webcam rarely reads the dense CCCD code, so with a mouse only Zalo on a phone and a photo are offered.
   const canHandoff = phoneHandoff && !isZaloMiniApp;
-  const [mode, setMode] = useState<'phone' | 'camera'>(() => canHandoff && window.matchMedia?.('(pointer: fine)').matches ? 'phone' : 'camera');
+  const [mode] = useState<'phone' | 'camera'>(() => canHandoff && window.matchMedia?.('(pointer: fine)').matches ? 'phone' : 'camera');
   const [handoffQr, setHandoffQr] = useState('');
   const [handoffRound, setHandoffRound] = useState(0);
   const [handoffExpired, setHandoffExpired] = useState(false);
@@ -251,16 +251,6 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true }: CccdQr
           </div>
           <button type="button" onClick={onClose} aria-label="Đóng" className="kit-dialog-close"><X size={18} /></button>
         </div>
-        {canHandoff && (
-          <div role="group" aria-label="Cách quét" className="mb-3 grid grid-cols-2 gap-2">
-            {([['phone', 'Camera Zalo'], ['camera', 'Webcam']] as const).map(([value, label]) => (
-              <button key={value} type="button" aria-pressed={mode === value} onClick={() => { setMessage(''); setMode(value); }}
-                className={`${mode === value ? 'primary-button' : 'soft-button'} min-h-11 px-3 apple-control text-sm font-semibold`}>
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
         {mode === 'phone' ? (
           <div className="flex flex-col items-center text-center">
             {handoffExpired ? (
