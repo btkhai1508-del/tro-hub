@@ -13,6 +13,7 @@ import { listAccounts, callAccountScript } from './src/server/accountService';
 import { normalizeRoom } from './src/server/googleSheetsBackendService';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
 import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
+import { registerCccdHandoff } from './src/server/cccdHandoff.js';
 import {
   getMonthList,
   getDashboardData,
@@ -87,6 +88,9 @@ async function startServer() {
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
   });
+
+  // Scan a CCCD on a phone, fill the form on a computer.
+  registerCccdHandoff(app);
 
   // Backend API Route: Authenticate tenant workflow (phone + password)
   app.post('/api/auth/login', async (req, res) => {

@@ -17,6 +17,7 @@ const PaymentPage = lazy(() => routeLoaders.payment().then(module => ({ default:
 const LaundryPage = lazy(() => routeLoaders.laundry().then(module => ({ default: module.LaundryPage })));
 const LoginPage = lazy(() => routeLoaders.login().then(module => ({ default: module.LoginPage })));
 const AdminPortal = lazy(() => routeLoaders.admin().then(module => ({ default: module.AdminPortal })));
+const CccdPhoneScan = lazy(() => import('./components/CccdPhoneScan'));
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useApp();
@@ -81,6 +82,9 @@ function AppRoutes() {
       />
 
       <Route path="/user/*" element={<Navigate to="/" replace />} />
+
+      {/* Opened on a phone from the QR a computer shows; works without logging in */}
+      <Route path="/cccd-scan/:id" element={<CccdPhoneScan />} />
 
       {/* Main Authenticated Layout matching root / */}
       <Route 
