@@ -148,28 +148,8 @@ function handleRequest(e) {
     // Nút xác nhận thu tiền: Tô highlight cột P tương ứng row/phòng sang màu xanh lá
     // ----------------------------------------------------
     if (action === "update_payment") {
-      var month = String(params.month || "").trim();
-      var rawDigits = month.replace(/\D/g, "");
-      var targetSheet = ss.getSheetByName(month) || 
-                        ss.getSheetByName(rawDigits) || 
-                        ss.getSheetByName("Tháng " + month) || 
-                        ss.getSheetByName("T" + month) || 
-                        ss.getSheetByName("Tháng " + rawDigits);
-      
-      if (!targetSheet) {
-        var allSheets = ss.getSheets();
-        for (var s = 0; s < allSheets.length; s++) {
-          var sName = allSheets[s].getName().toLowerCase();
-          if (sName.indexOf(month.toLowerCase()) !== -1 || (rawDigits && sName.indexOf(rawDigits) !== -1)) {
-            targetSheet = allSheets[s];
-            break;
-          }
-        }
-      }
-
-      if (!targetSheet) {
-        targetSheet = ss.getActiveSheet();
-      }
+      var targetSheet = timTabThang_(ss, params.month);
+      if (!targetSheet) return createJsonResponse({ success: false, error: "Không tìm thấy tab tháng " + (params.month || "hiện tại") });
 
       var targetRoom = String(params.room || "").trim();
       var isPaid = String(params.status || "").toLowerCase() === "paid";
@@ -239,15 +219,8 @@ function handleRequest(e) {
     // Cột H5: Đơn giá điện, I5: Đơn giá nước, K5: Tiền rác, L5: Tiền internet, M5: Tiền xe
     // ----------------------------------------------------
     if (action === "update_config" || action === "set_config") {
-      var month = String(params.month || "").trim();
-      var rawDigits = month.replace(/\D/g, "");
-      var targetSheet = ss.getSheetByName(month) || 
-                        ss.getSheetByName(rawDigits) || 
-                        ss.getSheetByName("Tháng " + month) || 
-                        ss.getSheetByName("T" + month) || 
-                        ss.getSheetByName("Tháng " + rawDigits);
-
-      if (!targetSheet) targetSheet = ss.getActiveSheet();
+      var targetSheet = timTabThang_(ss, params.month);
+      if (!targetSheet) return createJsonResponse({ success: false, error: "Không tìm thấy tab tháng " + (params.month || "hiện tại") });
 
       // Cột H5 (cột 8): Đơn giá điện
       if (params.dien !== undefined && params.dien !== "") targetSheet.getRange("H5").setValue(Number(params.dien));
@@ -270,6 +243,27 @@ function handleRequest(e) {
         net: params.net,
         xe: params.xe
       });
+    }
+
+    // ----------------------------------------------------
+    // ACTION 4B: CẬP NHẬT CHỈ SỐ ĐIỆN NƯỚC CỦA PHÒNG
+    // Cột B: Điện cũ, C: Điện mới, E: Nước cũ, F: Nước mới, P: màu thanh toán
+    // ----------------------------------------------------
+    if (action === "update_meters" || action === "update_room_detail") {
+      var meterSheet = timTabThang_(ss, params.month);
+      if (!meterSheet) return createJsonResponse({ success: false, error: "Không tìm thấy tab tháng " + (params.month || "hiện tại") });
+      var meterRow = timDongPhong_(meterSheet, params.room);
+      if (meterRow === -1) return createJsonResponse({ success: false, error: "Không tìm thấy phòng " + params.room + " trong tab " + meterSheet.getName() });
+
+      [["dienCu", 2], ["dienMoi", 3], ["nuocCu", 5], ["nuocMoi", 6]].forEach(function (pair) {
+        var value = params[pair[0]];
+        if (value !== undefined && value !== "" && !isNaN(Number(value))) meterSheet.getRange(meterRow, pair[1]).setValue(Number(value));
+      });
+      if (params.status) {
+        meterSheet.getRange(meterRow, 16).setBackground(String(params.status).toLowerCase() === "paid" ? "#b6d7a8" : "#F8D7DA");
+      }
+      SpreadsheetApp.flush();
+      return createJsonResponse({ success: true, action: action, sheet: meterSheet.getName(), row: meterRow });
     }
 
     // ----------------------------------------------------
@@ -488,11 +482,38 @@ function kyCuaTab_(name) {
   return Number(match[2]) * 12 + Number(match[1]);
 }
 
+/** Kỳ của tháng hiện tại theo giờ Việt Nam, cùng thang số với kyCuaTab_. */
+function kyHienTai_() {
+  return kyCuaTab_(Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'M/yyyy'));
+}
+
+/** Tab của tháng được hỏi ("11/2026", "112026", "Tháng 11/2026"); để trống là tháng hiện tại. Không có thì trả về null. */
+function timTabThang_(ss, month) {
+  var text = String(month === null || month === undefined ? '' : month).trim().replace(/^(THÁNG|Tháng|tháng|T)\s*/, '');
+  var ky = text ? kyCuaTab_(text) : kyHienTai_();
+  if (!ky) return null;
+  var tabs = ss.getSheets();
+  for (var i = 0; i < tabs.length; i++) {
+    if (kyCuaTab_(tabs[i].getName()) === ky) return tabs[i];
+  }
+  return null;
+}
+
+/** Dòng của phòng trong tab tháng (bảng phòng nằm từ dòng 7 đến 50); không có thì -1. */
+function timDongPhong_(sheet, room) {
+  var phong = chuanHoaPhong_(room);
+  if (!phong) return -1;
+  var cotA = sheet.getRange(7, 1, 44, 1).getValues();
+  for (var i = 0; i < cotA.length; i++) {
+    if (chuanHoaPhong_(cotA[i][0]) === phong) return 7 + i;
+  }
+  return -1;
+}
+
 function layTabThang_(ss, tatCa) {
   var tabs = ss.getSheets().filter(function (sheet) { return kyCuaTab_(sheet.getName()) > 0; });
   if (tatCa) return tabs;
-  var now = new Date();
-  var hienTai = now.getFullYear() * 12 + now.getMonth() + 1;
+  var hienTai = kyHienTai_();
   return tabs.filter(function (sheet) { return kyCuaTab_(sheet.getName()) >= hienTai; });
 }
 
