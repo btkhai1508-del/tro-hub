@@ -4,15 +4,17 @@ export interface CccdQrData {
   dob: string;
   gender: string;
   address: string;
+  /** Ngày cấp, dd/mm/yyyy; empty when the QR leaves it out. */
+  issueDate: string;
 }
 
 /** The QR on a chip CCCD holds: số CCCD|số CMND cũ|họ tên|ngày sinh ddmmyyyy|giới tính|địa chỉ|ngày cấp. */
 export function parseCccdQr(text: string): CccdQrData | null {
   const parts = String(text || '').split('|').map(part => part.trim());
   if (parts.length < 6 || !/^\d{12}$/.test(parts[0]) || !parts[2]) return null;
-  const dob = /^\d{8}$/.test(parts[3]) ? `${parts[3].slice(0, 2)}/${parts[3].slice(2, 4)}/${parts[3].slice(4)}` : '';
+  const date = (value = '') => /^\d{8}$/.test(value) ? `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}` : '';
   const gender = /^n[ữu]/i.test(parts[4]) ? 'Nữ' : /^nam/i.test(parts[4]) ? 'Nam' : '';
-  return { cccd: parts[0], name: parts[2], dob, gender, address: parts[5] };
+  return { cccd: parts[0], name: parts[2], dob: date(parts[3]), gender, address: parts[5], issueDate: date(parts[6]) };
 }
 
 export interface QrDetector {

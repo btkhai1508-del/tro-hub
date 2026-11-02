@@ -10,7 +10,7 @@ import { apiFetch } from '../lib/api';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
-import { convertScannedAddress, toCurrentAddress } from '../lib/vnAddress';
+import { toCurrentAddress } from '../lib/vnAddress';
 import { AddressFields } from './AddressFields';
 import { CccdQrScanner } from './CccdQrScanner';
 
@@ -82,7 +82,7 @@ export function Profile() {
 
   const handleQrResult = async (data: CccdQrData) => {
     setIsScanning(false);
-    const address = await convertScannedAddress(data.address).catch(() => data.address);
+    const address = await toCurrentAddress(data.address, data.issueDate).catch(() => data.address);
     setDraft(prev => ({ ...prev, name: data.name, cccd: data.cccd, address: address || prev.address, dob: data.dob || prev.dob, gender: data.gender || prev.gender }));
     setStatus({ ok: true, text: 'Đã điền từ CCCD. QR không có số điện thoại nên bạn tự kiểm tra ô này, rồi bấm Lưu thay đổi.' });
   };
