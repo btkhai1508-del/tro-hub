@@ -10,7 +10,7 @@ import { apiFetch } from '../lib/api';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
-import { convertScannedAddress } from '../lib/vnAddress';
+import { convertScannedAddress, toCurrentAddress } from '../lib/vnAddress';
 import { AddressFields } from './AddressFields';
 import { CccdQrScanner } from './CccdQrScanner';
 
@@ -65,6 +65,13 @@ export function Profile() {
       vehicleType: VEHICLE_TYPE, plateNumber: profile.vehicle?.plateNumber || '',
       emergencyName: profile.emergencyContact?.name || '', emergencyPhone: profile.emergencyContact?.phone || '', emergencyRelation: profile.emergencyContact?.relationship || '',
     });
+    // An address saved before the 2025 merger is moved to the new ward and province, then saved with the rest.
+    const saved = profile.address || '';
+    if (saved) toCurrentAddress(saved).then(address => {
+      if (!address || address === saved) return;
+      setDraft(prev => prev.address === saved ? { ...prev, address } : prev);
+      setStatus({ ok: true, text: 'Địa chỉ thường trú đã được đổi sang phường/xã và tỉnh sau sáp nhập. Bạn kiểm tra lại (chọn phường/xã nếu còn trống), rồi bấm Lưu thay đổi.' });
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 

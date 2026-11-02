@@ -604,61 +604,61 @@ export function PaymentPage() {
             </div>
 
             {/* 2. MOBILE VIEW (under lg): Matches desktop layout identically */}
-            <div className="liquid-panel lg:hidden w-full max-w-[420px] flex flex-col p-4 sm:p-5 relative">
+            <div className="liquid-panel lg:hidden w-full max-w-[400px] flex flex-col px-4 pt-3.5 pb-4 relative">
               {/* Header Title & Subtitle */}
-              <div className="w-full text-center mb-3">
-                <h2 className="apple-title1 font-semibold kit-text-primary">
+              <div className="w-full text-center mb-2.5">
+                <h2 className="apple-title3 font-semibold kit-text-primary">
                   QR Thanh toán
                 </h2>
-                <p className="apple-body kit-text-secondary font-normal mt-1 leading-relaxed">
+                <p className="apple-footnote kit-text-secondary font-normal mt-0.5">
                   Quét mã để thanh toán tự động
                 </p>
               </div>
 
               {/* Straight Square Pure QR Container */}
               <section aria-label="Mã QR thanh toán" className="flex flex-col items-center justify-center">
-                <div className="bg-white p-3 rounded-2xl shadow-sm inline-block max-w-full">
+                <div className="bg-white p-2 rounded-xl shadow-sm inline-block max-w-full">
                   {qrUrl ? (
                     <img
                       src={qrUrl}
                       alt="VietQR Matrix"
-                      className="w-[200px] max-w-full aspect-square object-contain rounded-none select-none"
+                      className="w-[168px] max-w-full aspect-square object-contain rounded-none select-none"
                     />
                   ) : (
-                    <div className="w-[200px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
+                    <div className="w-[168px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
                       Đang tạo mã QR...
                     </div>
                   )}
                 </div>
 
-                {/* Spacing between QR image and save button */}
-                <div className="w-full max-w-[240px] flex flex-col gap-2 mt-4 mb-4">
+                {/* Save and quick transfer side by side to keep the card short */}
+                <div className={`w-full max-w-[300px] grid gap-2 mt-3 mb-3 ${isZaloMiniApp ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <button
                     type="button"
                     onClick={handleSaveQR}
                     disabled={isSavingQR}
-                    className="primary-button min-h-11 w-full py-2.5 px-4 apple-control flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer"
+                    className="primary-button min-h-11 w-full py-2 px-3 apple-control flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
                   >
                     <ImageDown size={15} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
                   </button>
                   {isZaloMiniApp && (
-                    <button type="button" onClick={handleQuickTransfer} disabled={isOpeningTransfer} className="soft-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer">
+                    <button type="button" onClick={handleQuickTransfer} disabled={isOpeningTransfer} className="soft-button min-h-11 w-full py-2 px-3 apple-control flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer">
                       <Landmark size={15} />
-                      <span>{isOpeningTransfer ? 'Đang mở...' : 'Chuyển khoản nhanh'}</span>
+                      <span>{isOpeningTransfer ? 'Đang mở...' : 'Chuyển nhanh'}</span>
                     </button>
                   )}
-                  {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="mt-2 max-w-[260px] text-center apple-callout kit-text-secondary">{qrSaveResult.message}</p>}
+                  {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="col-span-full text-center apple-footnote kit-text-secondary">{qrSaveResult.message}</p>}
                 </div>
               </section>
 
               {/* Transaction Details - Exactly matching desktop template */}
-              <div className="space-y-4 pt-1">
+              <div className="space-y-2.5">
                 <div>
-                  <h3 className="apple-title2 font-semibold kit-text-primary tracking-tight mb-2.5">
+                  <h3 className="sr-only">
                     Chi tiết giao dịch
                   </h3>
-                  <div className="kit-inset kit-group p-3.5 sm:p-4 space-y-3.5">
+                  <div className="border-t border-[#ebebed] dark:border-neutral-800 pt-2.5 space-y-1.5">
                     <div className="flex items-center justify-between apple-body text-xs sm:text-sm">
                       <span className="kit-text-secondary font-normal">Người nhận</span>
                       <button
@@ -730,9 +730,9 @@ export function PaymentPage() {
                 <hr className="border-t border-[#ebebed] dark:border-neutral-800 w-full" />
 
                 {/* Total Amount - Exactly like desktop with large font */}
-                <div className="flex items-baseline justify-between py-1">
+                <div className="flex items-baseline justify-between">
                   <span className="text-[15px] font-medium kit-text-secondary">Tổng tiền</span>
-                  <span className="text-[28px] sm:text-[32px] font-semibold kit-text-primary tracking-tight leading-none font-num">
+                  <span className="text-[26px] font-semibold kit-text-primary tracking-tight leading-none font-num">
                     {formatCurrency(targetInvoice.total)} ₫
                   </span>
                 </div>

@@ -33,7 +33,6 @@ export function splitAddress(text: string, provinces: VnProvince[]): AddressPart
 }
 
 const ADMIN_UNIT = /^(phường|xã|thị trấn|quận|huyện|thị xã|thành phố|tỉnh|tp\.?|p\.|q\.|x\.|h\.|tx\.?)(\s|$)/i;
-const NEIGHBOURHOOD = /^(khu phố|kp\.?)\s*\S/i;
 const PROVINCE_ALIASES: Record<string, string> = { hcm: 'hồ chí minh', 'tp.hcm': 'hồ chí minh', tphcm: 'hồ chí minh', 'tp hcm': 'hồ chí minh', hn: 'hà nội' };
 const WARD_PREFIX: Record<string, string> = { P: 'Phường', X: 'Xã', D: 'Đặc khu' };
 
@@ -48,8 +47,9 @@ type LegacyProvinces = Record<string, { p: string; d: Record<string, Record<stri
 
 /**
  * Turns a CCCD address, written with districts and the old provinces, into "detail, ward, province"
- * on the current map. Only the house and street stay as text. An old ward that was split between
- * new wards gives no ward, because the address alone cannot tell which one it became.
+ * on the current map. The text keeps only the house, street and neighbourhood; the ward has its own
+ * field. An old ward that was split between new wards, or is missing from the list, gives no ward,
+ * because the address alone cannot tell which one it became, so the resident picks it.
  */
 export async function convertScannedAddress(text: string): Promise<string> {
   const segments = String(text || '').split(',').map(part => part.trim()).filter(Boolean);
@@ -66,7 +66,6 @@ export async function convertScannedAddress(text: string): Promise<string> {
   const rest = segments.slice(0, -1);
   const units: string[] = [];
   while (rest.length && ADMIN_UNIT.test(rest[rest.length - 1])) units.unshift(rest.pop()!);
-  const detail = rest.filter(part => !NEIGHBOURHOOD.test(part));
 
   const wardText = units[0] || '';
   const districtKey = units.length > 1 ? legacyKey(units[units.length - 1]) : '';
@@ -81,5 +80,18 @@ export async function convertScannedAddress(text: string): Promise<string> {
   const mapped = code ? `${WARD_PREFIX[code[0]]} ${code.slice(2)}` : '';
   const sameName = code === undefined ? current.w.find(item => normalize(item) === normalize(wardText)) : '';
   const ward = current.w.includes(mapped) ? mapped : sameName || '';
-  return joinAddress({ detail: detail.join(', '), ward, province: current.n });
+  return joinAddress({ detail: rest.join(', '), ward, province: current.n });
+}
+
+/**
+ * A saved address already on the current map stays as it is; an old one is converted like a CCCD scan.
+ * It counts as current only when the ward is written out in full ("Phường Thủ Đức", not the old
+ * "Thành phố Thủ Đức" district) and no old ward or district is left in the text before it.
+ */
+export async function toCurrentAddress(text: string): Promise<string> {
+  const parts = splitAddress(text, await loadProvinces());
+  const segments = String(text || '').split(',').map(part => part.trim()).filter(Boolean);
+  const wardWritten = segments[segments.length - 2]?.normalize('NFC').toLowerCase() === parts.ward.toLowerCase();
+  const oldUnitLeft = parts.detail.split(',').some(part => ADMIN_UNIT.test(part.trim()));
+  return parts.province && parts.ward && wardWritten && !oldUnitLeft ? text : convertScannedAddress(text);
 }

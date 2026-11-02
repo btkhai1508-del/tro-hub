@@ -15,6 +15,9 @@ const NOT_CCCD = 'Mã này không phải QR trên CCCD. Vui lòng thử lại.';
 /** Apps that register as a camera but show their own picture, such as OBS on a computer. */
 const VIRTUAL_CAMERA = /obs|virtual|manycam|xsplit|snap camera/i;
 
+/** Largest square handed to jsQR; bigger frames are read whole (shrunk) and by their middle (not shrunk). */
+const SCAN_SIZE = 1000;
+
 /** Scans on the device itself: no CCCD photo or frame ever leaves the phone. */
 export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
   const dialogRef = useDialogFocus(true, onClose);
@@ -32,6 +35,7 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
     let frame = 0;
     let stopped = false;
     let lastScan = 0;
+    let pass = 0;
     const canvas = document.createElement('canvas');
 
     const handleText = (text: string) => {
@@ -65,7 +69,7 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
         // The CCCD code is dense, so ask for more than the 640x480 a phone gives by default.
         setCameraError('');
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } }), width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } }), width: { ideal: 3840 }, height: { ideal: 2160 } },
           audio: false
         });
         if (stopped) return;
@@ -89,21 +93,24 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
           // A few reads a second is enough and keeps the phone cool.
           if (time - lastScan > 200 && video.videoWidth) {
             lastScan = time;
+            // Alternate the whole square the user sees with its middle at the camera's own pixels.
+            // Shrinking a large frame loses the dots of the dense CCCD code; enlarging adds nothing.
+            const whole = pass++ % 2 === 0;
+            const square = Math.min(video.videoWidth, video.videoHeight);
+            const side = whole ? square : Math.min(square, SCAN_SIZE);
+            const size = Math.min(side, SCAN_SIZE);
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d', { willReadFrequently: true })!;
+            context.drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2, side, side, 0, 0, size, size);
             let text = '';
             if (detector) {
               try {
-                text = (await detector.detect(video))[0]?.rawValue || '';
+                text = (await detector.detect(whole ? video : canvas))[0]?.rawValue || '';
               } catch {}
               if (stopped) return;
             }
             if (!text) {
-              // Read only the square the user sees, at full camera detail.
-              const side = Math.min(video.videoWidth, video.videoHeight);
-              const size = Math.min(side, 1000);
-              canvas.width = size;
-              canvas.height = size;
-              const context = canvas.getContext('2d', { willReadFrequently: true })!;
-              context.drawImage(video, (video.videoWidth - side) / 2, (video.videoHeight - side) / 2, side, side, 0, 0, size, size);
               text = jsQR(context.getImageData(0, 0, size, size).data, size, size)?.data || '';
             }
             if (text) {
@@ -149,13 +156,18 @@ export function CccdQrScanner({ onClose, onResult }: CccdQrScannerProps) {
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="cccd-qr-title" className="apple-title2 kit-text-primary font-semibold">Quét QR CCCD</h2>
-            <p className="apple-callout kit-text-secondary mt-1">Đưa mã QR ở mặt trước CCCD vào giữa khung, giữ yên và tránh lóa.</p>
+            <p className="apple-callout kit-text-secondary mt-1">Đưa CCCD lại gần để mã QR nằm gọn trong ô vuông, giữ yên và tránh lóa.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Đóng" className="kit-dialog-close"><X size={18} /></button>
         </div>
         {cameraError
           ? <p role="alert" className="apple-callout kit-text-secondary rounded-2xl bg-black/5 p-4 dark:bg-white/5">{cameraError}</p>
-          : <video ref={videoRef} muted playsInline aria-label="Hình ảnh từ camera" className="aspect-square w-full rounded-[22px] bg-black object-cover" />}
+          : (
+            <div className="relative overflow-hidden rounded-[22px]">
+              <video ref={videoRef} muted playsInline aria-label="Hình ảnh từ camera" className="aspect-square w-full rounded-[22px] bg-black object-cover" />
+              <div aria-hidden="true" className="pointer-events-none absolute inset-[22.5%] rounded-xl border-2 border-white/85 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
+            </div>
+          )}
         {cameras.length > 1 && (
           <label className="apple-callout kit-text-secondary mt-3 block">
             Camera
