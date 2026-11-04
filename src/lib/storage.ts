@@ -60,6 +60,7 @@ try {
 export const STORAGE_KEYS = {
   AUTH: 'ecostay_auth',
   TOKEN: 'ecostay_jwt',
+  WORKER_TOKEN: 'ecostay_worker_jwt',
   USER_PHONE: 'ecostay_user_phone',
   PROFILE_SYNCED: 'ecostay_profile_row_synced'
 } as const;

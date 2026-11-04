@@ -24,7 +24,36 @@ export function getAuthToken(): string | null {
 
 export function setAuthToken(token: string | null | undefined): void {
   if (token) storage.setItem(STORAGE_KEYS.TOKEN, token);
-  else storage.removeItem(STORAGE_KEYS.TOKEN);
+  else {
+    storage.removeItem(STORAGE_KEYS.TOKEN);
+    storage.removeItem(STORAGE_KEYS.WORKER_TOKEN);
+  }
+}
+
+/**
+ * The Cloudflare Worker: login, password and (step by step) the rest of the API move here.
+ * It has its own token, kept next to the Express one until Express is gone.
+ */
+export const WORKER_API_URL: string = String(
+  import.meta.env.VITE_WORKER_API_URL || 'https://tro-hub-api.trohub.workers.dev'
+).replace(/\/+$/, '');
+
+export function setWorkerToken(token: string | null | undefined): void {
+  if (token) storage.setItem(STORAGE_KEYS.WORKER_TOKEN, token);
+  else storage.removeItem(STORAGE_KEYS.WORKER_TOKEN);
+}
+
+export async function workerFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers || {});
+  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  const token = storage.getItem(STORAGE_KEYS.WORKER_TOKEN);
+  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+
+  const res = await fetch(`${WORKER_API_URL}${path}`, { ...init, headers });
+  if (res.status === 401 && token && !path.startsWith('/api/auth/login')) {
+    window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
+  }
+  return res;
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {

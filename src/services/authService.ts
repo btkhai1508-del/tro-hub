@@ -8,7 +8,7 @@
 
 import { Invoice, UserProfile } from '../context/AppContext';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { apiFetch, setAuthToken } from '../lib/api';
+import { apiFetch, setAuthToken, setWorkerToken, workerFetch } from '../lib/api';
 import { requestZaloLogin } from '../lib/zaloAuth';
 import { fetchAllResidentsFromSheet, fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
 
@@ -96,17 +96,28 @@ export const authService = {
       };
     }
 
-    // 1. Authenticate via Backend API (issues JWT token for all roles including Admin)
+    // 1. Check the password on the Cloudflare Worker, which also knows the house and room,
+    // then trade its token for the Express session that the rest of the app still uses.
     // A token left by an earlier session (e.g. admin) must not outlive this login.
     setAuthToken(null);
     try {
-      const response = await apiFetch('/api/auth/login', {
+      const workerRes = await workerFetch('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({
-          phone: cleanPhone,
-          password: cleanPassword,
-          sheetId
-        })
+        body: JSON.stringify({ phone: cleanPhone, password: cleanPassword })
+      });
+      const workerData = await workerRes.json().catch(() => null);
+      if (!workerRes.ok || !workerData?.success) {
+        return {
+          success: false,
+          errorCode: workerData?.errorCode || 'AUTH_INVALID_CREDENTIALS',
+          error: workerData?.error || 'Số điện thoại hoặc mật khẩu không chính xác.'
+        };
+      }
+      setWorkerToken(workerData.token);
+
+      const response = await apiFetch('/api/auth/worker-session', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${workerData.token}` }
       });
 
       let data: any;

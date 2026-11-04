@@ -14,6 +14,7 @@ import { normalizeRoom } from './src/server/googleSheetsBackendService';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
 import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
 import { registerCccdHandoff } from './src/server/cccdHandoff.js';
+import { registerWorkerSession } from './src/server/workerSession.js';
 import {
   getMonthList,
   getDashboardData,
@@ -93,6 +94,9 @@ async function startServer() {
 
   // Scan a CCCD on a phone, fill the form on a computer.
   registerCccdHandoff(app);
+
+  // Login on the Cloudflare Worker, then this turns its token into the usual session.
+  registerWorkerSession(app);
 
   // Backend API Route: Authenticate tenant workflow (phone + password)
   app.post('/api/auth/login', async (req, res) => {

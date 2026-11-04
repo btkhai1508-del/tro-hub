@@ -11,3 +11,7 @@ migrations_dir = "migrations"
 # Secret không để ở đây:
 #   chạy local: cloudflare/.dev.vars (JWT_SECRET=...)
 #   trên Cloudflare: npx wrangler secret put JWT_SECRET
+
+[vars]
+# Trang được phép gọi API từ trình duyệt: app chạy trên máy, bản trên Render, Zalo Mini App.
+ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:5199,https://tro-hub.onrender.com,https://h5.zdn.vn,zbrowser://h5.zdn.vn"

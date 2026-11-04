@@ -3,7 +3,7 @@ import { fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
 import { getAccessToken } from '../lib/googleAuth';
 import { authService, PersonType, AuthErrorCode } from '../services/authService';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { apiFetch, UNAUTHORIZED_EVENT } from '../lib/api';
+import { apiFetch, workerFetch, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
 import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
@@ -641,9 +641,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'Mật khẩu mới phải có ít nhất 6 ký tự' };
     }
 
-    // Column N of the user's row holds the password, so the server checks and writes it.
+    // Passwords live on the Cloudflare Worker, which checks the current one and stores the new hash.
     try {
-      const res = await apiFetch('/api/auth/change-password', {
+      const res = await workerFetch('/api/auth/change-password', {
         method: 'POST',
         body: JSON.stringify({ currentPassword: trimmedCur, newPassword: trimmedNew })
       });
