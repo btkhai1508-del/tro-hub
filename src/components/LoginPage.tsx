@@ -403,9 +403,9 @@ export function LoginPage() {
               <p className="apple-callout kit-text-secondary">Chủ trọ sẽ đối chiếu hợp đồng thuê phòng và kích hoạt tài khoản của bạn. Sau khi được duyệt, bạn có thể đăng nhập bằng số điện thoại này.</p>
 
               <div className="space-y-3">
-                <a href="tel:0902371800" className="soft-button min-h-12 w-full px-4 py-3 text-[13px]">
-                  <PhoneCall aria-hidden="true" size={16} className="shrink-0" />
-                  <span>Liên hệ BQL Bùi Trung Khải duyệt nhanh (0902 371 800)</span>
+                <a href="https://zalo.me/0902371800" target="_blank" rel="noopener noreferrer" className="soft-button min-h-12 w-full px-4 py-3 apple-control">
+                  <img src="/brand/zalo-logo.png" alt="" className="h-5 w-5 shrink-0 object-contain" />
+                  <span>Liên hệ BQL để duyệt</span>
                 </a>
                 <button
                   type="button"
