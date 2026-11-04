@@ -61,10 +61,12 @@ import { Background } from './Background';
 import { useSidebarLabels } from '../lib/useSidebarLabels';
 import { AccountDeleteDialog, AccountDeleteMode } from './AccountDeleteDialog';
 import { PaymentPortalSettings } from './PaymentPortalSettings';
+import { ManagerAccounts } from './ManagerAccounts';
 import { useWorkerViewer } from '../lib/paymentPortal';
 import {
   IconHome3D,
   IconWallet3D,
+  IconQr3D,
   IconSecurity3D,
   IconProfile3D,
   IconNotification3D,
@@ -180,12 +182,12 @@ export function AdminPortal() {
   const [activeMenu, setActiveMenu] = useState<
     'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
   >('dashboard');
-  // Developer and Admin Tổng set each house's bank account in "Thông tin thanh toán".
+  // Admin Tổng sets each house's bank account in "Thông tin thanh toán" and creates Admin căn.
   const workerViewer = useWorkerViewer();
-  const canManagePaymentPortal = workerViewer?.role === 'developer' || workerViewer?.role === 'owner';
+  const isAdminTong = workerViewer?.role === 'owner';
 
   // Account Management (Quản lý tài khoản) state
-  const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create'>('approval');
+  const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create' | 'managers'>('approval');
   const [viewingAccount, setViewingAccount] = useState<RegisteredAccount | null>(null);
   const [sheetAccounts, setSheetAccounts] = useState<(RegisteredAccount & { isAdmin?: boolean })[]>([]);
   const [accountSearch, setAccountSearch] = useState('');
@@ -1774,7 +1776,7 @@ export function AdminPortal() {
               { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
               { key: 'config', label: 'Cài đặt phí', icon: IconSettings3D },
               { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D },
-              ...(canManagePaymentPortal ? [{ key: 'paymentPortal', label: 'Thông tin thanh toán', icon: IconWallet3D }] : [])
+              ...(isAdminTong ? [{ key: 'paymentPortal', label: 'Thông tin thanh toán', icon: IconQr3D }] : [])
             ].map(item => {
               const Icon = item.icon;
               return (
@@ -3930,7 +3932,7 @@ export function AdminPortal() {
               </div>
 
               {/* 2 Sub-tabs Segmented Control */}
-              <div className="kit-segmented grid grid-cols-2 gap-1 p-1 max-w-md" role="tablist" aria-label="Chọn chức năng quản lý tài khoản">
+              <div className={cn("kit-segmented grid gap-1 p-1", isAdminTong ? "grid-cols-3 max-w-xl" : "grid-cols-2 max-w-md")} role="tablist" aria-label="Chọn chức năng quản lý tài khoản">
                 <button
                   type="button"
                   role="tab"
@@ -3966,7 +3968,25 @@ export function AdminPortal() {
                 >
                   <span>Tạo tài khoản mới</span>
                 </button>
+                {isAdminTong && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={accountSubTab === 'managers'}
+                    aria-pressed={accountSubTab === 'managers'}
+                    onClick={() => {
+                      playSound('tab');
+                      setAccountSubTab('managers');
+                    }}
+                    className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'managers' && "kit-segment-active")}
+                  >
+                    <span>Admin căn</span>
+                  </button>
+                )}
               </div>
+
+              {/* Sub-tab 3: Admin căn (Admin Tổng only) */}
+              {accountSubTab === 'managers' && isAdminTong && <ManagerAccounts />}
 
               {/* Sub-tab 1: Xét duyệt tài khoản */}
               {accountSubTab === 'approval' && (

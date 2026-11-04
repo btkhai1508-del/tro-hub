@@ -11,7 +11,7 @@ export interface WorkerViewer {
   kind: 'resident' | 'staff';
   id: number;
   name: string;
-  role?: 'developer' | 'owner' | 'manager';
+  role?: 'owner' | 'manager';
   houseId?: string;
   houseIds?: string[];
   roomName?: string | null;

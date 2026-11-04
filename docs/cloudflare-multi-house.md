@@ -68,21 +68,21 @@ Nhà trọ X ──(link mã mời ngẫu nhiên)──► User ──► Fronte
 Mỗi request ──► Worker lấy house_id TỪ TOKEN ──► D1 lọc theo nhà và phòng
 ```
 
-## Phân quyền quản lý (ba tầng, quyết định 2026-11-04)
+## Phân quyền quản lý (hai tầng, quyết định 2026-11-04)
 
-- **Developer** (`developer`, Bùi Trung Khải): thấy mọi nhà, tạo nhà trọ, tạo Admin Tổng và giao nhà cho họ, kết nối Google.
-- **Admin Tổng** (`owner`): quản lý các nhà được Developer giao (`staff_houses`), có ô chọn nhà và trang tổng hợp, tạo Admin căn cho các nhà của mình, đặt **Thông tin thanh toán** (ngân hàng + STK) của từng nhà.
+- **Admin Tổng** (`owner`): một chủ trọ độc lập. Chỉ thấy các nhà của mình (`staff_houses`), có ô chọn nhà và trang tổng hợp, tạo nhà mới (nhà thuộc về người tạo), tạo và khoá Admin căn, đặt **Thông tin thanh toán** (ngân hàng + STK), kết nối Google của riêng mình.
 - **Admin căn** (`manager`): chỉ nhà được giao, không có ô chọn nhà.
+- Thêm Admin Tổng mới = thêm một chủ trọ độc lập (thương mại hoá, có bảng giá). Việc này sẽ làm qua **một trang web dịch vụ riêng**, sau này; app hiện tại không tạo Admin Tổng.
 
-| Việc | Developer | Admin Tổng | Admin căn |
-|---|---|---|---|
-| Tạo nhà trọ | ✅ | ❌ | ❌ |
-| Tạo Admin Tổng, giao nhà cho Admin Tổng | ✅ | ❌ | ❌ |
-| Tạo / khoá Admin căn | ✅ | ✅ nhà mình | ❌ |
-| Trang tổng hợp nhiều nhà | ✅ | ✅ nhà mình | ❌ |
-| Thông tin thanh toán (ngân hàng, STK) | ✅ | ✅ nhà mình | ❌ |
-| Kết nối Google, giao dịch chưa gắn nhà | ✅ | ❌ | ❌ |
-| Mọi việc vận hành khác của nhà | ✅ | ✅ nhà mình | ✅ nhà mình |
+| Việc | Admin Tổng | Admin căn |
+|---|---|---|
+| Tạo nhà trọ | ✅ (nhà của mình) | ❌ |
+| Tạo / khoá Admin căn (Quản lý tài khoản → Admin căn) | ✅ nhà mình | ❌ |
+| Trang tổng hợp nhiều nhà | ✅ nhà mình | ❌ |
+| Thông tin thanh toán (ngân hàng, STK) | ✅ nhà mình | ❌ |
+| Kết nối Google (Sheet nằm trong Drive của Admin Tổng) | ✅ | ❌ |
+| Giao dịch ngân hàng chưa gắn nhà | ✅ tài khoản của mình | ❌ |
+| Mọi việc vận hành khác của nhà | ✅ nhà mình | ✅ nhà mình |
 
 Thông tin thanh toán: chọn ngân hàng trong danh sách VietQR và nhập STK; mã QR cho cư dân do VietQR tạo từ BIN + STK. Nút "Chuyển khoản nhanh" qua Zalo chỉ hiện khi STK của nhà trùng tài khoản đã đăng ký Zalo Checkout (`ZALO_CHECKOUT_ACCOUNT`), vì Zalo chỉ chuyển vào tài khoản đó.
 

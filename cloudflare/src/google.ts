@@ -1,5 +1,5 @@
 /**
- * Google access as the owner's own Google account (OAuth), not a service account: new service
+ * Google access as each Admin Tổng's own Google account (OAuth), not a service account: new service
  * accounts have no Drive storage, so they cannot create the Sheets. The only Drive scope is
  * drive.file, which reaches just the files this app created, and the refresh token is kept in
  * D1 encrypted with CCCD_KEY.
@@ -16,6 +16,9 @@ export interface GoogleEnv {
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.file', 'openid', 'email'];
 const STATE_TTL_SECONDS = 10 * 60;
+
+/** One Google link per Admin Tổng, stored as 'google:staff:<id>'. */
+export const googleKey = (actor: string) => `google:${actor}`;
 
 export const redirectUri = (origin: string) => `${origin}/api/google/callback`;
 
@@ -68,21 +71,22 @@ export async function finishConnect(env: GoogleEnv, origin: string, code: string
   // The id_token came straight from Google over TLS, so its email is read without verifying the signature.
   const email = data.id_token ? JSON.parse(atob(data.id_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).email : null;
   await env.DB.prepare(
-    `INSERT INTO integrations (name, secret_enc, account, connected_by) VALUES ('google', ?, ?, ?)
+    `INSERT INTO integrations (name, secret_enc, account, connected_by) VALUES (?, ?, ?, ?)
      ON CONFLICT (name) DO UPDATE SET secret_enc = excluded.secret_enc, account = excluded.account,
        connected_by = excluded.connected_by, updated_at = datetime('now')`
   )
-    .bind(await encryptText(data.refresh_token, env.CCCD_KEY), email, actor)
+    .bind(googleKey(actor), await encryptText(data.refresh_token, env.CCCD_KEY), email, actor)
     .run();
-  cached = null;
+  cached.delete(actor);
   return email as string | null;
 }
 
-let cached: { token: string; expiresAt: number } | null = null;
+const cached = new Map<string, { token: string; expiresAt: number }>();
 
-async function accessToken(env: GoogleEnv): Promise<string> {
-  if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
-  const row = await env.DB.prepare(`SELECT secret_enc FROM integrations WHERE name = 'google'`).first<{ secret_enc: string }>();
+async function accessToken(env: GoogleEnv, actor: string): Promise<string> {
+  const hit = cached.get(actor);
+  if (hit && hit.expiresAt > Date.now() + 60_000) return hit.token;
+  const row = await env.DB.prepare(`SELECT secret_enc FROM integrations WHERE name = ?`).bind(googleKey(actor)).first<{ secret_enc: string }>();
   if (!row) throw new Error('Chưa kết nối Google');
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -96,15 +100,15 @@ async function accessToken(env: GoogleEnv): Promise<string> {
   });
   const data = (await res.json()) as { access_token?: string; expires_in?: number; error_description?: string };
   if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Không lấy được quyền truy cập Google');
-  cached = { token: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 };
-  return cached.token;
+  cached.set(actor, { token: data.access_token, expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 });
+  return data.access_token;
 }
 
-/** Calls the Sheets API as the connected account. `path` starts after /v4/. */
-export async function sheetsApi<T = any>(env: GoogleEnv, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+/** Calls the Sheets API as the Google account this Admin Tổng linked. `path` starts after /v4/. */
+export async function sheetsApi<T = any>(env: GoogleEnv, actor: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await fetch(`https://sheets.googleapis.com/v4/${path}`, {
     method: init.method ?? 'GET',
-    headers: { Authorization: `Bearer ${await accessToken(env)}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${await accessToken(env, actor)}`, 'Content-Type': 'application/json' },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
   const data = (await res.json().catch(() => ({}))) as any;

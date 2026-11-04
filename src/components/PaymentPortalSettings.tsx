@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, Landmark } from 'lucide-react';
 import { workerFetch } from '../lib/api';
 import { fetchPaymentPortal, PaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { cn } from '../lib/utils';
-import { IconWallet3D } from './Icons3D';
+import { IconQr3D } from './Icons3D';
 
 interface House { id: string; name: string }
 interface Bank { bin: string; code: string; shortName: string; name: string }
@@ -13,7 +13,7 @@ const fieldClass =
 const labelClass = 'text-[11px] font-bold text-neutral-600 uppercase block mb-1.5 dark:text-neutral-300';
 
 /**
- * Admin Tổng (and Developer) set, per house, the bank and account residents pay rent into.
+ * Admin Tổng sets, per house, the bank and account residents pay rent into.
  * VietQR draws the code from them; Zalo's quick transfer is offered when the account is the
  * one registered with Zalo Checkout.
  */
@@ -94,7 +94,7 @@ export function PaymentPortalSettings({ onBack }: { onBack: () => void }) {
           <span>Quay lại Tiện ích</span>
         </button>
         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200">
-          <IconWallet3D size={22} />
+          <IconQr3D size={22} />
           <span>Thông tin thanh toán</span>
         </div>
       </div>
@@ -102,7 +102,7 @@ export function PaymentPortalSettings({ onBack }: { onBack: () => void }) {
       <div className="soft-surface p-5 sm:p-8 space-y-6">
         <div className="border-b border-neutral-200 dark:border-neutral-800 pb-4">
           <h2 className="type-h2 font-bold text-neutral-900 dark:text-white flex items-center gap-3">
-            <IconWallet3D size={44} />
+            <IconQr3D size={44} />
             <span>Thông tin thanh toán</span>
           </h2>
           <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 mt-1">

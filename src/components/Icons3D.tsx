@@ -16,6 +16,10 @@ export function IconWallet3D({ size = 48, className = '', style }: Icon3DProps &
   return <KitIcon name="Wallet" size={size} className={className} style={style} />;
 }
 
+export function IconQr3D({ size = 48, className = '', style }: Icon3DProps) {
+  return <KitIcon name="QrCode" size={size} className={className} style={style} />;
+}
+
 export function IconSecurity3D({ size = 48, className = '', style }: Icon3DProps & { strokeWidth?: number }) {
   return <KitIcon name="Shield" size={size} className={className} style={style} />;
 }

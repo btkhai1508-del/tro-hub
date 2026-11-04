@@ -2,7 +2,7 @@ import { Hono, type Context, type Next } from 'hono';
 import { cors } from 'hono/cors';
 import { hashPassword, normalizePhone, verifyPassword } from './password.ts';
 import { signToken, verifyToken } from './token.ts';
-import { checkState, connectUrl, finishConnect, sheetsApi } from './google.ts';
+import { checkState, connectUrl, finishConnect, googleKey, sheetsApi } from './google.ts';
 
 interface Env {
   DB: D1Database;
@@ -19,7 +19,7 @@ type Viewer =
   | { kind: 'resident'; id: number; name: string; phone: string | null; houseId: string; roomId: number | null; roomName: string | null }
   | { kind: 'staff'; id: number; name: string; phone: string; role: StaffRole; houseIds: string[] };
 
-type StaffRole = 'developer' | 'owner' | 'manager';
+type StaffRole = 'owner' | 'manager';
 
 type App = { Bindings: Env; Variables: { viewer: Viewer } };
 
@@ -58,10 +58,8 @@ async function loadViewer(db: D1Database, sub: number, kind: 'resident' | 'staff
     .bind(sub)
     .first<{ id: number; full_name: string; phone: string; role: StaffRole }>();
   if (!staff) return null;
-  const houses =
-    staff.role === 'developer'
-      ? await db.prepare(`SELECT id AS house_id FROM houses ORDER BY name`).all<{ house_id: string }>()
-      : await db.prepare(`SELECT house_id FROM staff_houses WHERE staff_id = ?`).bind(staff.id).all<{ house_id: string }>();
+  // Admin Tổng and Admin căn alike see only the houses in staff_houses: each Admin Tổng is an independent landlord.
+  const houses = await db.prepare(`SELECT house_id FROM staff_houses WHERE staff_id = ?`).bind(staff.id).all<{ house_id: string }>();
   return { kind, id: staff.id, name: staff.full_name, phone: staff.phone, role: staff.role, houseIds: houses.results.map((h) => h.house_id) };
 }
 
@@ -75,9 +73,8 @@ async function requireAuth(c: Context<App>, next: Next) {
 }
 
 const actorOf = (v: Viewer) => `${v.kind}:${v.id}`;
-const isDeveloper = (v: Viewer) => v.kind === 'staff' && v.role === 'developer';
-/** Developer or Admin Tổng: may set a house's bank account and see the summary of their houses. */
-const isOwnerOrAbove = (v: Viewer) => v.kind === 'staff' && (v.role === 'developer' || v.role === 'owner');
+/** Admin Tổng: owns their houses, sets their bank accounts, sees their summary and creates Admin căn. */
+const isOwner = (v: Viewer) => v.kind === 'staff' && v.role === 'owner';
 
 function canAccessHouse(viewer: Viewer, houseId: string) {
   return viewer.kind === 'resident' ? viewer.houseId === houseId : viewer.houseIds.includes(houseId);
@@ -156,7 +153,7 @@ app.post('/api/auth/change-password', async (c) => {
 app.use('/api/houses', requireAuth);
 app.use('/api/houses/*', requireAuth);
 
-/** The houses the caller may open. Developer and Admin Tổng get the summary across their houses. */
+/** The houses the caller may open. Admin Tổng gets the summary across their houses. */
 app.get('/api/houses', async (c) => {
   const viewer = c.get('viewer');
   const ids = viewer.kind === 'resident' ? [viewer.houseId] : viewer.houseIds;
@@ -167,7 +164,7 @@ app.get('/api/houses', async (c) => {
   )
     .bind(...ids)
     .all();
-  return c.json({ success: true, houses: results, canSeeSummary: isOwnerOrAbove(viewer) });
+  return c.json({ success: true, houses: results, canSeeSummary: isOwner(viewer) });
 });
 
 app.use('/api/houses/:houseId/*', requireHouse);
@@ -200,7 +197,7 @@ app.get('/api/banks', async (c) => {
 
 /**
  * Payment portal of a house: the bank and account residents pay into. Everyone in the house can read
- * it (residents need it to pay); only Developer and Admin Tổng can change it. Zalo's quick transfer
+ * it (residents need it to pay); only Admin Tổng can change it. Zalo's quick transfer
  * pays into the one account registered with Zalo Checkout, so it is offered only when they match.
  */
 app.get('/api/houses/:houseId/payment-portal', async (c) => {
@@ -222,14 +219,14 @@ app.get('/api/houses/:houseId/payment-portal', async (c) => {
       accountName: house.bank_account_name || house.landlord_name,
       zaloCheckout: ready && c.env.ZALO_CHECKOUT_ACCOUNT === `${house.bank_bin}:${house.bank_account_no}`,
     },
-    canEdit: isOwnerOrAbove(c.get('viewer')),
+    canEdit: isOwner(c.get('viewer')),
   });
 });
 
 app.put('/api/houses/:houseId/payment-portal', async (c) => {
   const viewer = c.get('viewer');
   const houseId = c.req.param('houseId');
-  if (!isOwnerOrAbove(viewer)) {
+  if (!isOwner(viewer)) {
     await audit(c, actorOf(viewer), 'bank_edit_denied', houseId);
     return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Admin Tổng được đổi ngân hàng và số tài khoản.');
   }
@@ -247,18 +244,15 @@ app.put('/api/houses/:houseId/payment-portal', async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// Staff accounts. Developer creates Admin Tổng (and Admin căn); Admin Tổng creates Admin căn
-// for their own houses only. Nobody manages an account above their own level.
+// Staff accounts. Admin Tổng creates and locks Admin căn for their own houses. New Admin Tổng
+// (a new independent landlord) will sign up through a separate service site, not here.
 // ---------------------------------------------------------------------------
 
-const ROLE_LABEL: Record<StaffRole, string> = { developer: 'Developer', owner: 'Admin Tổng', manager: 'Admin căn' };
+const ROLE_LABEL: Record<StaffRole, string> = { owner: 'Admin Tổng', manager: 'Admin căn' };
 
 /** Which roles this viewer may create or edit, and on which houses. */
 function staffScope(v: Viewer): { roles: StaffRole[]; houseIds: string[] } | null {
-  if (v.kind !== 'staff') return null;
-  if (v.role === 'developer') return { roles: ['owner', 'manager'], houseIds: v.houseIds };
-  if (v.role === 'owner') return { roles: ['manager'], houseIds: v.houseIds };
-  return null;
+  return isOwner(v) && v.kind === 'staff' ? { roles: ['manager'], houseIds: v.houseIds } : null;
 }
 
 async function staffHouses(db: D1Database, staffId: number) {
@@ -280,7 +274,7 @@ app.get('/api/staff', async (c) => {
   const staff = results
     .map((s) => ({ ...s, house_ids: s.house_ids ? s.house_ids.split(',') : [], role_label: ROLE_LABEL[s.role] }))
     // Admin Tổng sees themself and the Admin căn of their houses.
-    .filter((s) => isDeveloper(viewer) || s.id === viewer.id || (s.role === 'manager' && s.house_ids.some((h) => scope.houseIds.includes(h))));
+    .filter((s) => s.id === viewer.id || (s.role === 'manager' && s.house_ids.some((h) => scope.houseIds.includes(h))));
   return c.json({ success: true, staff, canCreate: scope.roles.map((r) => ({ role: r, label: ROLE_LABEL[r] })) });
 });
 
@@ -321,7 +315,7 @@ app.patch('/api/staff/:id', async (c) => {
   if (!scope || !target || target.id === viewer.id || !scope.roles.includes(target.role))
     return fail(c, 403, 'STAFF_FORBIDDEN', 'Bạn không được sửa tài khoản này.');
   const current = await staffHouses(c.env.DB, id);
-  if (viewer.kind === 'staff' && viewer.role === 'owner' && current.some((h) => !scope.houseIds.includes(h)))
+  if (current.some((h) => !scope.houseIds.includes(h)))
     return fail(c, 403, 'STAFF_FORBIDDEN', 'Tài khoản này còn quản lý nhà khác ngoài nhà của bạn.');
 
   const body = await c.req.json<{ status?: string; houseIds?: string[] }>().catch(() => ({}) as Record<string, never>);
@@ -344,7 +338,7 @@ app.patch('/api/staff/:id', async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// New house (Developer only): house, rates and rooms in one request.
+// New house (Admin Tổng): house, rates and rooms in one request; the house belongs to its creator.
 // ---------------------------------------------------------------------------
 
 /** "101-105, 201, G01-G03" → 101…105, 201, G01…G03 (letter prefix and zero padding kept). */
@@ -361,7 +355,7 @@ export function expandRooms(text: string): string[] {
 
 app.post('/api/houses', async (c) => {
   const viewer = c.get('viewer');
-  if (!isDeveloper(viewer)) return fail(c, 403, 'DEVELOPER_ONLY', 'Chỉ Developer được tạo nhà trọ.');
+  if (!isOwner(viewer)) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng được tạo nhà trọ.');
   const body = await c.req.json<Record<string, any>>().catch(() => ({}) as Record<string, any>);
   const name = String(body.name ?? '').trim();
   const abbreviation = String(body.abbreviation ?? '').trim().toUpperCase();
@@ -374,7 +368,6 @@ app.post('/api/houses', async (c) => {
 
   const text = (key: string) => String(body[key] ?? '').trim();
   const rates = body.rates ?? {};
-  const ownerIds: number[] = (body.ownerIds ?? []).map(Number).filter(Boolean);
   await c.env.DB.batch([
     c.env.DB.prepare(
       `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -382,9 +375,7 @@ app.post('/api/houses', async (c) => {
     c.env.DB.prepare(`INSERT INTO house_rates (house_id, ${RATE_FIELDS.join(', ')}) VALUES (?, ${RATE_FIELDS.map(() => '?').join(', ')})`)
       .bind(id, ...RATE_FIELDS.map((f) => Math.max(0, Math.round(Number(rates[f]) || 0)))),
     ...rooms.map((room) => c.env.DB.prepare(`INSERT INTO rooms (house_id, name, price) VALUES (?, ?, ?)`).bind(id, room, Math.max(0, Number(body.roomPrice) || 0))),
-    ...ownerIds.map((sid) =>
-      c.env.DB.prepare(`INSERT INTO staff_houses (staff_id, house_id) SELECT id, ? FROM staff WHERE id = ? AND role = 'owner'`).bind(id, sid)
-    ),
+    c.env.DB.prepare(`INSERT INTO staff_houses (staff_id, house_id) VALUES (?, ?)`).bind(viewer.id, id),
   ]);
   await audit(c, actorOf(viewer), 'house_create', id, `${rooms.length} phòng`);
   return c.json({ success: true, id, rooms: rooms.length });
@@ -399,7 +390,7 @@ app.get('/api/houses/:houseId', async (c) => {
     .first();
   if (!house) return fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy nhà trọ.');
   const rates = await c.env.DB.prepare(`SELECT ${RATE_FIELDS.join(', ')} FROM house_rates WHERE house_id = ?`).bind(houseId).first();
-  return c.json({ success: true, house, rates, canEditBank: isOwnerOrAbove(c.get('viewer')) });
+  return c.json({ success: true, house, rates, canEditBank: isOwner(c.get('viewer')) });
 });
 
 /** House details: both admin levels. Bank and account number: Admin Tổng only. */
@@ -407,7 +398,7 @@ app.patch('/api/houses/:houseId', staffOnly, async (c) => {
   const viewer = c.get('viewer');
   const houseId = c.req.param('houseId');
   const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
-  if (BANK_FIELDS.some((f) => f in body) && !isOwnerOrAbove(viewer)) {
+  if (BANK_FIELDS.some((f) => f in body) && !isOwner(viewer)) {
     await audit(c, actorOf(viewer), 'bank_edit_denied', houseId);
     return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Admin Tổng được đổi ngân hàng và số tài khoản.');
   }
@@ -488,28 +479,36 @@ app.get('/api/houses/:houseId/payments', staffOnly, async (c) => {
   return c.json({ success: true, payments: results });
 });
 
-/** Bank transfers not yet tied to a house. Only the Developer sees money that belongs to no house yet. */
+/** Bank transfers not yet tied to a house, limited to accounts used by this Admin Tổng's houses. */
 app.use('/api/payments/unassigned', requireAuth);
 app.get('/api/payments/unassigned', async (c) => {
-  if (!isDeveloper(c.get('viewer'))) return fail(c, 403, 'DEVELOPER_ONLY', 'Chỉ Developer xem được mục này.');
+  const viewer = c.get('viewer');
+  if (!isOwner(viewer) || viewer.kind !== 'staff' || !viewer.houseIds.length) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng xem được mục này.');
+  const marks = viewer.houseIds.map(() => '?').join(',');
   const { results } = await c.env.DB.prepare(
-    `SELECT id, amount, method, bank_name, reference, content, paid_at FROM payments WHERE house_id IS NULL ORDER BY paid_at DESC`
-  ).all();
+    `SELECT id, amount, method, bank_name, reference, content, paid_at FROM payments
+      WHERE house_id IS NULL AND account_no IN (SELECT bank_account_no FROM houses WHERE id IN (${marks}))
+      ORDER BY paid_at DESC`
+  )
+    .bind(...viewer.houseIds)
+    .all();
   return c.json({ success: true, payments: results });
 });
 
-/** The Google account behind every house's Sheet is set up once, by the Developer. */
-const developerOnly = async (c: Context<App>, next: Next) =>
-  isDeveloper(c.get('viewer')) ? next() : fail(c, 403, 'DEVELOPER_ONLY', 'Chỉ Developer dùng được chức năng này.');
+/** Each Admin Tổng links their own Google account; their houses' Sheets live in their Drive. */
+const ownerOnly = async (c: Context<App>, next: Next) =>
+  isOwner(c.get('viewer')) ? next() : fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng dùng được chức năng này.');
 
-app.use('/api/google/status', requireAuth, developerOnly);
+app.use('/api/google/status', requireAuth, ownerOnly);
 app.get('/api/google/status', async (c) => {
-  const row = await c.env.DB.prepare(`SELECT account, updated_at FROM integrations WHERE name = 'google'`).first<{ account: string; updated_at: string }>();
+  const row = await c.env.DB.prepare(`SELECT account, updated_at FROM integrations WHERE name = ?`)
+    .bind(googleKey(actorOf(c.get('viewer'))))
+    .first<{ account: string; updated_at: string }>();
   return c.json({ success: true, connected: Boolean(row), account: row?.account ?? null, since: row?.updated_at ?? null });
 });
 
-/** The Developer opens this link in a browser and allows access with the Google account that should own the Sheets. */
-app.use('/api/google/connect-url', requireAuth, developerOnly);
+/** Admin Tổng opens this link in a browser and allows access with the Google account that should own the Sheets. */
+app.use('/api/google/connect-url', requireAuth, ownerOnly);
 app.post('/api/google/connect-url', async (c) => {
   const url = await connectUrl(c.env, new URL(c.req.url).origin, actorOf(c.get('viewer')));
   return c.json({ success: true, url });
@@ -533,14 +532,15 @@ app.get('/api/google/callback', async (c) => {
 });
 
 /** Proves the connection end to end: makes a small Sheet in the owner's Drive and returns its link. */
-app.use('/api/google/test-sheet', requireAuth, developerOnly);
+app.use('/api/google/test-sheet', requireAuth, ownerOnly);
 app.post('/api/google/test-sheet', async (c) => {
   try {
-    const sheet = await sheetsApi<{ spreadsheetId: string; spreadsheetUrl: string }>(c.env, 'spreadsheets', {
+    const actor = actorOf(c.get('viewer'));
+    const sheet = await sheetsApi<{ spreadsheetId: string; spreadsheetUrl: string }>(c.env, actor, 'spreadsheets', {
       method: 'POST',
       body: { properties: { title: 'Trọ-Hub – kiểm tra kết nối' }, sheets: [{ properties: { title: 'Kiểm tra' } }] },
     });
-    await sheetsApi(c.env, `spreadsheets/${sheet.spreadsheetId}/values/Kiểm tra!A1:B1?valueInputOption=RAW`, {
+    await sheetsApi(c.env, actor, `spreadsheets/${sheet.spreadsheetId}/values/Kiểm tra!A1:B1?valueInputOption=RAW`, {
       method: 'PUT',
       body: { values: [['Kết nối từ Cloudflare lúc', new Date().toISOString()]] },
     });
