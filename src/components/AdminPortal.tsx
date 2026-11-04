@@ -270,7 +270,7 @@ export function AdminPortal() {
       sender: `BQL Phong Lan (${targetDesc})`
     };
 
-    // Admin -> tab Notifications -> resident; success only once the row is in the sheet.
+    // Admin -> Cloudflare D1 -> resident; success only once the notice is stored.
     apiFetch('/api/admin/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -285,7 +285,7 @@ export function AdminPortal() {
       .then(data => {
         if (!data?.success) throw new Error(data?.error);
         playSound('success');
-        setNotifSuccessMsg(`Đã ghi vào tab Notifications và gửi đến: ${targetDesc}.`);
+        setNotifSuccessMsg(`Đã gửi đến: ${targetDesc}.`);
       })
       .catch(err => showPortalToast(err?.message || 'Chưa gửi được thông báo. Vui lòng thử lại.', 'error'))
       .finally(() => setIsSendingNotif(false));

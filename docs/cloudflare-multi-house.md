@@ -135,6 +135,24 @@ Chỉ một màn hình, không sửa code:
 3. Worker tạo file Google Sheet của nhà (tab tháng hiện tại + tab Thu tiền) và lưu `sheet_id`.
 4. Có thể giao ngay một Admin căn và tạo link mời đăng ký.
 
+## Ngắt Google Sheet: chuyển theo nhóm dữ liệu
+
+Toàn bộ hai file Sheet đã được sao lưu, mã hoá, trong bảng `sheet_archive` (xem `cloudflare/scripts/restore-archive.mts`).
+Mỗi nhóm chuyển **cả phía admin lẫn cư dân cùng lúc**, để hai bên không thấy dữ liệu khác nhau. Worker giữ đúng đường dẫn và dạng dữ liệu của Express; `src/lib/api.ts` (`WORKER_ROUTES`) chuyển từng đường dẫn sang Worker. Trước khi chuyển một nhóm, nhập lại phần dữ liệu đó từ Sheet để có số mới nhất.
+
+| # | Nhóm | API Express | Trạng thái |
+|---|---|---|---|
+| 1 | Thông báo | `/api/notifications`, `/api/admin/notifications` | ✅ trên D1 |
+| 2 | Tiền phòng, thanh toán | `/api/payment/*`, `/api/admin/billing`, `/api/admin/payment-status`, `/api/admin/payment-gate`, `/api/admin/dashboard`, `/api/admin/months`, webhook SePay, `/api/payment/zalo-order` | |
+| 3 | Cư dân, phòng | `/api/sheets/tenant-data`, `/api/admin/rooms`, `/api/admin/room-detail`, `/api/admin/accounts*`, `/api/auth/register`, `/api/profile/update`, đăng nhập Express | |
+| 4 | Điện nước, đơn giá | `/api/admin/room-detail` (ghi), `/api/admin/config` | |
+| 5 | Giấy tờ | `/api/admin/contract/history`, `/api/admin/declaration` (tạo khi mở, không lưu) | |
+| 6 | Giặt sấy | `/api/laundry/*` | |
+| 7 | Đăng nhập Zalo | `/api/auth/zalo` (Worker cấp token) | |
+| 8 | Ngắt | bỏ Apps Script, `googleSheetsService`, `googleSheetSyncService`, đọc sheet công khai, server Express | |
+
+Phiên đăng nhập bằng Zalo chưa có token Worker nên vẫn đi qua Express cho tới nhóm 7.
+
 ## Lộ trình
 
 Đã xong:
