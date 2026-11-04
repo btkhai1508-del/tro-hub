@@ -22,9 +22,27 @@ const normalize = (text: string) => text
 export const joinAddress = ({ province, ward, detail }: AddressParts) =>
   [detail.trim(), ward, province].filter(Boolean).join(', ');
 
+// A khu phố, ward or district written without a comma before it ("12 Võ Văn Ngân KP.3", "KP.1 Phường Linh Xuân").
+// Only a numbered neighbourhood, a short unit with its dot, or Phường/Quận/Huyện starts a new part, so a street
+// like "Xã Đàn" or "Thành Thái" is never cut.
+const INLINE_BREAK = /\s+(?=(?:khu phố|kp|tổ dân phố|tdp|tổ|ấp|khóm|thôn|xóm)\.?\s*\d|(?:p|q|tp|tx)\.\s*\S|(?:phường|quận|huyện)\s+\S)/giu;
+
+/**
+ * The parts of an address, split at commas and also at the breaks people write instead of one: " - "
+ * (except in the last part, where "Bà Rịa - Vũng Tàu" is a province name) and the units above.
+ */
+const addressParts = (text: string) => {
+  const segments = String(text || '').split(',').map(part => part.trim()).filter(Boolean);
+  return segments
+    .flatMap((segment, index) => index < segments.length - 1 ? segment.split(/\s+-\s+/) : [segment])
+    .flatMap(segment => segment.split(INLINE_BREAK))
+    .map(part => part.trim())
+    .filter(Boolean);
+};
+
 /** Anything that does not match the current list, like an old district or merged province, stays in the free text. */
 export function splitAddress(text: string, provinces: VnProvince[]): AddressParts {
-  const segments = String(text || '').split(',').map(part => part.trim()).filter(Boolean);
+  const segments = addressParts(text);
   const province = provinces.find(item => normalize(item.n) === normalize(segments[segments.length - 1] || ''));
   if (!province) return { province: '', ward: '', detail: segments.join(', ') };
   const rest = segments.slice(0, -1);
@@ -48,8 +66,12 @@ const legacyKey = (text: string) => {
   return PROVINCE_ALIASES[text.toLowerCase().trim()] || PROVINCE_ALIASES[key] || key;
 };
 
-/** The house, street and neighbourhood only: wards and districts have their own fields or are gone. */
-const dropUnits = (parts: string[]) => parts.map(part => part.trim()).filter(part => part && !ADMIN_UNIT.test(part));
+// Neighbourhoods below a ward. Many were renumbered at the merger with no public list, so they are left out.
+// The keyword must end at a dot, space or digit, so a street such as "Thông Nhất" is kept.
+const NEIGHBOURHOOD = /^(?:khu phố|kp|ấp|khóm|thôn|tổ dân phố|tdp|tổ|xóm|bản|buôn)(?:[.\s]|\d|$)/i;
+
+/** The house number and street only: the ward has its own field, districts are gone, khu phố is left out. */
+const dropUnits = (parts: string[]) => parts.map(part => part.trim()).filter(part => part && !ADMIN_UNIT.test(part) && !NEIGHBOURHOOD.test(part));
 
 /** "ddmmyyyy" from the CCCD QR or "dd/mm/yyyy" as "yyyy-mm-dd", so dates compare as text. */
 const isoDate = (value: string) => {
@@ -59,51 +81,14 @@ const isoDate = (value: string) => {
 
 type LegacyProvinces = Record<string, { p: string; d: Record<string, Record<string, string>> }>;
 
-/** One row of the "KHU PHỐ" tab: how a khu phố or ấp of an old ward is called in the new ward. */
-export interface NeighbourhoodRename {
-  oldWard: string;
-  oldArea: string;
-  newWard: string;
-  newArea: string;
-}
-
-const AREA = /^(khu phố|kp|ấp|khóm|thôn|tổ dân phố|tdp|tổ|xóm)\.?\s*(.*)$/;
-const AREA_NAMES: Record<string, string> = { kp: 'khu phố', tdp: 'tổ dân phố' };
-
-/** "KP 02", "Khu phố 2" and "kp.2" are the same place; a bare "2" in the tab matches any kind. */
-const readArea = (text: string) => {
-  const original = String(text || '').normalize('NFC').trim();
-  const match = original.toLowerCase().match(AREA);
-  const name = (match ? match[2] : original.toLowerCase()).replace(/^0+(?=\d)/, '').trim();
-  // The resident's own wording ("KP", "Khu phố", "Ấp") without its trailing dot.
-  const prefix = match ? original.slice(0, original.length - match[2].length).trim().replace(/\.$/, '') : '';
-  return { kind: match ? AREA_NAMES[match[1]] || match[1] : '', name, prefix };
-};
-
-/** The new name of one neighbourhood part, or the part unchanged when the tab has no row for it. */
-function renameArea(part: string, oldWard: string, newWard: string, renames: NeighbourhoodRename[]): string {
-  const area = readArea(part);
-  if (!area.kind || !area.name) return part;
-  const row = renames.find(item => {
-    const old = readArea(item.oldArea);
-    return legacyKey(item.oldWard) === legacyKey(oldWard)
-      && (!item.newWard || !newWard || normalize(item.newWard) === normalize(newWard))
-      && old.name === area.name && (!old.kind || old.kind === area.kind);
-  });
-  if (!row) return part;
-  // "15" in the tab keeps the resident's own "Khu phố"/"KP"; a full name is written as given.
-  return readArea(row.newArea).kind ? row.newArea.trim() : `${area.prefix} ${row.newArea.trim()}`;
-}
-
 /**
  * Turns a CCCD address, written with districts and the old provinces, into "detail, ward, province"
- * on the current map. The text keeps only the house, street and neighbourhood; the ward has its own
- * field. An old ward that was split between new wards, or is missing from the list, gives no ward,
+ * on the current map. The text keeps only the house number and street; the ward has its own field.
+ * An old ward that was split between new wards, or is missing from the list, gives no ward,
  * because the address alone cannot tell which one it became, so the resident picks it.
- * A khu phố or ấp listed in `renames` for its old ward takes its new name.
  */
-export async function convertScannedAddress(text: string, renames: NeighbourhoodRename[] = []): Promise<string> {
-  const segments = String(text || '').split(',').map(part => part.trim()).filter(Boolean);
+export async function convertScannedAddress(text: string): Promise<string> {
+  const segments = addressParts(text);
   if (!segments.length) return '';
   const [provinces, legacy] = await Promise.all([
     loadProvinces(),
@@ -135,8 +120,7 @@ export async function convertScannedAddress(text: string, renames: Neighbourhood
   const mapped = code ? `${WARD_PREFIX[code[0]]} ${code.slice(2)}` : '';
   const sameName = code === undefined ? current.w.find(item => normalize(item) === normalize(wardText)) : '';
   const ward = current.w.includes(mapped) ? mapped : sameName || '';
-  const detail = dropUnits(rest).map(part => wardText ? renameArea(part, wardText, ward, renames) : part);
-  return joinAddress({ detail: detail.join(', '), ward, province: current.n });
+  return joinAddress({ detail: dropUnits(rest).join(', '), ward, province: current.n });
 }
 
 /**
@@ -144,17 +128,17 @@ export async function convertScannedAddress(text: string, renames: Neighbourhood
  * A card issued before the merger always has the old address, so it is converted; one issued since
  * already has the new address and is kept as written. Without a date the address is old when a
  * district (Quận, Huyện, TP. Thủ Đức...) is still in it or the new ward cannot be read from it.
- * Either way a stray "P. ..." is dropped from the house and street text.
+ * Either way a stray "P. ..." and any khu phố or ấp are dropped from the house and street text.
  */
-export async function toCurrentAddress(text: string, issuedOn = '', renames: NeighbourhoodRename[] = []): Promise<string> {
+export async function toCurrentAddress(text: string, issuedOn = ''): Promise<string> {
   const parts = splitAddress(text, await loadProvinces());
-  const segments = String(text || '').split(',').map(part => part.trim()).filter(Boolean);
+  const segments = addressParts(text);
   const issued = isoDate(issuedOn);
   const wardSegment = segments[segments.length - 2] || '';
   const wardWritten = WARD_UNIT.test(wardSegment) && normalize(wardSegment) === normalize(parts.ward);
   const districtLeft = segments.slice(0, -1).some(part => DISTRICT_UNIT.test(part));
   const isNew = issued ? issued >= MERGER_DATE : Boolean(parts.province && parts.ward && wardWritten && !districtLeft);
   // A province written short ("TP.HCM") is read through the old-name list, which also finds new wards by name.
-  if (!isNew || !parts.province) return convertScannedAddress(text, renames);
+  if (!isNew || !parts.province) return convertScannedAddress(text);
   return joinAddress({ ...parts, detail: dropUnits(parts.detail.split(',')).join(', ') });
 }
