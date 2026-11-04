@@ -6,7 +6,7 @@
  * source of truth. The SQL holds personal data: delete it after applying.
  */
 import { fetchSheetXlsx, parseSheetXmlRows, sheetDate } from '../../src/server/adminService.ts';
-import { encryptCccd, hashCccd } from '../src/cccd.ts';
+import { encryptText, hashCccd } from '../src/cccd.ts';
 import { hashPassword, normalizePhone } from '../src/password.ts';
 
 const key = process.env.CCCD_KEY;
@@ -102,7 +102,7 @@ for (const r of data) {
   const values: Value[] = [
     place.house, rooms.get(roomKey)!, text(r.cells.A), text(r.cells.B), phone,
     await hashPassword(text(r.cells.N) || '1'),
-    cccd ? await encryptCccd(cccd, key) : null, cccd ? cccd.slice(-4) : null, cccd ? await hashCccd(cccd, key) : null,
+    cccd ? await encryptText(cccd, key) : null, cccd ? cccd.slice(-4) : null, cccd ? await hashCccd(cccd, key) : null,
     text(r.cells.E), sheetDate(r.cells.F), text(r.cells.G), text(r.cells.H), text(r.cells.I),
     text(r.cells.K), text(r.cells.L), text(r.cells.M),
     status === 'TẠM NGƯNG' || status === 'TỪ CHỐI' ? 'rejected' : status.includes('CHỜ') ? 'pending' : 'approved',

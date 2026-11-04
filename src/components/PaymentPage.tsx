@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Payment } from 'zmp-sdk/apis';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
+import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { prepareQrImage, saveQrToDevice } from '../lib/qrHelper';
 import { isZaloMiniApp } from '../lib/platform';
 import { soundFx } from '../lib/soundFx';
@@ -167,15 +168,17 @@ export function PaymentPage() {
     }
   };
 
-  const recipientName = 'Bùi Trung Khải';
-  const bankName = 'MB BANK';
-  const accountNumber = '0902371800';
+  // The house's own bank account, set by Admin Tổng in the payment portal.
+  const portal = usePaymentPortal();
+  const recipientName = portal.accountName;
+  const bankName = portal.bankName;
+  const accountNumber = portal.accountNo;
 
   // Format transfer syntax: Room with LVC -> LVC{room}-T{m}-{y}, Room without LVC -> {room}-T{m}-{y}
   const transferContent = getTransferContent(profile.room?.roomNumber || '', targetInvoice.month);
 
   // Pure QR code matrix without borders or background
-  const qrUrl = `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${targetInvoice.total}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(recipientName)}`;
+  const qrUrl = vietQrUrl(portal, targetInvoice.total, transferContent);
 
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [isOpeningTransfer, setIsOpeningTransfer] = useState(false);
@@ -500,7 +503,7 @@ export function PaymentPage() {
                       <ImageDown size={15} />
                       <span>{isSavingQR ? 'Đang lưu ảnh...' : 'Lưu ảnh QR'}</span>
                     </button>
-                    {isZaloMiniApp && (
+                    {isZaloMiniApp && portal.zaloCheckout && (
                       <button type="button" onClick={handleQuickTransfer} disabled={isOpeningTransfer} className="soft-button min-h-11 w-full py-3 px-4 apple-control flex items-center justify-center gap-2 cursor-pointer">
                         <Landmark size={15} />
                         <span>{isOpeningTransfer ? 'Đang mở...' : 'Chuyển khoản nhanh'}</span>
@@ -642,7 +645,7 @@ export function PaymentPage() {
                     <ImageDown size={15} />
                     <span>{isSavingQR ? 'Đang lưu...' : 'Lưu ảnh QR'}</span>
                   </button>
-                  {isZaloMiniApp && (
+                  {isZaloMiniApp && portal.zaloCheckout && (
                     <button type="button" onClick={handleQuickTransfer} disabled={isOpeningTransfer} className="soft-button min-h-11 w-full py-2 px-3 apple-control flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer">
                       <Landmark size={15} />
                       <span>{isOpeningTransfer ? 'Đang mở...' : 'Chuyển khoản nhanh'}</span>

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from './AppIcons';
 import { useApp, getTransferContent } from '../context/AppContext';
 import { saveQrToDevice } from '../lib/qrHelper';
+import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { IconWallet3D, IconSecurity3D } from './Icons3D';
 
 export function PaymentModal() {
@@ -10,6 +11,7 @@ export function PaymentModal() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [lastTxnCode, setLastTxnCode] = useState('');
+  const portal = usePaymentPortal();
 
   const dialogRef = useDialogFocus(Boolean(isPaymentModalOpen && activeInvoice), () => { setIsSuccess(false); closePaymentModal(); });
 
@@ -38,10 +40,10 @@ export function PaymentModal() {
   };
 
   const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || '10/2026');
-  const bankAccount = '0902371800';
-  const bankName = 'MB BANK';
-  const accountHolder = 'Bùi Trung Khải';
-  const qrUrl = `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${activeInvoice.total}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountHolder)}`;
+  const bankAccount = portal.accountNo;
+  const bankName = portal.bankName;
+  const accountHolder = portal.accountName;
+  const qrUrl = vietQrUrl(portal, activeInvoice.total, transferContent);
 
   return (
     <div

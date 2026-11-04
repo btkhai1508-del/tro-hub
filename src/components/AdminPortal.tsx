@@ -60,6 +60,8 @@ import { ModernLineGraph } from './ModernLineGraph';
 import { Background } from './Background';
 import { useSidebarLabels } from '../lib/useSidebarLabels';
 import { AccountDeleteDialog, AccountDeleteMode } from './AccountDeleteDialog';
+import { PaymentPortalSettings } from './PaymentPortalSettings';
+import { useWorkerViewer } from '../lib/paymentPortal';
 import {
   IconHome3D,
   IconWallet3D,
@@ -176,8 +178,11 @@ export function AdminPortal() {
 
   // Active Menu
   const [activeMenu, setActiveMenu] = useState<
-    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement'
+    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
   >('dashboard');
+  // Developer and Admin Tổng set each house's bank account in "Thông tin thanh toán".
+  const workerViewer = useWorkerViewer();
+  const canManagePaymentPortal = workerViewer?.role === 'developer' || workerViewer?.role === 'owner';
 
   // Account Management (Quản lý tài khoản) state
   const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create'>('approval');
@@ -1191,7 +1196,8 @@ export function AdminPortal() {
     config: { title: 'Đơn giá dịch vụ', description: 'Điều chỉnh đơn giá đang áp dụng trong tháng.' },
     createNotification: { title: 'Thông báo cư dân', description: 'Soạn nội dung và chọn người nhận.' },
     laundry: { title: 'Quản lý giặt sấy', description: 'Kiểm tra máy, giá dịch vụ và lịch đặt chỗ.' },
-    accountManagement: { title: 'Quản lý tài khoản', description: 'Xét duyệt yêu cầu đăng ký và tạo tài khoản mới cho cư dân.' }
+    accountManagement: { title: 'Quản lý tài khoản', description: 'Xét duyệt yêu cầu đăng ký và tạo tài khoản mới cho cư dân.' },
+    paymentPortal: { title: 'Thông tin thanh toán', description: 'Ngân hàng và số tài khoản nhận tiền phòng của từng nhà.' }
   };
   const currentAdminPage = adminPageTitles[activeMenu] || adminPageTitles.dashboard;
   const normalizeAdminSearch = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -1357,7 +1363,7 @@ export function AdminPortal() {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.key ||
                   (item.key === 'rooms' && activeMenu === 'roomDetail') ||
-                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
+                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
                 return (
 
                   <button
@@ -1767,7 +1773,8 @@ export function AdminPortal() {
               { key: 'invoices', label: 'Hoá đơn phòng', icon: IconWallet3D },
               { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
               { key: 'config', label: 'Cài đặt phí', icon: IconSettings3D },
-              { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D }
+              { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D },
+              ...(canManagePaymentPortal ? [{ key: 'paymentPortal', label: 'Thông tin thanh toán', icon: IconWallet3D }] : [])
             ].map(item => {
               const Icon = item.icon;
               return (
@@ -3877,6 +3884,15 @@ export function AdminPortal() {
         {/* =========================================================================
             11. ACCOUNT MANAGEMENT TAB (QUẢN LÝ TÀI KHOẢN)
            ========================================================================= */}
+        {activeMenu === 'paymentPortal' && (
+          <PaymentPortalSettings
+            onBack={() => {
+              playSound('click');
+              setActiveMenu('utilities');
+            }}
+          />
+        )}
+
         {activeMenu === 'accountManagement' && (
           <div className="space-y-6">
             {/* Top Navigation Bar: Back Button & Title */}
@@ -4380,7 +4396,7 @@ export function AdminPortal() {
             { key: 'billing', icon: NavIcons.Receipt, label: 'Thu tiền' },
             { key: 'utilities', icon: NavIcons.LayoutGrid, label: 'Tiện ích' }
           ].map(({ key, icon: Icon, label }) => {
-            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement'].includes(activeMenu));
+            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
             return <button type="button" key={key} aria-current={isActive ? 'page' : undefined} onClick={() => { playSound('click'); setActiveMenu(key as any); }} className={cn('kit-nav-item kit-admin-dock-item', isActive && 'kit-nav-active')}>
               <Icon size={21} /><span>{label}</span>
             </button>;

@@ -15,3 +15,6 @@ migrations_dir = "migrations"
 [vars]
 # Trang được phép gọi API từ trình duyệt: app chạy trên máy, bản trên Render, Zalo Mini App.
 ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:5199,https://tro-hub.onrender.com,https://h5.zdn.vn,zbrowser://h5.zdn.vn"
+# Tài khoản đã đăng ký với Zalo Checkout ("<BIN ngân hàng>:<STK>"). Nhà nào nhận tiền đúng tài khoản này
+# thì cư dân thấy nút chuyển khoản nhanh qua Zalo.
+ZALO_CHECKOUT_ACCOUNT = "970422:0902371800"

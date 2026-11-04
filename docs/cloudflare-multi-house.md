@@ -68,25 +68,23 @@ Nhà trọ X ──(link mã mời ngẫu nhiên)──► User ──► Fronte
 Mỗi request ──► Worker lấy house_id TỪ TOKEN ──► D1 lọc theo nhà và phòng
 ```
 
-## Phân quyền quản lý
+## Phân quyền quản lý (ba tầng, quyết định 2026-11-04)
 
-- **Admin Tổng** (`owner`): vào được mọi nhà. Có ô chọn nhà trọ, trong đó có thêm mục **"Tất cả"** để xem trang tổng hợp.
-- **Admin căn** (`manager`): chỉ vào được các nhà gắn với mình trong `staff_houses`, không có ô chọn nhà.
+- **Developer** (`developer`, Bùi Trung Khải): thấy mọi nhà, tạo nhà trọ, tạo Admin Tổng và giao nhà cho họ, kết nối Google.
+- **Admin Tổng** (`owner`): quản lý các nhà được Developer giao (`staff_houses`), có ô chọn nhà và trang tổng hợp, tạo Admin căn cho các nhà của mình, đặt **Thông tin thanh toán** (ngân hàng + STK) của từng nhà.
+- **Admin căn** (`manager`): chỉ nhà được giao, không có ô chọn nhà.
 
-| Việc | Admin Tổng | Admin căn |
-|---|---|---|
-| Xem trang tổng hợp mọi nhà | ✅ | ❌ |
-| Tạo / khoá Admin căn, giao nhà | ✅ | ❌ |
-| Tạo nhà trọ mới | ✅ | ❌ |
-| Sửa thông tin nhà, gắn link Google Sheet | ✅ | ✅ nhà mình |
-| Tạo / thu hồi link đăng ký | ✅ | ✅ nhà mình |
-| Duyệt cư dân, gán phòng | ✅ | ✅ nhà mình |
-| Ghi điện nước, đánh dấu đã đóng tiền | ✅ | ✅ nhà mình |
-| Gửi thông báo | ✅ | ✅ nhà mình |
-| Xem CCCD đầy đủ và ảnh CCCD (có ghi nhật ký) | ✅ | ✅ nhà mình |
-| Đổi giá phòng, giá điện nước | ✅ | ✅ nhà mình |
-| Xoá cư dân / hoá đơn (xoá mềm) | ✅ | ✅ nhà mình |
-| Xem nhật ký truy cập | ✅ | ✅ nhà mình |
+| Việc | Developer | Admin Tổng | Admin căn |
+|---|---|---|---|
+| Tạo nhà trọ | ✅ | ❌ | ❌ |
+| Tạo Admin Tổng, giao nhà cho Admin Tổng | ✅ | ❌ | ❌ |
+| Tạo / khoá Admin căn | ✅ | ✅ nhà mình | ❌ |
+| Trang tổng hợp nhiều nhà | ✅ | ✅ nhà mình | ❌ |
+| Thông tin thanh toán (ngân hàng, STK) | ✅ | ✅ nhà mình | ❌ |
+| Kết nối Google, giao dịch chưa gắn nhà | ✅ | ❌ | ❌ |
+| Mọi việc vận hành khác của nhà | ✅ | ✅ nhà mình | ✅ nhà mình |
+
+Thông tin thanh toán: chọn ngân hàng trong danh sách VietQR và nhập STK; mã QR cho cư dân do VietQR tạo từ BIN + STK. Nút "Chuyển khoản nhanh" qua Zalo chỉ hiện khi STK của nhà trùng tài khoản đã đăng ký Zalo Checkout (`ZALO_CHECKOUT_ACCOUNT`), vì Zalo chỉ chuyển vào tài khoản đó.
 
 Mọi API đều qua cùng một bước kiểm tra: `owner` được qua; `manager` chỉ được qua khi có `house_id` đó trong `staff_houses`; còn lại trả 403 và ghi vào `audit_log`.
 

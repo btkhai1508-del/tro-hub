@@ -1,5 +1,6 @@
 /**
- * CCCD numbers are stored encrypted (AES-256-GCM) with CCCD_KEY, a base64 32-byte secret.
+ * CCCD numbers, and other secrets kept in D1 such as the Google refresh token, are stored
+ * encrypted (AES-256-GCM) with CCCD_KEY, a base64 32-byte secret.
  * cccd_hash is an HMAC of the number under the same key, so duplicates can be found
  * without decrypting. Losing CCCD_KEY means losing every stored CCCD: keep a copy offline.
  */
@@ -11,13 +12,13 @@ const hmacKey = (keyB64: string) =>
   crypto.subtle.importKey('raw', fromB64(keyB64), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 
 /** Returns "<iv>.<ciphertext>" in base64. */
-export async function encryptCccd(cccd: string, keyB64: string): Promise<string> {
+export async function encryptText(plain: string, keyB64: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await aesKey(keyB64), new TextEncoder().encode(cccd));
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await aesKey(keyB64), new TextEncoder().encode(plain));
   return `${toB64(iv)}.${toB64(new Uint8Array(data))}`;
 }
 
-export async function decryptCccd(stored: string, keyB64: string): Promise<string> {
+export async function decryptText(stored: string, keyB64: string): Promise<string> {
   const [iv, data] = stored.split('.');
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(iv) }, await aesKey(keyB64), fromB64(data));
   return new TextDecoder().decode(plain);

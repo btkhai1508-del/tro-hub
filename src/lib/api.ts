@@ -27,6 +27,7 @@ export function setAuthToken(token: string | null | undefined): void {
   else {
     storage.removeItem(STORAGE_KEYS.TOKEN);
     storage.removeItem(STORAGE_KEYS.WORKER_TOKEN);
+    workerSessionListeners.forEach((fn) => fn());
   }
 }
 
@@ -41,6 +42,13 @@ export const WORKER_API_URL: string = String(
 export function setWorkerToken(token: string | null | undefined): void {
   if (token) storage.setItem(STORAGE_KEYS.WORKER_TOKEN, token);
   else storage.removeItem(STORAGE_KEYS.WORKER_TOKEN);
+  workerSessionListeners.forEach((fn) => fn());
+}
+
+/** Lets caches of "who is signed in on the Worker" drop themselves when the session changes. */
+const workerSessionListeners = new Set<() => void>();
+export function onWorkerSessionChange(fn: () => void): void {
+  workerSessionListeners.add(fn);
 }
 
 export async function workerFetch(path: string, init: RequestInit = {}): Promise<Response> {

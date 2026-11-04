@@ -15,10 +15,37 @@ interface WorkerViewer {
   id: number;
   name: string;
   phone: string | null;
-  role?: 'owner' | 'manager';
+  role?: 'developer' | 'owner' | 'manager';
   houseId?: string;
   houseIds?: string[];
   roomName?: string | null;
+}
+
+function staffOnlyProfile(viewer: WorkerViewer): Awaited<ReturnType<typeof authenticateUser>> {
+  return {
+    success: true,
+    isAdmin: true,
+    invoices: [],
+    user: {
+      name: viewer.name,
+      phone: viewer.phone ?? '',
+      cccd: '',
+      email: '',
+      dob: '',
+      address: '',
+      plateNumber: '',
+      vehicleType: '',
+      roomNumber: 'admin',
+      personType: 'person1',
+      emergencyName: '',
+      emergencyRelation: '',
+      emergencyPhone: '',
+      rentPrice: 0,
+      depositAmount: 0,
+      totalMonthlyAmount: 0,
+      isAdmin: true,
+    },
+  } as Awaited<ReturnType<typeof authenticateUser>>;
 }
 
 export function registerWorkerSession(app: Express) {
@@ -36,7 +63,9 @@ export function registerWorkerSession(app: Express) {
 
     try {
       // The Worker already checked the password, so the sheet row is found by phone alone.
-      const result = await authenticateUser(viewer.phone, '', undefined, { verifiedPhone: true });
+      // Staff created on the Worker (Admin Tổng, Admin căn) have no sheet row: their profile comes from the Worker.
+      let result = await authenticateUser(viewer.phone, '', undefined, { verifiedPhone: true });
+      if ((!result.success || !result.user) && viewer.kind === 'staff') result = staffOnlyProfile(viewer);
       if (!result.success || !result.user) return res.status(401).json(result);
 
       const isAdmin = viewer.kind === 'staff';
