@@ -1,0 +1,13 @@
+name = "tro-hub-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tro-hub"
+database_id = "9cd50386-7968-465c-ac1e-c8835eeb7c74"
+migrations_dir = "migrations"
+
+# Secret không để ở đây:
+#   chạy local: cloudflare/.dev.vars (JWT_SECRET=...)
+#   trên Cloudflare: npx wrangler secret put JWT_SECRET
