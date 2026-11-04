@@ -90,19 +90,65 @@ Mỗi request ──► Worker lấy house_id TỪ TOKEN ──► D1 lọc theo
 
 Mọi API đều qua cùng một bước kiểm tra: `owner` được qua; `manager` chỉ được qua khi có `house_id` đó trong `staff_houses`; còn lại trả 403 và ghi vào `audit_log`.
 
+## Hai vùng dữ liệu (quyết định 2026-11-04)
+
+**Vùng 1: Thông tin cá nhân**, dùng chung cho mọi nhà: `residents`, `staff`, `staff_houses`. Chỉ vùng này chứa CCCD.
+
+**Vùng 2: Riêng từng nhà**, mỗi dòng đều có `house_id`:
+
+| Bảng | Nội dung | Ai được sửa |
+|---|---|---|
+| `houses` | Tên, địa chỉ, **ngân hàng + số tài khoản + chủ tài khoản** nhận tiền | Thông tin nhà: Admin Tổng + Admin căn. **Ngân hàng/STK: chỉ Admin Tổng** |
+| `house_rates` | Đơn giá điện/số, nước/khối, rác, internet, xe | Admin Tổng + Admin căn |
+| `rooms` | Tên phòng, tiền phòng, tiền cọc, sức chứa | Admin Tổng + Admin căn |
+| `meter_readings` | Chỉ số điện, nước cũ/mới theo tháng | Admin Tổng + Admin căn |
+| `invoices` | Hoá đơn tháng từng phòng: các khoản, tổng, trạng thái | Admin Tổng + Admin căn |
+| `payments` | Log thu tiền (giao dịch ngân hàng, tiền mặt) | Ghi tự động / xác nhận tiền mặt |
+| `notifications` | Thông báo cho cư dân. **Chỉ lưu trên D1**, không ghi ra Sheet | Admin Tổng + Admin căn |
+
+Vùng 2 không lưu tên hay CCCD, chỉ lưu `resident_id` khi cần.
+
+**Giấy tờ không lưu**: hợp đồng, CT01, thông báo tiền phòng và sổ doanh thu (kỳ kê khai S1a-HKD) được tạo ngay khi mở, bằng `src/lib/documents` từ dữ liệu trong D1. Không lưu file và không lưu bản sổ (`declarationStore.json` sẽ bỏ).
+
 ## Google Sheet dự phòng
 
-- Mỗi nhà một file, tạo theo cùng một mẫu: tab `Phòng`, `Cư dân`, và mỗi tháng một tab `MM/YYYY` gồm hoá đơn và điện nước.
-- Chỉ chia sẻ cho service account và chủ trọ. Không bật chế độ "bất kỳ ai có liên kết".
-- Sheet **không chứa CCCD đầy đủ**, chỉ có 4 số cuối. Bản đầy đủ chỉ nằm trong D1 (đã mã hoá) và trong bản sao lưu mã hoá trên PC.
-- Đồng bộ: mỗi lần ghi vào D1 thì đẩy một việc vào Queue để cập nhật đúng dòng trên Sheet. Ngoài ra Cron chạy mỗi đêm ghi lại toàn bộ để bù những lần lỗi.
-- Nhà chưa gắn link Sheet thì bỏ qua bước đồng bộ.
+Đồng bộ một chiều D1 → Sheet qua service account. Không chia sẻ dạng "bất kỳ ai có liên kết". Không có CCCD đầy đủ.
+
+```
+📄 Trọ-Hub – Thông tin cá nhân            (1 file, chỉ Admin Tổng)
+   ├─ Cư dân     Họ tên | Nhà trọ | Phòng | SĐT | CCCD ****1234 | Ngày sinh | Địa chỉ | Xe | Biển số | Liên hệ khẩn | Ngày vào | Trạng thái
+   └─ Quản lý    Họ tên | SĐT | Vai trò | Nhà được giao | Trạng thái
+
+📄 Trọ-Hub – <tên nhà>                    (1 file / nhà, tạo tự động khi tạo nhà)
+   ├─ MM/YYYY    tự tạo khi sang tháng mới (nếu chưa có):
+   │             Phòng | Điện cũ | Điện mới | Số điện | Nước cũ | Nước mới | Số nước | Tiền điện | Tiền nước
+   │             | Tiền phòng | Rác | Internet | Xe | Khác | Cọc | Tổng | Trạng thái | Người ở (tên)
+   └─ Thu tiền   Ngày | Phòng | Tháng | Số tiền | Hình thức | Ngân hàng | Mã giao dịch | Nội dung | Người xác nhận
+```
+
+- Mỗi lần ghi vào D1 thì cập nhật đúng dòng trên Sheet. Cron mỗi đêm ghi lại toàn bộ để bù những lần lỗi.
+- Nhà chưa có Sheet thì bỏ qua bước đồng bộ.
+
+## Tạo nhà trọ mới (chỉ Admin Tổng)
+
+Chỉ một màn hình, không sửa code:
+1. Nhập tên, địa chỉ, chủ trọ, ngân hàng + STK, đơn giá, danh sách phòng (ví dụ "101-110, 201-210").
+2. Worker tạo dòng trong `houses`, `house_rates`, `rooms`.
+3. Worker tạo file Google Sheet của nhà (tab tháng hiện tại + tab Thu tiền) và lưu `sheet_id`.
+4. Có thể giao ngay một Admin căn và tạo link mời đăng ký.
 
 ## Lộ trình
 
-1. Tạo D1 + Worker với các bảng `houses`, `rooms`, `residents`, `staff`, `staff_houses`. Nhập dữ liệu cư dân từ tab THÔNG TIN CÁ NHÂN. Đăng nhập chạy qua Worker.
-2. Đăng ký bằng link mời và luồng duyệt.
-3. Chuyển hoá đơn, điện nước, thanh toán sang D1. Nhập dữ liệu cũ từ các tab tháng của 2 sheet hiện có.
-4. Phân quyền hai cấp, ô chọn nhà, trang tổng hợp.
-5. Đồng bộ một chiều D1 → Sheet, sao lưu hàng tuần.
-6. Bỏ Apps Script, bỏ việc đọc sheet công khai, đổi mới `JWT_SECRET` và `ZALO_APP_SECRET`, chuyển secret sang `wrangler secret`.
+Đã xong:
+- ✅ D1 + Worker, nhập dữ liệu tab THÔNG TIN CÁ NHÂN, đăng nhập và đổi mật khẩu qua Worker.
+
+Tiếp theo, mỗi bước là một commit:
+1. **Bảng vùng 2 trên D1**: ngân hàng/STK trên `houses` (chỉ Admin Tổng sửa), `house_rates`, tiền phòng/cọc trên `rooms`, `meter_readings`, `invoices`, `payments`, `notifications`. Nhập lịch sử các tab tháng 03–11/2026.
+2. **Kết nối Google**: service account, Worker tự ký token Google. Bạn tạo service account; mình viết code.
+3. **Sheet Thông tin cá nhân**: tạo file, tab Cư dân + Quản lý, đồng bộ khi có thay đổi.
+4. **Sheet từng nhà**: tạo file, tự tạo tab tháng hiện tại, tab Thu tiền, đồng bộ hoá đơn và thanh toán.
+5. **Tạo nhà trọ mới** trong một màn hình.
+6. **Thông báo** chỉ trên D1: bỏ tab Notifications và Apps Script phần thông báo.
+7. **Giấy tờ** lấy từ D1, không lưu (bỏ `declarationStore.json`).
+8. **Đăng ký bằng link mời**, chuyển trang Admin và cư dân sang Worker, ô chọn nhà + trang tổng hợp.
+9. **Dọn dẹp**: bỏ Apps Script, bỏ đọc sheet công khai, đổi mới `JWT_SECRET` và `ZALO_APP_SECRET`, sao lưu hàng tuần.

@@ -163,24 +163,118 @@ app.get('/api/houses', async (c) => {
 app.use('/api/houses/:houseId/*', requireHouse);
 app.use('/api/houses/:houseId', requireHouse);
 
+const HOUSE_FIELDS = ['name', 'abbreviation', 'address_detail', 'ward', 'province', 'landlord_name', 'landlord_phone'] as const;
+const BANK_FIELDS = ['bank_name', 'bank_code', 'bank_account_no', 'bank_account_name'] as const;
+const RATE_FIELDS = ['electricity_per_kwh', 'water_per_m3', 'trash', 'internet', 'parking'] as const;
+
+const isOwner = (v: Viewer) => v.kind === 'staff' && v.role === 'owner';
+
 app.get('/api/houses/:houseId', async (c) => {
+  const houseId = c.req.param('houseId');
   const house = await c.env.DB.prepare(
-    `SELECT id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, status FROM houses WHERE id = ?`
+    `SELECT id, ${[...HOUSE_FIELDS, ...BANK_FIELDS].join(', ')}, status FROM houses WHERE id = ?`
   )
-    .bind(c.req.param('houseId'))
+    .bind(houseId)
     .first();
-  return house ? c.json({ success: true, house }) : fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy nhà trọ.');
+  if (!house) return fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy nhà trọ.');
+  const rates = await c.env.DB.prepare(`SELECT ${RATE_FIELDS.join(', ')} FROM house_rates WHERE house_id = ?`).bind(houseId).first();
+  return c.json({ success: true, house, rates, canEditBank: isOwner(c.get('viewer')) });
+});
+
+/** House details: both admin levels. Bank and account number: Admin Tổng only. */
+app.patch('/api/houses/:houseId', staffOnly, async (c) => {
+  const viewer = c.get('viewer');
+  const houseId = c.req.param('houseId');
+  const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+  if (BANK_FIELDS.some((f) => f in body) && !isOwner(viewer)) {
+    await audit(c, actorOf(viewer), 'bank_edit_denied', houseId);
+    return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Admin Tổng được đổi ngân hàng và số tài khoản.');
+  }
+  const fields = [...HOUSE_FIELDS, ...BANK_FIELDS].filter((f) => f in body);
+  if (!fields.length) return fail(c, 400, 'NOTHING_TO_UPDATE', 'Không có thông tin nào để cập nhật.');
+  await c.env.DB.prepare(`UPDATE houses SET ${fields.map((f) => `${f} = ?`).join(', ')} WHERE id = ?`)
+    .bind(...fields.map((f) => String(body[f] ?? '').trim()), houseId)
+    .run();
+  await audit(c, actorOf(viewer), 'house_update', houseId, fields.join(','));
+  return c.json({ success: true });
+});
+
+app.put('/api/houses/:houseId/rates', staffOnly, async (c) => {
+  const houseId = c.req.param('houseId');
+  const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+  const values = RATE_FIELDS.map((f) => Math.max(0, Math.round(Number(body[f]) || 0)));
+  await c.env.DB.prepare(
+    `INSERT INTO house_rates (house_id, ${RATE_FIELDS.join(', ')}) VALUES (?, ${RATE_FIELDS.map(() => '?').join(', ')})
+     ON CONFLICT (house_id) DO UPDATE SET ${RATE_FIELDS.map((f) => `${f} = excluded.${f}`).join(', ')}, updated_at = datetime('now')`
+  )
+    .bind(houseId, ...values)
+    .run();
+  await audit(c, actorOf(c.get('viewer')), 'rates_update', houseId);
+  return c.json({ success: true });
 });
 
 app.get('/api/houses/:houseId/rooms', staffOnly, async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT rm.id, rm.name, rm.price, rm.capacity,
+    `SELECT rm.id, rm.name, rm.price, rm.deposit, rm.capacity,
             (SELECT COUNT(*) FROM residents r WHERE r.room_id = rm.id AND r.status = 'approved' AND r.deleted_at IS NULL) AS occupants
        FROM rooms rm WHERE rm.house_id = ? AND rm.deleted_at IS NULL ORDER BY rm.name`
   )
     .bind(c.req.param('houseId'))
     .all();
   return c.json({ success: true, rooms: results });
+});
+
+/** One month of invoices with their meter readings. A resident only gets their own room. */
+app.get('/api/houses/:houseId/invoices', async (c) => {
+  const viewer = c.get('viewer');
+  const houseId = c.req.param('houseId');
+  const roomFilter = viewer.kind === 'resident' ? viewer.roomId : null;
+  if (viewer.kind === 'resident' && !roomFilter) return c.json({ success: true, month: null, invoices: [] });
+
+  const month =
+    c.req.query('month') ||
+    (
+      await c.env.DB.prepare(`SELECT MAX(month) AS month FROM invoices WHERE house_id = ?${roomFilter ? ' AND room_id = ?' : ''}`)
+        .bind(...(roomFilter ? [houseId, roomFilter] : [houseId]))
+        .first<{ month: string | null }>()
+    )?.month;
+  if (!month) return c.json({ success: true, month: null, invoices: [] });
+
+  const { results } = await c.env.DB.prepare(
+    `SELECT i.*, rm.name AS room_name, m.electric_old, m.electric_new, m.water_old, m.water_new
+       FROM invoices i
+       JOIN rooms rm ON rm.id = i.room_id
+       LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
+      WHERE i.house_id = ? AND i.month = ?${roomFilter ? ' AND i.room_id = ?' : ''}
+      ORDER BY rm.name`
+  )
+    .bind(...(roomFilter ? [houseId, month, roomFilter] : [houseId, month]))
+    .all();
+  return c.json({ success: true, month, invoices: results });
+});
+
+app.get('/api/houses/:houseId/payments', staffOnly, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.id, p.invoice_id, p.amount, p.method, p.bank_name, p.reference, p.content, p.paid_at, p.confirmed_by,
+            i.month, rm.name AS room_name
+       FROM payments p
+       LEFT JOIN invoices i ON i.id = p.invoice_id
+       LEFT JOIN rooms rm ON rm.id = i.room_id
+      WHERE p.house_id = ? ORDER BY p.paid_at DESC LIMIT 500`
+  )
+    .bind(c.req.param('houseId'))
+    .all();
+  return c.json({ success: true, payments: results });
+});
+
+/** Bank transfers not yet tied to a house. Only Admin Tổng sees money across houses. */
+app.use('/api/payments/unassigned', requireAuth);
+app.get('/api/payments/unassigned', async (c) => {
+  if (!isOwner(c.get('viewer'))) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng xem được mục này.');
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, amount, method, bank_name, reference, content, paid_at FROM payments WHERE house_id IS NULL ORDER BY paid_at DESC`
+  ).all();
+  return c.json({ success: true, payments: results });
 });
 
 app.notFound((c) => fail(c, 404, 'NOT_FOUND', 'Không tìm thấy.'));
