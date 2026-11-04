@@ -436,6 +436,46 @@ app.get('/api/houses/:houseId/rooms', staffOnly, async (c) => {
   return c.json({ success: true, rooms: results });
 });
 
+/**
+ * Admin Tổng or Admin căn creates a resident account straight into a room, already approved.
+ * A room holds at most its capacity (3) of approved and pending residents.
+ */
+app.post('/api/houses/:houseId/residents', staffOnly, async (c) => {
+  const viewer = c.get('viewer');
+  const houseId = c.req.param('houseId');
+  const body = await c.req.json<{ fullName?: string; phone?: string; password?: string; email?: string; gender?: string; roomId?: number }>()
+    .catch(() => ({}) as Record<string, never>);
+  const fullName = String(body.fullName ?? '').trim();
+  const phone = normalizePhone(body.phone ?? '');
+  const password = String(body.password ?? '');
+  if (!fullName || !/^0\d{9}$/.test(phone)) return fail(c, 400, 'RESIDENT_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
+  if (password.length < 6) return fail(c, 400, 'PASSWORD_TOO_SHORT', 'Mật khẩu phải có ít nhất 6 ký tự');
+
+  const room = await c.env.DB.prepare(
+    `SELECT rm.id, rm.name, rm.capacity,
+            (SELECT COUNT(*) FROM residents r WHERE r.room_id = rm.id AND r.status IN ('approved', 'pending') AND r.deleted_at IS NULL) AS occupants
+       FROM rooms rm WHERE rm.id = ? AND rm.house_id = ? AND rm.deleted_at IS NULL`
+  )
+    .bind(Number(body.roomId), houseId)
+    .first<{ id: number; name: string; capacity: number; occupants: number }>();
+  if (!room) return fail(c, 400, 'ROOM_INVALID', 'Vui lòng chọn phòng của nhà này.');
+  if (room.occupants >= room.capacity)
+    return fail(c, 400, 'ROOM_FULL', `Phòng ${room.name} đã đủ ${room.capacity} người.`);
+  const taken = await c.env.DB.prepare(`SELECT 1 FROM staff WHERE phone = ? UNION SELECT 1 FROM residents WHERE phone = ? AND deleted_at IS NULL`)
+    .bind(phone, phone)
+    .first();
+  if (taken) return fail(c, 400, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
+
+  const created = await c.env.DB.prepare(
+    `INSERT INTO residents (house_id, room_id, full_name, gender, phone, password_hash, email, status, move_in_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'approved', strftime('%d/%m/%Y', 'now', '+7 hours')) RETURNING id`
+  )
+    .bind(houseId, room.id, fullName, String(body.gender ?? '').trim() || null, phone, await hashPassword(password), String(body.email ?? '').trim() || null)
+    .first<{ id: number }>();
+  await audit(c, actorOf(viewer), 'resident_create', houseId, `resident:${created!.id}`);
+  return c.json({ success: true, id: created!.id, room: room.name });
+});
+
 /** One month of invoices with their meter readings. A resident only gets their own room. */
 app.get('/api/houses/:houseId/invoices', async (c) => {
   const viewer = c.get('viewer');

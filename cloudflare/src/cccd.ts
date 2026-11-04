@@ -4,7 +4,12 @@
  * cccd_hash is an HMAC of the number under the same key, so duplicates can be found
  * without decrypting. Losing CCCD_KEY means losing every stored CCCD: keep a copy offline.
  */
-const toB64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+/** In slices: spreading a large array into fromCharCode overflows the stack (sheet backups are ~1 MB). */
+function toB64(bytes: Uint8Array) {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text);
+}
 const fromB64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 const aesKey = (keyB64: string) => crypto.subtle.importKey('raw', fromB64(keyB64), 'AES-GCM', false, ['encrypt', 'decrypt']);

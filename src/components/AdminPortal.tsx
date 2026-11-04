@@ -62,6 +62,7 @@ import { useSidebarLabels } from '../lib/useSidebarLabels';
 import { AccountDeleteDialog, AccountDeleteMode } from './AccountDeleteDialog';
 import { PaymentPortalSettings } from './PaymentPortalSettings';
 import { ManagerAccounts } from './ManagerAccounts';
+import { ADMIN_ROOM, createAccountOnWorker, useAccountTargets } from '../lib/workerAccounts';
 import { useWorkerViewer } from '../lib/paymentPortal';
 import {
   IconHome3D,
@@ -185,6 +186,9 @@ export function AdminPortal() {
   // Admin Tổng sets each house's bank account in "Thông tin thanh toán" and creates Admin căn.
   const workerViewer = useWorkerViewer();
   const isAdminTong = workerViewer?.role === 'owner';
+  // Accounts made from "Tạo tài khoản mới" go to the Worker: pick a house, then a room or "Admin".
+  const isWorkerStaff = workerViewer?.kind === 'staff';
+  const accountTargets = useAccountTargets(isWorkerStaff);
 
   // Account Management (Quản lý tài khoản) state
   const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create' | 'managers'>('approval');
@@ -1630,7 +1634,7 @@ export function AdminPortal() {
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
               <span className="admin-role-badge px-2 py-0.5 rounded-md font-bold text-[10px] tracking-wide uppercase font-num">
-                Admin
+                {isAdminTong ? 'Admin tổng' : workerViewer?.role === 'manager' ? 'Admin căn' : 'Admin'}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -4147,19 +4151,28 @@ export function AdminPortal() {
                         return;
                       }
 
-                      const res = await registerResident({
-                        name: adminRegName,
-                        phone: adminRegPhone,
-                        email: adminRegEmail,
-                        roomNumber: adminRegRoom,
-                        password: adminRegPassword,
-                        autoApprove: true
-                      });
+                      const res = isWorkerStaff
+                        ? await createAccountOnWorker({
+                            houseId: accountTargets.houseId,
+                            room: adminRegRoom,
+                            fullName: adminRegName,
+                            phone: adminRegPhone,
+                            password: adminRegPassword,
+                            email: adminRegEmail
+                          })
+                        : await registerResident({
+                            name: adminRegName,
+                            phone: adminRegPhone,
+                            email: adminRegEmail,
+                            roomNumber: adminRegRoom,
+                            password: adminRegPassword,
+                            autoApprove: true
+                          });
 
                       if (res.success) {
                         playSound('success');
                         setAdminRegSuccess(res.message || 'Tạo tài khoản cư dân mới thành công!');
-                        showPortalToast(`Đã tạo tài khoản cho phòng ${adminRegRoom}`, 'success');
+                        showPortalToast(isWorkerStaff ? (res.message || 'Đã tạo tài khoản') : `Đã tạo tài khoản cho phòng ${adminRegRoom}`, 'success');
                         setAdminRegName('');
                         setAdminRegPhone('');
                         setAdminRegRoom('');
@@ -4205,6 +4218,25 @@ export function AdminPortal() {
                       </div>
                     </div>
 
+                    {isWorkerStaff && accountTargets.houses.length > 1 && (
+                      <div>
+                        <label htmlFor="admin-register-house" className="mb-2 block apple-headline kit-text-primary">Căn hộ / nhà trọ</label>
+                        <select
+                          id="admin-register-house"
+                          value={accountTargets.houseId}
+                          onChange={(e) => {
+                            accountTargets.setHouseId(e.target.value);
+                            setAdminRegRoom('');
+                          }}
+                          className="kit-field min-h-12 w-full px-3.5 cursor-pointer"
+                        >
+                          {accountTargets.houses.map(h => (
+                            <option key={h.id} value={h.id} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">{h.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="min-w-0">
                         <label htmlFor="admin-register-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
@@ -4229,7 +4261,18 @@ export function AdminPortal() {
                           className="kit-field min-h-12 w-full px-3.5 font-num cursor-pointer"
                         >
                           <option value="" disabled>Chọn phòng thuê</option>
-                          {(availableRoomNumbers.length > 0 ? availableRoomNumbers : DEFAULT_ROOM_NUMBERS).map(rNum => (
+                          {isWorkerStaff ? (
+                            <>
+                              {isAdminTong && (
+                                <option value={ADMIN_ROOM} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Admin (Admin căn trọ)</option>
+                              )}
+                              {accountTargets.rooms.map(r => (
+                                <option key={r.id} value={String(r.id)} disabled={r.occupants >= r.capacity} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
+                                  Phòng {r.name}{r.occupants >= r.capacity ? ' (đủ người)' : ''}
+                                </option>
+                              ))}
+                            </>
+                          ) : (availableRoomNumbers.length > 0 ? availableRoomNumbers : DEFAULT_ROOM_NUMBERS).map(rNum => (
                             <option key={rNum} value={rNum} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
                               Phòng {rNum}
                             </option>
@@ -4282,7 +4325,7 @@ export function AdminPortal() {
                     </div>
 
                     <button type="submit" className="primary-button min-h-12 w-full px-4 py-3 apple-control">
-                      <span>Tạo tài khoản cư dân</span>
+                      <span>{adminRegRoom === ADMIN_ROOM ? 'Tạo Admin căn' : 'Tạo tài khoản cư dân'}</span>
                       <ArrowRight aria-hidden="true" size={17} className="shrink-0" />
                     </button>
                   </form>
