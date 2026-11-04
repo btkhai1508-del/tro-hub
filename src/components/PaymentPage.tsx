@@ -631,8 +631,8 @@ export function PaymentPage() {
                   )}
                 </div>
 
-                {/* Save and quick transfer side by side to keep the card short */}
-                <div className={`w-full max-w-[300px] grid gap-2 mt-3 mb-3 ${isZaloMiniApp ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {/* Save and quick transfer, one above the other */}
+                <div className="w-full max-w-[260px] grid grid-cols-1 gap-2 mt-3 mb-3">
                   <button
                     type="button"
                     onClick={handleSaveQR}
@@ -645,7 +645,7 @@ export function PaymentPage() {
                   {isZaloMiniApp && (
                     <button type="button" onClick={handleQuickTransfer} disabled={isOpeningTransfer} className="soft-button min-h-11 w-full py-2 px-3 apple-control flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer">
                       <Landmark size={15} />
-                      <span>{isOpeningTransfer ? 'Đang mở...' : 'Chuyển nhanh'}</span>
+                      <span>{isOpeningTransfer ? 'Đang mở...' : 'Chuyển khoản nhanh'}</span>
                     </button>
                   )}
                   {qrSaveResult && <p role={qrSaveResult.success ? 'status' : 'alert'} className="col-span-full text-center apple-footnote kit-text-secondary">{qrSaveResult.message}</p>}

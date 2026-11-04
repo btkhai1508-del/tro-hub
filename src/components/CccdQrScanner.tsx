@@ -269,7 +269,7 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true, autoScan
             <h2 id="cccd-qr-title" className="apple-title2 kit-text-primary font-semibold">Quét QR CCCD</h2>
             <p className="apple-callout kit-text-secondary mt-1">
               {mode === 'zalo' ? 'Quét mã QR ở mặt trước CCCD, hoặc chọn ảnh CCCD có mã QR.'
-                : mode === 'phone' ? 'Quét bằng camera Zalo trên điện thoại, thông tin tự điền vào đây.'
+                : mode === 'phone' ? 'Quét CCCD bằng Zalo trên điện thoại, thông tin tự điền vào đây.'
                 : 'Đưa CCCD lại gần để mã QR nằm gọn trong ô vuông, giữ yên và tránh lóa.'}
             </p>
           </div>
@@ -297,9 +297,9 @@ export function CccdQrScanner({ onClose, onResult, phoneHandoff = true, autoScan
               <div role="status" className="flex aspect-square w-full max-w-[240px] items-center justify-center rounded-2xl bg-black/5 apple-callout kit-text-secondary dark:bg-white/5">Đang tạo mã...</div>
             )}
             <ol className="apple-callout kit-text-secondary mt-3 list-decimal space-y-1 pl-5 text-left">
-              <li>Trên điện thoại, mở Zalo, bấm biểu tượng quét QR và quét mã trên.</li>
-              <li>Camera Zalo tự mở, quét QR ở mặt trước CCCD.</li>
-              <li>Thông tin tự điền vào hồ sơ trên máy tính.</li>
+              <li>Dùng Zalo trên điện thoại quét mã này để mở app Trọ-Hub trong Zalo.</li>
+              <li>Trong app, bấm "Quét mã QR" và quét QR ở mặt trước CCCD (hoặc bấm "Tải ảnh CCCD lên").</li>
+              <li>Thông tin tự điền vào hồ sơ trên máy tính, kiểm tra rồi bấm "Lưu thay đổi".</li>
             </ol>
           </div>
         ) : cameraError
