@@ -129,6 +129,38 @@ function AdminDisclosure({ title, description, className = '', children }: { tit
   </section>;
 }
 
+/** Each room has three resident slots (Người 1–3, columns Q:AB of the month tab). */
+const MAX_ROOM_OCCUPANTS = 3;
+const ROOM_SLOTS = [1, 2, 3];
+
+/** A name cell holding only a head count ("1", "2.0") or the header text is not a resident. */
+const isOccupantName = (value: any) => {
+  const text = String(value ?? '').trim();
+  return Boolean(text) && !/^\d+(\.\d+)?$/.test(text) && !/^họ\s*(?:và\s*)?tên/i.test(text);
+};
+const occupiedSlots = (room: any) => ROOM_SLOTS.filter(slot => isOccupantName(room?.[`nguoi${slot}`]));
+
+function PersonGlyph({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" className={filled ? 'text-neutral-900 dark:text-white' : 'text-neutral-300 dark:text-neutral-600'}>
+      <circle cx="12" cy="7.5" r="4" fill="currentColor" />
+      <path d="M4 20.5c0-4.1 3.6-7 8-7s8 2.9 8 7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Who lives in a room at a glance: one solid figure per resident, a faint one per free slot. */
+function RoomOccupancy({ count }: { count: number }) {
+  return (
+    <div className="flex items-center gap-2" role="img" aria-label={`${count} trên ${MAX_ROOM_OCCUPANTS} người đang ở`}>
+      <span className="flex items-center gap-0.5">
+        {ROOM_SLOTS.map(slot => <PersonGlyph key={slot} filled={slot <= count} />)}
+      </span>
+      <span aria-hidden="true" className="font-num text-xs font-semibold text-neutral-600 dark:text-neutral-300">{count}/{MAX_ROOM_OCCUPANTS}</span>
+    </div>
+  );
+}
+
 function AdminEmptyState({ filtered, title }: { filtered: boolean; title: string }) {
   return <div className="kit-data-surface rounded-[20px] px-5 py-8 text-center" role="status">
     <Search size={32} className="mx-auto mb-3" />
@@ -274,6 +306,9 @@ export function AdminPortal() {
   const [roomsList, setRoomsList] = useState<any[]>([]);
   const [currentRoomData, setCurrentRoomData] = useState<any>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
+  // Empty resident slots the admin opened in this room, kept open while their fields are edited.
+  const [openedSlots, setOpenedSlots] = useState<number[]>([]);
+  useEffect(() => setOpenedSlots([]), [selectedRoomId]);
   const [billingList, setBillingList] = useState<any[]>([]);
   const [plateQuery, setPlateQuery] = useState('');
   const [adminSearch, setAdminSearch] = useState('');
@@ -1917,12 +1952,13 @@ export function AdminPortal() {
               {visibleRooms.map(r => {
                 const isPaid = (r.paymentStatus || r.status) === 'paid';
                 const isPending = (r.paymentStatus || r.status) === 'pending';
+                const residents = occupiedSlots(r);
                 return (
                   <div
                     key={r.room}
-                    className="admin-room-card soft-card p-5 flex flex-col justify-between hover:border-neutral-500 transition-all cursor-pointer group"
+                    className="admin-room-card soft-card p-5 flex flex-col gap-4 hover:border-neutral-500 transition-all cursor-pointer group"
                   >
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => openRoomDetail(r.room)}
@@ -1951,10 +1987,20 @@ export function AdminPortal() {
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{r.nguoi1 || r.name || 'Trống'}</h4>
-                      <p className="text-xs text-neutral-600 font-mono dark:text-neutral-300">SĐT: {r.sdt1 || r.phone || 'Chưa cập nhật'}</p>
-                    </div>
+                    <RoomOccupancy count={residents.length} />
+
+                    {residents.length > 0 ? (
+                      <ul className="space-y-2 border-t border-black/[0.06] pt-3 dark:border-white/[0.08]">
+                        {residents.map(slot => (
+                          <li key={slot} className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{r[`nguoi${slot}`]}</p>
+                            {r[`sdt${slot}`] && <p className="font-num text-xs text-neutral-600 dark:text-neutral-300">{r[`sdt${slot}`]}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="border-t border-black/[0.06] pt-3 text-sm text-neutral-600 dark:border-white/[0.08] dark:text-neutral-300">Phòng đang trống</p>
+                    )}
                   </div>
                 );
               })}
@@ -1999,14 +2045,22 @@ export function AdminPortal() {
 
             {/* Occupants Info */}
             <div className="soft-card p-6 sm:p-8 space-y-4">
-              <div className="flex items-center gap-3">
-                <IconProfile3D size={40} className="shrink-0 drop-shadow-xs" />
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <IconProfile3D size={40} className="shrink-0 drop-shadow-xs" />
                   <h4 className="font-bold text-neutral-900 dark:text-white text-base">Thông tin người cư trú Phòng {selectedRoomId}</h4>
                 </div>
+                <RoomOccupancy count={occupiedSlots(currentRoomData).length} />
               </div>
-              {[1, 2, 3].map(slot => (
-                <div key={slot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60">
+              {(() => {
+                // Only the slots someone lives in, plus any the admin opened to add a resident.
+                const shownSlots = ROOM_SLOTS.filter(slot => occupiedSlots(currentRoomData).includes(slot) || openedSlots.includes(slot));
+                const freeSlot = ROOM_SLOTS.find(slot => !shownSlots.includes(slot));
+                return (
+                  <>
+                    {shownSlots.length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-300">Phòng đang trống.</p>}
+                    {shownSlots.map(slot => (
+                <div key={slot} onChangeCapture={() => setOpenedSlots(prev => prev.includes(slot) ? prev : [...prev, slot])} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60">
                   <div>
                     <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Họ tên người {slot}</label>
                     <input
@@ -2077,7 +2131,17 @@ export function AdminPortal() {
                     />
                   </div>
                 </div>
-              ))}
+                    ))}
+                    {freeSlot !== undefined ? (
+                      <button type="button" onClick={() => setOpenedSlots(prev => [...prev, freeSlot])} className="soft-button min-h-11 w-full px-4 text-sm font-bold">
+                        + Thêm người ở ({shownSlots.length}/{MAX_ROOM_OCCUPANTS})
+                      </button>
+                    ) : occupiedSlots(currentRoomData).length === MAX_ROOM_OCCUPANTS && (
+                      <p className="text-xs text-neutral-600 dark:text-neutral-300">Phòng đã đủ {MAX_ROOM_OCCUPANTS} người.</p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Electricity & Water Indices with 3D Icons */}

@@ -6,7 +6,7 @@ if (!process.env.VITE_API_BASE_URL) {
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { fetchFreshTenantDataFromSheet, DEFAULT_SPREADSHEET_ID, setInvoicePaidByWebhook, setInvoiceUnpaid, authenticateUser, normalizePhone } from './src/server/googleSheetsBackendService.js';
+import { fetchFreshTenantDataFromSheet, fetchProfileRows, DEFAULT_SPREADSHEET_ID, setInvoicePaidByWebhook, setInvoiceUnpaid, authenticateUser, normalizePhone } from './src/server/googleSheetsBackendService.js';
 import { getRoomColumnPStatus, setRoomColumnPStatus } from './src/server/columnPStatusStore.js';
 import { getLiveRoomPaymentStatus, fetchAllSheetColumnPStatuses } from './src/server/googleSheetColorService.js';
 import { listAccounts, callAccountScript } from './src/server/accountService';
@@ -44,6 +44,8 @@ const __dirname = path.dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
 const PORT: number = Number(process.env.PORT) || 3000;
+/** Each room has three resident slots (Q:AB of the month tab). */
+const MAX_ROOM_OCCUPANTS = 3;
 
 // Origins allowed to call this API from the browser.
 // Zalo Mini App runs on Zalo's domains (h5.zdn.vn), so CORS is required.
@@ -124,6 +126,16 @@ async function startServer() {
       const room = normalizeRoom(roomNumber);
       if (!String(name || '').trim() || !normalizePhone(phone) || String(password || '').length < 6 || !room) {
         return res.status(400).json({ success: false, error: 'Vui lòng điền đầy đủ họ tên, số điện thoại, phòng và mật khẩu từ 6 ký tự.' });
+      }
+      // A room holds at most three people; accounts waiting for approval count, suspended ones do not.
+      const profileRows = await fetchProfileRows(DEFAULT_SPREADSHEET_ID).catch(() => [] as string[][]);
+      const roomPeople = profileRows.slice(1).filter(row =>
+        normalizeRoom(row[9]) === room
+        && /\D/.test(String(row[0] || '').trim())
+        && !['TẠM NGƯNG', 'TỪ CHỐI'].includes(String(row[15] || '').trim().toUpperCase())
+      ).length;
+      if (roomPeople >= MAX_ROOM_OCCUPANTS) {
+        return res.status(400).json({ success: false, error: `Phòng ${room} đã đủ ${MAX_ROOM_OCCUPANTS} người. Vui lòng liên hệ BQL nếu bạn cần chuyển vào phòng này.` });
       }
       // Only a signed-in admin can create an account that is approved straight away.
       const bearer = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
