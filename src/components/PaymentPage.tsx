@@ -175,7 +175,7 @@ export function PaymentPage() {
   const accountNumber = portal.accountNo;
 
   // Format transfer syntax: Room with LVC -> LVC{room}-T{m}-{y}, Room without LVC -> {room}-T{m}-{y}
-  const transferContent = getTransferContent(profile.room?.roomNumber || '', targetInvoice.month);
+  const transferContent = getTransferContent(profile.room?.roomNumber || '', targetInvoice.month, portal.payPrefix);
 
   // Pure QR code matrix without borders or background
   const qrUrl = vietQrUrl(portal, targetInvoice.total, transferContent);

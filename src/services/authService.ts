@@ -56,6 +56,8 @@ export interface AuthLoginResponse {
   invoices?: Invoice[];
   token?: string;
   isAdmin?: boolean;
+  /** The Developer who sells Trọ Hub: opens the developer portal instead of the admin one. */
+  isDeveloper?: boolean;
 }
 
 function sanitizeUser(rawUser: any, cleanPhone: string): AuthenticatedTenantUser {
@@ -146,7 +148,8 @@ export const authService = {
           user: sanitizedUser,
           invoices: data.invoices || [],
           token: data.token,
-          isAdmin: !!data.isAdmin
+          isAdmin: !!data.isAdmin,
+          isDeveloper: data.house?.role === 'developer'
         };
       } else if (data && !data.success && data.error) {
         return {

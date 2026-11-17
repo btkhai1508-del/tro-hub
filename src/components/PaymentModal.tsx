@@ -39,7 +39,7 @@ export function PaymentModal() {
     return val.toLocaleString('vi-VN');
   };
 
-  const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || '10/2026');
+  const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || '10/2026', portal.payPrefix);
   const bankAccount = portal.accountNo;
   const bankName = portal.bankName;
   const accountHolder = portal.accountName;

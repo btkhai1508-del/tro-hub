@@ -68,7 +68,13 @@ export async function workerFetch(path: string, init: RequestInit = {}): Promise
  * Express routes that now live on the Cloudflare Worker with the same path and response, so
  * callers keep using apiFetch. Sessions without a Worker token (Zalo login) still go to Express.
  */
-const WORKER_ROUTES = new Set(['/api/notifications', '/api/admin/notifications']);
+const WORKER_ROUTES = new Set([
+  // Nhóm 1: thông báo
+  '/api/notifications', '/api/admin/notifications',
+  // Nhóm 2: tiền phòng, thanh toán, cổng thanh toán
+  '/api/payment/status', '/api/payment/gate', '/api/payment/mark-paid',
+  '/api/admin/months', '/api/admin/dashboard', '/api/admin/billing', '/api/admin/payment-status', '/api/admin/payment-gate',
+]);
 
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   if (WORKER_ROUTES.has(path.split('?')[0]) && storage.getItem(STORAGE_KEYS.WORKER_TOKEN)) return workerFetch(path, init);

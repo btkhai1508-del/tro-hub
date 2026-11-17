@@ -15,7 +15,7 @@ interface WorkerViewer {
   id: number;
   name: string;
   phone: string | null;
-  role?: 'owner' | 'manager';
+  role?: 'developer' | 'owner' | 'manager';
   houseId?: string;
   houseIds?: string[];
   roomName?: string | null;

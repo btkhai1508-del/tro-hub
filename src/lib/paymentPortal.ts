@@ -25,6 +25,8 @@ export interface PaymentPortal {
   accountNo: string;
   accountName: string;
   zaloCheckout: boolean;
+  /** Số căn + số phòng của cư dân (6 số). Nội dung chuyển khoản = payPrefix + MMYYYY. Null khi chưa biết. */
+  payPrefix?: string | null;
 }
 
 export const DEFAULT_PORTAL: PaymentPortal = {
@@ -35,6 +37,7 @@ export const DEFAULT_PORTAL: PaymentPortal = {
   accountNo: '0902371800',
   accountName: 'Bùi Trung Khải',
   zaloCheckout: true,
+  payPrefix: null,
 };
 
 /** VietQR draws the code from bank BIN + account; amount and content are filled in for the resident. */
@@ -85,7 +88,9 @@ export function usePaymentPortal(): PaymentPortal {
     loadWorkerViewer()
       .then((viewer) => (viewer?.kind === 'resident' && viewer.houseId ? fetchPaymentPortal(viewer.houseId) : null))
       .then((result) => {
-        if (alive && result?.portal.ready) setPortal(result.portal);
+        if (!alive || !result) return;
+        // A house without its own account still pays into the old one, but with its own transfer code.
+        setPortal(result.portal.ready ? result.portal : { ...DEFAULT_PORTAL, payPrefix: result.portal.payPrefix ?? null });
       });
     return () => { alive = false; };
   }, []);

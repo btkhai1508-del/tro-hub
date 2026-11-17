@@ -143,7 +143,7 @@ Mỗi nhóm chuyển **cả phía admin lẫn cư dân cùng lúc**, để hai b
 | # | Nhóm | API Express | Trạng thái |
 |---|---|---|---|
 | 1 | Thông báo | `/api/notifications`, `/api/admin/notifications` | ✅ trên D1 |
-| 2 | Tiền phòng, thanh toán | `/api/payment/*`, `/api/admin/billing`, `/api/admin/payment-status`, `/api/admin/payment-gate`, `/api/admin/dashboard`, `/api/admin/months`, webhook SePay, `/api/payment/zalo-order` | |
+| 2 | Tiền phòng, thanh toán | `/api/payment/*`, `/api/admin/billing`, `/api/admin/payment-status`, `/api/admin/payment-gate`, `/api/admin/dashboard`, `/api/admin/months`, webhook SePay, `/api/payment/zalo-order` | ✅ code xong trên nhánh, chưa đưa lên (xem dưới) |
 | 3 | Cư dân, phòng | `/api/sheets/tenant-data`, `/api/admin/rooms`, `/api/admin/room-detail`, `/api/admin/accounts*`, `/api/auth/register`, `/api/profile/update`, đăng nhập Express | |
 | 4 | Điện nước, đơn giá | `/api/admin/room-detail` (ghi), `/api/admin/config` | |
 | 5 | Giấy tờ | `/api/admin/contract/history`, `/api/admin/declaration` (tạo khi mở, không lưu) | |
@@ -152,6 +152,16 @@ Mỗi nhóm chuyển **cả phía admin lẫn cư dân cùng lúc**, để hai b
 | 8 | Ngắt | bỏ Apps Script, `googleSheetsService`, `googleSheetSyncService`, đọc sheet công khai, server Express | |
 
 Phiên đăng nhập bằng Zalo chưa có token Worker nên vẫn đi qua Express cho tới nhóm 7.
+
+### Nhóm 2: cách chạy
+
+- **Trạng thái thanh toán và cổng thanh toán nằm trên D1.** Số tiền, chỉ số điện nước vẫn do chủ trọ nhập trên tab tháng của Sheet cũ (tới nhóm 4): Worker đọc lại bằng bản xuất CSV công khai mỗi 10 phút (cron), và ngay khi trang Thu tiền / Tổng quan mở một tháng chưa đọc trong 60 giây (`cloudflare/src/sheetSync.ts`). Đọc Sheet không bao giờ đổi trạng thái.
+- Khi trạng thái đổi trên D1, Worker tô lại ô cột P (Apps Script `update_payment`) và lưu cổng sang Apps Script (`set_payment_gate`), để phần còn trên Express (đăng nhập Zalo, danh sách phòng) thấy giống nhau. Chủ trọ không tô màu cột P bằng tay nữa.
+- Cư dân bấm "đã chuyển khoản" → **Chờ xác nhận** (trước đây là Đã đóng ngay). Đã đóng chỉ khi SePay báo tiền về đủ số tiền hoá đơn (mã `XXXPPPMMYYYY` hoặc mã cũ), hoặc quản lý bật.
+- Webhook SePay trên Worker ghi tiền vào bảng `payments`, và chuyển giao dịch giặt sấy (MG/MS) sang Express.
+- `/api/payment/zalo-order` không đụng dữ liệu, vẫn ở Express.
+
+Khi đưa lên (theo thứ tự): deploy Worker + migration 0016 → đưa giao diện lên Render → chạy `cloudflare/scripts/import-statuses.mts` cho tháng này và tháng trước trên D1 thật → đổi URL webhook SePay sang `https://tro-hub-api.trohub.workers.dev/api/sepay/webhook`.
 
 ## Lộ trình
 

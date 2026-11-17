@@ -21,7 +21,6 @@ import {
   getRoomListByMonth,
   getRoomDataByMonth,
   getMonthlyBilling,
-  searchLicensePlates,
   HOUSES_CONFIG,
   getDeclarationData,
   saveDeclarationData,
@@ -840,17 +839,6 @@ async function startServer() {
       const month = (req.query.month as string) || '10/2026';
       const billing = await getMonthlyBilling(month);
       res.json({ success: true, billing });
-    } catch (e: any) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
-
-  app.get('/api/admin/plates', async (req, res) => {
-    try {
-      const month = (req.query.month as string) || '10/2026';
-      const query = (req.query.query as string) || '';
-      const results = await searchLicensePlates(month, query);
-      res.json({ success: true, results });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }

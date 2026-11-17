@@ -827,66 +827,6 @@ export function isValidLicensePlate(val: any): boolean {
 }
 
 /**
- * Search License Plates across all rooms
- */
-export async function searchLicensePlates(month: string = '10/2026', query: string = '') {
-  const q = String(query || '').replace(/[\s.-]/g, '').toLowerCase();
-
-  try {
-    const zip = await fetchSheetXlsx();
-    const roomsList = zip ? (await parseSheetXmlRows(zip, month)).rows : [];
-    const results: any[] = [];
-
-    const slots = [
-      { idx: 1, nameCol: 'Q', cccdCol: 'R', phoneCol: 'S', plateCol: 'T' },
-      { idx: 2, nameCol: 'U', cccdCol: 'V', phoneCol: 'W', plateCol: 'X' },
-      { idx: 3, nameCol: 'Y', cccdCol: 'Z', phoneCol: 'AA', plateCol: 'AB' }
-    ];
-
-    roomsList.forEach(r => {
-      if (r.rowNumber >= 7 && r.rowNumber <= 50) {
-        const c = r.cells;
-        const room = c.A?.value || '';
-        if (!room) return;
-
-        slots.forEach(slot => {
-          let plateRaw = c[slot.plateCol]?.value || '';
-          let name = c[slot.nameCol]?.value || c.Q?.value || '';
-          let phone = c[slot.phoneCol]?.value || c.S?.value || '';
-
-          // If plate column is invalid (e.g. empty or pure text name like "Phạm Huyền Trâm"), check if plate was placed in phone/cccd column
-          if (!isValidLicensePlate(plateRaw)) {
-            if (isValidLicensePlate(c[slot.phoneCol]?.value)) {
-              plateRaw = c[slot.phoneCol]?.value;
-              phone = c.S?.value || '';
-            } else if (isValidLicensePlate(c[slot.cccdCol]?.value)) {
-              plateRaw = c[slot.cccdCol]?.value;
-            } else {
-              return;
-            }
-          }
-
-          const cleanPlate = String(plateRaw).replace(/[\s.-]/g, '').toLowerCase();
-          if (!q || cleanPlate.includes(q)) {
-            results.push({
-              room: canonicalRoom(room),
-              personIndex: slot.idx,
-              name,
-              plate: plateRaw,
-              phone
-            });
-          }
-        });
-      }
-    });
-
-    return results;
-  } catch (e) {
-    return [];
-  }
-}
-
-/**
  * Get Declaration Data (Mẫu S1a-HKD Thông tư 152/2025/TT-BTC)
  */
 export async function getDeclarationData(month: string = '10/2026', houseKey: 'LVC' | 'TRUNG_KIM' = 'TRUNG_KIM') {

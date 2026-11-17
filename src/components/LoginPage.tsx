@@ -66,7 +66,7 @@ export function LoginPage() {
         setTimeout(() => {
           const isAdmin = Boolean(res.isAdmin) || phone.trim().toLowerCase() === 'admin' || phone.replace(/\D/g, '').endsWith('902371800');
           const from = (location.state as any)?.from?.pathname;
-          const target = isAdmin ? '/admin' : ((from && from !== '/login' && from !== '/' && from !== '/admin') ? from : '/');
+          const target = res.isDeveloper ? '/developer' : isAdmin ? '/admin' : ((from && from !== '/login' && from !== '/' && from !== '/admin') ? from : '/');
           navigate(target, { replace: true });
         }, 400);
       } else {

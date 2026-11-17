@@ -66,3 +66,19 @@ export async function createAccountOnWorker(input: {
       : `Đã tạo tài khoản cư dân phòng ${data.room}.`,
   };
 }
+
+/**
+ * The Tiện ích tools the signed-in staff member's houses pay for (set by the Developer).
+ * null while unknown or without a Worker session: every tool stays visible.
+ */
+export function useEnabledModules(enabled: boolean): Set<string> | null {
+  const [modules, setModules] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    workerFetch('/api/modules')
+      .then((res) => res.json())
+      .then((data) => { if (data?.success && Array.isArray(data.modules)) setModules(new Set(data.modules)); })
+      .catch(() => {});
+  }, [enabled]);
+  return modules;
+}

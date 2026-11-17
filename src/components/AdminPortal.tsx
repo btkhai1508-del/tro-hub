@@ -62,7 +62,7 @@ import { useSidebarLabels } from '../lib/useSidebarLabels';
 import { AccountDeleteDialog, AccountDeleteMode } from './AccountDeleteDialog';
 import { PaymentPortalSettings } from './PaymentPortalSettings';
 import { ManagerAccounts } from './ManagerAccounts';
-import { ADMIN_ROOM, createAccountOnWorker, useAccountTargets } from '../lib/workerAccounts';
+import { ADMIN_ROOM, createAccountOnWorker, useAccountTargets, useEnabledModules } from '../lib/workerAccounts';
 import { useWorkerViewer } from '../lib/paymentPortal';
 import {
   IconHome3D,
@@ -79,7 +79,6 @@ import {
   IconWater3D,
   IconPencil3D,
   IconMeter3D,
-  IconSearchPlate3D,
   IconContract3D,
   IconDeclaration3D,
   IconSettings3D,
@@ -181,7 +180,7 @@ export function AdminPortal() {
 
   // Active Menu
   const [activeMenu, setActiveMenu] = useState<
-    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'plates' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
+    'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
   >('dashboard');
   // Admin Tổng sets each house's bank account in "Thông tin thanh toán" and creates Admin căn.
   const workerViewer = useWorkerViewer();
@@ -189,6 +188,8 @@ export function AdminPortal() {
   // Accounts made from "Tạo tài khoản mới" go to the Worker: pick a house, then a room or "Admin".
   const isWorkerStaff = workerViewer?.kind === 'staff';
   const accountTargets = useAccountTargets(isWorkerStaff);
+  // Tiện ích the Developer turned on for this admin's houses; unknown (null) shows them all.
+  const enabledModules = useEnabledModules(isWorkerStaff);
 
   // Account Management (Quản lý tài khoản) state
   const [accountSubTab, setAccountSubTab] = useState<'approval' | 'create' | 'managers'>('approval');
@@ -321,10 +322,8 @@ export function AdminPortal() {
   const [openedSlots, setOpenedSlots] = useState<number[]>([]);
   useEffect(() => setOpenedSlots([]), [selectedRoomId]);
   const [billingList, setBillingList] = useState<any[]>([]);
-  const [plateQuery, setPlateQuery] = useState('');
   const [adminSearch, setAdminSearch] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('all');
-  const [plateResults, setPlateResults] = useState<any[]>([]);
 
   // Contract state
   const [contractMode, setContractMode] = useState<'new' | 'history'>('new');
@@ -777,8 +776,6 @@ export function AdminPortal() {
           else if (d.success === false) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
         })
         .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
-    } else if (menuKey === 'plates') {
-      fetchPlates(month, plateQuery);
     } else if (menuKey === 'declaration') {
       loadDeclaration(month, declarationHouse);
     } else if (menuKey === 'config') {
@@ -939,46 +936,6 @@ export function AdminPortal() {
     const clean = str.replace(/[\s.-]/g, '');
     if (clean.length < 4 || clean.length > 12) return false;
     return true;
-  };
-
-  const fetchPlates = (month: string, q: string) => {
-    const cleanQ = (q || '').trim().toLowerCase().replace(/[\s.-]/g, '');
-    const searchFromRooms = (list: any[]) => {
-      const results: any[] = [];
-      list.forEach(r => {
-        [
-          { plate: r.xe1, name: r.nguoi1, phone: r.sdt1 },
-          { plate: r.xe2, name: r.nguoi2, phone: r.sdt2 },
-          { plate: r.xe3, name: r.nguoi3, phone: r.sdt3 }
-        ].forEach(item => {
-          const plateStr = String(item.plate || '').trim();
-          if (!isValidLicensePlate(plateStr)) return;
-          if (!cleanQ || plateStr.toLowerCase().replace(/[\s.-]/g, '').includes(cleanQ)) {
-            results.push({
-              room: r.room,
-              plate: plateStr,
-              tenant: item.name || r.name,
-              phone: item.phone || r.phone
-            });
-          }
-        });
-      });
-      return results;
-    };
-
-    apiFetch(`/api/admin/plates?month=${month}&query=${encodeURIComponent(q)}`)
-      .then(res => {
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.includes('application/json')) throw new Error('Not JSON');
-        return res.json();
-      })
-      .then(d => {
-        if (d.success && d.results?.length) setPlateResults(d.results);
-        else setPlateResults(searchFromRooms(roomsList));
-      })
-      .catch(() => {
-        setPlateResults(searchFromRooms(roomsList));
-      });
   };
 
   const loadDeclaration = (month: string, houseKey: 'TRUNG_KIM' | 'LVC') => {
@@ -1195,7 +1152,6 @@ export function AdminPortal() {
     billing: { title: 'Thu tiền tháng', description: 'Theo dõi từng khoản phí và trạng thái thu tiền.' },
     utilities: { title: 'Công cụ quản lý', description: 'Chọn công việc bạn cần thực hiện.' },
     meter: { title: 'Chỉ số điện nước', description: 'Nhập chỉ số từng phòng theo kỳ tháng.' },
-    plates: { title: 'Tra biển số xe', description: 'Tìm xe và phòng đã đăng ký.' },
     contract: { title: 'Hồ sơ cư trú', description: 'Tờ khai CT01 và hợp đồng thuê phòng.' },
     invoices: { title: 'Hoá đơn phòng', description: 'Xem, in hoặc lưu PDF hoá đơn của từng phòng theo kỳ tháng.' },
     declaration: { title: 'Kê khai doanh thu', description: 'Sổ doanh thu theo hộ kinh doanh và kỳ tháng.' },
@@ -1229,9 +1185,18 @@ export function AdminPortal() {
       row.cccd,
       ...(Array.isArray(row.occupants) ? row.occupants.flatMap((o: any) => [o.name, o.phone, o.cccd, o.plate]) : [])
     ];
-    const matchesSearch = normalizeAdminSearch(searchableFields.filter(Boolean).join(' ')).includes(normalizeAdminSearch(adminSearch));
+    const query = compactSearch(adminSearch);
+    // A plate or phone typed without its dots, dashes or spaces ("59x188888") still finds "59-X1 888.88".
+    const matchesSearch = normalizeAdminSearch(searchableFields.filter(Boolean).join(' ')).includes(normalizeAdminSearch(adminSearch))
+      || (query.length >= 3 && searchableFields.some(field => compactSearch(field).includes(query)));
     const status = row.paymentStatus || row.status || 'unpaid';
     return matchesSearch && (collectionFilter === 'all' || status === collectionFilter);
+  };
+  const compactSearch = (value: unknown) => normalizeAdminSearch(value).replace(/[^a-z0-9]/g, '');
+  const matchingPlates = (row: any) => {
+    const query = compactSearch(adminSearch);
+    if (query.length < 3) return [];
+    return [row.xe1, row.xe2, row.xe3].filter(plate => plate && compactSearch(plate).includes(query));
   };
   const visibleRooms = roomsList.filter(filterAdminRows);
   const visibleBilling = billingList.filter(filterAdminRows);
@@ -1369,7 +1334,7 @@ export function AdminPortal() {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.key ||
                   (item.key === 'rooms' && activeMenu === 'roomDetail') ||
-                  (item.key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
+                  (item.key === 'utilities' && ['meter', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
                 return (
 
                   <button
@@ -1763,7 +1728,7 @@ export function AdminPortal() {
 
         {adminLoadError && <div role="alert" className="admin-load-error kit-data-surface rounded-[18px] p-4 mb-4"><div><p className="apple-headline kit-text-primary">Không thể cập nhật dữ liệu</p><p className="apple-callout kit-text-secondary mt-1">{adminLoadError}</p></div><button type="button" className="soft-button min-h-11 px-4" onClick={() => { setAdminLoadError(''); loadTabContent(activeMenu, selectedMonth); }}><RefreshCw size={18} />Thử lại</button></div>}
         {(activeMenu === 'rooms' || activeMenu === 'billing') && <div className="admin-list-toolbar kit-data-surface rounded-[20px] p-3 mb-4">
-          <label className="admin-search-field"><Search size={21} /><input type="search" data-stage-filter="admin-room-results" value={adminSearch} onChange={event => setAdminSearch(event.target.value)} placeholder="Tìm phòng, tên hoặc số điện thoại" aria-label="Tìm phòng, tên hoặc số điện thoại" /></label>
+          <label className="admin-search-field"><Search size={21} /><input type="search" data-stage-filter="admin-room-results" value={adminSearch} onChange={event => setAdminSearch(event.target.value)} placeholder="Tìm phòng, tên, số điện thoại hoặc biển số xe" aria-label="Tìm phòng, tên, số điện thoại hoặc biển số xe" /></label>
           <label className="admin-status-filter"><span className="sr-only">Trạng thái thu tiền</span><select data-stage-filter="admin-room-results" value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái thu tiền"><option value="all">Tất cả trạng thái</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></select></label>
           <p role="status" className="admin-result-count apple-callout kit-text-secondary">{activeMenu === 'rooms' ? visibleRooms.length : visibleBilling.length} kết quả</p>
         </div>}
@@ -1774,14 +1739,13 @@ export function AdminPortal() {
               { key: 'accountManagement', label: 'Quản lý tài khoản', icon: IconProfile3D },
               { key: 'createNotification', label: 'Tạo thông báo', icon: IconNotification3D },
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
-              { key: 'plates', label: 'Tra biển số', icon: IconSearchPlate3D },
               { key: 'contract', label: 'Hợp đồng & CT01', icon: IconContract3D },
               { key: 'invoices', label: 'Hoá đơn phòng', icon: IconWallet3D },
               { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
               { key: 'config', label: 'Cài đặt phí', icon: IconSettings3D },
               { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D },
               ...(isAdminTong ? [{ key: 'paymentPortal', label: 'Thông tin thanh toán', icon: IconQr3D }] : [])
-            ].map(item => {
+            ].filter(item => !enabledModules || enabledModules.has(item.key)).map(item => {
               const Icon = item.icon;
               return (
                 <button
@@ -2002,17 +1966,13 @@ export function AdminPortal() {
 
                     <RoomOccupancy count={residents.length} />
 
-                    {residents.length > 0 ? (
-                      <ul className="space-y-2 border-t border-black/[0.06] pt-3 dark:border-white/[0.08]">
-                        {residents.map(slot => (
-                          <li key={slot} className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{r[`nguoi${slot}`]}</p>
-                            {r[`sdt${slot}`] && <p className="font-num text-xs text-neutral-600 dark:text-neutral-300">{r[`sdt${slot}`]}</p>}
-                          </li>
+                    {/* A plate search shows which plate brought this room up. */}
+                    {matchingPlates(r).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {matchingPlates(r).map(plate => (
+                          <span key={plate} className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 font-mono text-xs font-bold text-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white">{plate}</span>
                         ))}
-                      </ul>
-                    ) : (
-                      <p className="border-t border-black/[0.06] pt-3 text-sm text-neutral-600 dark:border-white/[0.08] dark:text-neutral-300">Phòng đang trống</p>
+                      </div>
                     )}
                   </div>
                 );
@@ -2606,72 +2566,6 @@ export function AdminPortal() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* =========================================================================
-            4. LICENSE PLATE SEARCH
-           ========================================================================= */}
-        {activeMenu === 'plates' && (
-          <div className="space-y-6">
-            {/* Top Navigation Bar: Back Button */}
-            <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  setActiveMenu('utilities');
-                }}
-                className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
-              >
-                <ArrowLeft size={16} />
-                <span>Quay lại Tiện ích</span>
-              </button>
-
-              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
-                <Search size={15} className="text-neutral-600 dark:text-neutral-300" />
-                <span>Tra cứu biển số xe</span>
-              </div>
-            </div>
-
-            <div className="soft-card p-6 sm:p-8 space-y-4 text-center">
-              <IconLocation3D size={52} className="mx-auto drop-shadow-xs mb-1" />
-              <div className="text-center max-w-md mx-auto space-y-1 mb-4">
-                <h3 className="type-h2 font-bold text-neutral-900 dark:text-white">Tra Cứu Biển Số Xe</h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-300">Tìm kiếm nhanh thông tin chủ xe và số phòng</p>
-              </div>
-
-              <div className="relative max-w-xl mx-auto">
-                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600 dark:text-neutral-300" />
-                <input
-                  type="text"
-                  value={plateQuery}
-                  onChange={e => {
-                    setPlateQuery(e.target.value);
-                    fetchPlates(selectedMonth, e.target.value);
-                  }}
-                  placeholder="Nhập biển số xe (VD: 59-X1, 888.88...)"
-                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-bold text-neutral-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {plateResults.map((r, i) => (
-                <div key={i} className="soft-card p-5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold rounded-lg text-xs">
-                      Phòng {r.room}
-                    </span>
-                    <span className="font-mono text-sm font-bold text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-800 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-neutral-700">
-                      {r.plate}
-                    </span>
-                  </div>
-                  <p className="font-bold text-sm text-neutral-800 dark:text-white">{r.name || r.tenant || 'Chưa cập nhật tên'}</p>
-                  <p className="text-xs text-neutral-600 font-mono dark:text-neutral-300">SĐT: {r.phone || 'Chưa cập nhật'}</p>
-                </div>
-              ))}
             </div>
           </div>
         )}
@@ -4459,7 +4353,7 @@ export function AdminPortal() {
             { key: 'billing', icon: NavIcons.Receipt, label: 'Thu tiền' },
             { key: 'utilities', icon: NavIcons.LayoutGrid, label: 'Tiện ích' }
           ].map(({ key, icon: Icon, label }) => {
-            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'plates', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
+            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'utilities' && ['meter', 'contract', 'invoices', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
             return <button type="button" key={key} aria-current={isActive ? 'page' : undefined} onClick={() => { playSound('click'); setActiveMenu(key as any); }} className={cn('kit-nav-item kit-admin-dock-item', isActive && 'kit-nav-active')}>
               <Icon size={21} /><span>{label}</span>
             </button>;

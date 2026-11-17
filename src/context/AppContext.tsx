@@ -34,7 +34,15 @@ export interface Invoice {
  * - If room has 'LVC' -> LVC{room}-T{month}-{year}
  * - If room does NOT have 'LVC' -> {room}-T{month}-{year}
  */
-export function getTransferContent(roomNumber: string = '203', month: string = '10/2026'): string {
+/**
+ * Nội dung chuyển khoản tiền trọ. Có payPrefix (số căn + số phòng từ Worker) thì dùng mã số XXXPPPMMYYYY,
+ * ví dụ 005102112026; không thì dùng mã cũ theo tên phòng (webhook vẫn đọc được cả hai).
+ */
+export function getTransferContent(roomNumber: string = '203', month: string = '10/2026', payPrefix?: string | null): string {
+  if (payPrefix && /^\d{6}$/.test(payPrefix)) {
+    const [mm = '', yyyy = ''] = month.split('/');
+    if (/^\d{1,2}$/.test(mm) && /^\d{4}$/.test(yyyy)) return `${payPrefix}${mm.padStart(2, '0')}${yyyy}`;
+  }
   const rawRoom = (roomNumber || '203').trim();
   const isLVC = rawRoom.toUpperCase().includes('LVC');
   const cleanRoom = rawRoom.replace(/[^0-9A-Za-z]/g, '');
@@ -75,6 +83,7 @@ export interface VehicleInfo {
 
 export interface UserProfile {
   isAdmin?: boolean;
+  isDeveloper?: boolean;
   name: string;
   phone: string;
   email: string;
@@ -185,7 +194,7 @@ interface AppContextType {
   // Authentication & Account Management
   isAuthenticated: boolean;
   currentPassword: string;
-  loginUser: (phone: string, pass: string) => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
+  loginUser: (phone: string, pass: string) => Promise<{ success: boolean; isAdmin?: boolean; isDeveloper?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
   loginWithZalo: () => Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }>;
   registerResident: (data: { name: string; phone: string; email?: string; gender?: string; password: string; roomNumber: string; autoApprove?: boolean }) => Promise<{ success: boolean; pendingApproval?: boolean; message?: string; error?: string }>;
   registeredAccounts: RegisteredAccount[];
@@ -705,7 +714,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [logoutUser, refreshTenantDataFromSheet, fetchPaymentStatus]);
 
-  const loginUser = async (phoneInput: string, passInput: string): Promise<{ success: boolean; isAdmin?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }> => {
+  const loginUser = async (phoneInput: string, passInput: string): Promise<{ success: boolean; isAdmin?: boolean; isDeveloper?: boolean; roomNumber?: string; errorCode?: AuthErrorCode; error?: string }> => {
     const currentSheetId = sheetConfig.spreadsheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
     const cleanPass = passInput.trim();
     const res = await authService.login(phoneInput, cleanPass, currentSheetId);
@@ -719,7 +728,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentPassword(cleanPass);
       storage.setItem('ecostay_current_password', cleanPass);
 
-      const updatedProfile = { ...authService.mapToUserProfile(res.user, storage.getItem(avatarKey(res.user.phone)) || profile.avatar), isAdmin: isRoomAdmin };
+      const updatedProfile = { ...authService.mapToUserProfile(res.user, storage.getItem(avatarKey(res.user.phone)) || profile.avatar), isAdmin: isRoomAdmin, isDeveloper: Boolean(res.isDeveloper) };
       setProfile(updatedProfile);
       storage.setItem(STORAGE_KEYS.PROFILE_SYNCED, JSON.stringify(updatedProfile));
 
@@ -734,6 +743,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { 
         success: true, 
         isAdmin: isRoomAdmin, 
+        isDeveloper: Boolean(res.isDeveloper),
         roomNumber: res.user.roomNumber 
       };
     }
@@ -1021,7 +1031,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (inv.id === invoiceId || inv.month === (currentInv?.month || '10/2026')) {
         return {
           ...inv,
-          status: 'paid' as const,
+          // Chờ xác nhận cho tới khi tiền về tài khoản (SePay) hoặc quản lý xác nhận.
+          status: 'pending' as const,
           paidAt: formattedDate,
           paymentMethod: 'qr' as const,
           transactionId: txnCode
@@ -1031,6 +1042,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     setInvoices(updatedInvoices);
+    const claimedMonth = currentInv?.month || '10/2026';
 
     // Call backend API to set Column P (GREEN for QR/transfer)
     apiFetch('/api/payment/mark-paid', {
@@ -1045,7 +1057,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })
       .then(res => res.json())
       .then(data => {
-        console.log('[processPayment] Column P successfully updated:', data);
+        // Worker trả trạng thái thật (thường là 'pending'); Express cũ đánh dấu đã đóng ngay.
+        const confirmed = data?.status?.paymentStatus ?? (data?.success ? 'paid' : null);
+        if (confirmed === 'paid' || confirmed === 'pending') {
+          setInvoices(prev => prev.map(inv => (isSameMonth(inv.month, claimedMonth) ? { ...inv, status: confirmed } : inv)));
+        }
         refreshTenantDataFromSheet(true);
       })
       .catch(err => console.warn('[processPayment API error]:', err));
@@ -1053,8 +1069,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Add a new notification
     const newNotif: NotificationItem = {
       id: `notif-${Date.now()}`,
-      title: `Thanh toán thành công ${currentInv?.month || ''}`,
-      desc: `Hóa đơn ${currentInv?.month} (${(currentInv?.total || 0).toLocaleString('vi-VN')}₫) đã được thanh toán bằng hình thức Chuyển khoản VietQR. Mã GD: ${txnCode}.`,
+      title: `Đã báo chuyển khoản ${currentInv?.month || ''}`,
+      desc: `Hóa đơn ${currentInv?.month} (${(currentInv?.total || 0).toLocaleString('vi-VN')}₫) đang chờ xác nhận tiền về tài khoản. Bạn sẽ thấy trạng thái Đã đóng khi tiền về.`,
       time: 'Vừa xong',
       type: 'success',
       unread: true,

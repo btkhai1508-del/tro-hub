@@ -12,6 +12,10 @@ migrations_dir = "migrations"
 #   chạy local: cloudflare/.dev.vars (JWT_SECRET=...)
 #   trên Cloudflare: npx wrangler secret put JWT_SECRET
 
+# Mỗi ngày 2 giờ sáng (giờ Việt Nam): xoá hẳn các căn trọ đã hết 7 ngày chờ xoá.
+[triggers]
+crons = ["0 19 * * *", "*/10 * * * *"] # 19:00 UTC: xoá nhà hết hạn; mỗi 10 phút: đọc số tiền từ Sheet cũ
+
 [vars]
 # Trang được phép gọi API từ trình duyệt: app chạy trên máy, bản trên Render, Zalo Mini App.
 ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:5199,https://tro-hub.onrender.com,https://h5.zdn.vn,zbrowser://h5.zdn.vn"

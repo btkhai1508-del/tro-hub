@@ -19,6 +19,7 @@ const PaymentPage = lazy(() => routeLoaders.payment().then(module => ({ default:
 const LaundryPage = lazy(() => routeLoaders.laundry().then(module => ({ default: module.LaundryPage })));
 const LoginPage = lazy(() => routeLoaders.login().then(module => ({ default: module.LoginPage })));
 const AdminPortal = lazy(() => routeLoaders.admin().then(module => ({ default: module.AdminPortal })));
+const DeveloperPortal = lazy(() => routeLoaders.developer().then(module => ({ default: module.DeveloperPortal })));
 const CccdPhoneScan = lazy(() => import('./components/CccdPhoneScan'));
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
@@ -34,8 +35,18 @@ function ProtectedRoute({ children }: { children: React.ReactElement }) {
 
 function AdminRoleRoute() {
   const { profile } = useApp();
+  if (profile.isDeveloper) return <Navigate to="/developer" replace />;
   return profile.isAdmin ? <AdminPortal /> : <Navigate to="/" replace />;
 }
+
+/** The Developer sells Trọ Hub: creates landlords and their houses. */
+function DeveloperRoleRoute() {
+  const { profile } = useApp();
+  return profile.isDeveloper ? <DeveloperPortal /> : <Navigate to="/" replace />;
+}
+
+const homeFor = (profile: { isAdmin?: boolean; isDeveloper?: boolean }) =>
+  profile.isDeveloper ? '/developer' : profile.isAdmin ? '/admin' : '/';
 
 function AuthenticatedHomeRoute() {
   const { isAuthenticated, profile } = useApp();
@@ -46,7 +57,7 @@ function AuthenticatedHomeRoute() {
   }
 
   if (profile.isAdmin) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to={homeFor(profile)} replace />;
   }
 
   return <Home />;
@@ -55,7 +66,7 @@ function AuthenticatedHomeRoute() {
 function PublicAuthRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated, profile } = useApp();
   if (isAuthenticated) {
-    return <Navigate to={profile.isAdmin ? "/admin" : "/"} replace />;
+    return <Navigate to={homeFor(profile)} replace />;
   }
   return children;
 }
@@ -99,6 +110,16 @@ function AppRoutes() {
             <AdminRoleRoute />
           </ProtectedRoute>
         } 
+      />
+
+      {/* Developer: sells the service, creates landlords and houses */}
+      <Route
+        path="/developer"
+        element={
+          <ProtectedRoute>
+            <DeveloperRoleRoute />
+          </ProtectedRoute>
+        }
       />
 
       <Route path="/user/*" element={<Navigate to="/" replace />} />

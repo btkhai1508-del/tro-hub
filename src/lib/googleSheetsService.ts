@@ -1,6 +1,6 @@
 import { meterDetail, meterReading } from './meterDetail';
 import { Invoice, InvoiceDetailItem, UserProfile } from '../context/AppContext';
-import { apiUrl } from './api';
+import { apiFetch } from './api';
 
 export interface SheetResidentInfo {
   name: string;
@@ -772,8 +772,7 @@ export async function fetchMonthlyInvoicesFromSheet(
               // Direct check with Google Sheet Column P live status
               try {
                 const queryRoom = normalizeRoomId(cleanTargetRoom || roomNumber);
-                const statusUrl = apiUrl(`/api/payment/status?room=${encodeURIComponent(queryRoom)}&sheetId=${encodeURIComponent(cleanId)}&month=${encodeURIComponent(invoiceMonth)}`);
-                const statusRes = await fetch(statusUrl);
+                const statusRes = await apiFetch(`/api/payment/status?room=${encodeURIComponent(queryRoom)}&sheetId=${encodeURIComponent(cleanId)}&month=${encodeURIComponent(invoiceMonth)}`);
                 if (statusRes.ok) {
                   const statusData = await statusRes.json();
                   if (statusData && statusData.success) {
@@ -896,8 +895,7 @@ export async function fetchMonthlyInvoicesFromSheet(
             // Direct check with Google Sheet Column P live status (AUTHORITATIVE SOURCE OF TRUTH)
             try {
               const queryRoom = normalizeRoomId(cleanTargetRoom || roomNumber);
-              const statusUrl = apiUrl(`/api/payment/status?room=${encodeURIComponent(queryRoom)}&sheetId=${encodeURIComponent(cleanId)}&month=${encodeURIComponent(invoiceMonth)}`);
-              const statusRes = await fetch(statusUrl);
+              const statusRes = await apiFetch(`/api/payment/status?room=${encodeURIComponent(queryRoom)}&sheetId=${encodeURIComponent(cleanId)}&month=${encodeURIComponent(invoiceMonth)}`);
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 if (statusData && statusData.success) {

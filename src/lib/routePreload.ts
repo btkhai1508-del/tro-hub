@@ -13,6 +13,7 @@ export const routeLoaders = {
   laundry: cached(() => import('../components/LaundryPage')),
   login: cached(() => import('../components/LoginPage')),
   admin: cached(() => import('../components/AdminPortal')),
+  developer: cached(() => import('../components/DeveloperPortal')),
 };
 const paths = { '/': 'home', '/utilities': 'utilities', '/invoices': 'invoices', '/contract': 'contract', '/profile': 'profile', '/payment': 'payment', '/laundry': 'laundry' } as const;
 export function preloadRoute(path: string): void {
