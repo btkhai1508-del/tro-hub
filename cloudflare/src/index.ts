@@ -9,7 +9,6 @@ import {
 } from './sheetSync.ts';
 import { decryptText } from './cccd.ts';
 import { checkSepayState, disconnectSepay, finishSepayConnect, sepayConfigured, sepayConnectUrl, sepayRedirectUri, syncSepay } from './sepayOauth.ts';
-import { checkoutPage, paidFromIpn, pgConfigured, pgLive, pgOrderNumber, sameSecret, type PgIpn } from './sepayGateway.ts';
 
 interface Env {
   DB: D1Database;
@@ -25,10 +24,6 @@ interface Env {
   SEPAY_WEBHOOK_ORIGIN?: string; // địa chỉ public SePay gửi webhook về, nếu khác địa chỉ Worker
   SHEET_WRITES?: string; // 'off': không tô cột P / không ghi cổng thanh toán sang Apps Script (chạy thử trên máy)
   EXPRESS_ORIGIN?: string; // server Express còn chạy giặt sấy, mặc định https://tro-hub.onrender.com
-  SEPAY_PG_MERCHANT_ID?: string; // Cổng thanh toán SePay: mã đơn vị (secret)
-  SEPAY_PG_SECRET_KEY?: string; // khoá ký form thanh toán (secret)
-  SEPAY_PG_IPN_SECRET?: string; // khoá IPN đặt ở Cổng thanh toán → Cấu hình → IPN (secret)
-  SEPAY_PG_ENV?: string; // 'production' để thu tiền thật; còn lại là sandbox
 }
 
 /** Who is calling, read fresh from D1 on every request. */
@@ -1728,65 +1723,6 @@ async function sepayWebhook(c: Context<App>) {
 }
 
 app.post('/api/sepay/webhook', sepayWebhook);
-
-// ── Cổng thanh toán SePay: chủ trọ trả phí dịch vụ bằng thẻ / chuyển khoản / NAPAS VietQR ──
-
-/** The pay link of a fee invoice. Public: the invoice code is the secret, as it is on the bank-transfer QR. */
-app.get('/pay/service/:code', async (c) => {
-  if (!pgConfigured(c.env)) return c.html(page('Chưa mở thanh toán online', 'Trọ Hub chưa cài Cổng thanh toán SePay. Vui lòng chuyển khoản theo mã QR trên hoá đơn.'), 503);
-  const code = c.req.param('code').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const inv = await c.env.DB.prepare(
-    `SELECT i.code, i.month, i.amount, i.status, i.owner_id,
-            (SELECT COALESCE(SUM(p.amount), 0) FROM service_payments p WHERE p.invoice_id = i.id) AS received
-       FROM service_invoices i WHERE i.code = ?`
-  )
-    .bind(code)
-    .first<{ code: string; month: string; amount: number; status: string; owner_id: number; received: number }>();
-  if (!inv) return c.html(page('Không tìm thấy hoá đơn', 'Link không đúng. Vui lòng hỏi lại Trọ Hub.'), 404);
-  if (inv.status === 'paid') return c.html(page('Hoá đơn đã thanh toán', `Hoá đơn ${inv.code} đã được thanh toán. Cảm ơn bạn!`));
-  const due = inv.amount - inv.received;
-  const [y, m] = inv.month.split('-');
-  return c.html(
-    await checkoutPage(c.env, {
-      amount: due,
-      orderNumber: pgOrderNumber(inv.code),
-      description: `Phi Tro Hub thang ${Number(m)}/${y} ${inv.code}`,
-      customerId: `OWNER${inv.owner_id}`,
-      returnBase: new URL(c.req.url).origin,
-    })
-  );
-});
-
-app.get('/pay/done', (c) => {
-  const r = c.req.query('r');
-  if (r === 'success')
-    return c.html(page('Đã thanh toán', 'SePay đã nhận thanh toán. Hoá đơn sẽ chuyển sang "Đã thanh toán" trong giây lát. Bạn có thể đóng trang này.'));
-  if (r === 'cancel') return c.html(page('Đã huỷ thanh toán', 'Bạn đã huỷ. Có thể mở lại link hoá đơn để thanh toán bất cứ lúc nào.'));
-  return c.html(page('Thanh toán chưa thành công', 'Giao dịch bị lỗi hoặc bị từ chối. Vui lòng thử lại, hoặc chuyển khoản theo mã QR trên hoá đơn.'));
-});
-
-/** SePay's IPN. Only an approved, captured payment settles the invoice; repeats are recorded once. */
-app.post('/api/sepay/pg/ipn', async (c) => {
-  const secret = c.env.SEPAY_PG_IPN_SECRET;
-  if (!secret || !sameSecret(c.req.header('X-Secret-Key') ?? '', secret)) {
-    await audit(c, 'anonymous', 'sepay_pg_ipn_rejected');
-    return c.json({ success: false, error: 'Unauthorized' }, 401);
-  }
-  const body = await c.req.json<PgIpn>().catch(() => null);
-  if (!body) return c.json({ success: false, error: 'Dữ liệu không hợp lệ.' }, 400);
-  const paid = paidFromIpn(body);
-  if (!paid.ok) return c.json({ success: true, ignored: paid.reason });
-  const result = await processServiceTransfer(c.env.DB, {
-    id: paid.id,
-    gateway: `SePay PG ${paid.method}`,
-    content: `${paid.invoiceCode} ${paid.orderNumber}`,
-    transferType: 'in',
-    transferAmount: paid.amount,
-    referenceCode: paid.orderNumber,
-    transactionDate: paid.date ?? undefined,
-  }, false);
-  return c.json({ success: true, ...result });
-});
 // Same handler under the first name the Developer page showed.
 app.post('/api/sepay/service-webhook', sepayWebhook);
 
@@ -1819,12 +1755,6 @@ app.get('/api/dev/billing', async (c) => {
       bankBin: s.bankBin, bankName: s.bankName, accountNo: s.accountNo, accountName: s.accountName,
       keySet: Boolean(s.keySha),
       webhookUrl: `${new URL(c.req.url).origin}/api/sepay/webhook`,
-    },
-    gateway: {
-      configured: pgConfigured(c.env),
-      live: pgLive(c.env),
-      ipnUrl: `${new URL(c.req.url).origin}/api/sepay/pg/ipn`,
-      payBase: `${new URL(c.req.url).origin}/pay/service/`,
     },
     invoices: invoices.map((i) => ({ ...i, detail: i.detail ? JSON.parse(i.detail) : [] })),
     payments,
