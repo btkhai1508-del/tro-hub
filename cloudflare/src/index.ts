@@ -1760,9 +1760,10 @@ async function houseForRent(db: D1Database, rent: { lvc: boolean; room: string }
  * once: a service-fee code settles that invoice; a rent code is recorded with its house, room and month
  * (marking rent paid comes when rent moves to D1); everything else is just logged.
  */
-async function forwardToExpress(env: Env, body: SepayTransfer) {
+async function forwardToExpress(env: Env, body: SepayTransfer, authorization: string) {
   const origin = (env.EXPRESS_ORIGIN || 'https://tro-hub.onrender.com').replace(/\/+$/, '');
-  await fetch(`${origin}/api/sepay/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  // Express checks the same SePay API key (SEPAY_WEBHOOK_KEY on Render), so the header goes along.
+  await fetch(`${origin}/api/sepay/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: authorization }, body: JSON.stringify(body) })
     .catch((err) => console.warn('[sepay] forward laundry', err));
 }
 
@@ -1814,7 +1815,7 @@ async function sepayWebhook(c: Context<App>) {
     .run();
   const settled = rent && houseId ? await settleRent(c.env, houseId, rent.room, rent.month, body, sepayId) : null;
   // Giặt sấy vẫn chạy trên Express: chuyển nguyên giao dịch sang đó.
-  if (laundry) c.executionCtx.waitUntil(forwardToExpress(c.env, body));
+  if (laundry) c.executionCtx.waitUntil(forwardToExpress(c.env, body, c.req.header('Authorization') ?? ''));
   return c.json({ success: true, kind, ...(service.matched ? service : {}), ...(rent ? { houseId, room: rent.room, month: rent.month, rent: settled } : {}) });
 }
 
