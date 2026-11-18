@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "dev:local": "bash scripts/dev-local.sh",
     "start": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",

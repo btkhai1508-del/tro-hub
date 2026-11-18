@@ -1,6 +1,7 @@
 /**
  * Prints test data as SQL for the local D1: the two current houses, a few rooms,
- * one owner, one manager and three residents. Every password is "1" while testing.
+ * one owner (who owns both houses), one manager, the Developer and three residents.
+ * Every password is "1" while testing.
  *   npm run db:seed:local
  */
 import { hashPassword } from '../src/password.ts';
@@ -20,8 +21,11 @@ const sql = [
     ${row(3, 'LVC', '101', 3500000)}, ${row(4, 'LVC', '102', 3500000)};`,
   `INSERT INTO staff (id, full_name, phone, password_hash, role) VALUES
     ${row(1, 'Bùi Trung Khải', '0902371800', pw, 'owner')},
-    ${row(2, 'Quản lý Trung Kim (test)', '0900000001', pw, 'manager')};`,
-  `INSERT INTO staff_houses (staff_id, house_id) VALUES ${row(2, 'TRUNG_KIM')};`,
+    ${row(2, 'Quản lý Trung Kim (test)', '0900000001', pw, 'manager')},
+    ${row(3, 'Developer', '0918338863', pw, 'developer')};`,
+  `INSERT INTO staff_houses (staff_id, house_id) VALUES
+    ${row(1, 'TRUNG_KIM')}, ${row(1, 'LVC')}, ${row(2, 'TRUNG_KIM')};`,
+  `UPDATE houses SET owner_id = 1;`,
   `INSERT INTO residents (house_id, room_id, full_name, phone, password_hash, status) VALUES
     ${row('TRUNG_KIM', 1, 'Cư dân Trung Kim (test)', '0900000101', pw, 'approved')},
     ${row('LVC', 3, 'Cư dân LVC (test)', '0900000201', pw, 'approved')},
