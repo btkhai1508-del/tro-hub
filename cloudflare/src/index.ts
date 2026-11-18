@@ -1740,9 +1740,6 @@ app.get('/qr.png', async (c) => {
   if (des) out.set('des', des.slice(0, 100));
   const template = q.get('template');
   if (template && ['qronly', 'compact'].includes(template)) out.set('template', template);
-  if (q.get('showinfo') === 'true') out.set('showinfo', 'true');
-  const holder = q.get('holder');
-  if (holder && /^[A-Za-z0-9 ]{1,50}$/.test(holder)) out.set('holder', holder);
   const res = await fetch(`https://vietqr.app/img?${out}`, { cf: { cacheTtl: 86400, cacheEverything: true } } as RequestInit).catch(() => null);
   if (!res || !res.ok || !(res.headers.get('content-type') ?? '').startsWith('image/')) return c.json({ success: false, errorCode: 'QR_UPSTREAM', error: 'Chưa tạo được mã QR.' }, 502);
   return new Response(res.body, {
