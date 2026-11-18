@@ -4,16 +4,11 @@
  */
 import { saveImageToGallery, openShareSheet, showToast } from 'zmp-sdk/apis';
 import { isZaloMiniApp } from './platform';
-import { WORKER_API_URL } from './api';
 
 /** A real PNG with a white margin: gallery apps reject the SVG the QR service can return, and scanners need the margin. */
 async function buildQrPng(qrUrl: string): Promise<Blob> {
-  // SePay's vietqr.app sends no CORS header, so the page reads the same image through the Worker.
-  // (The old img.vietqr.io redirected .png to .svg without CORS, so only .svg could be read there.)
-  const source = qrUrl.startsWith('https://vietqr.app/img?')
-    ? `${WORKER_API_URL}/qr.png?${qrUrl.slice(qrUrl.indexOf('?') + 1)}`
-    : qrUrl.replace(/\.png(?=\?|$)/, '.svg');
-  const response = await fetch(source);
+  // The service redirects .png to .svg without CORS on the redirect, so a browser can only read .svg directly.
+  const response = await fetch(qrUrl.replace(/\.png(?=\?|$)/, '.svg'));
   if (!response.ok) throw new Error('Fetch failed');
   const objectUrl = URL.createObjectURL(await response.blob());
   try {

@@ -1729,29 +1729,6 @@ async function sepayWebhook(c: Context<App>) {
 
 app.post('/api/sepay/webhook', sepayWebhook);
 
-/**
- * SePay's QR image (vietqr.app) with a CORS header, so the app can turn it into a PNG to save.
- * Only the QR parameters pass through and only that one host is fetched: this is not an open proxy.
- */
-app.get('/qr.png', async (c) => {
-  const q = new URL(c.req.url).searchParams;
-  const acc = q.get('acc') ?? '';
-  const bank = q.get('bank') ?? '';
-  if (!/^[A-Za-z0-9]{4,30}$/.test(acc) || !/^[A-Za-z0-9]{2,20}$/.test(bank)) return fail(c, 400, 'QR_INVALID', 'Thiếu số tài khoản hoặc ngân hàng.');
-  const out = new URLSearchParams({ acc, bank });
-  const amount = q.get('amount');
-  if (amount && /^\d{1,12}$/.test(amount)) out.set('amount', amount);
-  const des = q.get('des');
-  if (des) out.set('des', des.slice(0, 100));
-  const template = q.get('template');
-  if (template && ['qronly', 'compact'].includes(template)) out.set('template', template);
-  const res = await fetch(`https://vietqr.app/img?${out}`, { cf: { cacheTtl: 86400, cacheEverything: true } } as RequestInit).catch(() => null);
-  if (!res || !res.ok || !(res.headers.get('content-type') ?? '').startsWith('image/')) return c.json({ success: false, errorCode: 'QR_UPSTREAM', error: 'Chưa tạo được mã QR.' }, 502);
-  return new Response(res.body, {
-    headers: { 'Content-Type': res.headers.get('content-type')!, 'Cache-Control': 'public, max-age=86400', 'Access-Control-Allow-Origin': '*' },
-  });
-});
-
 // ── Cổng thanh toán SePay: chủ trọ trả phí dịch vụ bằng thẻ / chuyển khoản / NAPAS VietQR ──
 
 /** The pay link of a fee invoice. Public: the invoice code is the secret, as it is on the bank-transfer QR. */
