@@ -5,6 +5,7 @@ if (!process.env.VITE_API_BASE_URL) {
 }
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { fetchFreshTenantDataFromSheet, fetchProfileRows, DEFAULT_SPREADSHEET_ID, setInvoicePaidByWebhook, setInvoiceUnpaid, authenticateUser, normalizePhone } from './src/server/googleSheetsBackendService.js';
 import { getRoomColumnPStatus, setRoomColumnPStatus } from './src/server/columnPStatusStore.js';
@@ -43,6 +44,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+/** Test-only routes (fake transfers, free laundry runs) do not exist on the live server. */
+const testOnly = (_req: express.Request, res: express.Response, next: express.NextFunction) =>
+  isProduction ? res.status(404).json({ success: false, error: 'Không tìm thấy.' }) : next();
+
+/** Constant-time compare, so a key cannot be guessed byte by byte from response times. */
+function sameSecret(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
 const PORT: number = Number(process.env.PORT) || 3000;
 /** Each room has three resident slots (Q:AB of the month tab). */
 const MAX_ROOM_OCCUPANTS = 3;
@@ -288,6 +300,17 @@ async function startServer() {
   // Webhook URL to configure in SePAY: https://[your-app-domain]/api/sepay/webhook
   // =========================================================================
   app.post('/api/sepay/webhook', async (req, res) => {
+    // With SEPAY_WEBHOOK_KEY set (Render env), only SePay's "Authorization: Apikey <key>" gets in.
+    const webhookKey = process.env.SEPAY_WEBHOOK_KEY || '';
+    if (webhookKey) {
+      const sent = String(req.headers.authorization || '').replace(/^Apikey\s+/i, '').trim();
+      if (!sameSecret(sent, webhookKey)) {
+        console.warn('[SePAY Webhook] Rejected: wrong or missing API key');
+        return res.status(401).json({ success: false, error: 'Sai API key.' });
+      }
+    } else if (isProduction) {
+      console.warn('[SePAY Webhook] SEPAY_WEBHOOK_KEY is not set: anyone can post fake transfers. Set it on Render and in SePay.');
+    }
     try {
       const payload = req.body || {};
       const {
@@ -429,7 +452,7 @@ async function startServer() {
   });
 
   // Legacy fallback endpoint alias to mark-paid
-  app.post('/api/payment/mark-cash-paid', async (req, res) => {
+  app.post('/api/payment/mark-cash-paid', requireAdmin, async (req, res) => {
     try {
       const { roomNumber, amount, month = '10/2026', transactionId } = req.body || {};
       if (!roomNumber) {
@@ -454,7 +477,7 @@ async function startServer() {
   });
 
   // Backend API: Mark unpaid -> Cột P: RED
-  app.post('/api/payment/mark-unpaid', async (req, res) => {
+  app.post('/api/payment/mark-unpaid', requireAdmin, async (req, res) => {
     try {
       const { roomNumber, month = '10/2026' } = req.body || {};
       if (!roomNumber) {
@@ -591,7 +614,7 @@ async function startServer() {
   });
 
   // Test simulation endpoint for SePAY Webhook
-  app.post('/api/sepay/test-webhook', (req, res) => {
+  app.post('/api/sepay/test-webhook', testOnly, requireAdmin, (req, res) => {
     const { room = '203', amount = 3550000, content = '203-T10-2026' } = req.body || {};
     const txnCode = `TEST-SEPAY-${Date.now()}`;
     setInvoicePaidByWebhook(room, txnCode, amount);
@@ -670,7 +693,7 @@ async function startServer() {
   });
 
   // Test simulation endpoint for Laundry payment
-  app.post('/api/laundry/test-payment', async (req, res) => {
+  app.post('/api/laundry/test-payment', testOnly, requireAdmin, async (req, res) => {
     try {
       const { machineId = 'MG01', amount = 15000 } = req.body || {};
       const result = await LaundryService.processDirectPayment({
