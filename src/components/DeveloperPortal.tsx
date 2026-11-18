@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Check, Landmark, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
+import { Building2, Check, KeyRound, Landmark, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
 import { vietQrUrl } from '../lib/paymentPortal';
 import { useApp } from '../context/AppContext';
 import { workerFetch } from '../lib/api';
@@ -87,6 +87,8 @@ export function DeveloperPortal() {
   const [prices, setPrices] = useState(false);
   const [sepay, setSepay] = useState<SepayOverview | null>(null);
   const [sepayFor, setSepayFor] = useState<Landlord | null>(null);
+  const [editLandlord, setEditLandlord] = useState<Landlord | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const load = useCallback(async () => {
     const data = await send<{ landlords: Landlord[] }>('/api/dev/landlords', 'GET');
@@ -137,14 +139,20 @@ export function DeveloperPortal() {
             <p className="apple-callout kit-text-secondary">Trọ Hub · Developer</p>
             <h1 className="apple-title1 font-bold kit-text-primary truncate">Cung cấp dịch vụ</h1>
           </div>
+          <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={() => setPasswordOpen(true)} aria-label="Đổi mật khẩu" className="soft-button min-h-11 min-w-11 px-3 inline-flex items-center justify-center gap-1.5 text-sm font-semibold">
+            <KeyRound size={16} /> <span className="hidden sm:inline">Mật khẩu</span>
+          </button>
           <button
             type="button"
             onClick={() => { logoutUser(); navigate('/login'); }}
-            className="soft-button min-h-11 shrink-0 px-3 inline-flex items-center gap-1.5 text-sm font-semibold"
+            aria-label="Đăng xuất"
+            className="soft-button min-h-11 min-w-11 shrink-0 px-3 inline-flex items-center justify-center gap-1.5 text-sm font-semibold"
             title={profile.name}
           >
-            <LogOut size={16} /> <span>Đăng xuất</span>
+            <LogOut size={16} /> <span className="hidden sm:inline">Đăng xuất</span>
           </button>
+          </div>
         </header>
 
         <section className="liquid-panel rounded-[28px] p-4 sm:p-6">
@@ -190,7 +198,10 @@ export function DeveloperPortal() {
                       {l.email ? ` · ${l.email}` : ''} · {l.houses.length} căn
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setEditLandlord(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+                      <Pencil size={14} /> Sửa
+                    </button>
                     <button type="button" onClick={() => toggleLock(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
                       {l.status === 'locked' ? <Unlock size={15} /> : <Lock size={15} />}
                       {l.status === 'locked' ? 'Mở khoá' : 'Khoá'}
@@ -253,6 +264,19 @@ export function DeveloperPortal() {
         <LandlordDialog
           onClose={() => setNewLandlord(false)}
           onCreated={(name) => { setNewLandlord(false); setNotice({ ok: true, text: `Đã tạo chủ trọ ${name}.` }); load(); }}
+        />
+      )}
+      {editLandlord && (
+        <LandlordEditDialog
+          landlord={editLandlord}
+          onClose={() => { setEditLandlord(null); load(); }}
+          onChanged={(text) => { setEditLandlord(null); setNotice({ ok: true, text }); load(); }}
+        />
+      )}
+      {passwordOpen && (
+        <PasswordDialog
+          onClose={() => setPasswordOpen(false)}
+          onDone={() => { setPasswordOpen(false); setNotice({ ok: true, text: 'Đã đổi mật khẩu Developer. Các thiết bị khác đã bị đăng xuất.' }); }}
         />
       )}
       {houseFor && (
@@ -386,6 +410,177 @@ function LandlordDialog({ onClose, onCreated }: { onClose: () => void; onCreated
         {error && <p role="alert" className="sm:col-span-2 apple-callout font-semibold text-rose-600">{error}</p>}
         <button type="submit" hidden />
       </form>
+    </Dialog>
+  );
+}
+
+/** The Developer's own password. Every other session of the account is signed out. */
+function PasswordDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { updatePassword } = useApp();
+  const [form, setForm] = useState({ current: '', next: '', again: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value });
+
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError('');
+    if (form.next.trim().length < 8) return setError('Mật khẩu Developer nên có ít nhất 8 ký tự.');
+    if (form.next !== form.again) return setError('Hai lần nhập mật khẩu mới không khớp.');
+    setBusy(true);
+    const result = await updatePassword(form.current, form.next);
+    setBusy(false);
+    if (!result.success) return setError(result.error || 'Chưa đổi được mật khẩu.');
+    onDone();
+  };
+
+  return (
+    <Dialog
+      title="Đổi mật khẩu"
+      subtitle="Tài khoản Developer. Các thiết bị khác đang đăng nhập sẽ bị đăng xuất."
+      onClose={onClose}
+      busy={busy}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={busy} className="soft-button min-h-11 flex-1 px-4">Huỷ</button>
+          <button type="button" onClick={() => submit()} disabled={busy} className="primary-button min-h-11 flex-1 px-4 font-semibold inline-flex items-center justify-center gap-2">
+            <KeyRound size={17} /> {busy ? 'Đang lưu…' : 'Đổi mật khẩu'}
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={submit} className="grid gap-4">
+        <Field label="Mật khẩu hiện tại">
+          <input className={inputClass} type="password" value={form.current} onChange={set('current')} autoComplete="current-password" />
+        </Field>
+        <Field label="Mật khẩu mới" hint="Ít nhất 8 ký tự">
+          <input className={inputClass} type="password" value={form.next} onChange={set('next')} autoComplete="new-password" />
+        </Field>
+        <Field label="Nhập lại mật khẩu mới">
+          <input className={inputClass} type="password" value={form.again} onChange={set('again')} autoComplete="new-password" />
+        </Field>
+        {error && <p role="alert" className="apple-callout font-semibold text-rose-600">{error}</p>}
+        <button type="submit" hidden />
+      </form>
+    </Dialog>
+  );
+}
+
+/** Edit a landlord: details, a new password (shown once), or delete one created by mistake. */
+function LandlordEditDialog({ landlord, onClose, onChanged }: { landlord: Landlord; onClose: () => void; onChanged: (text: string) => void }) {
+  const [form, setForm] = useState({ fullName: landlord.full_name, phone: landlord.phone, email: landlord.email ?? '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [newPassword, setNewPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [confirm, setConfirm] = useState<'reset' | 'delete' | null>(null);
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [key]: e.target.value });
+  const base = `/api/dev/landlords/${landlord.id}`;
+  const canDelete = landlord.houses.length === 0;
+
+  const save = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setBusy(true);
+    setError('');
+    const data = await send(base, 'PATCH', form);
+    setBusy(false);
+    if (!data.success) return setError(data.error || 'Chưa lưu được.');
+    onChanged(`Đã cập nhật ${form.fullName.trim()}.`);
+  };
+
+  const reset = async () => {
+    if (confirm !== 'reset') return setConfirm('reset');
+    setBusy(true);
+    setError('');
+    const data = await send<{ password: string }>(`${base}/reset-password`, 'POST', {});
+    setBusy(false);
+    setConfirm(null);
+    if (!data.success) return setError(data.error || 'Chưa đặt lại được mật khẩu.');
+    setNewPassword(data.password);
+  };
+
+  const remove = async () => {
+    if (confirm !== 'delete') return setConfirm('delete');
+    setBusy(true);
+    setError('');
+    const data = await send(`${base}/delete`, 'POST');
+    setBusy(false);
+    setConfirm(null);
+    if (!data.success) return setError(data.error || 'Chưa xoá được.');
+    onChanged(`Đã xoá chủ trọ ${landlord.full_name}.`);
+  };
+
+  return (
+    <Dialog
+      title="Sửa chủ trọ"
+      subtitle={landlord.full_name}
+      onClose={onClose}
+      busy={busy}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={busy} className="soft-button min-h-11 flex-1 px-4">{newPassword ? 'Xong' : 'Huỷ'}</button>
+          <button type="button" onClick={() => save()} disabled={busy} className="primary-button min-h-11 flex-1 px-4 font-semibold inline-flex items-center justify-center gap-2">
+            <Check size={17} /> {busy ? 'Đang lưu…' : 'Lưu thông tin'}
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
+        <Field label="Họ tên" className="sm:col-span-2">
+          <input className={inputClass} value={form.fullName} onChange={set('fullName')} autoComplete="off" />
+        </Field>
+        <Field label="Số điện thoại" hint="Dùng để đăng nhập">
+          <input className={cn(inputClass, 'font-num')} value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="off" />
+        </Field>
+        <Field label="Email (tuỳ chọn)">
+          <input className={inputClass} value={form.email} onChange={set('email')} type="email" inputMode="email" autoComplete="off" />
+        </Field>
+        <button type="submit" hidden />
+      </form>
+
+      <div className="mt-5 space-y-3 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
+        <p className="apple-headline kit-text-primary">Mật khẩu</p>
+        {newPassword ? (
+          <div className="rounded-2xl bg-emerald-500/10 p-3 space-y-2">
+            <p className="apple-callout text-emerald-800 dark:text-emerald-200">
+              Mật khẩu mới của {landlord.full_name}. Mọi thiết bị của chủ trọ đã bị đăng xuất.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 rounded-xl bg-white/70 px-3 py-2 text-lg font-num tracking-wider kit-text-primary dark:bg-black/30">{newPassword}</code>
+              <button
+                type="button"
+                aria-label="Chép mật khẩu"
+                onClick={async () => { await navigator.clipboard?.writeText(newPassword).catch(() => null); setCopied(true); }}
+                className="soft-button min-h-11 min-w-11 inline-flex items-center justify-center"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+              </button>
+            </div>
+            <p className="apple-callout font-semibold text-rose-600">Chỉ hiện một lần. Gửi riêng cho chủ trọ và nhắc họ đổi lại sau khi đăng nhập.</p>
+          </div>
+        ) : (
+          <p className="apple-callout kit-text-secondary">Khi chủ trọ quên mật khẩu hoặc nghi bị lộ: tạo mật khẩu tạm, mọi thiết bị của họ bị đăng xuất ngay.</p>
+        )}
+        <button type="button" disabled={busy} onClick={reset} className={cn('soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold', confirm === 'reset' && 'text-rose-600')}>
+          <KeyRound size={15} /> {confirm === 'reset' ? 'Bấm lần nữa: mật khẩu cũ sẽ ngừng' : 'Đặt lại mật khẩu'}
+        </button>
+      </div>
+
+      <div className="mt-5 space-y-2 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
+        <p className="apple-headline kit-text-primary">Xoá chủ trọ</p>
+        <p className="apple-callout kit-text-secondary">
+          {canDelete
+            ? 'Chỉ xoá được chủ trọ tạo nhầm: chưa có căn và chưa có hoá đơn phí. Không hoàn tác được.'
+            : `Chủ trọ đang có ${landlord.houses.length} căn nên không xoá được. Muốn ngừng dịch vụ, hãy bấm Khoá.`}
+        </p>
+        {canDelete && (
+          <button type="button" disabled={busy} onClick={remove} className={cn('soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold', confirm === 'delete' && 'text-rose-600')}>
+            <Trash2 size={15} /> {confirm === 'delete' ? 'Bấm lần nữa để xoá hẳn' : 'Xoá chủ trọ'}
+          </button>
+        )}
+      </div>
+
+      {error && <p role="alert" className="mt-4 apple-callout font-semibold text-rose-600">{error}</p>}
     </Dialog>
   );
 }

@@ -165,7 +165,7 @@ Phiên đăng nhập bằng Zalo chưa có token Worker nên vẫn đi qua Expre
 
 Trong lúc chờ SePay duyệt ứng dụng OAuth: Developer bấm "Kết nối SePay" → tab **Webhook tự tạo** → **Tạo URL và key**. Chủ trọ thêm webhook trên my.sepay.vn của họ (Tiền vào, API Key, bật "Dùng để xác thực thanh toán"). Worker nhận ra chủ trọ qua key (bảng `sepay_manual_webhooks`, migration 0017, chỉ lưu SHA-256). Tạo key mới thì key cũ ngừng ngay. Dòng trạng thái chuyển "Đang hoạt động" khi webhook đầu tiên về. Chạy chung với OAuth: cùng một URL webhook.
 
-Khi đưa lên (theo thứ tự): deploy Worker + migration 0016, 0017 → đưa giao diện lên Render → chạy `cloudflare/scripts/import-statuses.mts` cho tháng này và tháng trước trên D1 thật → đổi URL webhook SePay sang `https://tro-hub-api.trohub.workers.dev/api/sepay/webhook`.
+Khi đưa lên (theo thứ tự): deploy Worker + migration 0016, 0017, 0018 → đưa giao diện lên Render → chạy `cloudflare/scripts/import-statuses.mts` cho tháng này và tháng trước trên D1 thật → đổi URL webhook SePay sang `https://tro-hub-api.trohub.workers.dev/api/sepay/webhook`.
 
 ## Lộ trình
 

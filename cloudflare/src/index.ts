@@ -51,23 +51,28 @@ async function audit(c: Context<App>, actor: string, action: string, houseId: st
     .run();
 }
 
-async function loadViewer(db: D1Database, sub: number, kind: 'resident' | 'staff'): Promise<Viewer | null> {
+/**
+ * Who the token belongs to, read fresh from D1. issuedAt (the token's iat) must not be older than
+ * the account's last password change: changing or resetting a password signs out every older session.
+ */
+async function loadViewer(db: D1Database, sub: number, kind: 'resident' | 'staff', issuedAt = Infinity): Promise<Viewer | null> {
   if (kind === 'resident') {
     const row = await db
       .prepare(
         `SELECT r.id, r.full_name, r.phone, r.house_id, r.room_id, rm.name AS room_name
            FROM residents r LEFT JOIN rooms rm ON rm.id = r.room_id
-          WHERE r.id = ? AND r.status = 'approved' AND r.deleted_at IS NULL`
+          WHERE r.id = ? AND r.status = 'approved' AND r.deleted_at IS NULL
+            AND (r.password_changed_at IS NULL OR r.password_changed_at <= ?)`
       )
-      .bind(sub)
+      .bind(sub, issuedAt === Infinity ? Number.MAX_SAFE_INTEGER : issuedAt)
       .first<{ id: number; full_name: string; phone: string | null; house_id: string; room_id: number | null; room_name: string | null }>();
     if (!row) return null;
     return { kind, id: row.id, name: row.full_name, phone: row.phone, houseId: row.house_id, roomId: row.room_id, roomName: row.room_name };
   }
 
   const staff = await db
-    .prepare(`SELECT id, full_name, phone, role FROM staff WHERE id = ? AND status = 'active'`)
-    .bind(sub)
+    .prepare(`SELECT id, full_name, phone, role FROM staff WHERE id = ? AND status = 'active' AND (password_changed_at IS NULL OR password_changed_at <= ?)`)
+    .bind(sub, issuedAt === Infinity ? Number.MAX_SAFE_INTEGER : issuedAt)
     .first<{ id: number; full_name: string; phone: string; role: StaffRole }>();
   if (!staff) return null;
   // Admin Tổng and Admin căn alike see only the houses in staff_houses: each Admin Tổng is an independent landlord.
@@ -81,7 +86,7 @@ async function loadViewer(db: D1Database, sub: number, kind: 'resident' | 'staff
 async function requireAuth(c: Context<App>, next: Next) {
   const token = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '') ?? '';
   const payload = token ? await verifyToken(token, c.env.JWT_SECRET) : null;
-  const viewer = payload && (await loadViewer(c.env.DB, payload.sub, payload.kind));
+  const viewer = payload && (await loadViewer(c.env.DB, payload.sub, payload.kind, payload.iat));
   if (!viewer) return fail(c, 401, 'AUTH_SESSION_EXPIRED', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
   c.set('viewer', viewer);
   await next();
@@ -160,9 +165,12 @@ app.post('/api/auth/change-password', async (c) => {
   if (!row || !(await verifyPassword(current, row.password_hash))) {
     return fail(c, 400, 'PASSWORD_WRONG', 'Mật khẩu hiện tại không đúng.');
   }
-  await c.env.DB.prepare(`UPDATE ${table} SET password_hash = ? WHERE id = ?`).bind(await hashPassword(next), viewer.id).run();
+  // Every other session of this account ends; this one continues with the fresh token returned here.
+  await c.env.DB.prepare(`UPDATE ${table} SET password_hash = ?, password_changed_at = ? WHERE id = ?`)
+    .bind(await hashPassword(next), Math.floor(Date.now() / 1000), viewer.id)
+    .run();
   await audit(c, actorOf(viewer), 'change_password', viewer.kind === 'resident' ? viewer.houseId : null);
-  return c.json({ success: true });
+  return c.json({ success: true, token: await signToken(viewer.id, viewer.kind, c.env.JWT_SECRET) });
 });
 
 app.use('/api/houses', requireAuth);
@@ -1136,15 +1144,103 @@ app.post('/api/dev/landlords', async (c) => {
 });
 
 /** Lock or unlock a landlord. A locked landlord is signed out at once (the Worker reads D1 on every request). */
+/**
+ * Edit a landlord: name, phone (their login), email, or lock / unlock. A locked landlord is signed out
+ * at once (the Worker reads D1 on every request). Only the fields sent change.
+ */
 app.patch('/api/dev/landlords/:id', async (c) => {
   const viewer = c.get('viewer');
   const id = Number(c.req.param('id'));
-  const body = await c.req.json<{ status?: string }>().catch(() => ({}) as { status?: string });
-  if (!['active', 'locked'].includes(String(body.status))) return fail(c, 400, 'STATUS_INVALID', 'Trạng thái không hợp lệ.');
+  const body = await c.req.json<{ status?: string; fullName?: string; phone?: string; email?: string }>().catch(() => ({}) as Record<string, string>);
+  const target = await c.env.DB.prepare(`SELECT id, phone FROM staff WHERE id = ? AND role = 'owner'`).bind(id).first<{ id: number; phone: string }>();
+  if (!target) return fail(c, 404, 'LANDLORD_NOT_FOUND', 'Không tìm thấy chủ trọ.');
+
+  const sets: string[] = [];
+  const values: (string | number | null)[] = [];
+  if (body.status !== undefined) {
+    if (!['active', 'locked'].includes(String(body.status))) return fail(c, 400, 'STATUS_INVALID', 'Trạng thái không hợp lệ.');
+    sets.push('status = ?'); values.push(String(body.status));
+  }
+  if (body.fullName !== undefined) {
+    const fullName = String(body.fullName).trim();
+    if (!fullName) return fail(c, 400, 'LANDLORD_INVALID', 'Vui lòng nhập họ tên.');
+    sets.push('full_name = ?'); values.push(fullName);
+  }
+  if (body.phone !== undefined) {
+    const phone = normalizePhone(String(body.phone));
+    if (!/^0\d{9}$/.test(phone)) return fail(c, 400, 'LANDLORD_INVALID', 'Số điện thoại phải có 10 số.');
+    if (phone !== target.phone) {
+      const taken = await c.env.DB.prepare(`SELECT 1 FROM staff WHERE phone = ? AND id <> ? UNION SELECT 1 FROM residents WHERE phone = ? AND deleted_at IS NULL`)
+        .bind(phone, id, phone)
+        .first();
+      if (taken) return fail(c, 400, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
+    }
+    sets.push('phone = ?'); values.push(phone);
+  }
+  if (body.email !== undefined) {
+    const email = String(body.email).trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(c, 400, 'EMAIL_INVALID', 'Email không hợp lệ.');
+    sets.push('email = ?'); values.push(email || null);
+  }
+  if (!sets.length) return fail(c, 400, 'NOTHING_TO_CHANGE', 'Không có gì để cập nhật.');
+
+  await c.env.DB.prepare(`UPDATE staff SET ${sets.join(', ')} WHERE id = ?`).bind(...values, id).run();
+  const action = body.status === 'locked' ? 'landlord_lock' : body.status === 'active' ? 'landlord_unlock' : 'landlord_edit';
+  await audit(c, actorOf(viewer), action, null, `owner:${id}`);
+  return c.json({ success: true });
+});
+
+/** Readable temporary password: no 0/O or 1/l/I, so it can be read out over the phone. */
+function temporaryPassword(length = 8) {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  return [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
+}
+
+/**
+ * Reset a landlord's password when they forget it or it may have leaked. Every session they have
+ * is signed out. The new password is returned once, to pass on to them.
+ */
+app.post('/api/dev/landlords/:id/reset-password', async (c) => {
+  const viewer = c.get('viewer');
+  const id = Number(c.req.param('id'));
+  const body = await c.req.json<{ password?: string }>().catch(() => ({}) as { password?: string });
   const target = await c.env.DB.prepare(`SELECT id FROM staff WHERE id = ? AND role = 'owner'`).bind(id).first();
   if (!target) return fail(c, 404, 'LANDLORD_NOT_FOUND', 'Không tìm thấy chủ trọ.');
-  await c.env.DB.prepare(`UPDATE staff SET status = ? WHERE id = ?`).bind(body.status, id).run();
-  await audit(c, actorOf(viewer), body.status === 'locked' ? 'landlord_lock' : 'landlord_unlock', null, `owner:${id}`);
+  const chosen = String(body.password ?? '').trim();
+  if (chosen && chosen.length < 6) return fail(c, 400, 'PASSWORD_TOO_SHORT', 'Mật khẩu mới phải có ít nhất 6 ký tự');
+  const password = chosen || temporaryPassword();
+  await c.env.DB.prepare(`UPDATE staff SET password_hash = ?, password_changed_at = ? WHERE id = ?`)
+    .bind(await hashPassword(password), Math.floor(Date.now() / 1000), id)
+    .run();
+  await audit(c, actorOf(viewer), 'landlord_reset_password', null, `owner:${id}`);
+  return c.json({ success: true, password });
+});
+
+/**
+ * Delete a landlord who has no house and was never billed (for example one created by mistake).
+ * Anyone with houses or fee invoices is kept for the records: lock them instead.
+ */
+app.post('/api/dev/landlords/:id/delete', async (c) => {
+  const viewer = c.get('viewer');
+  const id = Number(c.req.param('id'));
+  const target = await c.env.DB.prepare(`SELECT id, full_name FROM staff WHERE id = ? AND role = 'owner'`).bind(id).first<{ id: number; full_name: string }>();
+  if (!target) return fail(c, 404, 'LANDLORD_NOT_FOUND', 'Không tìm thấy chủ trọ.');
+  const houses = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM houses WHERE owner_id = ? OR id IN (SELECT house_id FROM staff_houses WHERE staff_id = ?)`)
+    .bind(id, id)
+    .first<{ n: number }>();
+  if (houses?.n) return fail(c, 400, 'LANDLORD_HAS_HOUSES', 'Chủ trọ còn căn trọ. Xoá hoặc chuyển các căn trước, hoặc bấm Khoá.');
+  const billed = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM service_invoices WHERE owner_id = ?`).bind(id).first<{ n: number }>();
+  if (billed?.n) return fail(c, 400, 'LANDLORD_HAS_INVOICES', 'Chủ trọ đã có hoá đơn phí, cần giữ lại để đối soát. Hãy bấm Khoá thay vì xoá.');
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM sepay_manual_webhooks WHERE owner_id = ?`).bind(id),
+    c.env.DB.prepare(`DELETE FROM sepay_connections WHERE owner_id = ?`).bind(id),
+    c.env.DB.prepare(`DELETE FROM staff_houses WHERE staff_id = ?`).bind(id),
+    c.env.DB.prepare(`UPDATE staff SET created_by = NULL WHERE created_by = ?`).bind(id),
+    c.env.DB.prepare(`DELETE FROM staff WHERE id = ?`).bind(id),
+  ]);
+  await audit(c, actorOf(viewer), 'landlord_delete', null, `owner:${id} ${target.full_name}`);
   return c.json({ success: true });
 });
 
