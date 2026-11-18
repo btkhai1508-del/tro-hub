@@ -4,11 +4,16 @@
  */
 import { saveImageToGallery, openShareSheet, showToast } from 'zmp-sdk/apis';
 import { isZaloMiniApp } from './platform';
+import { WORKER_API_URL } from './api';
 
 /** A real PNG with a white margin: gallery apps reject the SVG the QR service can return, and scanners need the margin. */
 async function buildQrPng(qrUrl: string): Promise<Blob> {
-  // The service redirects .png to .svg without CORS on the redirect, so a browser can only read .svg directly.
-  const response = await fetch(qrUrl.replace(/\.png(?=\?|$)/, '.svg'));
+  // SePay's vietqr.app sends no CORS header, so the page reads the same image through the Worker.
+  // (The old img.vietqr.io redirected .png to .svg without CORS, so only .svg could be read there.)
+  const source = qrUrl.startsWith('https://vietqr.app/img?')
+    ? `${WORKER_API_URL}/qr.png?${qrUrl.slice(qrUrl.indexOf('?') + 1)}`
+    : qrUrl.replace(/\.png(?=\?|$)/, '.svg');
+  const response = await fetch(source);
   if (!response.ok) throw new Error('Fetch failed');
   const objectUrl = URL.createObjectURL(await response.blob());
   try {
@@ -18,16 +23,20 @@ async function buildQrPng(qrUrl: string): Promise<Blob> {
       element.onerror = () => reject(new Error('Image failed'));
       element.src = objectUrl;
     });
-    const size = 1024;
+    // Keep the image's own shape: SePay's QR with account info underneath is taller than wide.
+    const width = 1024;
     const margin = 64;
+    const inner = width - margin * 2;
+    const ratio = image.naturalWidth && image.naturalHeight ? image.naturalHeight / image.naturalWidth : 1;
+    const height = Math.round(inner * ratio) + margin * 2;
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext('2d')!;
     context.fillStyle = '#fff';
-    context.fillRect(0, 0, size, size);
+    context.fillRect(0, 0, width, height);
     context.imageSmoothingEnabled = false;
-    context.drawImage(image, margin, margin, size - margin * 2, size - margin * 2);
+    context.drawImage(image, margin, margin, inner, height - margin * 2);
     return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Encode failed'))), 'image/png'));
   } finally {
     URL.revokeObjectURL(objectUrl);

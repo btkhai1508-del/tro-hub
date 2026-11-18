@@ -484,7 +484,7 @@ export function PaymentPage() {
                       <img
                         src={qrUrl}
                         alt="VietQR Matrix"
-                        className="w-[280px] max-w-full aspect-square object-contain rounded-none select-none"
+                        className="w-[280px] max-w-full h-auto object-contain rounded-none select-none"
                       />
                     ) : (
                       <div className="w-[280px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">
@@ -625,7 +625,7 @@ export function PaymentPage() {
                     <img
                       src={qrUrl}
                       alt="VietQR Matrix"
-                      className="w-[168px] max-w-full aspect-square object-contain rounded-none select-none"
+                      className="w-[168px] max-w-full h-auto object-contain rounded-none select-none"
                     />
                   ) : (
                     <div className="w-[168px] max-w-full aspect-square flex items-center justify-center apple-callout text-neutral-700">

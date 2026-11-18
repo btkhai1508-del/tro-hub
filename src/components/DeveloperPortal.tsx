@@ -1340,7 +1340,7 @@ function BillingCard() {
             <img
               src={vietQrUrl({ bankBin: s.bankBin, accountNo: s.accountNo, accountName: s.accountName }, qrFor.amount - qrFor.received, qrFor.code)}
               alt={`Mã QR chuyển ${money(qrFor.amount - qrFor.received)} nội dung ${qrFor.code}`}
-              className="h-56 w-56 rounded-xl bg-white p-2"
+              className="w-56 h-auto rounded-xl bg-white p-2"
             />
             <dl className="w-full grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 apple-callout">
               <dt className="kit-text-secondary">Ngân hàng</dt><dd className="kit-text-primary">{s.bankName}</dd>

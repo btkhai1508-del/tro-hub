@@ -232,7 +232,7 @@ export function PaymentModal() {
                         <img
                           src={qrUrl}
                           alt="Mã VietQR MB Bank"
-                          className="w-32 h-32 rounded-lg object-contain mx-auto"
+                          className="w-32 h-auto rounded-lg object-contain mx-auto"
                         />
                       ) : (
                         <div className="w-32 h-32 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">
