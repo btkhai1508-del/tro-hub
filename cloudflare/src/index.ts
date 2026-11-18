@@ -1055,7 +1055,7 @@ app.use('/api/dev/*', requireAuth, developerOnly);
 interface ServiceModule { key: string; label: string; price_per_room: number; core: number }
 
 async function moduleCatalog(db: D1Database): Promise<ServiceModule[]> {
-  const { results } = await db.prepare(`SELECT key, label, price_per_room, core FROM service_modules ORDER BY sort, key`).all<ServiceModule>();
+  const { results } = await db.prepare(`SELECT key, label, price_per_room, core FROM service_modules WHERE enabled = 1 ORDER BY sort, key`).all<ServiceModule>();
   return results;
 }
 
@@ -1083,7 +1083,7 @@ app.put('/api/dev/modules/:key', async (c) => {
   const body = await c.req.json<{ price_per_room?: number }>().catch(() => ({}) as { price_per_room?: number });
   const price = Math.round(Number(body.price_per_room));
   if (!(price >= 0 && price <= 10_000_000)) return fail(c, 400, 'PRICE_INVALID', 'Giá phải là số từ 0 đến 10.000.000.');
-  const row = await c.env.DB.prepare(`UPDATE service_modules SET price_per_room = ? WHERE key = ? RETURNING key`).bind(price, key).first();
+  const row = await c.env.DB.prepare(`UPDATE service_modules SET price_per_room = ? WHERE key = ? AND enabled = 1 RETURNING key`).bind(price, key).first();
   if (!row) return fail(c, 404, 'MODULE_NOT_FOUND', 'Không tìm thấy tiện ích.');
   await audit(c, actorOf(c.get('viewer')), 'module_price', null, `${key}=${price}`);
   return c.json({ success: true });
