@@ -201,7 +201,7 @@ export function DeveloperPortal() {
                   </div>
                 </div>
 
-                <SepayLine status={sepay?.connections[l.id]} onOpen={() => setSepayFor(l)} />
+                <SepayLine status={sepay?.connections[l.id]} manual={sepay?.manual?.[l.id]} onOpen={() => setSepayFor(l)} />
 
                 {l.houses.length > 0 && (
                   <ul className="mt-3 space-y-2 border-l-2 border-black/[0.08] pl-4 dark:border-white/[0.12]">
@@ -1427,10 +1427,34 @@ interface SepayBankAccount { id: number; bank: string; last4: string; holder: st
 type SepayStatus =
   | { connected: false }
   | { connected: true; company: string | null; bankAccounts: SepayBankAccount[]; webhookId: string | null; since: string; updatedAt: string };
-interface SepayOverview { configured: boolean; redirectUri: string; connections: Record<string, SepayStatus> }
+interface SepayManual { keyHint: string; createdAt: string; lastEventAt: string | null }
+interface SepayOverview {
+  configured: boolean;
+  redirectUri: string;
+  webhookUrl: string;
+  connections: Record<string, SepayStatus>;
+  manual: Record<string, SepayManual>;
+}
 
-function SepayLine({ status, onOpen }: { status?: SepayStatus; onOpen: () => void }) {
+function SepayLine({ status, manual, onOpen }: { status?: SepayStatus; manual?: SepayManual; onOpen: () => void }) {
   const connected = status?.connected === true;
+  if (!connected && manual) {
+    return (
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13px] leading-[18px] kit-text-secondary inline-flex items-center gap-1.5 min-w-0">
+          <Landmark size={14} className="shrink-0" />
+          <span className="truncate">
+            {manual.lastEventAt
+              ? <><b className="text-emerald-700 dark:text-emerald-300">SePay đã kết nối</b> · webhook tự tạo</>
+              : <><b className="text-amber-700 dark:text-amber-300">Chờ webhook đầu tiên</b> · key ••{manual.keyHint}</>}
+          </span>
+        </p>
+        <button type="button" onClick={onOpen} className="soft-button min-h-11 shrink-0 whitespace-nowrap px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+          <Link2 size={14} /> SePay
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
       <p className="text-[13px] leading-[18px] kit-text-secondary inline-flex items-center gap-1.5 min-w-0">
@@ -1450,12 +1474,124 @@ function SepayLine({ status, onOpen }: { status?: SepayStatus; onOpen: () => voi
   );
 }
 
+function CopyRow({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div>
+      <p className="apple-callout font-semibold kit-text-primary">{label}</p>
+      <div className="mt-1 flex items-center gap-2">
+        <p className={cn('min-w-0 flex-1 rounded-2xl bg-black/[0.04] p-3 text-[13px] leading-[18px] font-num break-all dark:bg-white/[0.06]', secret ? 'kit-text-primary' : 'kit-text-secondary')}>
+          {value}
+        </p>
+        <button
+          type="button"
+          aria-label={`Chép ${label}`}
+          onClick={async () => { await navigator.clipboard.writeText(value).catch(() => null); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+          className="soft-button min-h-11 min-w-11 shrink-0 inline-flex items-center justify-center"
+        >
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * No OAuth needed: Trọ Hub gives the landlord a URL and their own API key, and the landlord adds a webhook
+ * with them on my.sepay.vn. The key is shown once; making a new one stops the old one at once.
+ */
+function ManualWebhookPanel({ landlord, webhookUrl, initial }: { landlord: Landlord; webhookUrl: string; initial: SepayManual | null }) {
+  const [manual, setManual] = useState<SepayManual | null>(initial);
+  const [key, setKey] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<'new' | 'delete' | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
+  const base = `/api/dev/landlords/${landlord.id}/sepay/manual-key`;
+
+  const makeKey = async () => {
+    if (manual && confirm !== 'new') { setConfirm('new'); return; }
+    setBusy(true);
+    const data = await send<{ key: string; manual: SepayManual }>(base, 'POST');
+    setBusy(false);
+    setConfirm(null);
+    if (!data.success) { setNotice({ ok: false, text: data.error || 'Chưa tạo được key.' }); return; }
+    setKey(data.key);
+    setManual(data.manual);
+    setNotice(manual ? { ok: true, text: 'Đã tạo key mới. Key cũ đã ngừng hoạt động: chủ trọ phải dán key mới vào webhook trên SePay.' } : null);
+  };
+
+  const remove = async () => {
+    if (confirm !== 'delete') { setConfirm('delete'); return; }
+    setBusy(true);
+    const data = await send(`${base}/delete`, 'POST');
+    setBusy(false);
+    setConfirm(null);
+    if (!data.success) { setNotice({ ok: false, text: data.error || 'Chưa xoá được.' }); return; }
+    setManual(null);
+    setKey(null);
+    setNotice({ ok: true, text: 'Đã xoá key. Trọ Hub từ chối mọi webhook dùng key này; chủ trọ nên xoá webhook trên my.sepay.vn.' });
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="apple-body kit-text-primary">
+        Không cần SePay duyệt. Chủ trọ tự thêm webhook trên SePay của họ bằng địa chỉ và key dưới đây.
+        Tiền vẫn vào thẳng tài khoản chủ trọ.
+      </p>
+
+      {manual && (
+        <p className={cn('rounded-2xl p-3 apple-callout', manual.lastEventAt ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'bg-amber-500/10 text-amber-800 dark:text-amber-200')}>
+          {manual.lastEventAt
+            ? <>Đang hoạt động · giao dịch gần nhất lúc {d1Time(manual.lastEventAt)} · key ••{manual.keyHint}</>
+            : <>Đã cấp key ••{manual.keyHint} lúc {d1Time(manual.createdAt)}. Chưa nhận được webhook nào: chủ trọ bấm <b>Gửi thử</b> trên SePay để kiểm tra.</>}
+        </p>
+      )}
+
+      {key && (
+        <div className="space-y-3 rounded-2xl border border-black/10 p-3 dark:border-white/15">
+          <CopyRow label="URL webhook" value={webhookUrl} />
+          <CopyRow label="API Key" value={key} secret />
+          <p className="apple-callout font-semibold text-rose-600">Key chỉ hiện một lần. Chép ngay và chỉ gửi riêng cho chủ trọ.</p>
+        </div>
+      )}
+
+      <ol className="list-decimal pl-5 apple-callout kit-text-secondary space-y-1">
+        <li>Chủ trọ đăng nhập <b>my.sepay.vn</b> → <b>WebHooks</b> → <b>Thêm webhooks</b>.</li>
+        <li>Sự kiện: <b>Tiền vào</b>; chọn tài khoản ngân hàng nhận tiền trọ.</li>
+        <li>Dán <b>URL webhook</b>. Kiểu chứng thực: <b>API Key</b>, dán <b>API Key</b> ở trên. Kiểu nội dung: <b>application/json</b>.</li>
+        <li>Bật <b>Dùng để xác thực thanh toán</b>. Để <b>tắt</b> “Chỉ gửi khi có mã thanh toán”.</li>
+        <li>Lưu, rồi bấm <b>Gửi thử</b>: dòng trạng thái ở trên chuyển sang “Đang hoạt động”.</li>
+      </ol>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={busy} onClick={makeKey} className={cn(manual ? 'soft-button' : 'primary-button', 'min-h-11 px-4 inline-flex items-center gap-2 text-sm font-semibold disabled:opacity-50', confirm === 'new' && 'text-rose-600')}>
+          <Zap size={16} /> {manual ? (confirm === 'new' ? 'Bấm lần nữa: key cũ sẽ ngừng' : 'Tạo key mới') : 'Tạo URL và key'}
+        </button>
+        {manual && (
+          <button type="button" disabled={busy} onClick={remove} className={cn('soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold', confirm === 'delete' && 'text-rose-600')}>
+            <Trash2 size={14} /> {confirm === 'delete' ? 'Bấm lần nữa để xoá' : 'Xoá key'}
+          </button>
+        )}
+      </div>
+
+      {notice && (
+        <p role={notice.ok ? 'status' : 'alert'} className={cn('apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>
+          {notice.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function SepayDialog({ landlord, overview, onClose }: { landlord: Landlord; overview: SepayOverview; onClose: () => void }) {
   const [status, setStatus] = useState<SepayStatus>(overview.connections[landlord.id] ?? { connected: false });
   const [link, setLink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [confirmOff, setConfirmOff] = useState(false);
+  const [mode, setMode] = useState<'manual' | 'oauth'>(
+    overview.manual?.[landlord.id] || !overview.configured ? 'manual' : 'oauth'
+  );
   const base = `/api/dev/landlords/${landlord.id}/sepay`;
 
   const makeLink = async () => {
@@ -1500,6 +1636,26 @@ function SepayDialog({ landlord, overview, onClose }: { landlord: Landlord; over
       busy={busy}
       footer={<button type="button" onClick={onClose} className="soft-button min-h-11 px-4 text-sm font-semibold">Xong</button>}
     >
+      {!status.connected && (
+        <div role="tablist" aria-label="Cách kết nối" className="mb-4 grid grid-cols-2 gap-1 rounded-2xl bg-black/[0.04] p-1 dark:bg-white/[0.06]">
+          {([['manual', 'Webhook tự tạo'], ['oauth', 'Tự động (OAuth)']] as const).map(([m, label]) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => setMode(m)}
+              className={cn('min-h-11 rounded-xl px-2 text-sm font-semibold', mode === m ? 'bg-white shadow-sm kit-text-primary dark:bg-white/15' : 'kit-text-secondary')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!status.connected && mode === 'manual' ? (
+        <ManualWebhookPanel landlord={landlord} webhookUrl={overview.webhookUrl} initial={overview.manual?.[landlord.id] ?? null} />
+      ) : (<>
       {!overview.configured && (
         <p className="mb-4 rounded-2xl bg-amber-500/10 p-3 apple-callout text-amber-800 dark:text-amber-200">
           Chưa cài ứng dụng OAuth của Trọ Hub trên SePay. SePay cấp <b>client_id</b> và <b>client_secret</b> khi bạn đăng ký ứng dụng,
@@ -1572,6 +1728,7 @@ function SepayDialog({ landlord, overview, onClose }: { landlord: Landlord; over
           )}
         </div>
       )}
+      </>)}
 
       {notice && (
         <p role={notice.ok ? 'status' : 'alert'} className={cn('mt-4 apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>

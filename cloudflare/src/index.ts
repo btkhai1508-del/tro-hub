@@ -1674,10 +1674,18 @@ async function sepayWebhook(c: Context<App>) {
   const { keySha } = await billingSettings(c.env.DB);
   const sent = (c.req.header('Authorization') ?? '').replace(/^Apikey\s+/i, '').trim();
   const sentSha = sent ? await sha256Hex(sent) : '';
-  // The Developer's own webhook, or one Trọ Hub created on a landlord's SePay account through OAuth.
+  // The Developer's own webhook, one Trọ Hub created on a landlord's SePay account through OAuth,
+  // or one the landlord made by hand with the key Trọ Hub gave them.
   const landlord = sentSha && sentSha !== keySha
-    ? await c.env.DB.prepare(`SELECT owner_id FROM sepay_connections WHERE webhook_key_sha256 = ?`).bind(sentSha).first<{ owner_id: number }>()
+    ? await c.env.DB.prepare(
+        `SELECT owner_id FROM sepay_connections WHERE webhook_key_sha256 = ?1
+         UNION ALL SELECT owner_id FROM sepay_manual_webhooks WHERE key_sha256 = ?1 LIMIT 1`
+      ).bind(sentSha).first<{ owner_id: number }>()
     : null;
+  if (landlord)
+    c.executionCtx.waitUntil(
+      c.env.DB.prepare(`UPDATE sepay_manual_webhooks SET last_event_at = datetime('now') WHERE key_sha256 = ?`).bind(sentSha).run()
+    );
   if (!sentSha || (sentSha !== keySha && !landlord)) {
     await audit(c, 'anonymous', 'sepay_webhook_rejected');
     return c.json({ success: false, error: 'Sai API key.' }, 401);
@@ -1853,13 +1861,47 @@ app.get('/api/dev/sepay', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT owner_id, company, bank_accounts, webhook_id, connected_at, updated_at FROM sepay_connections`
   ).all<SepayConnRow>();
+  const manual = await c.env.DB.prepare(`SELECT owner_id, key_hint, created_at, last_event_at FROM sepay_manual_webhooks`).all<ManualRow>();
   const origin = new URL(c.req.url).origin;
   return c.json({
     success: true,
     configured: sepayConfigured(c.env),
     redirectUri: sepayRedirectUri(origin),
+    webhookUrl: sepayWebhookUrl(c),
     connections: Object.fromEntries(results.map((r) => [r.owner_id, sepayStatus(r)])),
+    manual: Object.fromEntries(manual.results.map((r) => [r.owner_id, manualStatus(r)])),
   });
+});
+
+// ── Webhook tự tạo: chủ trọ dán URL + API key Trọ Hub cấp vào my.sepay.vn của họ (không cần OAuth) ──
+
+type ManualRow = { owner_id: number; key_hint: string; created_at: string; last_event_at: string | null };
+const manualStatus = (r: ManualRow) => ({ keyHint: r.key_hint, createdAt: r.created_at, lastEventAt: r.last_event_at });
+const sepayWebhookUrl = (c: Context<App>) => `${(c.env.SEPAY_WEBHOOK_ORIGIN || new URL(c.req.url).origin).replace(/\/$/, '')}/api/sepay/webhook`;
+
+/** A new key for this landlord's hand-made webhook. The old key stops working at once; the new one is shown only here. */
+app.post('/api/dev/landlords/:id/sepay/manual-key', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!(await ownerExists(c.env.DB, id))) return fail(c, 404, 'LANDLORD_NOT_FOUND', 'Không tìm thấy chủ trọ.');
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  const key = 'th_' + [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const row = await c.env.DB.prepare(
+    `INSERT INTO sepay_manual_webhooks (owner_id, key_sha256, key_hint) VALUES (?, ?, ?)
+     ON CONFLICT (owner_id) DO UPDATE SET key_sha256 = excluded.key_sha256, key_hint = excluded.key_hint,
+       created_at = datetime('now'), last_event_at = NULL
+     RETURNING owner_id, key_hint, created_at, last_event_at`
+  )
+    .bind(id, await sha256Hex(key), key.slice(-4))
+    .first<ManualRow>();
+  await audit(c, actorOf(c.get('viewer')), 'sepay_manual_key', null, `staff:${id}`);
+  return c.json({ success: true, key, webhookUrl: sepayWebhookUrl(c), manual: manualStatus(row!) });
+});
+
+app.post('/api/dev/landlords/:id/sepay/manual-key/delete', async (c) => {
+  const id = Number(c.req.param('id'));
+  await c.env.DB.prepare(`DELETE FROM sepay_manual_webhooks WHERE owner_id = ?`).bind(id).run();
+  await audit(c, actorOf(c.get('viewer')), 'sepay_manual_key_delete', null, `staff:${id}`);
+  return c.json({ success: true });
 });
 
 app.post('/api/dev/landlords/:id/sepay/connect-url', async (c) => {
