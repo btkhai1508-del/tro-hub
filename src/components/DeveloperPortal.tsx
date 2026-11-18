@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Check, KeyRound, Landmark, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
+import { Building2, Check, ChevronDown, KeyRound, Landmark, Search, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
 import { vietQrUrl } from '../lib/paymentPortal';
 import { useApp } from '../context/AppContext';
 import { workerFetch } from '../lib/api';
@@ -89,6 +89,9 @@ export function DeveloperPortal() {
   const [sepayFor, setSepayFor] = useState<Landlord | null>(null);
   const [editLandlord, setEditLandlord] = useState<Landlord | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [tab, setTab] = useState<'landlords' | 'billing'>('landlords');
+  const [query, setQuery] = useState('');
+  const [openId, setOpenId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const data = await send<{ landlords: Landlord[] }>('/api/dev/landlords', 'GET');
@@ -124,6 +127,12 @@ export function DeveloperPortal() {
     load();
   };
 
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return landlords ?? [];
+    return (landlords ?? []).filter((l) => l.full_name.toLowerCase().includes(q) || l.phone.includes(q.replace(/\s/g, '')));
+  }, [landlords, query]);
+
   const totals = useMemo(() => {
     // A house shared by two landlords is counted once.
     const houses = [...new Map((landlords ?? []).flatMap((l) => l.houses).map((h) => [h.id, h])).values()];
@@ -155,14 +164,31 @@ export function DeveloperPortal() {
           </div>
         </header>
 
-        <section className="liquid-panel rounded-[28px] p-4 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="apple-title2 font-semibold kit-text-primary">Chủ trọ</h2>
-              <p className="apple-callout kit-text-secondary font-num">
-                {totals.landlords} chủ trọ · {totals.houses} căn · {totals.rooms} phòng · {money(totals.fee)}/tháng
-              </p>
+        <dl className="liquid-panel mb-4 grid grid-cols-4 rounded-[22px] px-2 py-3 sm:py-4">
+          {([['Chủ trọ', String(totals.landlords)], ['Căn', String(totals.houses)], ['Phòng', String(totals.rooms)], ['Phí/tháng', money(totals.fee)]] as const).map(([label, value], i) => (
+            <div key={label} className={cn('min-w-0 px-2 text-center', i > 0 && 'border-l border-black/[0.08] dark:border-white/[0.1]')}>
+              <dt className="text-[11px] font-semibold uppercase tracking-wide kit-text-secondary truncate">{label}</dt>
+              <dd className="mt-0.5 text-base sm:text-xl font-bold kit-text-primary font-num truncate">{value}</dd>
             </div>
+          ))}
+        </dl>
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div role="tablist" aria-label="Khu vực" className="inline-flex rounded-2xl bg-black/[0.05] p-1 dark:bg-white/[0.07]">
+            {([['landlords', 'Chủ trọ'], ['billing', 'Thu phí']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={cn('min-h-11 rounded-xl px-5 text-sm font-semibold', tab === key ? 'bg-white shadow-sm kit-text-primary dark:bg-white/15' : 'kit-text-secondary')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {tab === 'landlords' && (
             <div className="flex gap-2">
               <button type="button" onClick={() => setPrices(true)} className="soft-button min-h-11 px-4 inline-flex items-center gap-2 text-sm font-semibold">
                 <Tags size={16} /> Bảng giá
@@ -171,51 +197,85 @@ export function DeveloperPortal() {
                 <Plus size={18} /> Chủ trọ
               </button>
             </div>
-          </div>
-
-          {notice && (
-            <p role={notice.ok ? 'status' : 'alert'} className={cn('mt-4 apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>
-              {notice.text}
-            </p>
           )}
+        </div>
 
-          {landlords === null && <p className="mt-6 apple-body kit-text-secondary">Đang tải…</p>}
-          {landlords?.length === 0 && !notice && (
-            <p className="mt-6 apple-body kit-text-secondary">Chưa có chủ trọ nào. Bấm <b>+ Chủ trọ</b> để tạo người đầu tiên.</p>
-          )}
+        {notice && tab === 'landlords' && (
+          <p role={notice.ok ? 'status' : 'alert'} className={cn('mb-4 apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>
+            {notice.text}
+          </p>
+        )}
 
-          <ul className="mt-4 divide-y divide-black/[0.06] dark:divide-white/[0.08]">
-            {landlords?.map((l) => (
-              <li key={l.id} className="py-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="apple-headline kit-text-primary truncate">
-                      {l.full_name}
-                      {l.status === 'locked' && <span className="ml-2 text-xs font-bold text-rose-600">Đã khoá</span>}
-                    </p>
-                    <p className="apple-callout kit-text-secondary">
-                      <span className="font-num">{l.phone}</span>
-                      {l.email ? ` · ${l.email}` : ''} · {l.houses.length} căn
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setEditLandlord(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
-                      <Pencil size={14} /> Sửa
+        {tab === 'billing' ? (
+          <BillingCard />
+        ) : (
+          <section className="liquid-panel rounded-[28px] p-3 sm:p-4">
+            <label className="relative block">
+              <span className="sr-only">Tìm chủ trọ</span>
+              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 kit-text-secondary" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Tìm tên hoặc số điện thoại"
+                className={cn(inputClass, 'pl-10')}
+              />
+            </label>
+
+            {landlords === null && <p className="px-2 py-6 apple-body kit-text-secondary">Đang tải…</p>}
+            {landlords?.length === 0 && (
+              <p className="px-2 py-6 apple-body kit-text-secondary">Chưa có chủ trọ nào. Bấm <b>+ Chủ trọ</b> để tạo người đầu tiên.</p>
+            )}
+            {landlords && landlords.length > 0 && shown.length === 0 && (
+              <p className="px-2 py-6 apple-body kit-text-secondary">Không có chủ trọ nào khớp “{query}”.</p>
+            )}
+
+            <ul className="mt-2 divide-y divide-black/[0.06] dark:divide-white/[0.08]">
+              {shown.map((l) => {
+                const open = openId === l.id;
+                const linked = sepay?.connections[l.id]?.connected === true || Boolean(sepay?.manual?.[l.id]);
+                const fee = l.houses.filter((h) => !h.delete_after).reduce((n, h) => n + h.monthly_fee, 0);
+                return (
+                  <li key={l.id}>
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      onClick={() => setOpenId(open ? null : l.id)}
+                      className="flex w-full min-h-11 items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 apple-headline kit-text-primary">
+                          <span className="min-w-0 truncate">{l.full_name}</span>
+                          {l.status === 'locked' && <Pill tone="red">Đã khoá</Pill>}
+                          <Pill tone={linked ? 'green' : 'gray'}>{linked ? 'SePay' : 'Chưa SePay'}</Pill>
+                        </p>
+                        <p className="apple-callout kit-text-secondary font-num truncate">
+                          {l.phone} · {l.houses.length} căn · {money(fee)}/tháng
+                        </p>
+                      </div>
+                      <ChevronDown size={18} className={cn('shrink-0 kit-text-secondary transition-transform', open && 'rotate-180')} />
                     </button>
-                    <button type="button" onClick={() => toggleLock(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
-                      {l.status === 'locked' ? <Unlock size={15} /> : <Lock size={15} />}
-                      {l.status === 'locked' ? 'Mở khoá' : 'Khoá'}
-                    </button>
-                    <button type="button" onClick={() => setHouseFor(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
-                      <Plus size={16} /> Căn trọ
-                    </button>
-                  </div>
-                </div>
 
-                <SepayLine status={sepay?.connections[l.id]} manual={sepay?.manual?.[l.id]} onOpen={() => setSepayFor(l)} />
+                    {open && (
+                      <div className="space-y-4 px-2 pb-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => setEditLandlord(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+                            <Pencil size={14} /> Sửa
+                          </button>
+                          <button type="button" onClick={() => toggleLock(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+                            {l.status === 'locked' ? <Unlock size={15} /> : <Lock size={15} />}
+                            {l.status === 'locked' ? 'Mở khoá' : 'Khoá'}
+                          </button>
+                          <button type="button" onClick={() => setHouseFor(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+                            <Plus size={16} /> Căn trọ
+                          </button>
+                        </div>
 
+                        <SepayLine status={sepay?.connections[l.id]} manual={sepay?.manual?.[l.id]} onOpen={() => setSepayFor(l)} />
+
+                        {l.houses.length === 0 && <p className="apple-callout kit-text-secondary">Chưa có căn nào. Bấm <b>+ Căn trọ</b> để tạo.</p>}
                 {l.houses.length > 0 && (
-                  <ul className="mt-3 space-y-2 border-l-2 border-black/[0.08] pl-4 dark:border-white/[0.12]">
+                  <ul className="space-y-3">
                     {l.houses.map((h) => (
                       <li key={h.id} className="flex items-start gap-2.5">
                         <Building2 size={16} className="mt-0.5 shrink-0 kit-text-secondary" />
@@ -252,12 +312,14 @@ export function DeveloperPortal() {
                     ))}
                   </ul>
                 )}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <BillingCard />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </main>
 
       {newLandlord && (
@@ -304,6 +366,18 @@ export function DeveloperPortal() {
         />
       )}
     </div>
+  );
+}
+
+/** Small status label: red for problems, green for done, grey for not yet. */
+function Pill({ tone, children }: { tone: 'red' | 'green' | 'gray'; children: React.ReactNode }) {
+  return (
+    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold',
+      tone === 'red' && 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+      tone === 'green' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+      tone === 'gray' && 'bg-black/[0.05] kit-text-secondary dark:bg-white/[0.08]')}>
+      {children}
+    </span>
   );
 }
 
@@ -1410,12 +1484,12 @@ function BillingCard() {
   const totals = (data?.invoices ?? []).reduce((t, i) => ({ due: t.due + i.amount, paid: t.paid + (i.status === 'paid' ? i.amount : 0) }), { due: 0, paid: 0 });
 
   return (
-    <section className="liquid-panel mt-5 rounded-[28px] p-4 sm:p-6">
+    <section className="liquid-panel rounded-[28px] p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="apple-title2 font-semibold kit-text-primary">Thu phí dịch vụ · SePay</h2>
+          <h2 className="apple-title2 font-semibold kit-text-primary">Phí dịch vụ tháng {monthLabel(month)}</h2>
           <p className="apple-callout kit-text-secondary font-num">
-            Tháng {monthLabel(month)}: đã thu {money(totals.paid)} / {money(totals.due)}
+            Đã thu {money(totals.paid)} / {money(totals.due)}
           </p>
         </div>
         <div className="flex gap-2">
@@ -1433,23 +1507,28 @@ function BillingCard() {
       )}
 
       {s && (
-        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 apple-callout border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
-          <dt className="kit-text-secondary">Nhận tiền vào</dt>
-          <dd className="kit-text-primary font-num">{ready ? `${s.bankName} · ${s.accountNo}${s.accountName ? ` · ${s.accountName}` : ''}` : <span className="text-rose-600">Chưa cài đặt</span>}</dd>
-          <dt className="kit-text-secondary">API key SePay</dt>
-          <dd className={s.keySet ? 'kit-text-primary' : 'text-rose-600'}>{s.keySet ? 'Đã lưu' : 'Chưa có – webhook sẽ từ chối mọi lệnh'}</dd>
-          <dt className="kit-text-secondary">Webhook URL</dt>
-          <dd className="min-w-0 flex items-center gap-2">
-            <code className="truncate text-[13px] kit-text-primary">{s.webhookUrl}</code>
-            <button type="button" onClick={() => navigator.clipboard?.writeText(s.webhookUrl).then(() => setNotice({ ok: true, text: 'Đã chép webhook URL.' }))} aria-label="Chép webhook URL" className="soft-button h-9 w-9 shrink-0 inline-flex items-center justify-center">
-              <Copy size={14} />
-            </button>
-          </dd>
-        </dl>
+        <div className="mt-4 rounded-2xl bg-black/[0.03] p-3 dark:bg-white/[0.05]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 apple-callout">
+            <span className="kit-text-secondary">Nhận tiền</span>
+            <span className={cn('min-w-0 font-num', ready ? 'kit-text-primary' : 'text-rose-600')}>
+              {ready ? `${s.bankName} · ${s.accountNo}` : 'Chưa cài đặt'}
+            </span>
+            <Pill tone={s.keySet ? 'green' : 'red'}>{s.keySet ? 'API key ✓' : 'Chưa có API key'}</Pill>
+          </div>
+          <details className="mt-2">
+            <summary className="cursor-pointer apple-callout kit-text-secondary">Webhook URL cho SePay</summary>
+            <div className="mt-2 flex min-w-0 items-center gap-2">
+              <code className="min-w-0 truncate text-[13px] kit-text-primary">{s.webhookUrl}</code>
+              <button type="button" onClick={() => navigator.clipboard?.writeText(s.webhookUrl).then(() => setNotice({ ok: true, text: 'Đã chép webhook URL.' }))} aria-label="Chép webhook URL" className="soft-button h-9 w-9 shrink-0 inline-flex items-center justify-center">
+                <Copy size={14} />
+              </button>
+            </div>
+          </details>
+        </div>
       )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
-        <p className="apple-headline kit-text-primary">Hoá đơn phí tháng {monthLabel(month)}</p>
+        <p className="apple-headline kit-text-primary">Hoá đơn</p>
         <button type="button" onClick={createInvoices} disabled={busy || !data?.unbilled} className="primary-button min-h-11 px-4 inline-flex items-center gap-2 text-sm font-semibold disabled:opacity-50">
           <Plus size={16} /> {data?.unbilled ? `Tạo hoá đơn (${data.unbilled} chủ trọ)` : 'Đã tạo đủ hoá đơn'}
         </button>
@@ -1487,9 +1566,9 @@ function BillingCard() {
       </ul>
 
       {data && data.events.length > 0 && (
-        <div className="mt-4 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
-          <p className="apple-headline kit-text-primary">Tiền về qua webhook SePay</p>
-          <p className="text-[13px] leading-[18px] kit-text-secondary mb-2">Tiền trọ mới được nhận diện (căn, phòng, tháng), chưa tự đánh dấu đã trả.</p>
+        <details className="mt-4 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
+          <summary className="cursor-pointer apple-headline kit-text-primary">Tiền về qua webhook SePay <span className="apple-callout font-normal kit-text-secondary">· {data.events.length} giao dịch gần nhất</span></summary>
+          <p className="mt-2 mb-2 text-[13px] leading-[18px] kit-text-secondary">Tiền trọ được nhận diện theo căn, phòng, tháng.</p>
           <ul className="space-y-1.5">
             {data.events.map((e) => (
               <li key={e.sepay_id} className="flex items-start justify-between gap-3 apple-callout">
@@ -1503,12 +1582,12 @@ function BillingCard() {
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {data && data.payments.length > 0 && (
-        <div className="mt-4 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
-          <p className="apple-headline kit-text-primary mb-2">Thanh toán phí dịch vụ</p>
+        <details className="mt-4 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
+          <summary className="cursor-pointer apple-headline kit-text-primary mb-2">Thanh toán phí dịch vụ <span className="apple-callout font-normal kit-text-secondary">· {data.payments.length} khoản gần nhất</span></summary>
           <ul className="space-y-1.5">
             {data.payments.map((p) => (
               <li key={p.id} className="flex items-start justify-between gap-3 apple-callout">
@@ -1520,7 +1599,7 @@ function BillingCard() {
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {settingsOpen && s && <BillingSettingsDialog current={s} onClose={() => setSettingsOpen(false)} onSaved={() => { setSettingsOpen(false); setNotice({ ok: true, text: 'Đã lưu cài đặt thu phí.' }); load(); }} />}
