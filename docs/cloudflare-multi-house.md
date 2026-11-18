@@ -165,6 +165,14 @@ Phiên đăng nhập bằng Zalo chưa có token Worker nên vẫn đi qua Expre
 
 Trong lúc chờ SePay duyệt ứng dụng OAuth: Developer bấm "Kết nối SePay" → tab **Webhook tự tạo** → **Tạo URL và key**. Chủ trọ thêm webhook trên my.sepay.vn của họ (Tiền vào, API Key, bật "Dùng để xác thực thanh toán"). Worker nhận ra chủ trọ qua key (bảng `sepay_manual_webhooks`, migration 0017, chỉ lưu SHA-256). Tạo key mới thì key cũ ngừng ngay. Dòng trạng thái chuyển "Đang hoạt động" khi webhook đầu tiên về. Chạy chung với OAuth: cùng một URL webhook.
 
+### Cổng thanh toán SePay (phí dịch vụ, tuỳ chọn)
+
+Chủ trọ trả hoá đơn phí Trọ Hub bằng thẻ / chuyển khoản / NAPAS VietQR trên trang của SePay; tiền vào tài khoản merchant của Developer. Tiền trọ không đi qua đây.
+
+- Link mỗi hoá đơn: `/pay/service/<mã hoá đơn>` (nút **Link thẻ** trên trang Developer). Worker ký form theo tài liệu SePay rồi chuyển sang `pay(-sandbox).sepay.vn/v1/checkout/init`. Mỗi lần mở là một đơn mới `<mã>_<hậu tố>` vì SePay cần mã đơn không trùng.
+- IPN: `/api/sepay/pg/ipn`, xác thực header `X-Secret-Key`. Chỉ `ORDER_PAID` + `CAPTURED` + `APPROVED` mới ghi tiền, qua cùng hàm đối chiếu với chuyển khoản (`service_payments`, id `PG-…` chống ghi trùng).
+- Cài đặt (secret): `SEPAY_PG_MERCHANT_ID`, `SEPAY_PG_SECRET_KEY` (Cổng thanh toán → Cấu hình → Thông tin đơn vị), `SEPAY_PG_IPN_SECRET` (tự đặt ở tab IPN, Auth Type SECRET_KEY). `SEPAY_PG_ENV=production` mới là tiền thật; mặc định sandbox.
+
 Khi đưa lên (theo thứ tự): deploy Worker + migration 0016, 0017 → đưa giao diện lên Render → chạy `cloudflare/scripts/import-statuses.mts` cho tháng này và tháng trước trên D1 thật → đổi URL webhook SePay sang `https://tro-hub-api.trohub.workers.dev/api/sepay/webhook`.
 
 ## Lộ trình

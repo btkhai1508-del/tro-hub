@@ -1176,6 +1176,7 @@ interface ServiceInvoice {
 }
 interface SepayEvent { sepay_id: string; kind: 'service' | 'rent' | 'laundry' | 'none'; amount: number; content: string; house_id: string | null; room: string | null; month: string | null; paid_at: string | null; landlord?: string | null }
 const EVENT_LABEL: Record<SepayEvent['kind'], string> = { service: 'Phí dịch vụ', rent: 'Tiền trọ', laundry: 'Giặt sấy', none: 'Không có mã' };
+interface PgInfo { configured: boolean; live: boolean; ipnUrl: string; payBase: string }
 interface ServicePayment { id: number; amount: number; content: string; paid_at: string; simulated: number; code: string | null; full_name: string | null }
 
 const vnMonthNow = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7);
@@ -1183,14 +1184,14 @@ const monthLabel = (m: string) => `${Number(m.slice(5))}/${m.slice(0, 4)}`;
 
 function BillingCard() {
   const [month, setMonth] = useState(vnMonthNow());
-  const [data, setData] = useState<{ settings: BillingSettings; invoices: ServiceInvoice[]; payments: ServicePayment[]; events: SepayEvent[]; unbilled: number } | null>(null);
+  const [data, setData] = useState<{ settings: BillingSettings; gateway?: PgInfo; invoices: ServiceInvoice[]; payments: ServicePayment[]; events: SepayEvent[]; unbilled: number } | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [qrFor, setQrFor] = useState<ServiceInvoice | null>(null);
 
   const load = useCallback(async () => {
-    const d = await send<{ settings: BillingSettings; invoices: ServiceInvoice[]; payments: ServicePayment[]; events: SepayEvent[]; unbilled: number }>(`/api/dev/billing?month=${month}`, 'GET');
+    const d = await send<{ settings: BillingSettings; gateway?: PgInfo; invoices: ServiceInvoice[]; payments: ServicePayment[]; events: SepayEvent[]; unbilled: number }>(`/api/dev/billing?month=${month}`, 'GET');
     if (!d.success) return setNotice({ ok: false, text: d.error || 'Chưa tải được phần thu phí.' });
     setData(d);
   }, [month]);
@@ -1211,6 +1212,12 @@ function BillingCard() {
       d.settled ? `Giả lập: đã nhận đủ ${money(d.due)} cho ${inv.code}, hoá đơn chuyển sang Đã thu.` : `Giả lập: đã ghi nhận ${money(d.received)} / ${money(d.due)}.`);
 
   const s = data?.settings;
+  const pg = data?.gateway;
+  const copyPayLink = (inv: ServiceInvoice) => {
+    if (!pg) return;
+    navigator.clipboard?.writeText(pg.payBase + inv.code)
+      .then(() => setNotice({ ok: true, text: `Đã chép link thanh toán online của ${inv.full_name}. Gửi qua Zalo: chủ trọ trả bằng thẻ, chuyển khoản hoặc NAPAS VietQR.` }));
+  };
   const ready = Boolean(s?.accountNo && s?.bankBin);
   const totals = (data?.invoices ?? []).reduce((t, i) => ({ due: t.due + i.amount, paid: t.paid + (i.status === 'paid' ? i.amount : 0) }), { due: 0, paid: 0 });
 
@@ -1250,6 +1257,23 @@ function BillingCard() {
               <Copy size={14} />
             </button>
           </dd>
+          <dt className="kit-text-secondary">Cổng thanh toán</dt>
+          <dd className={pg?.configured ? 'kit-text-primary' : 'kit-text-secondary'}>
+            {pg?.configured
+              ? <>Đã bật · {pg.live ? <b>tiền thật</b> : <b className="text-amber-700 dark:text-amber-300">sandbox (thử)</b>}</>
+              : 'Chưa cài (tuỳ chọn: cho chủ trọ trả bằng thẻ)'}
+          </dd>
+          {pg && (
+            <>
+              <dt className="kit-text-secondary">IPN URL</dt>
+              <dd className="min-w-0 flex items-center gap-2">
+                <code className="truncate text-[13px] kit-text-primary">{pg.ipnUrl}</code>
+                <button type="button" onClick={() => navigator.clipboard?.writeText(pg.ipnUrl).then(() => setNotice({ ok: true, text: 'Đã chép IPN URL. Dán vào my.sepay.vn → Cổng thanh toán → Cấu hình → IPN.' }))} aria-label="Chép IPN URL" className="soft-button h-9 w-9 shrink-0 inline-flex items-center justify-center">
+                  <Copy size={14} />
+                </button>
+              </dd>
+            </>
+          )}
         </dl>
       )}
 
@@ -1277,10 +1301,15 @@ function BillingCard() {
                 {money(inv.amount)} · mã <b className="kit-text-primary">{inv.code}</b> · {inv.detail.map((h) => `${h.name} (${h.rooms} phòng)`).join(', ')}
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setQrFor(inv)} disabled={!ready} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold disabled:opacity-50">
                 <QrCode size={15} /> QR
               </button>
+              {inv.status === 'unpaid' && pg?.configured && (
+                <button type="button" onClick={() => copyPayLink(inv)} title="Link trang thanh toán SePay: thẻ, chuyển khoản, NAPAS VietQR" className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+                  <Link2 size={15} /> Link thẻ
+                </button>
+              )}
               {inv.status === 'unpaid' && (
                 <button type="button" onClick={() => simulate(inv)} disabled={busy} title="Chạy đúng luồng webhook với một giao dịch giả, không có tiền thật" className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
                   <Zap size={15} /> Giả lập chuyển khoản
