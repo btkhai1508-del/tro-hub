@@ -40,13 +40,21 @@ export const DEFAULT_PORTAL: PaymentPortal = {
   payPrefix: null,
 };
 
-/** VietQR draws the code from bank BIN + account; amount and content are filled in for the resident. */
+const VIETINBANK_BIN = '970415';
+
+/**
+ * The transfer QR, drawn by SePay's VietQR service (vietqr.app) from bank BIN + account, with amount
+ * and content filled in for the resident. VietinBank personal / household accounts only report a
+ * transfer to SePay when the content carries "SEVQR", so it goes first there.
+ * Docs: https://developer.sepay.vn/vi/tien-ich-khac/tao-qr-code
+ */
 export function vietQrUrl(portal: Pick<PaymentPortal, 'bankBin' | 'accountNo' | 'accountName'>, amount?: number, addInfo?: string) {
-  const params = new URLSearchParams();
-  if (amount) params.set('amount', String(amount));
-  if (addInfo) params.set('addInfo', addInfo);
-  if (portal.accountName) params.set('accountName', portal.accountName);
-  return `https://img.vietqr.io/image/${portal.bankBin}-${portal.accountNo}-qr_only.png?${params}`;
+  const params = new URLSearchParams({ acc: portal.accountNo, bank: portal.bankBin });
+  if (amount) params.set('amount', String(Math.round(amount)));
+  const des = portal.bankBin === VIETINBANK_BIN && addInfo && !/SEVQR/i.test(addInfo) ? `SEVQR ${addInfo}` : addInfo;
+  if (des) params.set('des', des);
+  params.set('template', 'qronly');
+  return `https://vietqr.app/img?${params}`;
 }
 
 let viewerRequest: Promise<WorkerViewer | null> | null = null;

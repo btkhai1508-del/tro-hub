@@ -26,6 +26,7 @@ import { cn } from '../lib/utils';
 import { apiFetch } from '../lib/api';
 import { soundFx } from '../lib/soundFx';
 import { saveQrToDevice } from '../lib/qrHelper';
+import { vietQrUrl } from '../lib/paymentPortal';
 import {
   IconLaundry3D,
   IconDryer3D
@@ -201,7 +202,7 @@ export function LaundryPage() {
 
   // Build clean VietQR URL matching PaymentPage (straight QR without cluttered templates)
   const qrUrl = selectedMachine
-    ? `https://img.vietqr.io/image/mbbank-0902371800-qr_only.png?amount=${selectedMachine.price}&addInfo=${encodeURIComponent(selectedMachine.machineId)}&accountName=${encodeURIComponent(recipientName)}`
+    ? vietQrUrl({ bankBin: '970422', accountNo: '0902371800', accountName: recipientName }, selectedMachine.price, selectedMachine.machineId)
     : '';
 
   const handleSaveQR = async () => {
