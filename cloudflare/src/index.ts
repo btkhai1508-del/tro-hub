@@ -10,8 +10,12 @@ import {
 import { decryptText } from './cccd.ts';
 import { checkSepayState, disconnectSepay, finishSepayConnect, sepayConfigured, sepayConnectUrl, sepayRedirectUri, syncSepay } from './sepayOauth.ts';
 
+export { TenantStore } from './tenant/store.ts';
+import type { TenantStore } from './tenant/store.ts';
+
 interface Env {
   DB: D1Database;
+  TENANT: DurableObjectNamespace<TenantStore>;
   JWT_SECRET: string;
   CCCD_KEY: string;
   GOOGLE_CLIENT_ID?: string;
