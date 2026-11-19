@@ -43,7 +43,7 @@ const HOUSE_TABLES = ['payments', 'meter_readings', 'invoices', 'notifications',
  * then the directory (and the staff links that point at it). A later step that fails leaves a warning
  * in the audit log and the rest for the nightly reconcile / next run.
  */
-export async function purgeDeletedHouses(env: Env): Promise<string[]> {
+export async function purgeDeletedHouses(env: Env, hooks: { beforeDelete?: (houseId: string) => Promise<void> } = {}): Promise<string[]> {
   const { results } = await env.DB
     .prepare(`SELECT house_id, owner_id FROM house_directory WHERE delete_after IS NOT NULL AND delete_after <= datetime('now')`)
     .all<{ house_id: string; owner_id: number }>();
@@ -52,6 +52,13 @@ export async function purgeDeletedHouses(env: Env): Promise<string[]> {
     try {
       if ((await getStorage(env.DB, ownerId)).backend === 'migrating') continue; // retried on the next run
       const store = await tenantOfOwner(env, ownerId);
+      await hooks.beforeDelete?.(houseId);
+      // The list above may be minutes old: a house restored meanwhile must survive, so look again right before deleting.
+      const stillDue = await env.DB
+        .prepare(`SELECT 1 FROM house_directory WHERE house_id = ? AND delete_after IS NOT NULL AND delete_after <= datetime('now')`)
+        .bind(houseId)
+        .first();
+      if (!stillDue) continue;
       await store.batch([
         ...HOUSE_TABLES.map((t) => store.prepare(`DELETE FROM ${t} WHERE house_id = ?`).bind(houseId)),
         store.prepare(`DELETE FROM houses WHERE id = ?`).bind(houseId),
@@ -80,16 +87,23 @@ export async function purgeDeletedHouses(env: Env): Promise<string[]> {
   return purged;
 }
 
-export interface ReconcileResult { countsFixed: number; indexMismatches: { residentId: number; problem: string }[] }
+export interface ReconcileResult {
+  countsFixed: number;
+  indexMismatches: { residentId: number; problem: string }[];
+  /** Directory vs the landlord's store (report only). */
+  houseMismatches: { houseId: string; problem: string }[];
+}
 
 /**
  * Recomputes each house's room/resident counters from its landlord's store and compares the resident
  * index with the store's residents. Mismatches are only reported, never fixed. Saved in settings.last_reconcile.
  */
 export async function reconcile(env: Env): Promise<ReconcileResult> {
-  const out: ReconcileResult = { countsFixed: 0, indexMismatches: [] };
+  const out: ReconcileResult = { countsFixed: 0, indexMismatches: [], houseMismatches: [] };
   const houses = await allHouses(env.DB);
-  const owners = [...new Set(houses.map((h) => h.owner_id))];
+  // A landlord on their own store with no house in the directory is still checked (their store may hold houses the directory lacks).
+  const { results: inDo } = await env.DB.prepare(`SELECT owner_id FROM tenant_storage WHERE backend = 'do'`).all<{ owner_id: number }>();
+  const owners = [...new Set([...houses.map((h) => h.owner_id), ...inDo.map((r) => r.owner_id)])];
   for (const ownerId of owners) {
     try {
       if ((await getStorage(env.DB, ownerId)).backend === 'migrating') continue;
@@ -107,6 +121,25 @@ export async function reconcile(env: Env): Promise<ReconcileResult> {
           out.countsFixed++;
         }
       }
+      const { results: storeHouses } = await store
+        .prepare(`SELECT id, name, status, delete_after, pay_no FROM houses WHERE owner_id = ?`)
+        .bind(ownerId)
+        .all<{ id: string; name: string; status: string; delete_after: string | null; pay_no: number | null }>();
+      const inStoreHouses = new Map(storeHouses.map((x) => [x.id, x]));
+      const ownDir = houses.filter((x) => x.owner_id === ownerId);
+      for (const h of ownDir) {
+        const x = inStoreHouses.get(h.house_id);
+        if (!x) {
+          out.houseMismatches.push({ houseId: h.house_id, problem: 'in directory but missing from store' });
+          continue;
+        }
+        const diff = (['name', 'status', 'delete_after', 'pay_no'] as const)
+          .filter((f) => (h[f] ?? null) !== (x[f] ?? null))
+          .map((f) => `${f} (directory ${h[f] ?? 'null'}, store ${x[f] ?? 'null'})`);
+        if (diff.length) out.houseMismatches.push({ houseId: h.house_id, problem: `differs: ${diff.join('; ')}` });
+      }
+      const dirIds = new Set(ownDir.map((x) => x.house_id));
+      for (const x of storeHouses) if (!dirIds.has(x.id)) out.houseMismatches.push({ houseId: x.id, problem: 'in store but missing from directory' });
       let { results: stored } = await store
         .prepare(`SELECT id, house_id, deleted_at FROM residents`)
         .all<{ id: number; house_id: string; deleted_at: string | null }>();
@@ -145,5 +178,6 @@ export async function runCron(cron: string, env: Env): Promise<void> {
     cron === DAILY_CRON
       ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)]]
       : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)]];
-  await Promise.all(jobs.map(([name, job]) => job().catch((err) => console.warn('[cron]', name, err))));
+  // One after another (purge before reconcile, so reconcile sees the purged state); each fails alone.
+  for (const [name, job] of jobs) await job().catch((err) => console.warn('[cron]', name, err));
 }

@@ -118,6 +118,50 @@ describe.each(BACKENDS)('cron [%s]', (backend) => {
     expect(await e.DB.prepare(`SELECT COUNT(*) n FROM resident_index WHERE resident_id = 777`).first('n')).toBe(1);
   });
 
+  it('purge: căn được khôi phục giữa lúc chọn và lúc xoá thì còn nguyên', async () => {
+    await e.DB.prepare(`UPDATE house_directory SET status = 'inactive', delete_after = datetime('now', '-1 day') WHERE house_id = 'LVC'`).run();
+    const purged = await purgeDeletedHouses(e, {
+      beforeDelete: async (id) => {
+        await e.DB.prepare(`UPDATE house_directory SET status = 'active', delete_after = NULL WHERE house_id = ?`).bind(id).run(); // restored
+      },
+    });
+    expect(purged).toEqual([]);
+    const store = await storeOf(1);
+    expect(await store.prepare(`SELECT COUNT(*) n FROM houses WHERE id = 'LVC'`).first('n')).toBe(1);
+    expect(await store.prepare(`SELECT COUNT(*) n FROM rooms WHERE house_id = 'LVC'`).first('n')).toBeGreaterThan(0);
+    expect(await e.DB.prepare(`SELECT COUNT(*) n FROM house_directory WHERE house_id = 'LVC'`).first('n')).toBe(1);
+  });
+
+  it('reconcile báo (không sửa) căn lệch giữa thư mục và kho: thiếu ở kho, thiếu ở thư mục, khác tên/trạng thái/hạn xoá/mã', async () => {
+    const store = await storeOf(1);
+    await e.DB.prepare(`INSERT INTO house_directory (house_id, owner_id, name) VALUES ('GHOST', 1, 'Ma')`).run();
+    await store.prepare(`UPDATE houses SET name = 'Tên khác', status = 'inactive', delete_after = '2030-01-01 00:00:00', pay_no = 77 WHERE id = 'TRUNG_KIM'`).run();
+    await e.DB.prepare(`DELETE FROM staff_houses WHERE house_id = 'LVC'`).run();
+    await e.DB.prepare(`DELETE FROM house_directory WHERE house_id = 'LVC'`).run();
+    const r = await reconcile(e);
+    const byHouse = Object.fromEntries(r.houseMismatches.map((m) => [m.houseId, m.problem]));
+    expect(byHouse['GHOST']).toMatch(/in directory but missing from store/);
+    expect(byHouse['LVC']).toMatch(/in store but missing from directory/);
+    for (const f of ['name', 'status', 'delete_after', 'pay_no']) expect(byHouse['TRUNG_KIM'], f).toContain(f);
+    expect(r.houseMismatches).toHaveLength(3);
+    const saved = JSON.parse((await e.DB.prepare(`SELECT value FROM settings WHERE key = 'last_reconcile'`).first<{ value: string }>())!.value);
+    expect(saved.houseMismatches).toHaveLength(3);
+    // Report only: nothing was changed.
+    expect(await e.DB.prepare(`SELECT name FROM house_directory WHERE house_id = 'TRUNG_KIM'`).first('name')).not.toBe('Tên khác');
+    expect(await e.DB.prepare(`SELECT COUNT(*) n FROM house_directory WHERE house_id = 'LVC'`).first('n')).toBe(0);
+  });
+
+  it('reconcile: thư mục và kho khớp thì không có căn lệch', async () => {
+    expect((await reconcile(e)).houseMismatches).toEqual([]);
+  });
+
+  it('scheduled 0 19: purge chạy xong rồi mới reconcile (reconcile không thấy căn vừa xoá là lệch)', async () => {
+    await e.DB.prepare(`UPDATE house_directory SET delete_after = datetime('now', '-1 day') WHERE house_id = 'LVC'`).run();
+    await runScheduled('0 19 * * *');
+    const saved = JSON.parse((await e.DB.prepare(`SELECT value FROM settings WHERE key = 'last_reconcile'`).first<{ value: string }>())!.value);
+    expect(saved.houseMismatches).toEqual([]);
+  });
+
   it('scheduled */10 phút ghi tiền deferred, bỏ qua chủ trọ migrating', async () => {
     const ins = (id: string, house: string, room: string) =>
       e.DB.prepare(`INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, status) VALUES (?, 'rent', 3500000, 'x', ?, ?, ?, 'deferred')`)
