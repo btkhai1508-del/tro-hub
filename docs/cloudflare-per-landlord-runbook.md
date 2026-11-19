@@ -43,6 +43,7 @@ Khoá tự hết hạn sau 10 phút nên thường không cần `unlock` thủ c
 
 | Mã | HTTP | Ý nghĩa và cách xử lý |
 |---|---|---|
+| `NOT_LOCKED` | 409 | `unlock` khi chủ trọ không đang bị khoá; không có gì để mở. |
 | `LANDLORD_NOT_FOUND` | 404 | Không có chủ trọ với id này. Xem `GET /api/dev/storage`. |
 | `MIGRATION_RUNNING` | 409 | Một lần chuyển/quay lại khác đang giữ khoá. Đợi; quá 10 phút mà không thấy kết thúc thì `unlock`. |
 | `ALREADY_MIGRATED` | 409 | Chủ trọ đã ở kho riêng (kể cả `dry-run`: D1 cũ không còn được cập nhật). Muốn chạy lại thì `rollback` trước. |
@@ -74,9 +75,9 @@ Chuẩn bị: `wrangler d1 export tro-hub --remote --output <file.sql>` (một l
 scripts/rehearse-migration.sh <file-sao-lưu.sql> [thư-mục-kết-quả] [ownerId ...]   # mặc định: 4 rồi 1
 ```
 
-Script: nạp bản sao lưu vào D1 local (đưa bảng `staff` lên đầu vì bản export liệt kê nó sau các bảng tham chiếu tới nó), áp các migration còn thiếu (0016 trở đi), chạy `wrangler dev --local` trên cổng trống, đặt mật khẩu ngẫu nhiên chỉ-local cho tài khoản Developer trong bản sao rồi đăng nhập lấy token (xuất vào `TROHUB_DEV_TOKEN` của riêng script, không in), rồi chạy lần lượt `dry-run` các chủ trọ, `migrate` các chủ trọ, `rollback` chủ trọ đầu và `migrate` lại. Mỗi bước ghi báo cáo (chỉ số đếm và cờ) vào thư mục kết quả; cuối cùng tắt wrangler dev và xoá dữ liệu tạm. Mã thoát khác 0 nếu bất kỳ bước nào `ok=false` hoặc API đọc khác nhau.
+Script: nạp bản sao lưu vào D1 local (đưa bảng `staff` lên đầu vì bản export liệt kê nó sau các bảng tham chiếu tới nó), áp các migration còn thiếu (0016 trở đi), chạy `wrangler dev --local` trên cổng trống, đặt mật khẩu ngẫu nhiên chỉ-local cho tài khoản Developer trong bản sao rồi đăng nhập lấy token (xuất vào `TROHUB_DEV_TOKEN` của riêng script, không in), rồi chạy lần lượt `dry-run` các chủ trọ, `migrate` các chủ trọ, `rollback` chủ trọ đầu và `migrate` lại. Mỗi bước ghi báo cáo (chỉ số đếm và cờ) vào thư mục kết quả; cuối cùng tắt wrangler dev và xoá dữ liệu tạm. Lưu ý: `01-load.log` (thư mục kết quả) có thể chứa nguyên văn câu SQL, tức dữ liệu cá nhân; xoá hoặc che trước khi chia sẻ thư mục kết quả. Mã thoát khác 0 nếu bất kỳ bước nào `ok=false` hoặc API đọc khác nhau.
 
-Hình dạng kết quả mong đợi mỗi bước: dòng `<lệnh> chủ trọ #N: KHỚP`, bảng 9 dòng (D1 = kho, SHA khớp, `OK`), bảng theo tháng (tổng và số hoá đơn đã đóng khớp), `Tiền về bị hoãn đã ghi`, `Thời gian khoá ghi` (migrate/rollback), và `Các API đọc giống hệt nhau trước và sau.`
+Hình dạng kết quả mỗi bước (chỉ mang tính tham khảo, quan sát được chứ không cam kết): dòng `<lệnh> chủ trọ #N: KHỚP`, bảng 9 dòng (D1 = kho, SHA khớp, `OK`), bảng theo tháng (tổng và số hoá đơn đã đóng khớp), `Tiền về bị hoãn đã ghi`, `Thời gian khoá ghi` (migrate/rollback), và `Các API đọc giống hệt nhau trước và sau.`
 
 ### Kết quả lần diễn tập 19/11/2026 (bản sao lưu ngày 18/11, trước migration 0016)
 
@@ -84,6 +85,6 @@ Hình dạng kết quả mong đợi mỗi bước: dòng `<lệnh> chủ trọ 
 - D1: houses 3, house_rates 3, rooms 63, residents 69, invoices 352, meter_readings 352, payments 13, payment_gates 0, notifications 0.
 - Chủ trọ #4: houses 1, rooms 19, còn lại 0. Chủ trọ #1: houses 2, rooms 44, residents 69, invoices 352, meter_readings 352, payments 13 (8 tháng, 04/2026 đến 11/2026, tổng và số đã đóng khớp từng tháng).
 - Cả 6 bước (dry-run 4, dry-run 1, migrate 4, migrate 1, rollback 4, migrate 4 lần nữa) đều `ok=true`, SHA từng bảng khớp, API đọc trước/sau giống hệt; không có cảnh báo.
-- 13 khoản tiền chưa gắn nhà **có trong bản sao lưu** và cả 13 thuộc kho của chủ trọ #1 (nhà dùng tài khoản đuôi 1800); chủ trọ #4 nhận 0; không có khoản nào không khớp.
+- 13 khoản tiền chưa gắn nhà **có trong bản sao lưu** và cả 13 thuộc kho của chủ trọ #1 (khớp theo tài khoản ngân hàng của nhà); chủ trọ #4 nhận 0; không có khoản nào không khớp.
 - Thời gian: `dry-run` dưới 1 giây; mỗi `migrate`/`rollback` khoảng 15 đến 16 giây, trong đó khoá ghi 15,05 đến 15,22 giây (gần như toàn bộ là 15 giây drain; việc chép dữ liệu chỉ mất vài trăm mili giây trên dữ liệu cỡ này). Cả buổi diễn tập khoảng 1 phút 54 giây kể cả nạp dữ liệu và khởi động.
 - Lưu ý khi chạy lại local: `wrangler d1 execute --file` không nạp được trực tiếp bản export vì thứ tự bảng; script đã xử lý.
