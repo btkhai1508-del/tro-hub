@@ -5,6 +5,8 @@
 export interface TokenPayload {
   sub: number;
   kind: 'resident' | 'staff';
+  /** Resident tokens: the landlord (staff id) whose store holds the resident. */
+  tid?: number;
   iat: number;
   exp: number;
 }
@@ -21,10 +23,10 @@ function hmacKey(secret: string) {
   return crypto.subtle.importKey('raw', utf8(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
-export async function signToken(sub: number, kind: TokenPayload['kind'], secret: string): Promise<string> {
+export async function signToken(sub: number, kind: TokenPayload['kind'], secret: string, tid?: number): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(utf8(JSON.stringify({ alg: 'HS256', typ: 'JWT' })));
-  const body = b64url(utf8(JSON.stringify({ sub, kind, iat: now, exp: now + TOKEN_TTL_SECONDS })));
+  const body = b64url(utf8(JSON.stringify({ sub, kind, ...(tid === undefined ? {} : { tid }), iat: now, exp: now + TOKEN_TTL_SECONDS })));
   const signature = await crypto.subtle.sign('HMAC', await hmacKey(secret), utf8(`${header}.${body}`));
   return `${header}.${body}.${b64url(new Uint8Array(signature))}`;
 }
