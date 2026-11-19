@@ -605,7 +605,10 @@ export function AdminPortal() {
 
     // Periodic auto-polling for Google Sheet updates (every 8 seconds)
     const interval = setInterval(() => {
-      if (activeMenu === 'dashboard' || activeMenu === 'rooms' || activeMenu === 'billing') {
+      if (activeMenu === 'dashboard' || activeMenu === 'billing') {
+        // Money that arrives while the page is open shows as "Đã đóng" without a reload.
+        loadTabContent(activeMenu, selectedMonth, true);
+      } else if (activeMenu === 'rooms') {
         fetchRooms(selectedMonth, true);
       }
       loadPaymentGateStatus(selectedMonth);
@@ -737,10 +740,11 @@ export function AdminPortal() {
     }
   };
 
-  const loadTabContent = async (menuKey: string, month: string) => {
-    setAdminLoadError('');
+  // background: the 8-second refresh. No spinner, error banners stay as they are, and a failed refresh is silent.
+  const loadTabContent = async (menuKey: string, month: string, background = false) => {
+    if (!background) setAdminLoadError('');
     if (menuKey === 'dashboard') {
-      setIsLoading(true);
+      if (!background) setIsLoading(true);
       apiFetch(`/api/admin/dashboard?month=${month}`)
         .then(res => {
           const ct = res.headers.get('content-type') || '';
@@ -750,7 +754,7 @@ export function AdminPortal() {
         .then(d => {
           // A slower answer for a month the admin already left must not repaint the screen.
           if (month !== selectedMonthRef.current) return;
-          setIsLoading(false);
+          if (!background) setIsLoading(false);
           if (d.success && d.data) {
             setDashboardData((prev: any) => ({
               ...prev,
@@ -758,8 +762,8 @@ export function AdminPortal() {
             }));
           }
         })
-        .catch(() => { setIsLoading(false); setAdminLoadError('Chưa tải được tổng quan. Vui lòng thử lại.'); });
-      fetchRooms(month);
+        .catch(() => { if (background) return; setIsLoading(false); setAdminLoadError('Chưa tải được tổng quan. Vui lòng thử lại.'); });
+      fetchRooms(month, background);
     } else if (menuKey === 'rooms') {
       fetchRooms(month);
     } else if (menuKey === 'billing') {
@@ -773,9 +777,9 @@ export function AdminPortal() {
           // A slower answer for a month the admin already left must not repaint the screen.
           if (month !== selectedMonthRef.current) return;
           if (d.success && Array.isArray(d.billing)) setBillingList(d.billing);
-          else if (d.success === false) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
+          else if (d.success === false && !background) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
         })
-        .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
+        .catch(() => { if (!background) setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'); });
     } else if (menuKey === 'declaration') {
       loadDeclaration(month, declarationHouse);
     } else if (menuKey === 'config') {
