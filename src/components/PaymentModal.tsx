@@ -2,6 +2,7 @@ import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
 import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from './AppIcons';
 import { useApp, getTransferContent } from '../context/AppContext';
+import { getCurrentMonthStr } from '../lib/utils';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { IconWallet3D, IconSecurity3D } from './Icons3D';
@@ -39,7 +40,7 @@ export function PaymentModal() {
     return val.toLocaleString('vi-VN');
   };
 
-  const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || '10/2026', portal.payPrefix);
+  const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || getCurrentMonthStr(), portal.payPrefix);
   const bankAccount = portal.accountNo;
   const bankName = portal.bankName;
   const accountHolder = portal.accountName;

@@ -11,6 +11,7 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { apiFetch, setAuthToken, setWorkerToken, workerFetch } from '../lib/api';
 import { requestZaloLogin } from '../lib/zaloAuth';
 import { fetchAllResidentsFromSheet, fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
+import { getCurrentMonthStr } from '../lib/utils';
 
 export type PersonType = 'person1' | 'person2' | 'person3' | 'tenant';
 
@@ -251,7 +252,7 @@ export const authService = {
                 };
                 let invoices: Invoice[] = [];
                 try {
-                  const inv = await fetchMonthlyInvoicesFromSheet(effectiveSheetId, '10/2026', null, roomNum, matchedReg.phone || matchedReg.name);
+                  const inv = await fetchMonthlyInvoicesFromSheet(effectiveSheetId, getCurrentMonthStr(), null, roomNum, matchedReg.phone || matchedReg.name);
                   if (inv) invoices = [inv];
                 } catch {}
                 return {
@@ -326,7 +327,7 @@ export const authService = {
             // Attempt to load monthly invoices
             let invoices: Invoice[] = [];
             try {
-              const inv = await fetchMonthlyInvoicesFromSheet(effectiveSheetId, '10/2026', null, match.roomNumber, match.phone || match.name);
+              const inv = await fetchMonthlyInvoicesFromSheet(effectiveSheetId, getCurrentMonthStr(), null, match.roomNumber, match.phone || match.name);
               if (inv) invoices = [inv];
             } catch {}
 

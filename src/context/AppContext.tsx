@@ -38,7 +38,7 @@ export interface Invoice {
  * Nội dung chuyển khoản tiền trọ. Có payPrefix (số căn + số phòng từ Worker) thì dùng mã số XXXPPPMMYYYY,
  * ví dụ 005102112026; không thì dùng mã cũ theo tên phòng (webhook vẫn đọc được cả hai).
  */
-export function getTransferContent(roomNumber: string = '203', month: string = '10/2026', payPrefix?: string | null): string {
+export function getTransferContent(roomNumber: string = '203', month: string = getCurrentMonthStr(), payPrefix?: string | null): string {
   if (payPrefix && /^\d{6}$/.test(payPrefix)) {
     const [mm = '', yyyy = ''] = month.split('/');
     if (/^\d{1,2}$/.test(mm) && /^\d{4}$/.test(yyyy)) return `${payPrefix}${mm.padStart(2, '0')}${yyyy}`;
@@ -503,7 +503,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const cleanRoom = profile.room?.roomNumber || '';
         const cleanName = profile.name || '';
         if (cleanRoom && !profile.isAdmin) {
-          const directInvoice = await fetchMonthlyInvoicesFromSheet(sheetId, sheetConfig.monthlyTab || '10/2026', null, cleanRoom, profile.phone || cleanName);
+          const directInvoice = await fetchMonthlyInvoicesFromSheet(sheetId, sheetConfig.monthlyTab || getCurrentMonthStr(), null, cleanRoom, profile.phone || cleanName);
           if (directInvoice && sessionIdentity() === session) {
             setInvoices(prevInvoices => {
               const others = prevInvoices.filter(i => i.month !== directInvoice.month && i.id !== directInvoice.id);
@@ -525,7 +525,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const room = targetRoom || profile.room?.roomNumber;
     if (!room) return null;
     const currentSheetId = sheetConfig.spreadsheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
-    const month = targetMonth || sheetConfig.monthlyTab || '10/2026';
+    const month = targetMonth || sheetConfig.monthlyTab || getCurrentMonthStr();
     const session = sessionIdentity();
     return singleFlight(requestsRef.current, JSON.stringify(['payment', session, room, currentSheetId, month]), async () => {
     try {
@@ -944,7 +944,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const liveInv = await fetchMonthlyInvoicesFromSheet(
           currentSheetId,
-          sheetConfig.monthlyTab || '10/2026',
+          sheetConfig.monthlyTab || getCurrentMonthStr(),
           token,
           targetRoom,
           targetPhone
@@ -1030,7 +1030,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const roomNum = profile.room?.roomNumber || 'G02';
 
     const updatedInvoices = invoices.map(inv => {
-      if (inv.id === invoiceId || inv.month === (currentInv?.month || '10/2026')) {
+      if (inv.id === invoiceId || inv.month === (currentInv?.month || getCurrentMonthStr())) {
         return {
           ...inv,
           // Chờ xác nhận cho tới khi tiền về tài khoản (SePay) hoặc quản lý xác nhận.
@@ -1044,7 +1044,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     setInvoices(updatedInvoices);
-    const claimedMonth = currentInv?.month || '10/2026';
+    const claimedMonth = currentInv?.month || getCurrentMonthStr();
 
     // Call backend API to set Column P (GREEN for QR/transfer)
     apiFetch('/api/payment/mark-paid', {
@@ -1053,7 +1053,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         roomNumber: roomNum,
         method: 'qr',
         amount: currentInv?.total,
-        month: currentInv?.month || '10/2026',
+        month: currentInv?.month || getCurrentMonthStr(),
         transactionId: txnCode
       })
     })
