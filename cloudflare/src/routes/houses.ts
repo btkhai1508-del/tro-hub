@@ -136,7 +136,7 @@ export async function assignPayNumbers(env: Env, db: TenantDb, houseId?: string)
 }
 
 /** Fresh room and resident counts from the store into the directory. */
-async function refreshCounts(env: Env, db: TenantDb, houseId: string): Promise<void> {
+export async function refreshCounts(env: Env, db: TenantDb, houseId: string): Promise<void> {
   const n = await db
     .prepare(
       `SELECT (SELECT COUNT(*) FROM rooms WHERE house_id = ?1 AND deleted_at IS NULL) AS rooms,
