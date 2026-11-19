@@ -16,20 +16,24 @@ const ROUTES: [string, string][] = [
 ];
 
 describe('storageWarnings', () => {
-  const GB = 1073741824;
+  const GB = 1_000_000_000; // decimal: Cloudflare measures Durable Object storage in GB, not GiB
   const quiet = { owners: [{ name: 'A', sizeBytes: 1000 }, { name: 'B', sizeBytes: null }], totalBytes: 1000, rowsWrittenToday: 10 };
 
   it('không cảnh báo khi dùng ít', () => {
     expect(storageWarnings(quiet)).toEqual([]);
   });
+  it('giới hạn theo GB thập phân', () => {
+    expect(FREE_LIMITS.perStoreBytes).toBe(1_000_000_000);
+    expect(FREE_LIMITS.totalBytes).toBe(5_000_000_000);
+  });
   it('một kho từ 70% của 1 GB', () => {
-    expect(storageWarnings({ ...quiet, owners: [{ name: 'A', sizeBytes: 0.7 * GB }] })).toHaveLength(1);
-    expect(storageWarnings({ ...quiet, owners: [{ name: 'A', sizeBytes: 0.69 * GB }] })).toEqual([]);
+    expect(storageWarnings({ ...quiet, owners: [{ name: 'A', sizeBytes: 700_000_000 }] })).toHaveLength(1);
+    expect(storageWarnings({ ...quiet, owners: [{ name: 'A', sizeBytes: 699_999_999 }] })).toEqual([]);
     expect(storageWarnings({ ...quiet, owners: [{ name: 'Chủ A', sizeBytes: 0.9 * GB }] })[0]).toContain('Chủ A');
   });
   it('tổng dung lượng từ 70% của 5 GB', () => {
-    expect(storageWarnings({ ...quiet, totalBytes: 0.7 * 5 * GB })).toHaveLength(1);
-    expect(storageWarnings({ ...quiet, totalBytes: 0.69 * 5 * GB })).toEqual([]);
+    expect(storageWarnings({ ...quiet, totalBytes: 3_500_000_000 })).toHaveLength(1);
+    expect(storageWarnings({ ...quiet, totalBytes: 3_499_999_999 })).toEqual([]);
   });
   it('tổng dòng ghi hôm nay từ 70% của 100.000', () => {
     expect(storageWarnings({ ...quiet, rowsWrittenToday: 70_000 })).toHaveLength(1);

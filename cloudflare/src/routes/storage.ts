@@ -28,11 +28,11 @@ function reply(c: Context<App>, r: MigrationReport) {
   return c.json(r.ok ? { success: true, report: r } : { success: false, errorCode: r.errorCode, error: r.error, report: r }, status);
 }
 
-/** Cloudflare free-plan limits the page warns about. */
-export const FREE_LIMITS = { perStoreBytes: 1073741824, totalBytes: 5368709120, rowsWrittenPerDay: 100000 } as const;
+/** Cloudflare free-plan limits the page warns about. Durable Object storage is measured in decimal GB (1 GB = 1,000,000,000 bytes). */
+export const FREE_LIMITS = { perStoreBytes: 1_000_000_000, totalBytes: 5_000_000_000, rowsWrittenPerDay: 100000 } as const;
 const WARN_AT = 0.7;
 
-const mb = (n: number) => `${(n / 1048576).toFixed(n >= 1073741824 ? 0 : 1)} MB`;
+const mb = (n: number) => `${(n / 1_000_000).toFixed(n >= 1_000_000_000 ? 0 : 1)} MB`;
 
 /** Warnings (Vietnamese) when a store, the total size or today's writes reach 70% of the free plan. */
 export function storageWarnings(input: { owners: { name: string; sizeBytes: number | null }[]; totalBytes: number; rowsWrittenToday: number }): string[] {

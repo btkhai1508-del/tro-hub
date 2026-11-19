@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Check, ChevronDown, KeyRound, Landmark, Search, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Loader2, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
 import { vietQrUrl } from '../lib/paymentPortal';
@@ -395,7 +395,7 @@ interface StorageOwner {
 interface StorageOverview {
   owners: StorageOwner[]; totalBytes: number; rowsWrittenToday: number; warnings: string[];
   freeLimits: { perStoreBytes: number; totalBytes: number; rowsWrittenPerDay: number };
-  lastReconcile: { ranAt?: string; indexMismatches?: unknown[] } | null;
+  lastReconcile: { ranAt?: string; indexMismatches?: unknown[]; houseMismatches?: unknown[] } | null;
 }
 interface StorageReport {
   mode: 'dry-run' | 'migrate' | 'rollback'; ok: boolean; error?: string; warnings?: string[]; deferredReplayed?: number; lockedMs?: number;
@@ -410,7 +410,10 @@ const BACKEND_PILL: Record<Backend, { tone: 'gray' | 'green' | 'amber'; label: s
 };
 const ACTION_LABEL: Record<StorageAction, string> = { 'dry-run': 'Chạy thử', migrate: 'Chuyển', rollback: 'Quay lại', unlock: 'Mở khoá', 'clear-store': 'Xoá kho', export: 'Xuất dữ liệu' };
 
-const fmtBytes = (n: number) => (n >= 1073741824 ? `${(n / 1073741824).toFixed(2)} GB` : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+// Cloudflare measures Durable Object storage in decimal units (1 GB = 1,000,000,000 bytes).
+const fmtBytes = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(2)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);
+/** A confirming click counts only this long after arming, so a fast double click cannot arm and run in one go. */
+const CONFIRM_DELAY_MS = 700;
 
 function UsageBar({ label, value, text, limit }: { label: string; value: number; text: string; limit: number }) {
   const ratio = Math.min(1, value / limit);
@@ -434,6 +437,7 @@ function StorageCard() {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<{ ownerId: number; action: StorageAction } | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
+  const armedAt = useRef(0);
   const [reports, setReports] = useState<Record<number, { report: StorageReport | null; error?: string }>>({});
 
   const load = useCallback(async () => {
@@ -443,7 +447,7 @@ function StorageCard() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // The first click of a dangerous button arms it for 5 seconds; the second click inside that time runs it.
+  // The first click of a dangerous button arms it for 5 seconds; a second click after 0.7 s and inside that time runs it.
   useEffect(() => {
     if (!armed) return;
     const t = setTimeout(() => setArmed(null), 5000);
@@ -469,7 +473,13 @@ function StorageCard() {
 
   const run = async (o: StorageOwner, action: StorageAction, needConfirm = false) => {
     if (busy) return;
-    if (needConfirm && armed !== `${o.ownerId}:${action}`) return setArmed(`${o.ownerId}:${action}`);
+    if (needConfirm) {
+      if (armed !== `${o.ownerId}:${action}`) {
+        armedAt.current = Date.now();
+        return setArmed(`${o.ownerId}:${action}`);
+      }
+      if (Date.now() - armedAt.current < CONFIRM_DELAY_MS) return; // too soon: still the first click of a double click
+    }
     setArmed(null);
     setNotice(null);
     setBusy({ ownerId: o.ownerId, action });
@@ -510,7 +520,7 @@ function StorageCard() {
           )}
           {data.lastReconcile?.ranAt && (
             <p className="text-[12px] kit-text-secondary">
-              Đối soát gần nhất: {new Date(data.lastReconcile.ranAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} · {data.lastReconcile.indexMismatches?.length ?? 0} lệch
+              Đối soát gần nhất: {new Date(data.lastReconcile.ranAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} · {(data.lastReconcile.indexMismatches?.length ?? 0) + (data.lastReconcile.houseMismatches?.length ?? 0)} lệch
             </p>
           )}
         </div>
