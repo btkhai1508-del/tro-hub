@@ -6,6 +6,8 @@ import type { Context, Hono } from 'hono';
 import { actorOf, audit, type App } from '../app.ts';
 import { getStorage, newOwnerBackend } from '../central/directory.ts';
 import { clearStore, migrateOwner, rollbackOwner, unlockOwner, type MigrationErrorCode, type MigrationReport } from '../migrate/tenant.ts';
+import { ownerRowsFromD1 } from '../migrate/digest.ts';
+import { TENANT_TABLES } from '../tenant/schema.ts';
 import { tenantStub } from '../tenant/route.ts';
 import type { TenantInfo } from '../tenant/store.ts';
 
@@ -26,6 +28,29 @@ function reply(c: Context<App>, r: MigrationReport) {
   return c.json(r.ok ? { success: true, report: r } : { success: false, errorCode: r.errorCode, error: r.error, report: r }, status);
 }
 
+/** Cloudflare free-plan limits the page warns about. */
+export const FREE_LIMITS = { perStoreBytes: 1073741824, totalBytes: 5368709120, rowsWrittenPerDay: 100000 } as const;
+const WARN_AT = 0.7;
+
+const mb = (n: number) => `${(n / 1048576).toFixed(n >= 1073741824 ? 0 : 1)} MB`;
+
+/** Warnings (Vietnamese) when a store, the total size or today's writes reach 70% of the free plan. */
+export function storageWarnings(input: { owners: { name: string; sizeBytes: number | null }[]; totalBytes: number; rowsWrittenToday: number }): string[] {
+  const out: string[] = [];
+  for (const o of input.owners) {
+    if (o.sizeBytes !== null && o.sizeBytes >= WARN_AT * FREE_LIMITS.perStoreBytes) {
+      out.push(`Kho của ${o.name} đã dùng ${Math.round((o.sizeBytes / FREE_LIMITS.perStoreBytes) * 100)}% giới hạn 1 GB của gói miễn phí.`);
+    }
+  }
+  if (input.totalBytes >= WARN_AT * FREE_LIMITS.totalBytes) {
+    out.push(`Tổng dung lượng các kho là ${mb(input.totalBytes)}, đã dùng ${Math.round((input.totalBytes / FREE_LIMITS.totalBytes) * 100)}% giới hạn 5 GB của gói miễn phí.`);
+  }
+  if (input.rowsWrittenToday >= WARN_AT * FREE_LIMITS.rowsWrittenPerDay) {
+    out.push(`Hôm nay đã ghi ${input.rowsWrittenToday.toLocaleString('en-US')} dòng, đã dùng ${Math.round((input.rowsWrittenToday / FREE_LIMITS.rowsWrittenPerDay) * 100)}% giới hạn 100.000 dòng/ngày của gói miễn phí.`);
+  }
+  return out;
+}
+
 export function registerStorage(app: Hono<App>): void {
   /** One row per landlord: the switch, the lock, and (for those on their own store) the store's own numbers. */
   app.get('/api/dev/storage', async (c) => {
@@ -34,14 +59,31 @@ export function registerStorage(app: Hono<App>): void {
          FROM staff s WHERE s.role = 'owner' ORDER BY s.id`
     ).all<{ id: number; full_name: string; phone: string; houses: number }>();
     const owners = [];
+    const failed: string[] = [];
     for (const o of results) {
       const st = await getStorage(c.env.DB, o.id);
       const note = (await c.env.DB.prepare(`SELECT note, changed_at FROM tenant_storage WHERE owner_id = ?`).bind(o.id).first<{ note: string | null; changed_at: string | null }>()) ?? null;
       let store: TenantInfo | null = null;
-      if (st.backend !== 'd1') store = await tenantStub(c.env, o.id).info().catch(() => null); // never wake a store that is not in use
-      owners.push({ ownerId: o.id, name: o.full_name, phone: o.phone, houses: o.houses, backend: st.backend, lockExpiresAt: st.lockExpiresAt, migratedAt: st.migratedAt, note: note?.note ?? null, changedAt: note?.changed_at ?? null, store });
+      // Only a landlord on their own store is asked; one failing store never fails the list.
+      if (st.backend === 'do') {
+        store = await tenantStub(c.env, o.id).info().catch(() => null);
+        if (!store) failed.push(`Không đọc được kho của ${o.full_name}.`);
+      }
+      owners.push({
+        ownerId: o.id, name: o.full_name, phone: o.phone, houses: o.houses, backend: st.backend, lockExpiresAt: st.lockExpiresAt,
+        migratedAt: st.migratedAt, note: note?.note ?? null, changedAt: note?.changed_at ?? null,
+        sizeBytes: store?.sizeBytes ?? null, rowsWrittenToday: store?.rowsWrittenToday ?? null, lastWriteAt: store?.lastWriteAt ?? null, store,
+      });
     }
-    return c.json({ success: true, newOwnerBackend: await newOwnerBackend(c.env.DB), owners });
+    const totalBytes = owners.reduce((n, o) => n + (o.sizeBytes ?? 0), 0);
+    const rowsWrittenToday = owners.reduce((n, o) => n + (o.rowsWrittenToday ?? 0), 0);
+    let lastReconcile: unknown = null;
+    const lr = await c.env.DB.prepare(`SELECT value FROM settings WHERE key = 'last_reconcile'`).first<{ value: string }>();
+    if (lr) { try { lastReconcile = JSON.parse(lr.value); } catch { lastReconcile = null; } }
+    return c.json({
+      success: true, newOwnerBackend: await newOwnerBackend(c.env.DB), owners, totalBytes, rowsWrittenToday, freeLimits: FREE_LIMITS,
+      warnings: [...failed, ...storageWarnings({ owners, totalBytes, rowsWrittenToday })], lastReconcile,
+    });
   });
 
   const run = (action: 'dry-run' | 'migrate' | 'rollback') => async (c: Context<App>) => {
@@ -72,5 +114,37 @@ export function registerStorage(app: Hono<App>): void {
     await audit(c, actorOf(c.get('viewer')), r.ok ? 'storage_unlock' : 'storage_unlock_refused', null, `staff:${ownerId}`);
     if (!r.ok) return c.json({ success: false, errorCode: 'NOT_LOCKED', error: r.error }, 409);
     return c.json({ success: true, backend: r.backend, replayed: r.replayed });
+  });
+
+  /** Everything one landlord has, as a JSON download (their own rows only). */
+  app.get('/api/dev/storage/:ownerId/export', async (c) => {
+    const ownerId = Number(c.req.param('ownerId'));
+    const owner = Number.isInteger(ownerId) && ownerId > 0
+      ? await c.env.DB.prepare(`SELECT id FROM staff WHERE id = ? AND role = 'owner'`).bind(ownerId).first()
+      : null;
+    if (!owner) return c.json({ success: false, errorCode: 'LANDLORD_NOT_FOUND', error: 'Không tìm thấy chủ trọ.' }, 404);
+    const { backend } = await getStorage(c.env.DB, ownerId);
+    if (backend === 'migrating') return c.json({ success: false, errorCode: 'TENANT_MIGRATING', error: 'Đang chuyển dữ liệu, thử lại sau ít phút.' }, 409);
+    const PAGE = 500;
+    const tables: Record<string, unknown[]> = {};
+    for (const t of TENANT_TABLES) {
+      const all: unknown[] = [];
+      for (let offset = 0; ; offset += PAGE) {
+        let rows: unknown[];
+        if (backend === 'do') {
+          const page = await tenantStub(c.env, ownerId).exportTable(t.name, offset, PAGE);
+          if (!page.ok) return c.json({ success: false, errorCode: 'EXPORT_FAILED', error: 'Chưa đọc được dữ liệu từ kho riêng.' }, 500);
+          rows = page.rows;
+        } else rows = await ownerRowsFromD1(c.env, ownerId, t, offset, PAGE);
+        all.push(...rows);
+        if (rows.length < PAGE) break;
+      }
+      tables[t.name] = all;
+    }
+    await audit(c, actorOf(c.get('viewer')), 'storage_export', null, `staff:${ownerId}`);
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return new Response(JSON.stringify({ ownerId, exportedAt: new Date().toISOString(), tables }), {
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="tro-hub-chu-tro-${ownerId}-${stamp}.json"` },
+    });
   });
 }
