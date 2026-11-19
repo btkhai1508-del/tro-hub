@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import type { Env } from '../app.ts';
 import { TENANT_MIGRATIONS, TENANT_TABLES, type SqlValue } from './schema.ts';
 
 export interface SqlOp {
@@ -35,8 +36,8 @@ function tableDef(table: string) {
 }
 
 /** One landlord's data: a Durable Object with its own SQLite database, named `owner:<staff.id>`. */
-export class TenantStore extends DurableObject {
-  constructor(ctx: DurableObjectState, env: Cloudflare.Env) {
+export class TenantStore extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     void ctx.blockConcurrencyWhile(async () => this.migrate());
   }

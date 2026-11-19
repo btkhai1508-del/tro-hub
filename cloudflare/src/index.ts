@@ -9,35 +9,12 @@ import {
 } from './sheetSync.ts';
 import { decryptText } from './cccd.ts';
 import { checkSepayState, disconnectSepay, finishSepayConnect, sepayConfigured, sepayConnectUrl, sepayRedirectUri, syncSepay } from './sepayOauth.ts';
+import {
+  actorOf, audit, developerOnly, fail, isDeveloper, isOwner, ownerOnly, requireHouse, staffOnly,
+  type App, type Env, type StaffRole, type Viewer,
+} from './app.ts';
 
 export { TenantStore } from './tenant/store.ts';
-import type { TenantStore } from './tenant/store.ts';
-
-interface Env {
-  DB: D1Database;
-  TENANT: DurableObjectNamespace<TenantStore>;
-  JWT_SECRET: string;
-  CCCD_KEY: string;
-  GOOGLE_CLIENT_ID?: string;
-  GOOGLE_CLIENT_SECRET?: string;
-  ZALO_CHECKOUT_ACCOUNT?: string; // "<bin>:<số tài khoản>" đã đăng ký với Zalo Checkout
-  ALLOWED_ORIGINS?: string; // comma-separated, e.g. "http://localhost:3000,https://tro-hub.pages.dev"
-  SEPAY_OAUTH_CLIENT_ID?: string; // ứng dụng OAuth của Trọ Hub trên SePay (secret)
-  SEPAY_OAUTH_CLIENT_SECRET?: string; // (secret)
-  SEPAY_OAUTH_BASE?: string; // mặc định https://my.sepay.vn; trỏ sang mock khi thử trên máy
-  SEPAY_WEBHOOK_ORIGIN?: string; // địa chỉ public SePay gửi webhook về, nếu khác địa chỉ Worker
-  SHEET_WRITES?: string; // 'off': không tô cột P / không ghi cổng thanh toán sang Apps Script (chạy thử trên máy)
-  EXPRESS_ORIGIN?: string; // server Express còn chạy giặt sấy, mặc định https://tro-hub.onrender.com
-}
-
-/** Who is calling, read fresh from D1 on every request. */
-type Viewer =
-  | { kind: 'resident'; id: number; name: string; phone: string | null; houseId: string; roomId: number | null; roomName: string | null }
-  | { kind: 'staff'; id: number; name: string; phone: string; role: StaffRole; houseIds: string[] };
-
-type StaffRole = 'developer' | 'owner' | 'manager';
-
-type App = { Bindings: Env; Variables: { viewer: Viewer } };
 
 const app = new Hono<App>();
 
@@ -45,15 +22,6 @@ app.use('/api/*', (c, next) => {
   const allowed = (c.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
   return cors({ origin: allowed, allowHeaders: ['Content-Type', 'Authorization'], maxAge: 86400 })(c, next); // maxAge: không gửi lại OPTIONS mỗi lần app hỏi trạng thái
 });
-
-const fail = (c: Context, status: 400 | 401 | 403 | 404, errorCode: string, error: string) =>
-  c.json({ success: false, errorCode, error }, status);
-
-async function audit(c: Context<App>, actor: string, action: string, houseId: string | null = null, target: string | null = null) {
-  await c.env.DB.prepare('INSERT INTO audit_log (actor, action, house_id, target, ip) VALUES (?, ?, ?, ?, ?)')
-    .bind(actor, action, houseId, target, c.req.header('CF-Connecting-IP') ?? null)
-    .run();
-}
 
 /**
  * Who the token belongs to, read fresh from D1. issuedAt (the token's iat) must not be older than
@@ -95,28 +63,6 @@ async function requireAuth(c: Context<App>, next: Next) {
   c.set('viewer', viewer);
   await next();
 }
-
-const actorOf = (v: Viewer) => `${v.kind}:${v.id}`;
-/** Admin Tổng: owns their houses, sets their bank accounts, sees their summary and creates Admin căn. */
-const isOwner = (v: Viewer) => v.kind === 'staff' && v.role === 'owner';
-
-function canAccessHouse(viewer: Viewer, houseId: string) {
-  return viewer.kind === 'resident' ? viewer.houseId === houseId : viewer.houseIds.includes(houseId);
-}
-
-/** Every route under /api/houses/:houseId goes through here: the house comes from the URL, the right to see it from D1. */
-async function requireHouse(c: Context<App>, next: Next) {
-  const viewer = c.get('viewer');
-  const houseId = c.req.param('houseId') ?? '';
-  if (!canAccessHouse(viewer, houseId)) {
-    await audit(c, actorOf(viewer), 'house_access_denied', houseId);
-    return fail(c, 403, 'HOUSE_FORBIDDEN', 'Bạn không có quyền xem nhà trọ này.');
-  }
-  await next();
-}
-
-const staffOnly = async (c: Context<App>, next: Next) =>
-  c.get('viewer').kind === 'staff' ? next() : fail(c, 403, 'STAFF_ONLY', 'Chỉ quản lý mới dùng được chức năng này.');
 
 app.post('/api/auth/login', async (c) => {
   const body = await c.req.json<{ phone?: string; password?: string }>().catch(() => ({}) as { phone?: string; password?: string });
@@ -577,9 +523,6 @@ app.get('/api/payments/unassigned', async (c) => {
 });
 
 /** Each Admin Tổng links their own Google account; their houses' Sheets live in their Drive. */
-const ownerOnly = async (c: Context<App>, next: Next) =>
-  isOwner(c.get('viewer')) ? next() : fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng dùng được chức năng này.');
-
 app.use('/api/google/status', requireAuth, ownerOnly);
 app.get('/api/google/status', async (c) => {
   const row = await c.env.DB.prepare(`SELECT account, updated_at FROM integrations WHERE name = ?`)
@@ -1045,10 +988,6 @@ async function settleRent(env: Env, houseId: string, room: string, month: string
 // creates houses with their floors and rooms for a landlord, and picks which admin tools (tiện ích)
 // each house pays for.
 // ---------------------------------------------------------------------------
-
-const isDeveloper = (v: Viewer) => v.kind === 'staff' && v.role === 'developer';
-const developerOnly = async (c: Context<App>, next: Next) =>
-  isDeveloper(c.get('viewer')) ? next() : fail(c, 403, 'DEVELOPER_ONLY', 'Chỉ Developer dùng được chức năng này.');
 
 app.use('/api/dev/*', requireAuth, developerOnly);
 
