@@ -20,7 +20,7 @@ export function tenantStub(env: Env, ownerId: number, opts: { dryRun?: boolean }
 
 export async function tenantOfOwner(env: Env, ownerId: number): Promise<TenantDb> {
   const { backend } = await getStorage(env.DB, ownerId);
-  if (backend === 'do') return remoteTenantDb(tenantStub(env, ownerId));
+  if (backend === 'do') return remoteTenantDb(tenantStub(env, ownerId), `owner:${ownerId}`);
   if (backend === 'migrating') return readOnlyDb(env.DB); // reads still come from D1; writes answer 503
   return env.DB;
 }

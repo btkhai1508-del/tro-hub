@@ -8,7 +8,7 @@
  * Sheet được mở công khai ở chế độ xem, nên đọc bằng bản xuất CSV, không cần đăng nhập Google.
  */
 
-import { isReadOnly, type TenantDb, type TenantStatement } from './tenant/db.ts';
+import { isReadOnly, tenantLabel, type TenantDb, type TenantStatement } from './tenant/db.ts';
 
 export const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec';
@@ -187,6 +187,7 @@ export async function syncMonthFromSheet(central: D1Database, tenant: TenantDb, 
   return result;
 }
 
+// Keyed by tenantLabel + month.
 const syncing = new Map<string, Promise<SyncResult | null>>();
 
 /**
@@ -198,12 +199,14 @@ export async function ensureMonthFresh(central: D1Database, tenant: TenantDb, mo
   if (isReadOnly(tenant)) return null;
   const last = await central.prepare(`SELECT value FROM settings WHERE key = ?`).bind(`legacy_sync:${month}`).first<{ value: string }>();
   if (last && Date.now() - Date.parse(last.value) < maxAgeMs) return null;
-  let job = syncing.get(month);
+  // One job per landlord's database and month: another landlord's no-op read must not stand in for this one.
+  const key = `${tenantLabel(tenant)}/${month}`;
+  let job = syncing.get(key);
   if (!job) {
     job = syncMonthFromSheet(central, tenant, month)
       .catch((err) => { console.warn('[sheetSync]', month, err); return null; })
-      .finally(() => syncing.delete(month));
-    syncing.set(month, job);
+      .finally(() => syncing.delete(key));
+    syncing.set(key, job);
   }
   return job;
 }

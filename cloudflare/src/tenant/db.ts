@@ -74,7 +74,10 @@ class RemoteStatement implements TenantStatement {
 }
 
 class RemoteTenantDb implements TenantDb {
-  constructor(private readonly stub: DurableObjectStub<TenantStore>) {}
+  constructor(
+    private readonly stub: DurableObjectStub<TenantStore>,
+    readonly label: string,
+  ) {}
 
   /** One RPC to the store; a SQL error comes back as a value and is rethrown here with its message. */
   async send(ops: SqlOp[], atomic: boolean): Promise<SqlResult[]> {
@@ -100,8 +103,13 @@ class RemoteTenantDb implements TenantDb {
 }
 
 /** A landlord's own store behind the D1-shaped API. */
-export function remoteTenantDb(stub: DurableObjectStub<TenantStore>): TenantDb {
-  return new RemoteTenantDb(stub);
+export function remoteTenantDb(stub: DurableObjectStub<TenantStore>, label = 'store'): TenantDb {
+  return new RemoteTenantDb(stub, label);
+}
+
+/** Which database this is, for keys that must not mix landlords: 'd1' for the shared D1, `owner:<id>` for a store. */
+export function tenantLabel(db: TenantDb): string {
+  return db instanceof RemoteTenantDb ? db.label : 'd1';
 }
 
 class ReadOnlyStatement implements TenantStatement {
