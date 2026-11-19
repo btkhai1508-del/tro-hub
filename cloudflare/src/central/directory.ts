@@ -168,10 +168,11 @@ export async function getStorage(
   ownerId: number,
   now: number = Date.now()
 ): Promise<{ backend: Backend; lockExpiresAt: number | null; migratedAt: string | null }> {
-  // Compare-and-set: an expired lock flips back to d1 in a single statement.
+  // Compare-and-set: an expired lock flips back in a single statement: to d1, except a rollback lock
+  // (note = 'rollback', taken while the landlord's store is still the truth) which goes back to do.
   await db
     .prepare(
-      `UPDATE tenant_storage SET backend = 'd1', lock_expires_at = NULL, changed_at = datetime('now')
+      `UPDATE tenant_storage SET backend = CASE WHEN note = 'rollback' THEN 'do' ELSE 'd1' END, lock_expires_at = NULL, changed_at = datetime('now')
        WHERE owner_id = ? AND backend = 'migrating' AND lock_expires_at < ?`
     )
     .bind(ownerId, now)
@@ -189,16 +190,22 @@ export async function newOwnerBackend(db: D1Database): Promise<'d1' | 'do'> {
   return row?.value === 'do' ? 'do' : 'd1';
 }
 
-/** Switch a landlord's backend. With `expect`, only changes when the current value matches (returns false otherwise). */
+/**
+ * Switch a landlord's backend. With `expect`, only changes when the current value matches (returns false otherwise).
+ * With `ownedLock` (the lock_expires_at a migration got when it took the lock), it also requires that this very
+ * lock is still held and has not run out, so a run whose lock expired or was unlocked can never flip the switch.
+ * `lockUntil` fixes the exact expiry of a new lock, so its taker knows its own `ownedLock` without reading it back.
+ */
 export async function setStorage(
   db: D1Database,
   ownerId: number,
   backend: Backend,
-  opts: { expect?: Backend; lockMinutes?: number; note?: string } = {}
+  opts: { expect?: Backend; lockMinutes?: number; note?: string; ownedLock?: number; lockUntil?: number; keepMigratedAt?: boolean } = {}
 ): Promise<boolean> {
   // Every migrating row gets an expiry (default 10 minutes), so a lock can never be stuck forever.
-  const lock = backend === 'migrating' ? Date.now() + (opts.lockMinutes ?? 10) * 60_000 : null;
-  const migratedAt = backend === 'do' ? new Date().toISOString() : null;
+  const now = Date.now();
+  const lock = backend === 'migrating' ? opts.lockUntil ?? now + (opts.lockMinutes ?? 10) * 60_000 : null;
+  const migratedAt = backend === 'do' && !opts.keepMigratedAt ? new Date().toISOString() : null;
   const note = opts.note ?? null;
   // A landlord without a row is on d1: materialise it so the guarded update below has something to match.
   if (!opts.expect || opts.expect === 'd1') {
@@ -211,9 +218,10 @@ export async function setStorage(
     .prepare(
       `UPDATE tenant_storage SET backend = ?2, lock_expires_at = ?3, changed_at = datetime('now'),
          migrated_at = COALESCE(?4, migrated_at), note = COALESCE(?5, note)
-       WHERE owner_id = ?1 AND (?6 IS NULL OR backend = ?6)`
+       WHERE owner_id = ?1 AND (?6 IS NULL OR backend = ?6)
+         AND (?7 IS NULL OR (lock_expires_at = ?7 AND lock_expires_at > ?8))`
     )
-    .bind(ownerId, backend, lock, migratedAt, note, opts.expect ?? null)
+    .bind(ownerId, backend, lock, migratedAt, note, opts.expect ?? null, opts.ownedLock ?? null, now)
     .run();
   return (res.meta.changes ?? 0) > 0;
 }

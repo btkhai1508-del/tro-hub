@@ -112,13 +112,17 @@ describe('TenantStore', () => {
   it('importRows / exportTable xếp theo khoá chính, giữ id', async () => {
     const stub = fresh();
     const house = { id: 'H', name: 'n', abbreviation: 'a', address_detail: 'd', ward: 'w', province: 'p', landlord_name: 'l', landlord_phone: '0' };
-    expect(await stub.importRows('houses', [house])).toBe(1);
+    expect(await stub.importRows('houses', [house])).toEqual({ ok: true, count: 1 });
     const rooms = [30, 10, 20].map((id) => ({ id, house_id: 'H', name: `R${id}` }));
-    expect(await stub.importRows('rooms', rooms)).toBe(3);
+    expect(await stub.importRows('rooms', rooms)).toEqual({ ok: true, count: 3 });
     const out = await stub.exportTable('rooms', 1, 2);
-    expect(out.map((r) => r.id)).toEqual([20, 30]);
-    await expect(direct(stub, (s) => s.importRows('nope', []))).rejects.toThrow();
-    await expect(direct(stub, (s) => s.exportTable('meta', 0, 1))).rejects.toThrow();
+    expect(out.ok && out.rows.map((r) => r.id)).toEqual([20, 30]);
+    // Errors come back as values (a thrown error would be an uncaught exception across the RPC boundary).
+    expect(await stub.importRows('nope', [])).toMatchObject({ ok: false, error: expect.stringContaining('Unknown tenant table') });
+    expect(await stub.exportTable('meta', 0, 1)).toMatchObject({ ok: false });
+    expect(await stub.digest('meta')).toMatchObject({ ok: false });
+    expect(await stub.importRows('rooms', [{ id: 10, house_id: 'H', name: 'dup' }])).toMatchObject({ ok: false, error: expect.stringMatching(/UNIQUE/) });
+    expect(await stub.importRows('rooms', [{ id: 77, house_id: 'NOPE', name: 'fk' }])).toMatchObject({ ok: false });
   });
 
   it('reset xoá dữ liệu, giữ lược đồ', async () => {

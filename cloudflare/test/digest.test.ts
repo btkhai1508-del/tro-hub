@@ -106,12 +106,13 @@ describe('ownerRowsFromD1 and store digest', () => {
     for (const t of TENANT_TABLES) {
       const rows = await exportAll(1, t);
       expect(rows.length, t.name).toBeGreaterThan(0);
-      for (let i = 0; i < rows.length; i += 200) await stub.importRows(t.name, rows.slice(i, i + 200));
+      for (let i = 0; i < rows.length; i += 200) expect(await stub.importRows(t.name, rows.slice(i, i + 200))).toEqual({ ok: true, count: rows.slice(i, i + 200).length });
       const d = await stub.digest(t.name);
+      if (!d.ok) throw new Error(d.error);
       expect(d.count, t.name).toBe(rows.length);
       expect(d.sha256, t.name).toBe(await digestRows(rows, t.pk));
       // No type drift across the RPC boundary: exported rows are identical, value for value.
-      expect(await stub.exportTable(t.name, 0, 1000), t.name).toEqual(rows);
+      expect(await stub.exportTable(t.name, 0, 1000), t.name).toEqual({ ok: true, rows });
     }
   });
 
@@ -128,7 +129,7 @@ describe('ownerRowsFromD1 and store digest', () => {
     const rows = await exportAll(1, TENANT_TABLES[2]);
     await stub.importRows('rooms', rows);
     await stub.query([{ sql: `UPDATE rooms SET name = name || ' ' WHERE id = 900`, params: [], mode: 'run' }], false);
-    expect((await stub.digest('rooms')).sha256).not.toBe(await digestRows(rows, ['id']));
+    expect(await stub.digest('rooms')).toMatchObject({ ok: true, sha256: expect.not.stringMatching(await digestRows(rows, ['id'])) });
   });
 
   it('AUTOINCREMENT: after import with explicit ids, an INSERT without id gets max id + 1', async () => {
@@ -160,9 +161,7 @@ describe('ownerRowsFromD1 and store digest', () => {
       province: null, plate_number: null, vehicle_type: null, emergency_name: null, emergency_relation: null, emergency_phone: null,
       status: 'approved', move_in_date: null, move_out_date: null, created_at: '2026-01-01', deleted_at: null, password_changed_at: null, room_id: null,
     }));
-    expect(await stub.importRows('residents', rows)).toBe(200);
-    const d = await stub.digest('residents');
-    expect(d.count).toBe(200);
-    expect(d.sha256).toBe(await digestRows(rows, ['id']));
+    expect(await stub.importRows('residents', rows)).toEqual({ ok: true, count: 200 });
+    expect(await stub.digest('residents')).toEqual({ ok: true, count: 200, sha256: await digestRows(rows, ['id']) });
   });
 });

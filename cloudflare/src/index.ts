@@ -11,6 +11,7 @@ import { registerRent } from './routes/rent.ts';
 import { registerIntegrations } from './routes/integrations.ts';
 import { registerBilling } from './routes/billing.ts';
 import { registerSepay } from './routes/sepay.ts';
+import { registerStorage } from './routes/storage.ts';
 
 export { TenantStore } from './tenant/store.ts';
 
@@ -32,6 +33,7 @@ registerPeople(app);
 registerRent(app);
 registerBilling(app);
 registerSepay(app);
+registerStorage(app); // after registerHouses: /api/dev/* is Developer-only there
 registerNotifications(app);
 
 app.notFound((c) => fail(c, 404, 'NOT_FOUND', 'Không tìm thấy.'));

@@ -22,6 +22,9 @@ export interface SqlResult {
  */
 export type QueryResult = { ok: true; results: SqlResult[] } | { ok: false; error: string };
 
+/** Result of the copy methods (importRows / exportTable / digest): errors come back as values, as with query(). */
+export type Outcome<T extends object> = ({ ok: true } & T) | { ok: false; error: string };
+
 export interface TenantInfo {
   ownerId: number | null;
   schemaVersion: number;
@@ -118,36 +121,54 @@ export class TenantStore extends DurableObject<Env> {
     return error === null ? { ok: true, results: out } : { ok: false, error };
   }
 
-  async importRows(table: string, rows: Record<string, SqlValue>[]): Promise<number> {
-    tableDef(table);
-    let written = 0;
-    this.ctx.storage.transactionSync(() => {
-      for (const row of rows) {
-        const cols = Object.keys(row);
-        if (!cols.every((c) => IDENT_RE.test(c))) throw new Error(`Invalid column name in ${table}`);
-        const cur = this.sql(
-          `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
-          ...cols.map((c) => row[c]),
-        );
-        written += cur.rowsWritten;
-      }
-      if (rows.length) this.touch(written);
+  /**
+   * Insert rows (explicit ids kept) in one transaction. Like query(), a SQL error comes back as a value:
+   * thrown errors cross the RPC boundary as uncaught exceptions, and the migration treats any failure as fatal.
+   */
+  async importRows(table: string, rows: Record<string, SqlValue>[]): Promise<Outcome<{ count: number }>> {
+    return this.guard(() => {
+      tableDef(table);
+      let written = 0;
+      this.ctx.storage.transactionSync(() => {
+        for (const row of rows) {
+          const cols = Object.keys(row);
+          if (!cols.every((c) => IDENT_RE.test(c))) throw new Error(`Invalid column name in ${table}`);
+          const cur = this.sql(
+            `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+            ...cols.map((c) => row[c]),
+          );
+          written += cur.rowsWritten;
+        }
+        if (rows.length) this.touch(written);
+      });
+      return { count: rows.length };
     });
-    return rows.length;
   }
 
-  async exportTable(table: string, offset: number, limit: number): Promise<Record<string, SqlValue>[]> {
-    const def = tableDef(table);
-    return this.sql(`SELECT * FROM ${table} ORDER BY ${def.pk.join(', ')} LIMIT ? OFFSET ?`, limit, offset).toArray() as Record<
-      string,
-      SqlValue
-    >[];
+  async exportTable(table: string, offset: number, limit: number): Promise<Outcome<{ rows: Record<string, SqlValue>[] }>> {
+    return this.guard(() => {
+      const def = tableDef(table);
+      const rows = this.sql(`SELECT * FROM ${table} ORDER BY ${def.pk.join(', ')} LIMIT ? OFFSET ?`, limit, offset).toArray() as Record<string, SqlValue>[];
+      return { rows };
+    });
   }
 
-  async digest(table: string): Promise<{ count: number; sha256: string }> {
-    const def = tableDef(table);
-    const rows = this.sql(`SELECT * FROM ${table}`).toArray() as Record<string, SqlValue>[];
-    return { count: rows.length, sha256: await digestRows(rows, def.pk) };
+  async digest(table: string): Promise<Outcome<{ count: number; sha256: string }>> {
+    try {
+      const def = tableDef(table);
+      const rows = this.sql(`SELECT * FROM ${table}`).toArray() as Record<string, SqlValue>[];
+      return { ok: true, count: rows.length, sha256: await digestRows(rows, def.pk) };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  private guard<T extends object>(fn: () => T): Outcome<T> {
+    try {
+      return { ok: true, ...fn() };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 
   async info(): Promise<TenantInfo> {
