@@ -7,10 +7,24 @@ Tài liệu này dành cho người vận hành (Developer). Mỗi chủ trọ c
 1. `npm test`, `npx tsc --noEmit`, `npx tsc --noEmit -p test` (trong `cloudflare/`) đều xanh.
 2. `npx wrangler deploy --dry-run` chạy được.
 3. Đã **diễn tập** (mục dưới) trên bản sao lưu D1 mới nhất và mọi bước đều đạt.
-4. Đã sao lưu D1 production ngay trước khi áp migration (`wrangler d1 export`), cất ở nơi riêng tư, ngoài repo.
-5. Áp migration (0016 trở đi) lên production rồi mới deploy Worker; mọi chủ trọ vẫn ở `d1` cho đến khi bạn chạy `migrate`.
-6. Chọn giờ ít người dùng cho từng lần `migrate`: ghi bị chặn khoảng 15–20 giây.
-7. Có sẵn token Developer trong biến môi trường (xem bên dưới); không dán token vào lệnh, không ghi vào log.
+4. Đã sao lưu D1 production ngay trước khi áp migration (`npx wrangler d1 export <DATABASE_NAME> --remote --output <file.sql>`), cất ở nơi riêng tư, ngoài repo.
+5. Xem các migration còn thiếu trên production: `npx wrangler d1 migrations list <DATABASE_NAME> --remote` (chỉ liệt kê, không áp).
+6. Áp migration (0016 trở đi) lên production rồi **deploy Worker ngay sau đó** (làm liền hai bước, không để cách nhau lâu); mọi chủ trọ vẫn ở `d1` cho đến khi bạn chạy `migrate`. Xem mục "Cửa sổ giữa migration và deploy" bên dưới.
+7. Ngay sau khi deploy chạy `dry-run` một chủ trọ trên production (`node scripts/migrate-tenant.mts dry-run <ownerId> --base https://<worker>`): việc này chạy thử Durable Object binding thật mà không đổi công tắc và không chặn ghi.
+8. Chọn giờ ít người dùng cho từng lần `migrate`: ghi bị chặn khoảng 15–20 giây.
+9. Có sẵn token Developer trong biến môi trường (xem bên dưới); không dán token vào lệnh, không ghi vào log.
+
+### Cửa sổ giữa migration và deploy
+
+Từ lúc áp migration đến lúc Worker mới chạy, Worker **cũ** vẫn phục vụ: nó không ghi `house_directory` và `resident_index` (phần backfill của migration 0019 chỉ chạy một lần), và migration 0020 đặt khoá ngoại `staff_houses.house_id → house_directory`, nên Worker cũ không gán được quản lý cho một căn chưa có trong thư mục (câu `INSERT INTO staff_houses` báo lỗi).
+
+1. Áp migration và deploy liền nhau; báo chủ trọ **không tạo căn hoặc cư dân mới** trong khoảng đó.
+2. Ngay sau deploy chạy file bù (idempotent, chỉ thêm dòng còn thiếu, chạy lại nhiều lần cũng được):
+   `npx wrangler d1 execute <DATABASE_NAME> --remote --file scripts/post-deploy-catchup.sql`
+   (đây là việc người vận hành làm tay; không có công cụ nào tự chạy file này).
+3. Hai câu `SELECT` cuối file là phần kiểm tra: `houses_missing_from_directory` và `residents_missing_from_index` đều phải bằng **0**. Khác 0 thì đọc kỹ lỗi (thường là trùng số điện thoại hoặc `pay_no`) và xử lý tay trước khi `migrate` bất kỳ chủ trọ nào.
+4. Cron hằng ngày (`reconcile`) cũng báo cư dân thiếu trong `resident_index` và căn lệch giữa thư mục và kho, nhưng chỉ báo, không sửa.
+5. Đưa Worker về bản cũ sau khi đã deploy bản mới là **an toàn cho dữ liệu** (không dòng nào bị mất); chỉ có việc tạo căn mới trên bản cũ sẽ báo lỗi do khoá ngoại 0020, vô hại nếu lúc đó không ai tạo căn.
 
 ## Dùng CLI
 
@@ -58,12 +72,21 @@ Cảnh báo trong `warnings` của báo cáo: các bước sau khi bật công t
 
 ## Giới hạn cần biết
 
-- **Quay lại (rollback) rồi vẫn còn kho riêng**: sau `rollback`, kho riêng không bị xoá và các lượt đọc cũ còn nằm trên kho đó ở chế độ chỉ đọc cho đến khi `migrate` lần sau xoá nó (hoặc `clear-store`).
+- **Sau `rollback` kho riêng được xoá sạch** (sau khi đối chiếu D1 khớp; bản cũ vẫn khôi phục được bằng point-in-time recovery). Chỉ khi bước xoá lỗi thì kho còn lại và báo cáo có cảnh báo; khi đó `migrate` lần sau tự xoá, hoặc dùng `clear-store`. Trong lúc khoá của `rollback`, các lượt đọc lấy từ kho riêng ở chế độ chỉ đọc (`route.ts`), vì kho vẫn là bản đúng cho đến khi công tắc về `d1`.
 - **`migrate` tự xoá kho còn sót**: nếu ai đó đã tự đổi công tắc về `d1` bằng tay trong khi kho đang giữ dữ liệu mới hơn D1, `migrate` kế tiếp sẽ xoá kho đó và chép lại từ D1; phần dữ liệu mới chỉ có trong kho **mất**, chỉ khôi phục được bằng point-in-time recovery của D1/DO. Không đổi công tắc bằng tay; dùng `rollback`.
 - **Đợi 15 giây (drain)**: mỗi `migrate`/`rollback` ngủ 15 giây sau khi khoá ghi để các yêu cầu ghi đang bay kịp xong; ghi mới bị trả 503 trong suốt thời gian khoá (khoảng 15–20 giây). Đọc không bao giờ bị chặn.
 - **Dải id theo chủ trọ**: id mới trong kho của chủ trọ `N` bắt đầu từ `N × 10^9 + k × 10^12` (k tăng thêm 1 mỗi lần chuyển lại), luôn trên id lớn nhất hiện có trong D1, nên không đụng id D1 hay của chủ trọ khác. Id cũ được giữ nguyên.
 - **Khoản tiền chưa gắn nhà** chỉ được chép cho chủ trọ có nhà dùng đúng tài khoản ngân hàng đó; tài khoản trùng giữa hai chủ trọ thì bị từ chối (`SHARED_BANK_ACCOUNT`).
 - D1 cũ không bị xoá sau khi chuyển; dọn dẹp là việc của một kế hoạch sau.
+- **Mã chủ trọ phải nhỏ hơn 1000** (`ownerId` từ 1 đến 999): dải id `N × 10^9` chỉ rời nhau khi `N < 1000`. Chủ trọ có mã ngoài khoảng đó bị `migrate` từ chối an toàn (`MIGRATION_FAILED`, khoá được nhả về `d1`).
+- **Chủ trọ mới mặc định ở `d1`**: `settings.new_owner_backend` mặc định `d1` và hiện chỉ được **đọc** (`directory.ts`); không có API hay giao diện để đổi. Muốn chủ trọ tạo sau này chạy thẳng trên kho riêng phải tự chạy SQL: `INSERT INTO settings (key, value) VALUES ('new_owner_backend', 'do') ON CONFLICT (key) DO UPDATE SET value = excluded.value;` (hoàn tác bằng `'d1'`).
+- **Tiền hoãn (deferred)**: khi chủ trọ đang bị khoá, tiền SePay vào được giữ ở `sepay_events` với `status = 'deferred'`; màn hình cư dân và chủ trọ cộng nó vào nên thấy "Đã đóng" ngay. Việc ghi vào kho do cron 10 phút, hoặc `migrate` / `unlock`, làm sau. Cũng vì thế, nếu một lần ghi giữa chừng lỗi, sự kiện nằm ở `deferred` hoặc `replaying` cho đến lần phát lại kế tiếp. Tìm sự kiện bị kẹt lâu: `SELECT sepay_id, house_id, room, month, amount, status, created_at FROM sepay_events WHERE status IN ('deferred','replaying') ORDER BY created_at;` (bình thường rỗng sau vài phút).
+- **Lịch cron** (`wrangler.toml`): mỗi 10 phút (`*/10 * * * *`) đọc lại Sheet cũ và phát lại tiền hoãn; hằng ngày 19:00 UTC (`0 19 * * *`) xoá hẳn các căn hết hạn rồi chạy `reconcile` (chạy lần lượt: xoá trước, đối chiếu sau). `reconcile` sửa số đếm phòng/cư dân trong thư mục, và **chỉ báo** các chỗ lệch: `resident_index` so với kho, và danh sách căn (thư mục thiếu hoặc kho thiếu, hoặc khác tên, trạng thái, `delete_after`, `pay_no`). Kết quả nằm ở `settings.last_reconcile`: `SELECT value, updated_at FROM settings WHERE key = 'last_reconcile';`
+- **Mã lỗi HTTP khi đang chuyển**: API ghi trả **503** `TENANT_MIGRATING`; riêng `GET /api/dev/storage/:ownerId/export` trả **409** `TENANT_MIGRATING` (xuất khi đang khoá bị từ chối) và **500** `EXPORT_FAILED` nếu không đọc được kho riêng. Mã khác xem bảng ở trên.
+- **Sau `migrate` dữ liệu cũ vẫn còn trong D1, gồm cả dữ liệu cá nhân** (họ tên, số điện thoại, CCCD đã mã hoá...). Yêu cầu xoá dữ liệu của một người phải xoá ở **cả hai nơi**: kho riêng của chủ trọ và các bảng cũ trong D1.
+- **Developer không đóng trang** khi đang `migrate` / `rollback` từ giao diện: yêu cầu chạy trong lúc trang mở. Nếu lỡ đóng, đợi khoá tự hết hạn (10 phút) hoặc xem `GET /api/dev/storage`. Nút **Mở khoá** (`unlock`) **không hỏi xác nhận lần hai**: chỉ bấm khi chắc không còn lần chạy nào sống.
+- **Tiền về trước khi có hoá đơn**: khoản tiền được ghi với `invoice_id = NULL` và không bao giờ tự đánh dấu hoá đơn nào là đã đóng; quản lý đánh dấu tay khi hoá đơn có (hành vi cũ, không đổi).
+- **Giới hạn gói Workers Free**: mỗi lần gọi Worker tối đa 50 subrequest ra ngoài nhưng 1000 subrequest tới dịch vụ Cloudflare (D1, Durable Object). Một lần `migrate` khoảng 85 lệnh gọi, nằm trong giới hạn (xem tài liệu Cloudflare, "Workers limits", mục Subrequests). Dung lượng Durable Object tính theo GB thập phân (1 GB = 1.000.000.000 byte); tab Lưu trữ cảnh báo từ 70%.
 
 ## Diễn tập
 
