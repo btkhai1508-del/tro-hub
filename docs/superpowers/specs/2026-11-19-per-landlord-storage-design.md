@@ -1,6 +1,6 @@
 # Thiết kế: mỗi chủ trọ một kho dữ liệu riêng (Durable Objects SQLite)
 
-Ngày: 19/11/2026 · Trạng thái: **chờ duyệt** · Nhánh: `cloudflare-multi-house-ubwehz`
+Ngày: 19/11/2026 · Trạng thái: **đã duyệt 19/11/2026** (khoá ghi dưới 1 phút; R2 hoãn) · Nhánh: `cloudflare-multi-house-ubwehz`
 
 ## 1. Mục đích và lý do
 
@@ -16,6 +16,7 @@ Trọ Hub chuẩn bị thương mại hoá: mỗi chủ trọ là một khách h
 2. Giao diện, đường dẫn API, Express, SePay webhook URL **không đổi**.
 3. Chuyển dữ liệu thật **từng chủ trọ một**, có chạy thử, đối chiếu, và quay lại được.
 4. Bộ test cách ly chạy trên cả hai kiểu lưu trữ và cho kết quả giống nhau.
+5. **Bắt buộc:** khi SePay báo tiền về đủ cho một hoá đơn, **cả cư dân (trang thanh toán) lẫn chủ trọ/quản lý (trang admin) đều thấy "Đã đóng"**, ở mọi trạng thái `d1` / `migrating` / `do`, kể cả trong lúc khoá ghi.
 
 ### Làm sau, khi kho chủ trọ đã chạy ổn
 - Đẩy trạng thái thanh toán xuống app ngay khi SePay báo tiền về (WebSocket từ kho chủ trọ), thay cho việc app hỏi lại mỗi 5 giây.
@@ -71,7 +72,6 @@ flowchart TB
   W -->|chủ trọ #1| T1[(TenantStore owner:1)]
   W -->|chủ trọ #4| T4[(TenantStore owner:4)]
   W -->|chủ trọ mới| TN[(TenantStore owner:N, tự tạo)]
-  W -->|xuất hằng đêm| R[(R2: bản sao lưu JSON)]
 ```
 
 - **D1 trung tâm** (database `tro-hub` hiện có): tài khoản, chủ trọ, danh bạ căn, định tuyến, thu phí dịch vụ, SePay, nhật ký.
@@ -147,6 +147,7 @@ flowchart TB
   PC -- không tìm được --> UA[unassigned_payments trung tâm]
 ```
 
+- **Xác nhận "Đã đóng" không bị chặn bởi khoá ghi:** khi chủ trọ đang `migrating`, các API trạng thái thanh toán (`/api/payment/status`, `/api/admin/billing`, `/api/admin/dashboard`, `/api/houses/:id/invoices`) đọc hoá đơn từ D1 **cộng thêm** các `sepay_events` `deferred` của phòng/tháng đó ở trung tâm; đủ tiền thì trả trạng thái `paid` ngay. Mở khoá xong, bước 5 ghi chính thức vào hoá đơn trong kho.
 - Không có khoản tiền nào bị mất trong lúc chuyển: sự kiện luôn được ghi ở trung tâm trước, phần cộng tiền vào hoá đơn được làm lại ngay khi chủ trọ chuyển xong.
 
 ### 4.5. Trang Developer và báo cáo toàn hệ thống
@@ -161,7 +162,7 @@ flowchart TB
 |---|---|---|
 | `*/10 * * * *` | Chép số tiền từ Sheet cũ (chỉ căn Trung Kim, LVC) | Worker tải CSV, gửi các dòng sang kho của chủ trọ #1 |
 | `0 19 * * *` | Xoá căn hết hạn chờ xoá | Xoá trong kho chủ trọ + `house_directory` |
-| mới, hằng đêm | Tính lại bộ đếm; xuất mỗi kho ra R2 (JSON, giữ 30 bản) | — |
+| mới, hằng đêm | Tính lại bộ đếm, đối soát danh bạ | — |
 
 ## 5. Code: cấu trúc mới
 
@@ -179,7 +180,7 @@ cloudflare/src/
 ```
 
 - Kho chủ trọ tự tạo bảng và chạy migration trong `blockConcurrencyWhile` khi khởi động, theo `meta.schema_version` (giống cách D1 dùng `d1_migrations`).
-- `wrangler.toml` thêm: `[[durable_objects.bindings]] name="TENANT" class_name="TenantStore"`, `[exports.TenantStore] type="durable-object" storage="sqlite"`, R2 binding `BACKUPS`.
+- `wrangler.toml` thêm: `[[durable_objects.bindings]] name="TENANT" class_name="TenantStore"`, `[exports.TenantStore] type="durable-object" storage="sqlite"`. (R2 hoãn: không thêm binding.)
 - D1 trung tâm có migration `0019_central_directory.sql`: tạo `house_directory`, `resident_index`, `tenant_storage`, `unassigned_payments`, thêm cột vào `sepay_events`, `audit_log`; điền dữ liệu từ bảng hiện có; mọi chủ trọ khởi đầu ở `d1` (không đổi hành vi).
 
 ## 6. Quy tắc nhất quán giữa trung tâm và kho
@@ -245,7 +246,8 @@ Thời gian khoá ghi ước tính dưới **1 phút** cho chủ trọ #1 (kho�
 | Cách ly (đã có, mở rộng) | Chạy **toàn bộ** bộ test API hai lần: một lần mọi chủ trọ ở `d1`, một lần ở `do`. Kết quả phải giống hệt. |
 | Kho chủ trọ | Tạo bảng, migration theo phiên bản, adapter: `first/all/run/batch`, `RETURNING`, `meta.changes`, lỗi ràng buộc trả đúng lỗi |
 | Chuyển dữ liệu | Dữ liệu mẫu → `migrate` → đối chiếu khớp; cố tình làm lệch một dòng → phải dừng và quay về `d1`; chạy lại lần hai không sinh trùng |
-| Webhook trong lúc chuyển | Tiền về khi `migrating` → ghi `deferred` → sau khi bật được cộng đúng một lần |
+| Webhook trong lúc chuyển | Tiền về khi `migrating` → ghi `deferred` → **ngay lúc đó** API của cư dân và của chủ trọ đều trả `paid` → sau khi bật được cộng đúng một lần, trạng thái vẫn `paid` |
+| Xác nhận hai phía | Ở cả ba trạng thái `d1`/`migrating`/`do`: tiền về đủ → `/api/payment/status` (cư dân) và `/api/admin/billing`, `/api/admin/dashboard`, `/api/houses/:id/invoices` (chủ trọ, quản lý) đều thấy "Đã đóng"; tiền về thiếu → cả hai thấy còn thiếu bao nhiêu |
 | Rollback | Bật `do`, ghi thêm, rollback → D1 có đủ dữ liệu mới |
 | So sánh đầu ra | Ảnh chụp JSON của các API đọc chính trước và sau khi chuyển phải giống nhau |
 
@@ -271,7 +273,7 @@ Quay lại được ở mọi bước đến hết ngày thứ 30.
 | 2 | `tenantFor` + port các API theo khu vực, tách `index.ts` thành `routes/*` | Bộ test chạy xanh ở cả `d1` và `do` | 5–7 ngày |
 | 3 | Đăng nhập cư dân qua `resident_index`, token `tid`; webhook định tuyến + `deferred`; cron; bộ đếm Developer | Test webhook trong lúc chuyển; test đăng nhập | 2–3 ngày |
 | 4 | Script chuyển dữ liệu: dry-run, migrate, rollback, đối chiếu băm; API + CLI | Test chuyển/lỗi/rollback; chạy với bản sao lưu thật ở local | 3 ngày |
-| 5 | Sao lưu hằng đêm ra R2, đối soát hằng đêm, trang trạng thái trên Developer | Test xuất/đối soát | 1–2 ngày |
+| 5 | Nút xuất dữ liệu một chủ trọ (JSON) trên trang Developer, đối soát hằng đêm, trang trạng thái + mức sử dụng gói Free | Test xuất/đối soát | 1–2 ngày |
 | 6 | Review, deploy (`d1`), dry-run thật, chuyển #4, chuyển #1 | Đối chiếu khớp; API trước/sau giống nhau | 2–3 ngày (+ thời gian theo dõi) |
 | | **Tổng** | | **khoảng 3–4 tuần** |
 
@@ -304,5 +306,5 @@ Sau khi bạn duyệt tài liệu này, mình lập **kế hoạch chi tiết t�
 ## 13. Cần bạn trả lời
 
 1. ~~Gói Free hay Paid~~ — **đã chốt: Free**, lên Paid khi gần chạm giới hạn (có cảnh báo trên trang Developer).
-2. Chấp nhận **khoá ghi dưới 1 phút** cho mỗi chủ trọ lúc chuyển (vẫn xem được, chỉ tạm không sửa)?
-3. Đồng ý bật **R2** (gói miễn phí 10 GB) để lưu bản sao hằng đêm của từng kho?
+2. ~~Khoá ghi~~ — **đã duyệt:** dưới 1 phút, làm ban đêm, một lần cho mỗi chủ trọ.
+3. ~~R2~~ — **hoãn:** chưa bật. Sao lưu dựa vào PITR 30 ngày của từng kho + nút xuất dữ liệu bằng tay; bật R2 sau nếu cần.
