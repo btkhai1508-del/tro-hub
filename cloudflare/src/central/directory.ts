@@ -32,6 +32,10 @@ export async function houseOwner(db: D1Database, houseId: string): Promise<numbe
   return row?.owner_id ?? null;
 }
 
+export async function houseDir(db: D1Database, houseId: string): Promise<HouseDir | null> {
+  return (await db.prepare(`SELECT ${HOUSE_COLS} FROM house_directory WHERE house_id = ?`).bind(houseId).first<HouseDir>()) ?? null;
+}
+
 export async function ownerHouses(db: D1Database, ownerId: number): Promise<HouseDir[]> {
   const { results } = await db.prepare(`SELECT ${HOUSE_COLS} FROM house_directory WHERE owner_id = ? ORDER BY house_id`).bind(ownerId).all<HouseDir>();
   return results;
