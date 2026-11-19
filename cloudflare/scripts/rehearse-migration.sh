@@ -18,13 +18,35 @@ FAIL=0
 WORKER_PID=""
 cd "$CF"
 
+# Linux: wrangler dev gets its own process group (setsid) and the whole group is stopped. macOS has no setsid
+# (or set REHEARSE_NO_SETSID=1 to force this path): walk the children with pgrep -P and also stop anything whose
+# command line names this run's unique temp dir. Never a bare pkill workerd, so other sessions are untouched.
+if [ -z "${REHEARSE_NO_SETSID:-}" ] && command -v setsid > /dev/null 2>&1; then
+  USE_SETSID=1
+elif command -v pgrep > /dev/null 2>&1 && command -v pkill > /dev/null 2>&1; then
+  USE_SETSID=0
+else
+  echo "Cần setsid (Linux) hoặc pgrep và pkill (macOS) để dừng wrangler dev sạch sẽ." >&2; exit 2
+fi
+descendants() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do echo "$c"; descendants "$c"; done; }
+
 cleanup() {
-  if [ -n "$WORKER_PID" ]; then
-    # wrangler dev runs in its own process group (setsid): stop the whole group, workerd included.
-    kill -- "-$WORKER_PID" 2>/dev/null || pkill -P "$WORKER_PID" 2>/dev/null
-    sleep 1
-    kill -9 -- "-$WORKER_PID" 2>/dev/null
-    wait "$WORKER_PID" 2>/dev/null
+  local pid="$WORKER_PID" tree=""
+  WORKER_PID="" # a second run of this trap must not touch a PID that may have been reused
+  if [ -n "$pid" ]; then
+    if [ "$USE_SETSID" = 1 ]; then
+      kill -- "-$pid" 2>/dev/null
+      sleep 1
+      kill -9 -- "-$pid" 2>/dev/null
+    else
+      tree="$pid $(descendants "$pid")" # collect before killing: orphans lose their parent
+      kill $tree 2>/dev/null
+      pkill -f "$PERSIST" 2>/dev/null
+      sleep 1
+      kill -9 $tree 2>/dev/null
+      pkill -9 -f "$PERSIST" 2>/dev/null
+    fi
+    wait "$pid" 2>/dev/null
   fi
   rm -rf "$PERSIST"
 }
@@ -69,7 +91,8 @@ d1 --command "UPDATE staff SET password_hash='$HASH', status='active' WHERE role
 PORT="$(node -e 'const s=require("net").createServer().listen(0,()=>{console.log(s.address().port);s.close()})')"
 echo "==> Chạy wrangler dev --local trên cổng $PORT"
 printf 'JWT_SECRET=%s\n' "$(openssl rand -hex 32)" > "$PERSIST/dev.env" # throwaway signing key, not in argv
-setsid "${W[@]}" dev --local --port "$PORT" --persist-to "$PERSIST" --env-file "$PERSIST/dev.env" > "$OUT/04-worker.log" 2>&1 &
+DEV=("${W[@]}" dev --local --port "$PORT" --persist-to "$PERSIST" --env-file "$PERSIST/dev.env")
+if [ "$USE_SETSID" = 1 ]; then setsid "${DEV[@]}" > "$OUT/04-worker.log" 2>&1 & else "${DEV[@]}" > "$OUT/04-worker.log" 2>&1 & fi
 WORKER_PID=$!
 BASE="http://127.0.0.1:$PORT"
 READY=0
