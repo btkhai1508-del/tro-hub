@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Check, ChevronDown, KeyRound, Landmark, Search, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
+import { Building2, Check, ChevronDown, KeyRound, Landmark, Search, Link2, RefreshCw, Unplug, ChevronLeft, ChevronRight, Copy, Lock, LogOut, Download, Loader2, Pencil, Plus, QrCode, RotateCcw, Settings, Tags, Trash2, Unlock, UserPlus, X, Zap } from 'lucide-react';
 import { vietQrUrl } from '../lib/paymentPortal';
 import { useApp } from '../context/AppContext';
 import { workerFetch } from '../lib/api';
@@ -89,7 +89,7 @@ export function DeveloperPortal() {
   const [sepayFor, setSepayFor] = useState<Landlord | null>(null);
   const [editLandlord, setEditLandlord] = useState<Landlord | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [tab, setTab] = useState<'landlords' | 'billing'>('landlords');
+  const [tab, setTab] = useState<'landlords' | 'billing' | 'storage'>('landlords');
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
 
@@ -175,14 +175,14 @@ export function DeveloperPortal() {
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div role="tablist" aria-label="Khu vực" className="inline-flex rounded-2xl bg-black/[0.05] p-1 dark:bg-white/[0.07]">
-            {([['landlords', 'Chủ trọ'], ['billing', 'Thu phí']] as const).map(([key, label]) => (
+            {([['landlords', 'Chủ trọ'], ['billing', 'Thu phí'], ['storage', 'Lưu trữ']] as const).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 role="tab"
                 aria-selected={tab === key}
                 onClick={() => setTab(key)}
-                className={cn('min-h-11 rounded-xl px-5 text-sm font-semibold', tab === key ? 'bg-white shadow-sm kit-text-primary dark:bg-white/15' : 'kit-text-secondary')}
+                className={cn('min-h-11 rounded-xl px-4 sm:px-5 text-sm font-semibold', tab === key ? 'bg-white shadow-sm kit-text-primary dark:bg-white/15' : 'kit-text-secondary')}
               >
                 {label}
               </button>
@@ -208,6 +208,8 @@ export function DeveloperPortal() {
 
         {tab === 'billing' ? (
           <BillingCard />
+        ) : tab === 'storage' ? (
+          <StorageCard />
         ) : (
           <section className="liquid-panel rounded-[28px] p-3 sm:p-4">
             <label className="relative block">
@@ -370,14 +372,255 @@ export function DeveloperPortal() {
 }
 
 /** Small status label: red for problems, green for done, grey for not yet. */
-function Pill({ tone, children }: { tone: 'red' | 'green' | 'gray'; children: React.ReactNode }) {
+function Pill({ tone, children }: { tone: 'red' | 'green' | 'gray' | 'amber'; children: React.ReactNode }) {
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold',
       tone === 'red' && 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
       tone === 'green' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+      tone === 'amber' && 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
       tone === 'gray' && 'bg-black/[0.05] kit-text-secondary dark:bg-white/[0.08]')}>
       {children}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Lưu trữ: where each landlord's data lives, and the dry run / move / rollback of one landlord
+
+type Backend = 'd1' | 'migrating' | 'do';
+interface StorageOwner {
+  ownerId: number; name: string; phone: string; houses: number; backend: Backend;
+  lockExpiresAt: number | null; migratedAt: string | null; sizeBytes: number | null; rowsWrittenToday: number | null; lastWriteAt: number | null;
+}
+interface StorageOverview {
+  owners: StorageOwner[]; totalBytes: number; rowsWrittenToday: number; warnings: string[];
+  freeLimits: { perStoreBytes: number; totalBytes: number; rowsWrittenPerDay: number };
+  lastReconcile: { ranAt?: string; indexMismatches?: unknown[] } | null;
+}
+interface StorageReport {
+  mode: 'dry-run' | 'migrate' | 'rollback'; ok: boolean; error?: string; warnings?: string[]; deferredReplayed?: number; lockedMs?: number;
+  tables: { table: string; d1Count: number; doCount: number; ok: boolean }[];
+}
+type StorageAction = 'dry-run' | 'migrate' | 'rollback' | 'unlock' | 'clear-store' | 'export';
+
+const BACKEND_PILL: Record<Backend, { tone: 'gray' | 'green' | 'amber'; label: string }> = {
+  d1: { tone: 'gray', label: 'D1' },
+  migrating: { tone: 'amber', label: 'Đang chuyển' },
+  do: { tone: 'green', label: 'Kho riêng' },
+};
+const ACTION_LABEL: Record<StorageAction, string> = { 'dry-run': 'Chạy thử', migrate: 'Chuyển', rollback: 'Quay lại', unlock: 'Mở khoá', 'clear-store': 'Xoá kho', export: 'Xuất dữ liệu' };
+
+const fmtBytes = (n: number) => (n >= 1073741824 ? `${(n / 1073741824).toFixed(2)} GB` : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+function UsageBar({ label, value, text, limit }: { label: string; value: number; text: string; limit: number }) {
+  const ratio = Math.min(1, value / limit);
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+        <span className="font-semibold kit-text-secondary">{label}</span>
+        <span className="font-num kit-text-primary">{text}</span>
+      </div>
+      <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(ratio * 100)} className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.1]">
+        <div className={cn('h-full rounded-full', ratio >= 0.7 ? 'bg-amber-500' : 'bg-emerald-500')} style={{ width: `${Math.max(ratio * 100, value > 0 ? 1.5 : 0)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function StorageCard() {
+  const [data, setData] = useState<StorageOverview | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState<{ ownerId: number; action: StorageAction } | null>(null);
+  const [armed, setArmed] = useState<string | null>(null);
+  const [reports, setReports] = useState<Record<number, { report: StorageReport | null; error?: string }>>({});
+
+  const load = useCallback(async () => {
+    const d = await send<StorageOverview>('/api/dev/storage', 'GET');
+    if (!d.success) return setNotice({ ok: false, text: d.error || 'Chưa tải được phần lưu trữ.' });
+    setData(d);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  // The first click of a dangerous button arms it for 5 seconds; the second click inside that time runs it.
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(null), 5000);
+    return () => clearTimeout(t);
+  }, [armed]);
+
+  const exportData = async (o: StorageOwner) => {
+    const res = await workerFetch(`/api/dev/storage/${o.ownerId}/export`, {}).catch(() => null);
+    if (!res || !res.ok) {
+      const body = await res?.json().catch(() => null);
+      return setNotice({ ok: false, text: body?.error || 'Chưa xuất được dữ liệu.' });
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tro-hub-chu-tro-${o.ownerId}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice({ ok: true, text: `Đã tải dữ liệu của ${o.name}.` });
+  };
+
+  const run = async (o: StorageOwner, action: StorageAction, needConfirm = false) => {
+    if (busy) return;
+    if (needConfirm && armed !== `${o.ownerId}:${action}`) return setArmed(`${o.ownerId}:${action}`);
+    setArmed(null);
+    setNotice(null);
+    setBusy({ ownerId: o.ownerId, action });
+    try {
+      if (action === 'export') return await exportData(o);
+      const d = await send<{ report?: StorageReport }>(`/api/dev/storage/${o.ownerId}/${action}`, 'POST');
+      if (action === 'dry-run' || action === 'migrate' || action === 'rollback') {
+        setReports((r) => ({ ...r, [o.ownerId]: { report: d.report ?? null, error: d.success ? undefined : d.error || 'Chưa thực hiện được.' } }));
+      } else {
+        setNotice(d.success ? { ok: true, text: `${ACTION_LABEL[action]}: xong (${o.name}).` } : { ok: false, text: d.error || 'Chưa thực hiện được.' });
+      }
+    } finally {
+      setBusy(null);
+      load();
+    }
+  };
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (data?.owners ?? []).filter((o) => !q || o.name.toLowerCase().includes(q) || o.phone.includes(q.replace(/\s/g, '')));
+  }, [data, query]);
+
+  const btn = 'soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold disabled:opacity-50';
+  const dangerBtn = (key: string) => cn(btn, armed === key && 'bg-rose-600 text-white');
+
+  return (
+    <section className="liquid-panel rounded-[28px] p-3 sm:p-4">
+      {notice && <p role={notice.ok ? 'status' : 'alert'} className={cn('mb-3 apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>{notice.text}</p>}
+
+      {data && (
+        <div className="mb-3 space-y-3 rounded-2xl bg-black/[0.03] p-3 dark:bg-white/[0.05]">
+          <UsageBar label="Tổng dung lượng kho riêng" value={data.totalBytes} text={`${fmtBytes(data.totalBytes)} / ${fmtBytes(data.freeLimits.totalBytes)}`} limit={data.freeLimits.totalBytes} />
+          <UsageBar label="Dòng ghi hôm nay" value={data.rowsWrittenToday} text={`${data.rowsWrittenToday.toLocaleString('vi-VN')} / ${data.freeLimits.rowsWrittenPerDay.toLocaleString('vi-VN')}`} limit={data.freeLimits.rowsWrittenPerDay} />
+          {data.warnings.length > 0 && (
+            <ul role="alert" className="space-y-1 rounded-xl bg-amber-500/10 px-3 py-2 text-[13px] font-semibold text-amber-800 dark:text-amber-300">
+              {data.warnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          )}
+          {data.lastReconcile?.ranAt && (
+            <p className="text-[12px] kit-text-secondary">
+              Đối soát gần nhất: {new Date(data.lastReconcile.ranAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} · {data.lastReconcile.indexMismatches?.length ?? 0} lệch
+            </p>
+          )}
+        </div>
+      )}
+
+      <label className="relative block">
+        <span className="sr-only">Tìm chủ trọ</span>
+        <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 kit-text-secondary" />
+        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm tên hoặc số điện thoại" className={cn(inputClass, 'pl-10')} />
+      </label>
+
+      {data === null && !notice && <p className="px-2 py-6 apple-body kit-text-secondary">Đang tải…</p>}
+      {data && shown.length === 0 && <p className="px-2 py-6 apple-body kit-text-secondary">Không có chủ trọ nào.</p>}
+
+      <ul className="mt-2 divide-y divide-black/[0.06] dark:divide-white/[0.08]">
+        {shown.map((o) => {
+          const open = openId === o.ownerId;
+          const pill = BACKEND_PILL[o.backend];
+          const mine = busy?.ownerId === o.ownerId ? busy.action : null;
+          const rep = reports[o.ownerId];
+          const key = (a: StorageAction) => `${o.ownerId}:${a}`;
+          const locked = o.backend === 'migrating';
+          return (
+            <li key={o.ownerId}>
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setOpenId(open ? null : o.ownerId)}
+                className="flex w-full min-h-11 items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 apple-headline kit-text-primary">
+                    <span className="min-w-0 truncate">{o.name}</span>
+                    <Pill tone={pill.tone}>{pill.label}</Pill>
+                    {mine && <Loader2 size={14} className="animate-spin kit-text-secondary" aria-label="Đang xử lý" />}
+                  </p>
+                  <p className="apple-callout kit-text-secondary font-num truncate">
+                    {o.sizeBytes === null ? 'Chưa có kho riêng' : fmtBytes(o.sizeBytes)} · {o.houses} căn
+                  </p>
+                </div>
+                <ChevronDown size={18} className={cn('shrink-0 kit-text-secondary transition-transform', open && 'rotate-180')} />
+              </button>
+
+              {open && (
+                <div className="space-y-3 px-2 pb-4">
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
+                    <dt className="kit-text-secondary">Dòng ghi hôm nay</dt><dd className="font-num kit-text-primary">{o.rowsWrittenToday === null ? '—' : o.rowsWrittenToday.toLocaleString('vi-VN')}</dd>
+                    <dt className="kit-text-secondary">Ghi gần nhất</dt><dd className="font-num kit-text-primary">{o.lastWriteAt ? new Date(o.lastWriteAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}</dd>
+                    {locked && <><dt className="kit-text-secondary">Khoá hết hạn</dt><dd className="font-num kit-text-primary">{o.lockExpiresAt ? new Date(o.lockExpiresAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}</dd></>}
+                  </dl>
+
+                  <div className="flex flex-wrap gap-2">
+                    {o.backend === 'd1' && <button type="button" disabled={!!busy} onClick={() => run(o, 'dry-run')} className={btn}>Chạy thử</button>}
+                    {o.backend === 'd1' && (
+                      <button type="button" disabled={!!busy} onClick={() => run(o, 'migrate', true)} className={dangerBtn(key('migrate'))}>
+                        {armed === key('migrate') ? 'Bấm lần nữa để chuyển' : 'Chuyển'}
+                      </button>
+                    )}
+                    {o.backend === 'do' && (
+                      <button type="button" disabled={!!busy} onClick={() => run(o, 'rollback', true)} className={dangerBtn(key('rollback'))}>
+                        {armed === key('rollback') ? 'Bấm lần nữa để quay lại' : 'Quay lại'}
+                      </button>
+                    )}
+                    {locked && <button type="button" disabled={!!busy} onClick={() => run(o, 'unlock')} className={btn}><Unlock size={15} /> Mở khoá</button>}
+                    {o.backend === 'd1' && (
+                      <button type="button" disabled={!!busy} onClick={() => run(o, 'clear-store', true)} className={dangerBtn(key('clear-store'))}>
+                        <Trash2 size={15} /> {armed === key('clear-store') ? 'Bấm lần nữa để xoá kho' : 'Xoá kho'}
+                      </button>
+                    )}
+                    <button type="button" disabled={!!busy || locked} onClick={() => run(o, 'export')} className={btn}><Download size={15} /> Xuất dữ liệu</button>
+                  </div>
+
+                  {mine && (
+                    <p role="status" className="flex items-center gap-2 text-[13px] font-semibold kit-text-secondary">
+                      <Loader2 size={15} className="animate-spin" />
+                      {mine === 'migrate' || mine === 'rollback' ? `${ACTION_LABEL[mine]}: đang chờ ghi dở dang, mất khoảng 15–20 giây. Đừng đóng trang.` : `${ACTION_LABEL[mine]}…`}
+                    </p>
+                  )}
+
+                  {rep && (
+                    <div className="rounded-2xl bg-black/[0.03] p-3 text-[13px] dark:bg-white/[0.05]">
+                      <p className={cn('font-semibold', rep.error ? 'text-rose-600' : 'text-emerald-700 dark:text-emerald-300')}>
+                        {rep.report ? `${ACTION_LABEL[rep.report.mode]}: ${rep.report.ok ? 'đạt' : 'không đạt'}` : 'Kết quả'}
+                        {rep.error ? ` — ${rep.error}` : ''}
+                      </p>
+                      {rep.report?.warnings?.map((w) => <p key={w} className="mt-1 text-amber-700 dark:text-amber-300">{w}</p>)}
+                      {rep.report && rep.report.tables.length > 0 && (
+                        <table className="mt-2 w-full text-left font-num">
+                          <thead><tr className="kit-text-secondary"><th className="py-0.5 font-semibold">Bảng</th><th className="py-0.5 text-right font-semibold">D1</th><th className="py-0.5 text-right font-semibold">Kho riêng</th><th className="w-6" /></tr></thead>
+                          <tbody>
+                            {rep.report.tables.map((t) => (
+                              <tr key={t.table} className="border-t border-black/[0.06] dark:border-white/[0.08]">
+                                <td className="py-0.5">{t.table}</td>
+                                <td className="py-0.5 text-right">{t.d1Count}</td>
+                                <td className="py-0.5 text-right">{t.doCount}</td>
+                                <td className="py-0.5 text-right">{t.ok ? <Check size={13} className="inline text-emerald-600" /> : <X size={13} className="inline text-rose-600" />}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
