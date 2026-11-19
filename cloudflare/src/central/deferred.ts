@@ -15,7 +15,9 @@ export const eventReference = (sepayId: string) => `sepay-${sepayId}`;
 /**
  * Room name → sum of SePay rent money for that house and month that is not in the store yet: events
  * 'deferred' (waiting) or 'replaying' (being booked) whose payment row `sepay-<id>` is NOT in `tenant`
- * yet. An event whose payment is already booked counts once, through the stored payments, never twice.
+ * yet. A room with an open event is present in the map even when every one of its events is already
+ * booked (value 0): the payment is then counted once, through the stored payments, never twice, and
+ * the caller knows the invoice's own status may lag behind the money (booking and marking are two writes).
  * Almost always an empty map (partial index sepay_events_open).
  */
 export async function deferredByRoom(db: D1Database, houseId: string, month: string, tenant: TenantDb): Promise<Map<string, number>> {
@@ -33,7 +35,7 @@ export async function deferredByRoom(db: D1Database, houseId: string, month: str
     .bind(...results.map((r) => eventReference(r.sepay_id)))
     .all<{ reference: string }>();
   const done = new Set(booked.map((b) => b.reference));
-  for (const r of results) if (!done.has(eventReference(r.sepay_id))) out.set(r.room, (out.get(r.room) ?? 0) + (r.amount ?? 0));
+  for (const r of results) out.set(r.room, (out.get(r.room) ?? 0) + (done.has(eventReference(r.sepay_id)) ? 0 : (r.amount ?? 0)));
   return out;
 }
 

@@ -263,6 +263,65 @@ describe.each(MODES)('SePay webhook, tiền trọ (%s)', (mode) => {
     });
   }
 
+  if (mode !== 'migrating') {
+    // settleRent books the payment and then marks the invoice: the gap between the two must not show "Chưa đóng".
+    const sqlOf = (sql: string) =>
+      backend === 'do'
+        ? runInDurableObject(tenantStub(e, 1), (_i, state) => { state.storage.sql.exec(sql); })
+        : void e.DB.prepare(sql).run();
+    const blockInvoices = `CREATE TRIGGER no_inv_update BEFORE UPDATE ON invoices BEGIN SELECT RAISE(ABORT, 'invoice update blocked'); END`;
+
+    it('payment ghi xong nhưng UPDATE hoá đơn lỗi: cả năm màn hình vẫn Đã đóng, replay ghi đúng một lần, không cộng trùng', async () => {
+      await sqlOf(blockInvoices);
+      try {
+        const r = await webhook(DEV_KEY, { id: 5151, transferAmount: 3_500_000, content: LVC_CODE });
+        expect(r).toMatchObject({ status: 200, body: { success: true, rent: { settled: false, deferred: true } } });
+        expect(await payments(backend)).toMatchObject([{ amount: 3_500_000, reference: 'sepay-5151' }]); // booked
+        expect((await lvcInvoice(backend))!.status).toBe('unpaid'); // invoice row lags
+        expect(await events()).toMatchObject([{ sepay_id: '5151', status: 'deferred' }]);
+        expect(view(await seen(tokens))).toEqual(everyone('paid'));
+      } finally {
+        await sqlOf('DROP TRIGGER no_inv_update');
+      }
+      expect(await replayDeferred(e, 1)).toBe(1);
+      expect((await payments(backend)).length).toBe(1); // booked once
+      expect((await lvcInvoice(backend))!.status).toBe('paid');
+      expect(await events()).toMatchObject([{ status: 'done' }]);
+      expect(view(await seen(tokens))).toEqual(everyone('paid'));
+    });
+
+    it('payment ghi nhưng UPDATE hoá đơn lỗi, tiền mới là một phần: vẫn chưa đóng; phần còn lại đủ thì Đã đóng (không cộng trùng)', async () => {
+      await sqlOf(blockInvoices);
+      try {
+        await webhook(DEV_KEY, { id: 5252, transferAmount: 1_000_000, content: LVC_CODE });
+        expect(await payments(backend)).toMatchObject([{ amount: 1_000_000 }]);
+        expect(view(await seen(tokens))).toEqual(everyone('unpaid')); // 1M booked, the open event adds nothing again
+        await webhook(DEV_KEY, { id: 5253, transferAmount: 2_500_000, content: LVC_CODE });
+        expect(view(await seen(tokens))).toEqual(everyone('paid')); // 1M + 2.5M
+      } finally {
+        await sqlOf('DROP TRIGGER no_inv_update');
+      }
+      expect(await replayDeferred(e, 1)).toBe(1); // only the 2.5M event was left open
+      expect((await payments(backend)).length).toBe(2);
+      expect((await lvcInvoice(backend))!.status).toBe('paid');
+    });
+  }
+
+  it('mark-paid: tiền đã về (deferred) thì trả Đã đóng, không ghi; chưa có tiền thì ghi (503 khi kho đang khoá)', async () => {
+    const claim = () => api('/api/payment/mark-paid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: '11/2026' }) }, tokens.resident);
+    if (mode === 'migrating') {
+      const r = await claim();
+      expect(r.status).toBe(503);
+      expect(((await r.json()) as any).errorCode).toBe('TENANT_MIGRATING');
+    }
+    await webhook(DEV_KEY, { id: 6161, transferAmount: 3_500_000, content: LVC_CODE });
+    const ok = await claim();
+    expect(ok.status).toBe(200);
+    expect(((await ok.json()) as any).status.paymentStatus).toBe('paid');
+    const stored = (await lvcInvoice(mode === 'migrating' ? 'd1' : backend))!.status;
+    expect(stored).toBe(mode === 'migrating' ? 'unpaid' : 'paid'); // nothing was written while migrating
+  });
+
   it('giặt sấy vẫn chuyển sang Express', async () => {
     const real = globalThis.fetch;
     const seenUrls: string[] = [];

@@ -54,8 +54,10 @@ async function statusView(central: D1Database, db: TenantDb, houseIds: string[],
   const deferred = new Map<string, Map<string, number>>();
   await Promise.all(houseIds.map(async (h) => deferred.set(h, await deferredByRoom(central, h, month, db))));
   return async (inv: { id: number; house_id: string; room: string; total: number; status: InvoiceStatus }): Promise<InvoiceStatus> => {
-    const waiting = deferred.get(inv.house_id)?.get(inv.room) ?? 0;
-    if (waiting <= 0 || inv.status === 'paid' || inv.status === 'cash') return inv.status;
+    // Present = the room has an open SePay event (even a booked one: its invoice update may not have landed yet).
+    const open = deferred.get(inv.house_id);
+    if (!open?.has(inv.room) || inv.status === 'paid' || inv.status === 'cash') return inv.status;
+    const waiting = open.get(inv.room) ?? 0;
     const sum = await db.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(inv.id).first<{ paid: number }>();
     return effectiveStatus(inv.status, inv.total, sum?.paid ?? 0, waiting);
   };
@@ -216,7 +218,9 @@ export function registerRent(app: Hono<App>): void {
     const db = await tenantFor(c, v.houseId);
     const inv = await invoiceOrSync(db, c.env.DB, v.roomId, month);
     if (!inv) return fail(c, 404, 'INVOICE_NOT_FOUND', `Chưa có hoá đơn tháng ${toSheetMonth(month)}.`);
-    if (inv.status === 'unpaid') {
+    // Money that already arrived (even if the invoice row lags or the store is read-only) reads "Đã đóng": nothing to write.
+    const before = await (await statusView(c.env.DB, db, [v.houseId], month))({ ...inv, room: v.roomName });
+    if (inv.status === 'unpaid' && before === 'unpaid') {
       await db.prepare(`UPDATE invoices SET status = 'pending', status_by = ? WHERE id = ? AND status = 'unpaid'`).bind(actorOf(v), inv.id).run();
       await audit(c, actorOf(v), 'rent_claimed_paid', v.houseId, `invoice:${inv.id}`);
     }
