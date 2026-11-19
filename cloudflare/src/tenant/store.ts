@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { Env } from '../app.ts';
-import { TENANT_MIGRATIONS, TENANT_TABLES, type SqlValue } from './schema.ts';
+import { TENANT_MIGRATIONS, TENANT_TABLES, isWriteSql, type SqlValue } from './schema.ts';
 
 export interface SqlOp {
   sql: string;
@@ -14,6 +14,13 @@ export interface SqlResult {
   lastRowId: number;
 }
 
+/**
+ * Outcome of query(). A SQL error comes back as a value rather than a thrown exception: thrown errors
+ * cross the RPC boundary as uncaught exceptions in the store, and the caller (remoteTenantDb) rethrows
+ * the message on its side anyway.
+ */
+export type QueryResult = { ok: true; results: SqlResult[] } | { ok: false; error: string };
+
 export interface TenantInfo {
   ownerId: number | null;
   schemaVersion: number;
@@ -24,7 +31,6 @@ export interface TenantInfo {
   rowsWrittenToday: number;
 }
 
-const WRITE_RE = /^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i;
 const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 const today = () => new Date().toISOString().slice(0, 10); // UTC day: Cloudflare daily limits reset at 00:00 UTC
@@ -74,13 +80,14 @@ export class TenantStore extends DurableObject<Env> {
     this.putMeta('writes_today', `${day}:${total}`);
   }
 
-  async query(ops: SqlOp[], atomic: boolean): Promise<SqlResult[]> {
+  /** Run statements in order; `atomic` runs them in one transaction (D1 batch semantics). */
+  async query(ops: SqlOp[], atomic: boolean): Promise<QueryResult> {
     const out: SqlResult[] = [];
     let wrote = false;
     let rowsWritten = 0;
     const runAll = () => {
       for (const op of ops) {
-        const isWrite = WRITE_RE.test(op.sql);
+        const isWrite = isWriteSql(op.sql);
         const cur = this.sql(op.sql, ...op.params);
         let results: Record<string, SqlValue>[] = [];
         if (op.mode === 'all') results = cur.toArray() as Record<string, SqlValue>[];
@@ -98,14 +105,16 @@ export class TenantStore extends DurableObject<Env> {
         out.push({ results, changes, lastRowId });
       }
     };
+    let error: string | null = null;
     try {
       if (atomic) this.ctx.storage.transactionSync(runAll);
       else runAll();
-    } finally {
-      // Non-atomic calls keep what ran before a failure, so they still count; an atomic rollback undid it.
-      if (wrote && (!atomic || out.length === ops.length)) this.touch(rowsWritten);
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
     }
-    return out;
+    // Non-atomic calls keep what ran before a failure, so they still count; an atomic rollback undid it.
+    if (wrote && (error === null || !atomic)) this.touch(rowsWritten);
+    return error === null ? { ok: true, results: out } : { ok: false, error };
   }
 
   async importRows(table: string, rows: Record<string, SqlValue>[]): Promise<number> {

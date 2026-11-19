@@ -1,14 +1,22 @@
 import { env, runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { TENANT_MIGRATIONS, TENANT_TABLES } from '../src/tenant/schema.ts';
-import type { TenantStore } from '../src/tenant/store.ts';
+import type { SqlOp, TenantStore } from '../src/tenant/store.ts';
 
 const e = env as unknown as { DB: D1Database; TENANT: DurableObjectNamespace<TenantStore> };
 let n = 0;
-// Errors thrown across the DO RPC boundary surface as unhandled rejections in the test runner, so
-// calls that are expected to fail go through runInDurableObject (same instance, no RPC hop).
+// query() returns SQL errors as values; the other methods still throw, and errors thrown across the
+// DO RPC boundary surface as unhandled rejections in the test runner, so those expected failures go
+// through runInDurableObject (same instance, no RPC hop).
 const direct = <T>(stub: DurableObjectStub<TenantStore>, fn: (s: TenantStore) => Promise<T>) => runInDurableObject(stub, (i: TenantStore) => fn(i));
 const fresh = () => e.TENANT.get(e.TENANT.idFromName(`test:${++n}`));
+/** Rows of a query that must succeed. */
+async function rows(stub: DurableObjectStub<TenantStore>, ops: SqlOp[], atomic = false) {
+  const r = await stub.query(ops, atomic);
+  if (!r.ok) throw new Error(r.error);
+  return r.results;
+}
+const HOUSE_SQL = "INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')";
 
 type Row = Record<string, unknown>;
 
@@ -64,21 +72,29 @@ describe('TenantStore', () => {
 
   it('query atomic quay lui khi một lệnh lỗi', async () => {
     const stub = fresh();
-    await stub.query([{ sql: "INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')", params: [], mode: 'run' }], true);
     const ins = { sql: "INSERT INTO rooms (house_id, name) VALUES ('H', 'P101')", params: [], mode: 'run' as const };
-    await expect(direct(stub, (s) => s.query([ins, ins], true))).rejects.toThrow();
-    const r = await stub.query([{ sql: 'SELECT COUNT(*) AS c FROM rooms', params: [], mode: 'first' }], false);
-    expect(r[0].results[0].c).toBe(0);
-    // Non-atomic keeps what ran before the failure.
-    await expect(direct(stub, (s) => s.query([ins, ins], false))).rejects.toThrow();
-    const r2 = await stub.query([{ sql: 'SELECT COUNT(*) AS c FROM rooms', params: [], mode: 'first' }], false);
-    expect(r2[0].results[0].c).toBe(1);
+    const count = { sql: 'SELECT COUNT(*) AS c FROM rooms', params: [], mode: 'first' as const };
+    // A failed atomic call returns the SQL error as a value and leaves data and meta untouched.
+    const failed = await stub.query([{ sql: HOUSE_SQL, params: [], mode: 'run' }, ins, ins], true);
+    expect(failed).toEqual({ ok: false, error: expect.stringContaining('UNIQUE constraint failed') });
+    expect((await rows(stub, [{ sql: 'SELECT COUNT(*) AS c FROM houses', params: [], mode: 'first' }]))[0].results[0].c).toBe(0);
+    expect(await stub.info()).toMatchObject({ lastWriteAt: null, rowsWrittenToday: 0 });
+
+    await rows(stub, [{ sql: HOUSE_SQL, params: [], mode: 'run' }], true);
+    expect(await stub.query([ins, ins], true)).toMatchObject({ ok: false });
+    expect((await rows(stub, [count]))[0].results[0].c).toBe(0);
+    // Non-atomic keeps what ran before the failure, and counts it as a write.
+    const before = (await stub.info()).rowsWrittenToday;
+    expect(await stub.query([ins, ins], false)).toEqual({ ok: false, error: expect.stringContaining('UNIQUE constraint failed') });
+    expect((await rows(stub, [count]))[0].results[0].c).toBe(1);
+    expect((await stub.info()).rowsWrittenToday).toBeGreaterThan(before);
   });
 
   it('kết quả: changes, lastRowId, các chế độ', async () => {
     const stub = fresh();
-    await stub.query([{ sql: "INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')", params: [], mode: 'run' }], false);
-    const [a, b, c] = await stub.query(
+    await rows(stub, [{ sql: HOUSE_SQL, params: [], mode: 'run' }]);
+    const [a, b, c] = await rows(
+      stub,
       [
         { sql: "INSERT INTO rooms (house_id, name) VALUES (?, ?)", params: ['H', 'A'], mode: 'run' },
         { sql: 'SELECT name FROM rooms WHERE house_id = ?', params: ['H'], mode: 'all' },
@@ -110,10 +126,11 @@ describe('TenantStore', () => {
     await stub.setMeta('owner_id', '7');
     await stub.setMeta('migrated_from', 'd1');
     await stub.setMeta('migrated_at', '123');
-    await stub.query([{ sql: "INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')", params: [], mode: 'run' }], false);
-    await stub.query([{ sql: "INSERT INTO rooms (house_id, name) VALUES ('H', 'A')", params: [], mode: 'run' }], false);
+    await rows(stub, [{ sql: HOUSE_SQL, params: [], mode: 'run' }]);
+    await rows(stub, [{ sql: "INSERT INTO rooms (house_id, name) VALUES ('H', 'A')", params: [], mode: 'run' }]);
     await stub.reset();
-    const r = await stub.query(
+    const r = await rows(
+      stub,
       [
         { sql: 'SELECT COUNT(*) AS c FROM houses', params: [], mode: 'first' },
         { sql: 'SELECT COUNT(*) AS c FROM rooms', params: [], mode: 'first' },
@@ -124,8 +141,8 @@ describe('TenantStore', () => {
     const info = await stub.info();
     expect(info).toMatchObject({ ownerId: 7, schemaVersion: TENANT_MIGRATIONS.length, lastWriteAt: null, migratedFrom: null, migratedAt: null });
     // AUTOINCREMENT restarts after reset.
-    await stub.query([{ sql: "INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')", params: [], mode: 'run' }], false);
-    const [ins] = await stub.query([{ sql: "INSERT INTO rooms (house_id, name) VALUES ('H', 'A')", params: [], mode: 'run' }], false);
+    await rows(stub, [{ sql: HOUSE_SQL, params: [], mode: 'run' }]);
+    const [ins] = await rows(stub, [{ sql: "INSERT INTO rooms (house_id, name) VALUES ('H', 'A')", params: [], mode: 'run' }]);
     expect(ins.lastRowId).toBe(1);
   });
 
@@ -145,10 +162,10 @@ describe('TenantStore', () => {
     expect(i0.lastWriteAt).toBeNull();
     expect(i0.rowsWrittenToday).toBe(0);
     expect(i0.sizeBytes).toBeGreaterThan(0);
-    await stub.query([{ sql: 'SELECT 1', params: [], mode: 'all' }], false);
+    await rows(stub, [{ sql: 'SELECT 1', params: [], mode: 'all' }]);
     expect(await stub.info()).toMatchObject({ lastWriteAt: null, rowsWrittenToday: 0 });
     const before = Date.now();
-    await stub.query([{ sql: "INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')", params: [], mode: 'run' }], false);
+    await rows(stub, [{ sql: HOUSE_SQL, params: [], mode: 'run' }]);
     const i1 = await stub.info();
     expect(i1.lastWriteAt).toBeGreaterThanOrEqual(before);
     expect(i1.rowsWrittenToday).toBeGreaterThanOrEqual(1);

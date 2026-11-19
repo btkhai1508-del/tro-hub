@@ -13,6 +13,7 @@ import {
   actorOf, audit, developerOnly, fail, isDeveloper, isOwner, ownerOnly, requireHouse, staffOnly,
   type App, type Env, type StaffRole, type Viewer,
 } from './app.ts';
+import { TenantLockedError } from './tenant/route.ts';
 
 export { TenantStore } from './tenant/store.ts';
 
@@ -2025,6 +2026,17 @@ app.get('/api/sepay/oauth/callback', async (c) => {
 });
 
 app.notFound((c) => fail(c, 404, 'NOT_FOUND', 'Không tìm thấy.'));
+
+// A write while the landlord's data is being moved answers 503; anything else as Hono's default handler.
+app.onError((err, c) => {
+  if (err instanceof TenantLockedError) return fail(c, 503, 'TENANT_MIGRATING', err.message);
+  if ('getResponse' in err) {
+    const res = err.getResponse();
+    return c.newResponse(res.body, res);
+  }
+  console.error(err);
+  return c.text('Internal Server Error', 500);
+});
 
 const DAILY_CRON = '0 19 * * *';
 

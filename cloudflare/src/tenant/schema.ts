@@ -4,6 +4,22 @@
 
 export type SqlValue = string | number | null;
 
+const LEADING_TRIVIA_RE = /^(?:\s+|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)*/;
+const WRITE_VERB_RE = /^(?:INSERT|UPDATE|DELETE|REPLACE)\b/i;
+const WITH_RE = /^WITH\b/i;
+const WRITE_WORD_RE = /\b(?:INSERT|UPDATE|DELETE|REPLACE)\b/i;
+
+/**
+ * Whether a statement writes data: after leading whitespace and comments it starts with
+ * INSERT/UPDATE/DELETE/REPLACE, or it is a WITH statement that contains one of those words. The one
+ * detector for both the store (which reports changes only for writes) and the read-only wrapper.
+ * A WITH read that merely mentions one of the words (say `replace(...)`) counts as a write.
+ */
+export function isWriteSql(sql: string): boolean {
+  const body = sql.replace(LEADING_TRIVIA_RE, '');
+  return WRITE_VERB_RE.test(body) || (WITH_RE.test(body) && WRITE_WORD_RE.test(body));
+}
+
 export interface TenantTable {
   name: string;
   pk: string[];
