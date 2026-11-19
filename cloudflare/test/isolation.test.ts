@@ -5,18 +5,18 @@
  */
 import { SELF } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { login, PHONES, seedWorld } from './helpers.ts';
+import { BACKENDS, login, PHONES, seedWorld } from './helpers.ts';
 
 const BASE = 'https://tro-hub.test';
 
 const get = (path: string, token?: string) =>
   SELF.fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
 
-describe('cách ly dữ liệu', () => {
+describe.each(BACKENDS)('cách ly dữ liệu (%s)', (backend) => {
   const tokens: Record<string, string> = {};
 
   beforeAll(async () => {
-    await seedWorld('d1');
+    await seedWorld(backend);
     tokens.developer = await login(PHONES.developer);
     tokens.owner = await login(PHONES.owner);
     tokens.otherOwner = await login(PHONES.otherOwner);
