@@ -149,3 +149,32 @@ describe('hai backend trả cùng JSON', () => {
     expect(out.do).toEqual(out.d1);
   });
 });
+
+describe('/api/banks', () => {
+  it('đòi đăng nhập', async () => {
+    expect((await api('/api/banks')).status).toBe(401);
+  });
+});
+
+describe.each(BACKENDS)('số căn trong danh bạ và kho (%s)', (backend) => {
+  beforeEach(() => seedWorld(backend));
+
+  it('căn chưa có số: cấp số ở danh bạ và kho giữ cùng số', async () => {
+    await e.DB.prepare(`UPDATE house_directory SET pay_no = NULL WHERE house_id = 'LVC'`).run();
+    const store = await tenantOfOwner(e, 1);
+    await store.prepare(`UPDATE houses SET pay_no = NULL WHERE id = 'LVC'`).run();
+    const dev = await login(PHONES.developer);
+    expect((await api('/api/dev/houses/LVC', {}, dev)).status).toBe(200);
+    const d = await e.DB.prepare(`SELECT pay_no FROM house_directory WHERE house_id = 'LVC'`).first<{ pay_no: number }>();
+    expect(d!.pay_no).toBeGreaterThan(3);
+    expect((await store.prepare(`SELECT pay_no FROM houses WHERE id = 'LVC'`).first<{ pay_no: number }>())!.pay_no).toBe(d!.pay_no);
+  });
+
+  it('danh bạ có số mà kho NULL: lần gọi sau sửa kho', async () => {
+    const store = await tenantOfOwner(e, 1);
+    await store.prepare(`UPDATE houses SET pay_no = NULL WHERE id = 'LVC'`).run();
+    const dev = await login(PHONES.developer);
+    expect((await api('/api/dev/houses/LVC', {}, dev)).status).toBe(200);
+    expect((await store.prepare(`SELECT pay_no FROM houses WHERE id = 'LVC'`).first<{ pay_no: number }>())!.pay_no).toBe(2);
+  });
+});

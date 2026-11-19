@@ -24,6 +24,7 @@ export const page = (title: string, text: string) =>
    <body style="font-family:system-ui;max-width:420px;margin:48px auto;padding:0 16px"><h2>${title}</h2><p>${text}</p></body>`;
 
 export function registerIntegrations(app: Hono<App>): void {
+  app.use('/api/banks', requireAuth);
   app.get('/api/banks', async (c) => {
     const banks = await vietQrBanks();
     return c.json({ success: true, banks: banks.map(({ bin, code, shortName, name, logo }) => ({ bin, code, shortName, name, logo })) });

@@ -55,19 +55,37 @@ export const monthlyPerRoom = (keys: string[], catalog: ServiceModule[]) =>
 // the landlord's store. The store's houses.pay_no is kept equal to the directory's.
 // ---------------------------------------------------------------------------
 
-/** Gives every directory house without a number one, and copies it into the landlord's store. */
-export async function assignHousePayNumbers(env: Env): Promise<void> {
+/** Copies a house's directory number into its landlord's store when they differ; a locked store is retried on the next call. */
+async function syncStorePayNo(env: Env, ownerId: number, houseId: string, payNo: number): Promise<void> {
+  try {
+    const db = await tenantOfOwner(env, ownerId);
+    const row = await db.prepare(`SELECT pay_no FROM houses WHERE id = ?`).bind(houseId).first<{ pay_no: number | null }>();
+    if (row && row.pay_no !== payNo) await db.prepare(`UPDATE houses SET pay_no = ? WHERE id = ?`).bind(payNo, houseId).run();
+  } catch (e) {
+    if (!(e instanceof TenantLockedError)) throw e;
+  }
+}
+
+/**
+ * Gives every directory house without a number one, and makes sure the landlord's store holds the
+ * same number: for the houses just numbered and, when `houseId` is given, for that house (so a copy
+ * that failed or was locked earlier is repaired on the next call).
+ */
+export async function assignHousePayNumbers(env: Env, houseId?: string): Promise<void> {
   const { results } = await env.DB.prepare(`SELECT house_id, owner_id FROM house_directory WHERE pay_no IS NULL ORDER BY house_id`).all<{ house_id: string; owner_id: number }>();
   for (const h of results) {
     const no = await allocateHousePayNo(env.DB);
     if (no > 999) throw new Error('Đã hết số căn (tối đa 999).');
     await env.DB.prepare(`UPDATE house_directory SET pay_no = ? WHERE house_id = ? AND pay_no IS NULL`).bind(no, h.house_id).run();
-    try {
-      await (await tenantOfOwner(env, h.owner_id)).prepare(`UPDATE houses SET pay_no = (SELECT pay_no FROM house_directory WHERE house_id = ?) WHERE id = ? AND pay_no IS NULL`).bind(h.house_id, h.house_id).run();
-    } catch (e) {
-      if (!(e instanceof TenantLockedError)) throw e;
-    }
   }
+  const check = houseId
+    ? await env.DB.prepare(`SELECT house_id, owner_id, pay_no FROM house_directory WHERE house_id = ? AND pay_no IS NOT NULL`).bind(houseId).all<{ house_id: string; owner_id: number; pay_no: number }>()
+    : { results: [] as { house_id: string; owner_id: number; pay_no: number }[] };
+  const fresh = results.length
+    ? (await env.DB.prepare(`SELECT house_id, owner_id, pay_no FROM house_directory WHERE house_id IN (${results.map(() => '?').join(',')})`).bind(...results.map((r) => r.house_id)).all<{ house_id: string; owner_id: number; pay_no: number }>()).results
+    : [];
+  const todo = new Map([...check.results, ...fresh].map((r) => [r.house_id, r]));
+  for (const r of todo.values()) await syncStorePayNo(env, r.owner_id, r.house_id, r.pay_no);
 }
 
 /** Gives every room without a number one (all rooms of `db`, or those of one house). */
@@ -109,7 +127,7 @@ export async function assignRoomPayNumbers(db: TenantDb, houseId?: string): Prom
 
 /** Both halves, for read APIs: a store that is locked for a move simply keeps its numbers as they are. */
 export async function assignPayNumbers(env: Env, db: TenantDb, houseId?: string): Promise<void> {
-  await assignHousePayNumbers(env);
+  await assignHousePayNumbers(env, houseId);
   try {
     await assignRoomPayNumbers(db, houseId);
   } catch (e) {
