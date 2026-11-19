@@ -17,6 +17,10 @@ Trọ Hub chuẩn bị thương mại hoá: mỗi chủ trọ là một khách h
 3. Chuyển dữ liệu thật **từng chủ trọ một**, có chạy thử, đối chiếu, và quay lại được.
 4. Bộ test cách ly chạy trên cả hai kiểu lưu trữ và cho kết quả giống nhau.
 
+### Làm sau, khi kho chủ trọ đã chạy ổn
+- Đẩy trạng thái thanh toán xuống app ngay khi SePay báo tiền về (WebSocket từ kho chủ trọ), thay cho việc app hỏi lại mỗi 5 giây.
+- App hiện dữ liệu lần trước ngay khi mở, cập nhật ngầm khi dữ liệu mới về.
+
 ### Không làm trong dự án này
 - Tự lập hoá đơn, nhập điện nước trên D1, chuyển giặt sấy / kỳ kê khai khỏi Express (dự án sau).
 - Đổi giao diện.
@@ -117,7 +121,7 @@ sequenceDiagram
 2. Kiểm tra người gọi có quyền căn đó (giữ nguyên logic `requireHouse` / `canAccessHouse`).
 3. Đọc `tenant_storage[owner_id]`:
    - `d1` → adapter trỏ vào D1 dùng chung (bảng cũ), như hôm nay;
-   - `do` → adapter gọi `TENANT.getByName('owner:' + owner_id)`;
+   - `do` → adapter gọi `TENANT.get(TENANT.idFromName('owner:' + owner_id), { locationHint: 'apac' })` — chỉ định đặt kho ở châu Á – Thái Bình Dương, vì kho nằm cố định gần nơi nó được tạo lần đầu (script chuyển dữ liệu có thể chạy từ máy ở nước ngoài);
    - `migrating` → đọc từ D1, **ghi bị từ chối** với 503 "Đang nâng cấp dữ liệu, thử lại sau ít phút".
 
 ### 4.3. Đăng nhập và phiên
@@ -285,6 +289,7 @@ Sau khi bạn duyệt tài liệu này, mình lập **kế hoạch chi tiết t�
 | Script chuyển lỗi giữa chừng, chủ trọ kẹt ở trạng thái khoá | Khoá tự hết hạn sau 10 phút, tự quay về `d1`; nút "Mở khoá" trên trang Developer |
 | Lịch chép từ Sheet ghi vào D1 trong lúc đang chuyển | Lịch chép bỏ qua chủ trọ `migrating`, chép lại một lần ngay sau khi bật |
 | Gói Free chạm giới hạn mà không ai biết | Trang Developer hiện mức sử dụng (dung lượng từng kho, tổng, dòng ghi/ngày), cảnh báo ở 70–80% |
+| Kho bị đặt xa người dùng Việt Nam (tạo lần đầu từ máy ở nước ngoài) | Luôn tạo kho với `locationHint: 'apac'`; đo thời gian phản hồi sau khi chuyển #4 |
 | PITR không chạy ở local | Chỉ thử PITR trên kho thử ở bản thật, không phụ thuộc vào nó cho việc chuyển dữ liệu |
 
 ## 12. Những gì mình tự quyết (bạn xem lại)
