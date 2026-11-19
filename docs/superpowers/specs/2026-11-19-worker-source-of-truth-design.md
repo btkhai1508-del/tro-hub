@@ -1,6 +1,6 @@
 # Thiết kế: Worker là nguồn dữ liệu chính, Google Sheet chỉ để xuất ra
 
-Ngày: 19/11/2026 · Trạng thái: **đã chốt hướng với bạn (19/11), chờ bạn đọc lại** · Nhánh: tạo mới từ `main`
+Ngày: 19/11/2026 · Trạng thái: **đã duyệt 19/11/2026** · Nhánh: tạo mới từ `main`
 
 ## 1. Mục đích và lý do
 
@@ -173,6 +173,12 @@ Bật công tắc `worker` trên bản thật: chỉ khi bạn đồng ý.
 **Zalo**: số điện thoại là duy nhất toàn hệ thống (cư dân và staff), nên không có trường hợp trùng. Cư dân `pending` → báo "đang chờ chủ trọ duyệt"; không tìm thấy → giữ thông báo hiện nay. Worker cần secret `ZALO_APP_SECRET` (hiện chỉ có trên Render).
 
 **Cư dân vào ở giữa tháng**: khi được duyệt vào phòng chưa có hoá đơn tháng đó, tạo hoá đơn nháp cho phòng.
+
+**Sửa hoá đơn đã trả một phần (bạn đã duyệt)**: sửa được hoá đơn chưa trả đủ; sau khi sửa, trạng thái tính lại theo tiền đã nhận + tiền chờ so với tổng mới (đủ thì tự "Đã đóng"); tổng mới thấp hơn tiền đã nhận thì hiển thị "dư X đồng" cho chủ trọ tự xử lý, không tự hoàn tiền. Phòng đã đóng khoá sửa; bỏ "đã đóng" rồi mới sửa được, sau đó cũng tính lại như trên.
+
+**Giặt sấy (bạn đã chốt)**: không thuộc dự án này; cư dân đăng ký mới sau khi bật luồng mới chưa dùng được giặt sấy cho tới dự án sau.
+
+**Khoá Zalo (bạn đã chốt)**: bạn tự thêm secret `ZALO_APP_SECRET` vào Worker trên Cloudflare trước khi bật luồng mới; không cản code và deploy với công tắc đang tắt.
 
 ## 13. Những gì mình tự quyết (bạn xem lại)
 - Xe máy giữ **50.000/xe** cho nhà của bạn (theo số tiền đang tính, không theo ô M5 = 60.000).
