@@ -6,7 +6,7 @@
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { actorOf, audit, canAccessHouse, fail, type App, type Env } from '../app.ts';
-import { getStorage, houseOwner } from '../central/directory.ts';
+import { getStorage, houseOwner, ROLLBACK_NOTE } from '../central/directory.ts';
 import { readOnlyDb, remoteTenantDb, type TenantDb } from './db.ts';
 import type { TenantStore } from './store.ts';
 
@@ -19,8 +19,10 @@ export function tenantStub(env: Env, ownerId: number, opts: { dryRun?: boolean }
 }
 
 export async function tenantOfOwner(env: Env, ownerId: number): Promise<TenantDb> {
-  const { backend } = await getStorage(env.DB, ownerId);
+  const { backend, note } = await getStorage(env.DB, ownerId);
   if (backend === 'do') return remoteTenantDb(tenantStub(env, ownerId), `owner:${ownerId}`);
+  // A rollback lock: the landlord's own store is still the truth (D1 is the stale pre-move copy), so read it, read-only.
+  if (backend === 'migrating' && note === ROLLBACK_NOTE) return readOnlyDb(remoteTenantDb(tenantStub(env, ownerId), `owner:${ownerId}`));
   if (backend === 'migrating') return readOnlyDb(env.DB); // reads still come from D1; writes answer 503
   return env.DB;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentMonth, diffSnapshots, formatReport, onlyHouses, parseArgs, snapshotPaths, UsageError } from '../scripts/migrate-tenant-lib.mts';
+import { currentMonth, diffSnapshots, formatReport, onlyHouses, parseArgs, snapshotPaths, snapshotStatusError, UsageError } from '../scripts/migrate-tenant-lib.mts';
 
 describe('migrate-tenant: dòng lệnh', () => {
   it('đọc lệnh, ownerId và --base (cả hai dạng)', () => {
@@ -94,5 +94,10 @@ describe('migrate-tenant: chụp và so', () => {
     expect(text).toContain('Lỗi (VERIFY_FAILED): Đối chiếu không khớp: rooms.');
     expect(text).toContain('Khoản chưa gắn căn');
     expect(formatReport({ ownerId: 4, mode: 'dry-run', ok: true })).toContain('KHỚP');
+  });
+
+  it('chỉ trang trả 200 mới chụp được (401/403/500 giống nhau không được coi là giống)', () => {
+    expect(snapshotStatusError('/api/houses', 200)).toBeNull();
+    for (const status of [401, 403, 404, 500, 503]) expect(snapshotStatusError('/api/houses', status)).toContain(String(status));
   });
 });

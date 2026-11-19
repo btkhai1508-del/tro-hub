@@ -143,3 +143,8 @@ export function formatReport(r: ReportLike): string {
 export function rollbackHint(o: Options): string {
   return `node scripts/migrate-tenant.mts rollback ${o.ownerId} --base ${o.base}`;
 }
+
+/** Two identical 401/403/500 answers must never read as "the same": a snapshot page counts only when it answered 200. */
+export function snapshotStatusError(path: string, status: number): string | null {
+  return status === 200 ? null : `GET ${path} trả ${status}, không chụp được.`;
+}

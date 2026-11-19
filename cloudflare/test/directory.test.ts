@@ -88,4 +88,29 @@ describe('danh bạ trung tâm', () => {
     expect((await getStorage(DB, 1)).backend).toBe('migrating');
     expect((await getStorage(DB, 1, Date.now() + 11 * 60_000)).backend).toBe('d1');
   });
+
+  it('khoá hết hạn được coi là trống cho CAS; khoá chưa hết hạn thì không', async () => {
+    expect(await setStorage(DB, 1, 'migrating', { expect: 'd1', lockUntil: Date.now() - 1000 })).toBe(true);
+    expect(await setStorage(DB, 1, 'migrating', { expect: 'd1', lockMinutes: 10 })).toBe(true); // expired: free
+    expect(await setStorage(DB, 1, 'migrating', { expect: 'd1', lockMinutes: 10 })).toBe(false); // live: taken
+  });
+
+  it('ownedLock: chỉ đúng khoá còn hạn mới đổi được công tắc', async () => {
+    const token = Date.now() + 60_000;
+    await setStorage(DB, 1, 'migrating', { expect: 'd1', lockUntil: token });
+    expect(await setStorage(DB, 1, 'do', { expect: 'migrating', ownedLock: token + 1 })).toBe(false);
+    expect(await setStorage(DB, 1, 'do', { expect: 'migrating', ownedLock: token })).toBe(true);
+    const old = Date.now() - 1000;
+    await setStorage(DB, 1, 'd1');
+    await setStorage(DB, 1, 'migrating', { expect: 'd1', lockUntil: old });
+    expect(await setStorage(DB, 1, 'do', { expect: 'migrating', ownedLock: old })).toBe(false); // expired
+  });
+
+  it('getStorage trả ghi chú của khoá; khoá rollback hết hạn về do', async () => {
+    await setStorage(DB, 1, 'do');
+    await setStorage(DB, 1, 'migrating', { expect: 'do', note: 'rollback', lockUntil: Date.now() - 1000 });
+    expect(await getStorage(DB, 1)).toMatchObject({ backend: 'do', note: 'rollback' });
+    await setStorage(DB, 1, 'migrating', { expect: 'do', note: 'migrate', lockMinutes: 10 });
+    expect(await getStorage(DB, 1)).toMatchObject({ backend: 'migrating', note: 'migrate' });
+  });
 });

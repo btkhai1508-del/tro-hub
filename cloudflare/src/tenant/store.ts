@@ -171,6 +171,29 @@ export class TenantStore extends DurableObject<Env> {
     }
   }
 
+  /**
+   * Raise the AUTOINCREMENT counters so the next id of each table is at least the given floor (never lowers
+   * one). Deliberately not a data write: last_write_at stays, so the rollback fast path still sees "no writes".
+   * Call after reset() and after the rows were copied (reset clears sqlite_sequence).
+   */
+  async setSequences(floors: Record<string, number>): Promise<Outcome<{ raised: number }>> {
+    return this.guard(() => {
+      let raised = 0;
+      this.ctx.storage.transactionSync(() => {
+        for (const [table, floor] of Object.entries(floors)) {
+          tableDef(table);
+          const want = floor - 1; // sqlite_sequence holds the last id used
+          const cur = this.sql('SELECT seq FROM sqlite_sequence WHERE name = ?', table).toArray()[0];
+          if (!cur) this.sql('INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)', table, want);
+          else if ((cur.seq as number) < want) this.sql('UPDATE sqlite_sequence SET seq = ? WHERE name = ?', want, table);
+          else continue;
+          raised++;
+        }
+      });
+      return { raised };
+    });
+  }
+
   async info(): Promise<TenantInfo> {
     const num = (k: string) => {
       const v = this.getMeta(k);

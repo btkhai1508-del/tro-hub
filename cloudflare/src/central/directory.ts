@@ -6,6 +6,9 @@
 
 export type Backend = 'd1' | 'migrating' | 'do';
 
+/** Note of a rollback lock: while it is held the landlord's own store is still the truth. */
+export const ROLLBACK_NOTE = 'rollback';
+
 export interface HouseDir {
   house_id: string;
   owner_id: number;
@@ -163,26 +166,29 @@ export async function updateResidentIndex(
   }
 }
 
-export async function getStorage(
-  db: D1Database,
-  ownerId: number,
-  now: number = Date.now()
-): Promise<{ backend: Backend; lockExpiresAt: number | null; migratedAt: string | null }> {
-  // Compare-and-set: an expired lock flips back in a single statement: to d1, except a rollback lock
-  // (note = 'rollback', taken while the landlord's store is still the truth) which goes back to do.
+/** An expired lock flips back in a single compare-and-set: to d1, except a rollback lock, which goes back to do. */
+async function expireLock(db: D1Database, ownerId: number, now: number): Promise<void> {
   await db
     .prepare(
-      `UPDATE tenant_storage SET backend = CASE WHEN note = 'rollback' THEN 'do' ELSE 'd1' END, lock_expires_at = NULL, changed_at = datetime('now')
+      `UPDATE tenant_storage SET backend = CASE WHEN note = '${ROLLBACK_NOTE}' THEN 'do' ELSE 'd1' END, lock_expires_at = NULL, changed_at = datetime('now')
        WHERE owner_id = ? AND backend = 'migrating' AND lock_expires_at < ?`
     )
     .bind(ownerId, now)
     .run();
+}
+
+export async function getStorage(
+  db: D1Database,
+  ownerId: number,
+  now: number = Date.now()
+): Promise<{ backend: Backend; lockExpiresAt: number | null; migratedAt: string | null; note: string | null }> {
+  await expireLock(db, ownerId, now);
   const row = await db
-    .prepare(`SELECT backend, lock_expires_at, migrated_at FROM tenant_storage WHERE owner_id = ?`)
+    .prepare(`SELECT backend, lock_expires_at, migrated_at, note FROM tenant_storage WHERE owner_id = ?`)
     .bind(ownerId)
-    .first<{ backend: Backend; lock_expires_at: number | null; migrated_at: string | null }>();
-  if (!row) return { backend: 'd1', lockExpiresAt: null, migratedAt: null };
-  return { backend: row.backend, lockExpiresAt: row.lock_expires_at, migratedAt: row.migrated_at };
+    .first<{ backend: Backend; lock_expires_at: number | null; migrated_at: string | null; note: string | null }>();
+  if (!row) return { backend: 'd1', lockExpiresAt: null, migratedAt: null, note: null };
+  return { backend: row.backend, lockExpiresAt: row.lock_expires_at, migratedAt: row.migrated_at, note: row.note };
 }
 
 export async function newOwnerBackend(db: D1Database): Promise<'d1' | 'do'> {
@@ -207,6 +213,7 @@ export async function setStorage(
   const lock = backend === 'migrating' ? opts.lockUntil ?? now + (opts.lockMinutes ?? 10) * 60_000 : null;
   const migratedAt = backend === 'do' && !opts.keepMigratedAt ? new Date().toISOString() : null;
   const note = opts.note ?? null;
+  await expireLock(db, ownerId, now); // an expired lock is free: the first retry must not be told a run is still going
   // A landlord without a row is on d1: materialise it so the guarded update below has something to match.
   if (!opts.expect || opts.expect === 'd1') {
     await db

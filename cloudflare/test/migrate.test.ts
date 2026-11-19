@@ -1,8 +1,8 @@
 import { env, runInDurableObject } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/app.ts';
-import { getStorage, setStorage } from '../src/central/directory.ts';
-import { migrateOwner, rollbackOwner, unlockOwner, type MigrationReport } from '../src/migrate/tenant.ts';
+import { getStorage, ROLLBACK_NOTE, setStorage } from '../src/central/directory.ts';
+import { config, DRAIN_MS, migrateOwner, rollbackOwner, unlockOwner, type MigrationReport } from '../src/migrate/tenant.ts';
 import { replayDeferred, replayPendingDeferred } from '../src/payments/settle.ts';
 import { TENANT_TABLES } from '../src/tenant/schema.ts';
 import { tenantOfOwner, tenantStub } from '../src/tenant/route.ts';
@@ -37,6 +37,8 @@ async function world() {
     e.DB.prepare(`DELETE FROM service_payments`), e.DB.prepare(`DELETE FROM service_invoices`),
     e.DB.prepare(`DELETE FROM sepay_events`), e.DB.prepare(`DELETE FROM unassigned_payments`),
     e.DB.prepare(`DELETE FROM audit_log`),
+    // Counters from earlier tests (a rollback leaves D1's inside a landlord's id range) must not leak in.
+    e.DB.prepare(`DELETE FROM sqlite_sequence WHERE name IN ('rooms', 'invoices', 'meter_readings', 'payments', 'notifications')`),
   ]);
   await seedWorld('d1');
   await e.DB.batch([
@@ -119,6 +121,7 @@ const okReport = (r: MigrationReport) => {
 
 let tokens: { dev: string; owner: string; other: string; manager: string; resident: string };
 beforeEach(async () => {
+  config.drainMs = 0; // the drain wait has its own tests
   await world();
   await e.DB.prepare(`INSERT INTO staff_houses (staff_id, house_id) VALUES (2, 'LVC')`).run();
   tokens = { dev: await login(PHONES.developer), owner: await login(PHONES.owner), other: await login(PHONES.otherOwner), manager: await login(PHONES.manager), resident: await login(PHONES.residentLvc) };
@@ -136,7 +139,7 @@ describe('chạy thử', () => {
     expect(await backend()).toBe('d1');
     expect(await lockRow()).toMatchObject({ backend: 'd1', lock_expires_at: null });
     expect(await storeEmpty()).toBe(true); // the real store
-    expect((await counts(tenantStub(e, 1, { dryRun: true }))).houses).toBe(2); // the trial store
+    expect(await storeEmpty(tenantStub(e, 1, { dryRun: true }))).toBe(true); // the trial store is emptied after the report
     expect(await d1State()).toBe(before);
     // Again: the trial store is emptied first, so a second run is just as clean.
     okReport(await migrateOwner(e, 1, { dryRun: true }));
@@ -289,17 +292,14 @@ describe('chuyển', () => {
     expect((await counts()).rooms).toBe(2);
   });
 
-  it('kho đã có dữ liệu của lần chuyển trước (migrated_from có) → 409 STORE_NOT_EMPTY, kho giữ nguyên, về d1', async () => {
+  it('kho sót marker của lần chuyển xong nhưng công tắc ở d1 (sập giữa chừng) → migrate tự reset rồi chuyển', async () => {
     okReport(await migrateOwner(e, 1));
     await sql(store(), `UPDATE rooms SET price = 7 WHERE id = 1`);
-    await setStorage(e.DB, 1, 'd1'); // somebody flipped the switch by hand
-    const r = await migrateOwner(e, 1);
-    expect(r).toMatchObject({ ok: false, errorCode: 'STORE_NOT_EMPTY' });
-    expect(await backend()).toBe('d1');
-    expect(await run(store(), (s) => s.ctx.storage.sql.exec(`SELECT price FROM rooms WHERE id = 1`).one().price)).toBe(7); // not emptied
-    const res = await api('/api/dev/storage/1/migrate', { method: 'POST' }, tokens.dev);
-    expect(res.status).toBe(409);
-    expect((await res.json()) as any).toMatchObject({ errorCode: 'STORE_NOT_EMPTY' });
+    await setStorage(e.DB, 1, 'd1'); // the crash left the switch on d1 and the marker in the store
+    expect((await store().info()).migratedFrom).toBe('d1');
+    okReport(await migrateOwner(e, 1));
+    expect(await backend()).toBe('do');
+    expect(await run(store(), (s) => s.ctx.storage.sql.exec(`SELECT price FROM rooms WHERE id = 1`).one().price)).toBe(3000000); // D1's value, not the leftover
   });
 
   it('chủ trọ lạ → 404', async () => {
@@ -440,7 +440,7 @@ describe('quay lại', () => {
     const r = await rollbackOwner(e, 1);
     okReport(r);
     expect(await backend()).toBe('d1');
-    expect(await rowsOf(e.DB, `SELECT id, price FROM rooms WHERE house_id = 'LVC' ORDER BY id`)).toEqual([{ id: 3, price: 3300000 }, { id: 4, price: 3600000 }]);
+    expect(await rowsOf(e.DB, `SELECT id, price FROM rooms WHERE house_id = 'LVC' ORDER BY id`)).toEqual([{ id: 3, price: 3300000 }, { id: 1_000_000_000, price: 3600000 }]);
     expect(await rowsOf(e.DB, `SELECT status, status_by FROM invoices WHERE room_id = 3`)).toEqual([{ status: 'cash', status_by: 'staff:1' }]);
     expect(await rowsOf(e.DB, `SELECT title FROM notifications`)).toEqual([{ title: 'mới' }]);
     expect(await snapshot(tokens.owner)).toEqual(storeSnapshot); // the API shows the same before and after the rollback
@@ -449,7 +449,7 @@ describe('quay lại', () => {
     expect(await rowsOf(e.DB, `SELECT id FROM rooms WHERE house_id = 'NTTD' ORDER BY id`)).toEqual([{ id: 5 }, { id: 6 }]);
     // New rows in D1 keep numbering after the restored ids.
     const next = await e.DB.prepare(`INSERT INTO rooms (house_id, name) VALUES ('LVC', '103') RETURNING id`).first<{ id: number }>();
-    expect(next!.id).toBeGreaterThan(6);
+    expect(next!.id).toBeGreaterThan(1_000_000_000);
   });
 
   it('rollback rồi migrate lại: thành công, rồi rollback lần nữa cũng được', async () => {
@@ -553,10 +553,25 @@ describe('tài khoản ngân hàng', () => {
     const res = await api('/api/dev/storage/4/migrate', { method: 'POST' }, tokens.dev);
     expect(res.status).toBe(409);
     expect((await res.json()) as any).toMatchObject({ errorCode: 'SHARED_BANK_ACCOUNT' });
-    // Rollback refuses too, rather than delete rows that may belong to the other landlord.
-    await setStorage(e.DB, 1, 'do', { expect: 'd1' });
-    expect(await rollbackOwner(e, 1)).toMatchObject({ ok: false, errorCode: 'SHARED_BANK_ACCOUNT' });
-    expect(await backend()).toBe('do');
+  });
+
+  it('rollback vẫn làm được khi tài khoản dùng chung: khoản chưa gắn căn của chủ trọ kia còn nguyên (có ghi mới và không)', async () => {
+    for (const withWrites of [false, true]) {
+      await world();
+      await house('TRUNG_KIM', '9990001800');
+      await lessPayment('9990001800', 1);
+      okReport(await migrateOwner(e, 1));
+      await house('NTTD', '9990001800'); // now shared
+      await lessPayment('9990001800', 77); // belongs to the other landlord's world
+      if (withWrites) await sql(store(), `UPDATE rooms SET price = 3300000 WHERE id = 3`);
+      let restored = false;
+      const r = await rollbackOwner(e, 1, { hooks: { afterRestore: async () => { restored = true; } } });
+      okReport(r);
+      expect(restored).toBe(withWrites);
+      expect(await backend()).toBe('d1');
+      expect(await rowsOf(e.DB, `SELECT amount FROM payments WHERE house_id IS NULL ORDER BY amount`)).toEqual([{ amount: 1 }, { amount: 77 }]);
+      if (withWrites) expect(await rowsOf(e.DB, `SELECT price FROM rooms WHERE id = 3`)).toEqual([{ price: 3300000 }]);
+    }
   });
 
   it('tài khoản dùng chung nhưng không có khoản chưa gắn căn → chuyển bình thường', async () => {
@@ -628,5 +643,155 @@ describe('API Developer', () => {
     await api('/api/dev/storage/1/migrate', { method: 'POST' }, tokens.dev);
     const acts = (await rowsOf(e.DB, `SELECT action FROM audit_log WHERE action LIKE 'storage_%' ORDER BY id`)).map((r) => r.action);
     expect(acts).toEqual(['storage_dry_run', 'storage_dry_run_ok', 'storage_migrate', 'storage_migrate_ok']);
+  });
+});
+
+describe('chờ ghi dở dang (drain)', () => {
+  it('mặc định 15 giây, nằm gọn trong khoá 10 phút', () => {
+    expect(DRAIN_MS).toBe(15_000);
+    expect(DRAIN_MS).toBeLessThan(10 * 60_000 / 10);
+    config.drainMs = DRAIN_MS; // the default is what a plain call uses (restored by beforeEach)
+    expect(config.drainMs).toBe(DRAIN_MS);
+  });
+
+  it('migrate chờ sau khi khoá, trước lần đọc đầu tiên', async () => {
+    const t0 = Date.now();
+    const seen: [string, number, string][] = [];
+    const mark = (name: string) => async () => { seen.push([name, Date.now() - t0, await backend()]); };
+    const r = await migrateOwner(e, 1, { drainMs: 150, hooks: { afterDrain: mark('drain'), afterReset: mark('reset'), afterCopy: mark('copy') } });
+    okReport(r);
+    expect(seen.map((x) => x[0])).toEqual(['drain', 'reset', 'copy']);
+    expect(seen[0][1]).toBeGreaterThanOrEqual(140);
+    expect(seen.every((x) => x[2] === 'migrating')).toBe(true); // already locked while it waits
+  });
+
+  it('một ghi D1 đến trong lúc chờ được chép theo (không mất)', async () => {
+    const run1 = migrateOwner(e, 1, { drainMs: 200 });
+    await new Promise((r) => setTimeout(r, 50));
+    await e.DB.prepare(`UPDATE rooms SET price = 3111111 WHERE id = 3`).run(); // a handler that began before the lock
+    okReport(await run1);
+    expect(await run(store(), (s) => s.ctx.storage.sql.exec(`SELECT price FROM rooms WHERE id = 3`).one().price)).toBe(3111111);
+  });
+
+  it('rollback chờ: một ghi vào kho đến trong lúc chờ làm rollback chép về D1 thay vì đi đường tắt', async () => {
+    okReport(await migrateOwner(e, 1));
+    const run1 = rollbackOwner(e, 1, { drainMs: 200 });
+    await new Promise((r) => setTimeout(r, 50));
+    await sql(store(), `UPDATE rooms SET price = 3222222 WHERE id = 3`);
+    okReport(await run1);
+    expect(await rowsOf(e.DB, `SELECT price FROM rooms WHERE id = 3`)).toEqual([{ price: 3222222 }]);
+    expect(await backend()).toBe('d1');
+  });
+});
+
+describe('đọc trong lúc khoá rollback', () => {
+  it('khoá rollback: đọc từ kho (hoá đơn đã đóng ở kho vẫn Đã đóng), ghi trả 503; khoá chuyển thường đọc D1', async () => {
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE room_id = 3`); // paid while on do
+    const status = async () => (await (await api(`/api/payment/status?${Q}`, {}, tokens.resident)).json() as any).paymentStatus;
+    expect(await status()).toBe('paid');
+    await setStorage(e.DB, 1, 'migrating', { expect: 'do', note: ROLLBACK_NOTE });
+    expect(await status()).toBe('paid'); // D1 still says unpaid: it must not be read
+    const write = await api('/api/admin/payment-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ roomNumber: 'LVC-101', status: 'unpaid', month: '11/2026' }) }, tokens.owner);
+    expect(write.status).toBe(503);
+    expect((await write.json()) as any).toMatchObject({ errorCode: 'TENANT_MIGRATING' });
+    expect((await (await api(`/api/houses/LVC/invoices?month=${MONTH}`, {}, tokens.owner)).json() as any).invoices[0].status).toBe('paid');
+    // A migrate lock is different: the landlord's data is still in D1.
+    await setStorage(e.DB, 1, 'do', { expect: 'migrating' });
+    await setStorage(e.DB, 1, 'migrating', { expect: 'do', note: 'migrate' });
+    expect(await status()).toBe('unpaid');
+  });
+
+  it('rollback copy-back: trong lúc khoá, đọc vẫn ra dữ liệu của kho', async () => {
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE room_id = 3`);
+    const during: string[] = [];
+    const r = await rollbackOwner(e, 1, {
+      hooks: { afterRestore: async () => { during.push((await (await api(`/api/payment/status?${Q}`, {}, tokens.resident)).json() as any).paymentStatus); } },
+    });
+    okReport(r);
+    expect(during).toEqual(['paid']);
+  });
+});
+
+describe('kho sót lại', () => {
+  it('clear-store: xoá kho khi công tắc ở d1; từ chối khi do hoặc migrating; chỉ Developer', async () => {
+    await sql(store(), `INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('JUNK','n','a','d','w','p','l','0')`);
+    await store().setMeta('migrated_from', 'd1');
+    for (const token of [tokens.owner, tokens.manager, tokens.resident]) expect((await api('/api/dev/storage/1/clear-store', { method: 'POST' }, token)).status).toBe(403);
+    expect((await api('/api/dev/storage/1/clear-store', { method: 'POST' })).status).toBe(401);
+    expect(await storeEmpty()).toBe(false);
+    expect((await api('/api/dev/storage/99/clear-store', { method: 'POST' }, tokens.dev)).status).toBe(404);
+    const ok = await api('/api/dev/storage/1/clear-store', { method: 'POST' }, tokens.dev);
+    expect(ok.status).toBe(200);
+    expect(await storeEmpty()).toBe(true);
+    expect((await store().info()).migratedFrom).toBeNull();
+    expect(await lockRow()).toMatchObject({ backend: 'd1', lock_expires_at: null });
+    // On 'do' and while migrating the store serves traffic or is being filled: refuse, touch nothing.
+    okReport(await migrateOwner(e, 1));
+    expect((await api('/api/dev/storage/1/clear-store', { method: 'POST' }, tokens.dev)).status).toBe(409);
+    expect(await storeEmpty()).toBe(false);
+    await setStorage(e.DB, 1, 'migrating', { expect: 'do', note: 'migrate' });
+    expect((await api('/api/dev/storage/1/clear-store', { method: 'POST' }, tokens.dev)).status).toBe(409);
+    expect(await storeEmpty()).toBe(false);
+  });
+
+  it('lần chạy chết giữa chừng (kho đầy, marker có, khoá hết hạn) → migrate chạy lại được', async () => {
+    okReport(await migrateOwner(e, 1));
+    await setStorage(e.DB, 1, 'migrating', { expect: 'do', note: 'migrate', lockUntil: Date.now() - 1000 }); // expired -> reads as d1? (migrate note)
+    expect(await backend()).toBe('d1');
+    okReport(await migrateOwner(e, 1));
+    expect(await backend()).toBe('do');
+  });
+
+  it('khoá hết hạn được coi là trống: lần thử lại đầu tiên không bị MIGRATION_RUNNING', async () => {
+    await setStorage(e.DB, 1, 'migrating', { expect: 'd1', note: 'migrate', lockUntil: Date.now() - 1000 });
+    okReport(await migrateOwner(e, 1));
+  });
+});
+
+describe('dải id của kho riêng', () => {
+  const idsOf = async (table: string) => (await run(store(), (s) => s.ctx.storage.sql.exec(`SELECT id FROM ${table} ORDER BY id`).toArray())).map((r: any) => r.id as number);
+  const FLOOR = 1_000_000_000;
+
+  it('sau migrate, hàng mới trong kho có id ≥ ngưỡng; rollback chép về D1 không đụng hàng chủ trọ khác tạo trong lúc đó', async () => {
+    okReport(await migrateOwner(e, 1));
+    expect(await store().info()).toMatchObject({ lastWriteAt: expect.anything() }); // copy wrote; counters did not change that
+    const res = await api('/api/admin/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 't', desc: 'd', target: 'LVC' }) }, tokens.owner);
+    expect(res.status).toBe(200);
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '102')`);
+    expect((await idsOf('notifications')).every((id: number) => id >= FLOOR)).toBe(true);
+    expect((await idsOf('rooms')).filter((id: number) => id >= FLOOR)).toEqual([FLOOR]);
+    // Meanwhile a landlord still on d1 creates rows in the shared D1.
+    const d1Room = await e.DB.prepare(`INSERT INTO rooms (house_id, name) VALUES ('NTTD', '103') RETURNING id`).first<{ id: number }>();
+    expect(d1Room!.id).toBeLessThan(FLOOR);
+    okReport(await rollbackOwner(e, 1));
+    expect(await rowsOf(e.DB, `SELECT id FROM rooms WHERE id >= ${FLOOR}`)).toEqual([{ id: FLOOR }]);
+    expect(await rowsOf(e.DB, `SELECT id FROM rooms WHERE id = ${d1Room!.id}`)).toHaveLength(1);
+    expect((await rowsOf(e.DB, `SELECT id FROM notifications`)).every((r) => r.id >= FLOOR)).toBe(true);
+  });
+
+  it('migrate → rollback → migrate: id mới trong kho không đụng id D1 đã cấp', async () => {
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '102')`);
+    okReport(await rollbackOwner(e, 1)); // D1's counter is now inside the landlord's range
+    const d1Room = await e.DB.prepare(`INSERT INTO rooms (house_id, name) VALUES ('NTTD', '103') RETURNING id`).first<{ id: number }>();
+    expect(d1Room!.id).toBeGreaterThan(FLOOR);
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '104')`);
+    const ids = await idsOf('rooms');
+    expect(Math.max(...ids)).toBeGreaterThan(d1Room!.id);
+    expect(ids).not.toContain(d1Room!.id);
+    okReport(await rollbackOwner(e, 1)); // and it goes back without a collision
+  });
+
+  it('chủ trọ khác có dải riêng; đặt bộ đếm không đếm là ghi (đường tắt rollback còn nguyên)', async () => {
+    expect((await migrateOwner(e, 4)).ok).toBe(true); // no invoices, so okReport's month check does not apply
+    await sql(store(4), `INSERT INTO rooms (house_id, name) VALUES ('NTTD', '103')`);
+    expect(await idsOf4()).toContain(4 * FLOOR);
+    async function idsOf4() { return (await run(store(4), (s) => s.ctx.storage.sql.exec(`SELECT id FROM rooms`).toArray())).map((r: any) => r.id as number); }
+    okReport(await migrateOwner(e, 1));
+    const info = await store().info();
+    expect(info.lastWriteAt!).toBeLessThanOrEqual(info.migratedAt!);
   });
 });

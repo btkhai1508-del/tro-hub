@@ -14,7 +14,7 @@
  *  - D1 is never emptied before the store's rows are in memory, and the copy back into D1 is one atomic batch.
  */
 import type { Env } from '../app.ts';
-import { getStorage, setStorage, type Backend } from '../central/directory.ts';
+import { getStorage, ROLLBACK_NOTE, setStorage, type Backend } from '../central/directory.ts';
 import { syncLegacySheets } from '../cron.ts';
 import { replayDeferred } from '../payments/settle.ts';
 import { tenantStub } from '../tenant/route.ts';
@@ -33,7 +33,7 @@ export type MigrationErrorCode =
   | 'MIGRATION_RUNNING' // another run holds the lock
   | 'ALREADY_MIGRATED' // already on the landlord's own store
   | 'NOT_MIGRATED' // rollback of a landlord that is not on the store
-  | 'STORE_NOT_EMPTY' // the store was filled by a finished migration and never rolled back
+  | 'STORE_IN_USE' // clear-store while the landlord is on, or being moved to, the store
   | 'SHARED_BANK_ACCOUNT' // house-less payments cannot be told apart between landlords
   | 'VERIFY_FAILED' // copied data does not match
   | 'LOCK_LOST' // the lock ran out or was unlocked while the run was working
@@ -61,10 +61,40 @@ export interface MigrateHooks {
   afterCopy?: () => Promise<void>;
   beforeFlip?: () => Promise<void>;
   afterRestore?: () => Promise<void>;
+  /** After the drain wait, before the first read. */
+  afterDrain?: () => Promise<void>;
 }
+
+interface RunOptions { hooks?: MigrateHooks; drainMs?: number }
 
 const PAGE = 200;
 const LOCK_MS = 10 * 60_000;
+/**
+ * After the lock is taken, wait this long before the first read: a handler that picked the old backend just
+ * before the lock can still be writing (a Sheet fetch inside settleRent takes seconds). Well inside the lock.
+ */
+export const DRAIN_MS = 15_000;
+/** Tests set `config.drainMs = 0`; a run can also be given `drainMs` directly. */
+export const config = { drainMs: DRAIN_MS };
+const sleep = (ms: number) => (ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve());
+
+/** AUTOINCREMENT tables of a store (residents get their ids from the central index). */
+const SEQUENCE_TABLES = ['rooms', 'invoices', 'meter_readings', 'payments', 'notifications'];
+const OWNER_ID_BASE = 1_000_000_000;
+
+/**
+ * The next id of each AUTOINCREMENT table in a landlord's store: above every id in the whole shared D1 (rollback
+ * inserts the store's explicit ids there, and landlords still on d1 allocate beside them) and inside the
+ * landlord's own range `ownerId * 1e9`. Only ever raised.
+ */
+async function sequenceFloors(env: Env, ownerId: number): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  for (const t of SEQUENCE_TABLES) {
+    const row = await env.DB.prepare(`SELECT COALESCE(MAX(id), 0) AS m FROM ${t}`).first<{ m: number }>();
+    out[t] = Math.max(ownerId * OWNER_ID_BASE, (row?.m ?? 0) + 1);
+  }
+  return out;
+}
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const mask = (account: string) => `••${account.slice(-4)}`;
@@ -136,11 +166,12 @@ async function copyToStore(env: Env, ownerId: number, store: Store): Promise<voi
   }
 }
 
-async function d1Digest(env: Env, ownerId: number, t: TenantTable): Promise<{ count: number; sha: string }> {
+async function d1Digest(env: Env, ownerId: number, t: TenantTable, lessIds?: Set<number>): Promise<{ count: number; sha: string }> {
   const rows: Row[] = [];
   for (let offset = 0; ; offset += PAGE) {
     const page = await ownerRowsFromD1(env, ownerId, t, offset, PAGE);
-    rows.push(...page);
+    // Rollback: house-less payments count only when the store has them (a bank account shared with another landlord brings foreign ones).
+    rows.push(...(t.name === 'payments' && lessIds ? page.filter((x) => x.house_id !== null || lessIds.has(x.id as number)) : page));
     if (page.length < PAGE) break;
   }
   return { count: rows.length, sha: await digestRows(rows, t.pk) };
@@ -161,10 +192,10 @@ async function d1Months(env: Env, ownerId: number): Promise<Map<string, { total:
 }
 
 /** Compare D1's rows of this landlord with the store: per table count + SHA-256, per month invoice totals and paid counts. */
-async function compare(env: Env, ownerId: number, store: Store): Promise<{ ok: boolean; tables: TableReport[]; months: MonthReport[] }> {
+async function compare(env: Env, ownerId: number, store: Store, lessIds?: Set<number>): Promise<{ ok: boolean; tables: TableReport[]; months: MonthReport[] }> {
   const tables: TableReport[] = [];
   for (const t of TENANT_TABLES) {
-    const d1 = await d1Digest(env, ownerId, t);
+    const d1 = await d1Digest(env, ownerId, t, lessIds);
     const doSide = await store.digest(t.name);
     if (!doSide.ok) throw new Error(`${t.name}: ${doSide.error}`);
     tables.push({ table: t.name, d1Count: d1.count, doCount: doSide.count, d1Sha: d1.sha, doSha: doSide.sha256, ok: d1.count === doSide.count && d1.sha === doSide.sha256 });
@@ -216,6 +247,8 @@ async function dryRun(env: Env, ownerId: number, r: MigrationReport, hooks: Migr
     return { ...r, ok: c.ok, tables: c.tables, months: c.months, ...(c.ok ? {} : { errorCode: 'VERIFY_FAILED' as const, error: 'Dữ liệu chép sang kho thử không khớp D1.' }) };
   } catch (e) {
     return refuse(r, 'MIGRATION_FAILED', message(e));
+  } finally {
+    await store.reset().catch(() => {}); // the report is all that is kept
   }
 }
 
@@ -224,9 +257,10 @@ async function dryRun(env: Env, ownerId: number, r: MigrationReport, hooks: Migr
  * Steps: lock writes (d1 -> migrating, 10 minutes) -> empty a leftover store -> copy -> compare ->
  * switch to 'do' -> book the transfers that waited -> re-read the old Sheet once.
  */
-export async function migrateOwner(env: Env, ownerId: number, opts: { dryRun?: boolean; hooks?: MigrateHooks } = {}): Promise<MigrationReport> {
+export async function migrateOwner(env: Env, ownerId: number, opts: RunOptions & { dryRun?: boolean } = {}): Promise<MigrationReport> {
   const r = blank(ownerId, opts.dryRun ? 'dry-run' : 'migrate');
   const hooks = opts.hooks ?? {};
+  let held: { token: number; store: Store } | null = null;
   try {
     const refused = await preflight(env, ownerId, r);
     if (refused) return refused;
@@ -241,6 +275,7 @@ export async function migrateOwner(env: Env, ownerId: number, opts: { dryRun?: b
     }
     const startedAt = Date.now();
     const store = tenantStub(env, ownerId);
+    held = { token, store };
     const stop = async (code: MigrationErrorCode, error: string, resetStore = true): Promise<MigrationReport> => {
       await giveUp(env, ownerId, store, token, { resetStore, to: 'd1', note: `migrate failed: ${code}` });
       return { ...r, ok: false, errorCode: code, error, lockedMs: Date.now() - startedAt };
@@ -248,11 +283,11 @@ export async function migrateOwner(env: Env, ownerId: number, opts: { dryRun?: b
 
     let compared: Awaited<ReturnType<typeof compare>>;
     try {
-      // A store that already carries `migrated_from` was filled by a finished migration that was never rolled
-      // back: it may hold newer data than D1, so it is neither reused nor emptied. A store without it is the
-      // leftover of a failed run or an expired lock: empty it.
-      if ((await store.info()).migratedFrom !== null)
-        return await stop('STORE_NOT_EMPTY', 'Kho riêng của chủ trọ này đã có dữ liệu từ lần chuyển trước. Hãy quay lại D1 (rollback) trước khi chuyển lại.', false);
+      // Let handlers that picked the old backend just before the lock finish their writes before anything is read.
+      await sleep(opts.drainMs ?? config.drainMs);
+      await hooks.afterDrain?.();
+      // The switch is 'd1' (we just took the lock from it), so whatever the store holds, even a finished
+      // migration's marker left by a crash, is not serving traffic: empty it.
       await store.reset();
       await store.setMeta('owner_id', String(ownerId));
       await hooks.afterReset?.();
@@ -264,6 +299,9 @@ export async function migrateOwner(env: Env, ownerId: number, opts: { dryRun?: b
         return { ...(await stop('VERIFY_FAILED', `Đối chiếu không khớp: ${bad.join(', ')}.`)), tables: compared.tables, months: compared.months };
       }
       await hooks.beforeFlip?.();
+      // After reset and copy (reset clears the counters), before the switch. Not a data write: last_write_at stays.
+      const seq = await store.setSequences(await sequenceFloors(env, ownerId));
+      if (!seq.ok) throw new Error(`sequences: ${seq.error}`);
       await store.setMeta('migrated_from', 'd1');
       await store.setMeta('migrated_at', String(Date.now()));
     } catch (e) {
@@ -294,8 +332,28 @@ export async function migrateOwner(env: Env, ownerId: number, opts: { dryRun?: b
     if (warnings.length) out.warnings = warnings;
     return out;
   } catch (e) {
+    if (held) await giveUp(env, ownerId, held.store, held.token, { resetStore: true, to: 'd1', note: 'migrate failed: MIGRATION_FAILED' });
     return refuse(r, 'MIGRATION_FAILED', message(e));
   }
+}
+
+/**
+ * Empty the landlord's live store `owner:<id>` by hand (leftover of a crashed run). Only while the switch is
+ * 'd1': a store the switch does not point at serves nobody. Takes the lock so no run starts meanwhile.
+ */
+export async function clearStore(env: Env, ownerId: number): Promise<{ ok: boolean; errorCode?: MigrationErrorCode; error?: string }> {
+  if (!(await ownerExists(env, ownerId))) return { ok: false, errorCode: 'LANDLORD_NOT_FOUND', error: 'Không tìm thấy chủ trọ.' };
+  const token = Date.now() + LOCK_MS;
+  if (!(await setStorage(env.DB, ownerId, 'migrating', { expect: 'd1', lockUntil: token, note: 'clear-store' })))
+    return { ok: false, errorCode: 'STORE_IN_USE', error: 'Chủ trọ này đang dùng kho riêng hoặc đang được chuyển; chỉ xoá kho khi công tắc ở D1.' };
+  try {
+    await tenantStub(env, ownerId).reset();
+  } catch (e) {
+    await setStorage(env.DB, ownerId, 'd1', { expect: 'migrating', ownedLock: token, note: 'clear-store failed' }).catch(() => {});
+    return { ok: false, errorCode: 'MIGRATION_FAILED', error: message(e) };
+  }
+  await setStorage(env.DB, ownerId, 'd1', { expect: 'migrating', ownedLock: token, note: 'store cleared' });
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -304,12 +362,14 @@ export async function migrateOwner(env: Env, ownerId: number, opts: { dryRun?: b
 
 const OWNER_HOUSE_IDS = 'SELECT id FROM houses WHERE owner_id = ?1';
 
-/** The statement that removes one landlord's rows of a table from D1 (same rows ownerRowsFromD1 reads). */
+/**
+ * The statement that removes one landlord's rows of a table from D1. Payments without a house are never deleted
+ * here: a bank account may be shared with another landlord, whose rows must survive; the store's own are put back by id.
+ */
 function deleteOwnerRows(env: Env, ownerId: number, t: TenantTable): D1PreparedStatement {
   let where: string;
   if (t.name === 'houses') where = 'owner_id = ?1';
-  else if (t.name === 'payments')
-    where = `house_id IN (${OWNER_HOUSE_IDS}) OR (house_id IS NULL AND account_no IN (SELECT bank_account_no FROM houses WHERE owner_id = ?1 AND bank_account_no IS NOT NULL))`;
+  else if (t.name === 'payments') where = `house_id IN (${OWNER_HOUSE_IDS})`; // house-less ones: see restoreToD1
   else where = `house_id IN (${OWNER_HOUSE_IDS})`;
   return env.DB.prepare(`DELETE FROM ${t.name} WHERE ${where}`).bind(ownerId);
 }
@@ -336,7 +396,8 @@ async function restoreToD1(env: Env, ownerId: number, store: Store): Promise<voi
   for (const t of TENANT_TABLES) {
     for (const row of data.get(t.name)!) {
       const cols = Object.keys(row);
-      stmts.push(env.DB.prepare(`INSERT INTO ${t.name} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map((c) => row[c])));
+      const verb = t.name === 'payments' && row.house_id === null ? 'INSERT OR REPLACE' : 'INSERT';
+      stmts.push(env.DB.prepare(`${verb} INTO ${t.name} (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`).bind(...cols.map((c) => row[c])));
     }
   }
   await env.DB.batch(stmts);
@@ -348,17 +409,14 @@ async function restoreToD1(env: Env, ownerId: number, store: Store): Promise<voi
  * store back into D1 (atomically), verify, switch. Any failure returns the switch to 'do' (a rollback lock that
  * merely expires also goes back to 'do'). On success the store is emptied, so the next migration starts clean.
  */
-export async function rollbackOwner(env: Env, ownerId: number, opts: { hooks?: MigrateHooks } = {}): Promise<MigrationReport> {
+export async function rollbackOwner(env: Env, ownerId: number, opts: RunOptions = {}): Promise<MigrationReport> {
   const r = blank(ownerId, 'rollback');
   const hooks = opts.hooks ?? {};
+  let held: { token: number; store: Store } | null = null;
   try {
     if (!(await ownerExists(env, ownerId))) return refuse(r, 'LANDLORD_NOT_FOUND', 'Không tìm thấy chủ trọ.');
-    const shared = await sharedBankAccounts(env, ownerId);
-    if (shared.length)
-      return refuse(r, 'SHARED_BANK_ACCOUNT', `Tài khoản ngân hàng ${shared.map(mask).join(', ')} được khai báo ở nhà của nhiều chủ trọ; không thể xoá và chép lại các khoản tiền chưa gắn căn một cách an toàn.`);
-
     const token = Date.now() + LOCK_MS;
-    if (!(await setStorage(env.DB, ownerId, 'migrating', { expect: 'do', lockUntil: token, note: 'rollback' }))) {
+    if (!(await setStorage(env.DB, ownerId, 'migrating', { expect: 'do', lockUntil: token, note: ROLLBACK_NOTE }))) {
       const { backend } = await getStorage(env.DB, ownerId);
       return backend === 'migrating'
         ? refuse(r, 'MIGRATION_RUNNING', 'Đang có một lần chuyển dữ liệu khác của chủ trọ này.')
@@ -366,6 +424,7 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: { hooks?: M
     }
     const startedAt = Date.now();
     const store = tenantStub(env, ownerId);
+    held = { token, store };
     const stop = async (code: MigrationErrorCode, error: string): Promise<MigrationReport> => {
       await giveUp(env, ownerId, store, token, { resetStore: false, to: 'do', note: `rollback failed: ${code}` });
       return { ...r, ok: false, errorCode: code, error, lockedMs: Date.now() - startedAt };
@@ -373,14 +432,21 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: { hooks?: M
 
     let compared: Awaited<ReturnType<typeof compare>>;
     try {
-      // The lock is taken, so nothing writes to the store any more: this reading is final.
+      // Let a write that began just before the lock land in the store before anything is read; after that
+      // nothing writes to it any more, so this reading is final.
+      await sleep(opts.drainMs ?? config.drainMs);
+      await hooks.afterDrain?.();
       const info = await store.info();
       const untouched = info.migratedFrom === 'd1' && info.migratedAt !== null && (info.lastWriteAt === null || info.lastWriteAt <= info.migratedAt);
-      compared = await compare(env, ownerId, store); // the store against D1 as it is now
+      // House-less payments count only when the store has them (a shared bank account brings another landlord's).
+      const lessRes = await store.query([{ sql: `SELECT id FROM payments WHERE house_id IS NULL`, params: [], mode: 'all' }], false);
+      if (!lessRes.ok) throw new Error(`payments: ${lessRes.error}`);
+      const lessIds = new Set(lessRes.results[0].results.map((x) => x.id as number));
+      compared = await compare(env, ownerId, store, lessIds); // the store against D1 as it is now
       if (!(untouched && compared.ok)) {
         await restoreToD1(env, ownerId, store);
         await hooks.afterRestore?.();
-        compared = await compare(env, ownerId, store);
+        compared = await compare(env, ownerId, store, lessIds);
       }
       if (!compared.ok) {
         const bad = compared.tables.filter((t) => !t.ok).map((t) => t.table);
@@ -403,7 +469,7 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: { hooks?: M
     try {
       await store.reset(); // D1 is verified equal: empty the store (point-in-time recovery can still bring it back)
     } catch (e) {
-      out.warnings = [`Chưa xoá được kho riêng sau khi quay lại (lần chuyển sau sẽ từ chối cho tới khi xoá): ${message(e)}`];
+      out.warnings = [`Chưa xoá được kho riêng sau khi quay lại (lần chuyển sau sẽ tự xoá; hoặc dùng clear-store): ${message(e)}`];
     }
     try {
       out.deferredReplayed = await replayDeferred(env, ownerId);
@@ -412,6 +478,7 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: { hooks?: M
     }
     return out;
   } catch (e) {
+    if (held) await giveUp(env, ownerId, held.store, held.token, { resetStore: false, to: 'do', note: 'rollback failed: MIGRATION_FAILED' });
     return refuse(r, 'MIGRATION_FAILED', message(e));
   }
 }
@@ -428,7 +495,7 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: { hooks?: M
 export async function unlockOwner(env: Env, ownerId: number): Promise<{ ok: boolean; backend?: Backend; replayed?: number; error?: string }> {
   const row = await env.DB.prepare(`SELECT backend, note FROM tenant_storage WHERE owner_id = ?`).bind(ownerId).first<{ backend: Backend; note: string | null }>();
   if (row?.backend !== 'migrating') return { ok: false, error: 'Chủ trọ này không đang bị khoá.' };
-  const to: Backend = row.note === 'rollback' ? 'do' : 'd1';
+  const to: Backend = row.note === ROLLBACK_NOTE ? 'do' : 'd1';
   if (!(await setStorage(env.DB, ownerId, to, { expect: 'migrating', note: 'unlocked', keepMigratedAt: true })))
     return { ok: false, error: 'Khoá đã được mở hoặc hết hạn.' };
   const replayed = await replayDeferred(env, ownerId).catch((e) => {

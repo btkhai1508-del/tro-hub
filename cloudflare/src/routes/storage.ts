@@ -5,7 +5,7 @@
 import type { Context, Hono } from 'hono';
 import { actorOf, audit, type App } from '../app.ts';
 import { getStorage, newOwnerBackend } from '../central/directory.ts';
-import { migrateOwner, rollbackOwner, unlockOwner, type MigrationErrorCode, type MigrationReport } from '../migrate/tenant.ts';
+import { clearStore, migrateOwner, rollbackOwner, unlockOwner, type MigrationErrorCode, type MigrationReport } from '../migrate/tenant.ts';
 import { tenantStub } from '../tenant/route.ts';
 import type { TenantInfo } from '../tenant/store.ts';
 
@@ -16,7 +16,7 @@ const STATUS: Partial<Record<MigrationErrorCode, Status>> = {
   MIGRATION_RUNNING: 409,
   ALREADY_MIGRATED: 409,
   NOT_MIGRATED: 409,
-  STORE_NOT_EMPTY: 409,
+  STORE_IN_USE: 409,
   SHARED_BANK_ACCOUNT: 409,
 };
 
@@ -55,6 +55,16 @@ export function registerStorage(app: Hono<App>): void {
   app.post('/api/dev/storage/:ownerId/dry-run', run('dry-run'));
   app.post('/api/dev/storage/:ownerId/migrate', run('migrate'));
   app.post('/api/dev/storage/:ownerId/rollback', run('rollback'));
+
+  /** Empty the live store of a landlord whose switch is on d1 (leftover of a crashed run). */
+  app.post('/api/dev/storage/:ownerId/clear-store', async (c) => {
+    const ownerId = Number(c.req.param('ownerId'));
+    if (!Number.isInteger(ownerId) || ownerId <= 0) return c.json({ success: false, errorCode: 'LANDLORD_NOT_FOUND', error: 'Không tìm thấy chủ trọ.' }, 404);
+    const r = await clearStore(c.env, ownerId);
+    await audit(c, actorOf(c.get('viewer')), r.ok ? 'storage_clear_store' : 'storage_clear_store_refused', null, `staff:${ownerId}`);
+    if (!r.ok) return c.json({ success: false, errorCode: r.errorCode, error: r.error }, r.errorCode === 'STORE_IN_USE' ? 409 : r.errorCode === 'LANDLORD_NOT_FOUND' ? 404 : 500);
+    return c.json({ success: true });
+  });
 
   app.post('/api/dev/storage/:ownerId/unlock', async (c) => {
     const ownerId = Number(c.req.param('ownerId'));
