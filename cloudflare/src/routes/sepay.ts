@@ -7,7 +7,7 @@
 import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, isOwner, type App, type Env } from '../app.ts';
 import { getStorage, houseOwner } from '../central/directory.ts';
-import { deferRent, recordUnassigned, settleRent, type SepayTransfer } from '../payments/settle.ts';
+import { deferRent, recordUnassigned, settleRent, unassignedStatement, type SepayTransfer } from '../payments/settle.ts';
 import { checkSepayState, disconnectSepay, finishSepayConnect, sepayConfigured, sepayConnectUrl, sepayRedirectUri, syncSepay } from '../sepayOauth.ts';
 import { TenantLockedError, tenantOfOwner } from '../tenant/route.ts';
 import { billingSettings, processServiceTransfer, sha256Hex } from './billing.ts';
@@ -139,13 +139,20 @@ async function sepayWebhook(c: Context<App>) {
   // A rent event starts as 'deferred' (the status APIs already count it, minus what is booked) and
   // becomes 'done' only after it was booked: whatever fails in between, a SePay retry finds the event
   // and the cron's replay books it. It is never 'done' without being booked.
-  await env.DB.prepare(
+  const insertEvent = env.DB.prepare(
     `INSERT OR IGNORE INTO sepay_events (sepay_id, kind, amount, content, account_no, house_id, room, month, paid_at, owner_id, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(sepayId, kind, Math.round(Number(body.transferAmount) || 0), String(body.content ?? '').slice(0, 300), body.accountNumber ?? null,
-      houseId, rent?.room ?? null, rent?.month ?? null, body.transactionDate ?? null, keyOwner, place && rent ? 'deferred' : 'done')
-    .run();
+      houseId, rent?.room ?? null, rent?.month ?? null, body.transactionDate ?? null, keyOwner, place && rent ? 'deferred' : 'done');
+  const unassigned = !(place && rent) && !service.matched && !laundry; // nobody to give the money to yet
+  if (unassigned) {
+    // One batch: the event is 'done' only together with the unassigned row. If the row cannot be written nothing is,
+    // the webhook fails and SePay's retry is processed again instead of being dropped as a duplicate.
+    await env.DB.batch([insertEvent, unassignedStatement(env, body, sepayId)]);
+  } else {
+    await insertEvent.run();
+  }
 
   let settled: Record<string, unknown> | null = null;
   if (place && rent) {
@@ -167,8 +174,6 @@ async function sepayWebhook(c: Context<App>) {
       await deferRent(env, place.ownerId, place.houseId, rent.room, rent.month, sepayId).catch((e) => console.warn('[sepay] defer', sepayId, e));
       settled = { settled: false, deferred: true };
     }
-  } else if (!service.matched && !laundry) {
-    await recordUnassigned(env, body, sepayId); // nobody to give the money to yet
   }
   // Giặt sấy vẫn chạy trên Express: chuyển nguyên giao dịch sang đó.
   if (laundry) c.executionCtx.waitUntil(forwardToExpress(env, body, c.req.header('Authorization') ?? ''));

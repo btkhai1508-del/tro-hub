@@ -40,12 +40,16 @@ export type SettleResult =
   | { settled: true; already?: true; invoiceId: number; received: number; total: number };
 
 /** A transfer that no house could be found for: kept centrally so the landlord can see it. */
-export async function recordUnassigned(env: Env, t: SepayTransfer, sepayId: string): Promise<void> {
-  await env.DB.prepare(
+export function unassignedStatement(env: Env, t: SepayTransfer, sepayId: string): D1PreparedStatement {
+  return env.DB.prepare(
     `INSERT OR IGNORE INTO unassigned_payments (sepay_id, amount, content, account_no, bank_name, reference, paid_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).bind(sepayId, Math.round(Number(t.transferAmount) || 0), String(t.content ?? '').slice(0, 300), t.accountNumber ?? null,
-    t.gateway ?? null, t.referenceCode || `sepay-${sepayId}`, t.transactionDate ?? new Date().toISOString()).run();
+    t.gateway ?? null, t.referenceCode || `sepay-${sepayId}`, t.transactionDate ?? new Date().toISOString());
+}
+
+export async function recordUnassigned(env: Env, t: SepayTransfer, sepayId: string): Promise<void> {
+  await unassignedStatement(env, t, sepayId).run();
 }
 
 /**

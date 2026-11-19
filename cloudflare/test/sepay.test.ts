@@ -158,6 +158,25 @@ describe.each(MODES)('SePay webhook, tiền trọ (%s)', (mode) => {
     expect(view(await seen(tokens))).toEqual(everyone('unpaid'));
   });
 
+  it('unassigned_payments lỗi: webhook báo lỗi (SePay gửi lại), không để lại sự kiện done; gửi lại thì vào unassigned đúng một lần', async () => {
+    await e.DB.prepare(`CREATE TRIGGER boom_un BEFORE INSERT ON unassigned_payments BEGIN SELECT RAISE(ABORT, 'boom'); END`).run();
+    const body = { id: 8181, transferAmount: 500_000, content: 'CHUYEN 999101112026', accountNumber: '0123456789' };
+    try {
+      const failed = await webhook(DEV_KEY, body).catch(() => ({ status: 500, body: { success: false } }));
+      expect(failed.status).toBeGreaterThanOrEqual(500);
+      expect(failed.body.success).not.toBe(true);
+      expect(await events()).toEqual([]); // no 'done' event: the retry is not a duplicate
+    } finally {
+      await e.DB.prepare(`DROP TRIGGER boom_un`).run();
+    }
+    const retry = await webhook(DEV_KEY, body);
+    expect(retry.body).toMatchObject({ success: true, unassigned: true });
+    expect((await e.DB.prepare(`SELECT sepay_id, amount FROM unassigned_payments`).all<any>()).results).toEqual([{ sepay_id: '8181', amount: 500_000 }]);
+    expect(await events()).toMatchObject([{ sepay_id: '8181', status: 'done' }]);
+    expect(await webhook(DEV_KEY, body)).toMatchObject({ body: { ignored: 'duplicate' } });
+    expect((await e.DB.prepare(`SELECT COUNT(*) n FROM unassigned_payments`).first<{ n: number }>())!.n).toBe(1);
+  });
+
   it('phòng không có trong căn → unassigned, không ghi payments', async () => {
     const r = await webhook(DEV_KEY, { id: 556, transferAmount: 500_000, content: '002555112026' });
     expect(r.body.unassigned).toBe(true);
