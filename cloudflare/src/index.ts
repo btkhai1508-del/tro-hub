@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { requireAuth, registerAuth } from './routes/auth.ts';
-import { legacyRoomCode, parseLegacyRoom } from './sheetSync.ts';
 import { fail, type App, type Env } from './app.ts';
 import { TenantLockedError } from './tenant/route.ts';
 import { runCron } from './cron.ts';
@@ -11,7 +10,7 @@ import { registerPeople } from './routes/people.ts';
 import { registerRent } from './routes/rent.ts';
 import { registerIntegrations } from './routes/integrations.ts';
 import { registerBilling } from './routes/billing.ts';
-import { registerSepay, parseRentCode, rentPayCode } from './routes/sepay.ts';
+import { registerSepay } from './routes/sepay.ts';
 
 export { TenantStore } from './tenant/store.ts';
 
@@ -34,14 +33,6 @@ registerRent(app);
 registerBilling(app);
 registerSepay(app);
 registerNotifications(app);
-
-// ---------------------------------------------------------------------------
-// Routes that replace the Express + Google Sheet ones, with the same paths and response shapes,
-// so the app moves over one data group at a time. Room codes keep the old form: LVC rooms are
-// "LVC-101", other houses' rooms are their plain name.
-// ---------------------------------------------------------------------------
-
-export { legacyRoomCode, parseLegacyRoom, parseRentCode, rentPayCode };
 
 app.notFound((c) => fail(c, 404, 'NOT_FOUND', 'Không tìm thấy.'));
 

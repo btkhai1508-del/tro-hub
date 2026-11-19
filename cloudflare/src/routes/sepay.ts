@@ -19,12 +19,6 @@ import { requireAuth } from './auth.ts';
 // Số căn cấp một lần và không dùng lại (settings.house_pay_seq, tra ở house_directory). Số phòng ở kho của chủ trọ.
 // ---------------------------------------------------------------------------
 
-const pad3 = (n: number) => String(n).padStart(3, '0');
-
-export function rentPayCode(housePayNo: number, roomPayNo: number, month: string /* YYYY-MM */) {
-  return `${pad3(housePayNo)}${pad3(roomPayNo)}${month.slice(5, 7)}${month.slice(0, 4)}`;
-}
-
 /**
  * Finds XXXPPPMMYYYY in a transfer memo. Tries the memo as written, then with spaces/dots/dashes between
  * digits removed (some banks split long numbers). A candidate counts only when that house exists in the
