@@ -176,8 +176,4 @@ describe('TenantStore', () => {
     await stub.importRows('rooms', [{ id: 5, house_id: 'H', name: 'A' }]);
     expect((await stub.info()).rowsWrittenToday).toBeGreaterThan(i1.rowsWrittenToday);
   });
-
-  it('digest chưa cài đặt', async () => {
-    await expect(direct(fresh(), (s) => s.digest('rooms'))).rejects.toThrow('not implemented');
-  });
 });

@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import type { Env } from '../app.ts';
+import { digestRows } from '../migrate/digest.ts';
 import { TENANT_MIGRATIONS, TENANT_TABLES, isWriteSql, type SqlValue } from './schema.ts';
 
 export interface SqlOp {
@@ -143,8 +144,10 @@ export class TenantStore extends DurableObject<Env> {
     >[];
   }
 
-  async digest(_table: string): Promise<{ count: number; sha256: string }> {
-    throw new Error('not implemented'); // Task 12 (digestRows)
+  async digest(table: string): Promise<{ count: number; sha256: string }> {
+    const def = tableDef(table);
+    const rows = this.sql(`SELECT * FROM ${table}`).toArray() as Record<string, SqlValue>[];
+    return { count: rows.length, sha256: await digestRows(rows, def.pk) };
   }
 
   async info(): Promise<TenantInfo> {
