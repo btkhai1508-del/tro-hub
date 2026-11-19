@@ -82,16 +82,29 @@ const sleep = (ms: number) => (ms > 0 ? new Promise<void>((r) => setTimeout(r, m
 const SEQUENCE_TABLES = ['rooms', 'invoices', 'meter_readings', 'payments', 'notifications'];
 const OWNER_ID_BASE = 1_000_000_000;
 
+const GENERATION = 1_000_000_000_000;
+
 /**
- * The next id of each AUTOINCREMENT table in a landlord's store: above every id in the whole shared D1 (rollback
- * inserts the store's explicit ids there, and landlords still on d1 allocate beside them) and inside the
- * landlord's own range `ownerId * 1e9`. Only ever raised.
+ * The first id a landlord's store may hand out: the smallest `ownerId * 1e9 + k * 1e12` (k >= 0) strictly above
+ * `maxId`, the highest id of that table anywhere in the shared D1. Each (landlord, generation) range is its own,
+ * disjoint from every other landlord's and far above what D1's own allocator reaches, so a store's new ids can
+ * never meet an id D1 hands out later; a re-migration simply moves to the next generation.
  */
+export function idFloor(ownerId: number, maxId: number): number {
+  const base = ownerId * OWNER_ID_BASE;
+  const k = base > maxId ? 0 : Math.floor((maxId - base) / GENERATION) + 1;
+  const floor = base + k * GENERATION;
+  if (!Number.isSafeInteger(floor) || floor + GENERATION > Number.MAX_SAFE_INTEGER)
+    throw new Error(`Hết dải id cho chủ trọ ${ownerId} (id lớn nhất hiện có: ${maxId}); không thể cấp thêm dải mới.`);
+  return floor;
+}
+
+/** The next id of each AUTOINCREMENT table in a landlord's store (see idFloor); only ever raised by the store. */
 async function sequenceFloors(env: Env, ownerId: number): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const t of SEQUENCE_TABLES) {
     const row = await env.DB.prepare(`SELECT COALESCE(MAX(id), 0) AS m FROM ${t}`).first<{ m: number }>();
-    out[t] = Math.max(ownerId * OWNER_ID_BASE, (row?.m ?? 0) + 1);
+    out[t] = idFloor(ownerId, row?.m ?? 0);
   }
   return out;
 }
@@ -218,11 +231,17 @@ async function compare(env: Env, ownerId: number, store: Store, lessIds?: Set<nu
  * holds its lock, or the switch is back on d1 (a store nobody reads). A switch that is now 'do' or held
  * by another run is left alone entirely. The switch goes back only if this run's lock is still the one held.
  */
-async function giveUp(env: Env, ownerId: number, store: Store, token: number, opts: { resetStore: boolean; to: Backend; note: string }): Promise<void> {
+async function giveUp(env: Env, ownerId: number, store: Store | null, token: number, opts: { resetStore: boolean; to: Backend; note: string }): Promise<void> {
   const now = await getStorage(env.DB, ownerId).catch(() => null);
   if (!now) return;
   const mine = now.backend === 'migrating' && now.lockExpiresAt === token;
-  if (opts.resetStore && (mine || now.backend === 'd1')) await store.reset().catch((e) => console.warn('[migrate] reset after failure', ownerId, e));
+  if (opts.resetStore && (mine || now.backend === 'd1')) {
+    try {
+      await (store ?? tenantStub(env, ownerId)).reset();
+    } catch (e) {
+      console.warn('[migrate] reset after failure', ownerId, e); // the switch must still go back
+    }
+  }
   if (mine) {
     await setStorage(env.DB, ownerId, opts.to, { expect: 'migrating', ownedLock: token, note: opts.note, keepMigratedAt: true })
       .catch((e) => console.warn('[migrate] switch back', ownerId, e));
@@ -260,7 +279,7 @@ async function dryRun(env: Env, ownerId: number, r: MigrationReport, hooks: Migr
 export async function migrateOwner(env: Env, ownerId: number, opts: RunOptions & { dryRun?: boolean } = {}): Promise<MigrationReport> {
   const r = blank(ownerId, opts.dryRun ? 'dry-run' : 'migrate');
   const hooks = opts.hooks ?? {};
-  let held: { token: number; store: Store } | null = null;
+  let held: { token: number } | null = null;
   try {
     const refused = await preflight(env, ownerId, r);
     if (refused) return refused;
@@ -273,9 +292,9 @@ export async function migrateOwner(env: Env, ownerId: number, opts: RunOptions &
         ? refuse(r, 'ALREADY_MIGRATED', 'Chủ trọ này đã dùng kho riêng.')
         : refuse(r, 'MIGRATION_RUNNING', 'Đang có một lần chuyển dữ liệu khác của chủ trọ này.');
     }
+    held = { token }; // from here on the outer catch releases the lock
     const startedAt = Date.now();
     const store = tenantStub(env, ownerId);
-    held = { token, store };
     const stop = async (code: MigrationErrorCode, error: string, resetStore = true): Promise<MigrationReport> => {
       await giveUp(env, ownerId, store, token, { resetStore, to: 'd1', note: `migrate failed: ${code}` });
       return { ...r, ok: false, errorCode: code, error, lockedMs: Date.now() - startedAt };
@@ -332,7 +351,7 @@ export async function migrateOwner(env: Env, ownerId: number, opts: RunOptions &
     if (warnings.length) out.warnings = warnings;
     return out;
   } catch (e) {
-    if (held) await giveUp(env, ownerId, held.store, held.token, { resetStore: true, to: 'd1', note: 'migrate failed: MIGRATION_FAILED' });
+    if (held) await giveUp(env, ownerId, null, held.token, { resetStore: true, to: 'd1', note: 'migrate failed: MIGRATION_FAILED' });
     return refuse(r, 'MIGRATION_FAILED', message(e));
   }
 }
@@ -412,7 +431,7 @@ async function restoreToD1(env: Env, ownerId: number, store: Store): Promise<voi
 export async function rollbackOwner(env: Env, ownerId: number, opts: RunOptions = {}): Promise<MigrationReport> {
   const r = blank(ownerId, 'rollback');
   const hooks = opts.hooks ?? {};
-  let held: { token: number; store: Store } | null = null;
+  let held: { token: number } | null = null;
   try {
     if (!(await ownerExists(env, ownerId))) return refuse(r, 'LANDLORD_NOT_FOUND', 'Không tìm thấy chủ trọ.');
     const token = Date.now() + LOCK_MS;
@@ -422,9 +441,9 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: RunOptions 
         ? refuse(r, 'MIGRATION_RUNNING', 'Đang có một lần chuyển dữ liệu khác của chủ trọ này.')
         : refuse(r, 'NOT_MIGRATED', 'Chủ trọ này đang dùng D1, không có gì để quay lại.');
     }
+    held = { token }; // from here on the outer catch releases the lock
     const startedAt = Date.now();
     const store = tenantStub(env, ownerId);
-    held = { token, store };
     const stop = async (code: MigrationErrorCode, error: string): Promise<MigrationReport> => {
       await giveUp(env, ownerId, store, token, { resetStore: false, to: 'do', note: `rollback failed: ${code}` });
       return { ...r, ok: false, errorCode: code, error, lockedMs: Date.now() - startedAt };
@@ -478,7 +497,7 @@ export async function rollbackOwner(env: Env, ownerId: number, opts: RunOptions 
     }
     return out;
   } catch (e) {
-    if (held) await giveUp(env, ownerId, held.store, held.token, { resetStore: false, to: 'do', note: 'rollback failed: MIGRATION_FAILED' });
+    if (held) await giveUp(env, ownerId, null, held.token, { resetStore: false, to: 'do', note: 'rollback failed: MIGRATION_FAILED' });
     return refuse(r, 'MIGRATION_FAILED', message(e));
   }
 }

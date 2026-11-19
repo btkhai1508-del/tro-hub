@@ -2,7 +2,7 @@ import { env, runInDurableObject } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/app.ts';
 import { getStorage, ROLLBACK_NOTE, setStorage } from '../src/central/directory.ts';
-import { config, DRAIN_MS, migrateOwner, rollbackOwner, unlockOwner, type MigrationReport } from '../src/migrate/tenant.ts';
+import { config, DRAIN_MS, idFloor, migrateOwner, rollbackOwner, unlockOwner, type MigrationReport } from '../src/migrate/tenant.ts';
 import { replayDeferred, replayPendingDeferred } from '../src/payments/settle.ts';
 import { TENANT_TABLES } from '../src/tenant/schema.ts';
 import { tenantOfOwner, tenantStub } from '../src/tenant/route.ts';
@@ -793,5 +793,101 @@ describe('dải id của kho riêng', () => {
     okReport(await migrateOwner(e, 1));
     const info = await store().info();
     expect(info.lastWriteAt!).toBeLessThanOrEqual(info.migratedAt!);
+  });
+});
+
+describe('dải id theo thế hệ (R21)', () => {
+  const G = 1_000_000_000_000;
+  const B = 1_000_000_000;
+
+  it('idFloor: nhỏ nhất dạng owner*1e9 + k*1e12 mà lớn hơn MAX của D1', () => {
+    const cases: [number, number, number][] = [
+      [1, 0, B], // empty D1
+      [1, 6, B],
+      [1, B - 1, B],
+      [1, B, B + G], // D1 max inside the owner's own range -> next generation
+      [1, B + 5, B + G],
+      [1, B + G - 1, B + G],
+      [1, B + G, B + 2 * G],
+      [1, 4 * B + 5, B + G], // another owner's range: still this owner's own form, above max
+      [4, B + 5, 4 * B], // below this owner's base
+      [4, 4 * B + 7, 4 * B + G],
+    ];
+    for (const [owner, max, want] of cases) {
+      const got = idFloor(owner, max);
+      expect(got, `owner ${owner}, max ${max}`).toBe(want);
+      expect(got).toBeGreaterThan(max);
+      expect((got - owner * B) % G).toBe(0);
+    }
+  });
+
+  it('idFloor: không tràn số nguyên an toàn, báo lỗi rõ', () => {
+    expect(Number.isSafeInteger(idFloor(999, 8_000 * G))).toBe(true);
+    expect(() => idFloor(1, Number.MAX_SAFE_INTEGER - 5)).toThrow(/Hết dải id/);
+    expect(() => idFloor(999, 9_007 * G)).toThrow(/Hết dải id/);
+  });
+
+  const ids = async (owner: number, table: string) => (await run(store(owner), (s) => s.ctx.storage.sql.exec(`SELECT id FROM ${table} ORDER BY id`).toArray())).map((r: any) => r.id as number);
+
+  it('migrate → ghi → rollback → landlord d1 chèn → migrate lại → chèn → landlord d1 chèn → rollback có ghi: không đụng id, không đè khoản của chủ trọ khác', async () => {
+    const lessPay = (acc: string, amount: number) => e.DB.prepare(`INSERT INTO payments (house_id, amount, method, account_no, paid_at) VALUES (NULL, ?, 'bank', ?, 'x') RETURNING id`).bind(amount, acc).first<{ id: number }>();
+    await e.DB.prepare(`UPDATE houses SET bank_account_no = '111' WHERE id = 'TRUNG_KIM'`).run();
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '102')`);
+    await sql(store(), `INSERT INTO payments (house_id, amount, method, account_no, paid_at) VALUES (NULL, 5, 'bank', '111', 'y')`);
+    okReport(await rollbackOwner(e, 1)); // D1's counters now sit inside the landlord's range
+    const d1a = await e.DB.prepare(`INSERT INTO rooms (house_id, name) VALUES ('NTTD', '103') RETURNING id`).first<{ id: number }>();
+    expect(d1a!.id).toBeGreaterThan(B);
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '104')`);
+    await sql(store(), `INSERT INTO payments (house_id, amount, method, account_no, paid_at) VALUES (NULL, 6, 'bank', '111', 'z')`);
+    const storeRooms = await ids(1, 'rooms');
+    expect(storeRooms.filter((id: number) => id >= B + G)).toHaveLength(1); // next generation
+    // Landlords still on d1 keep inserting, including a house-less payment on an account of their own.
+    const d1b = await e.DB.prepare(`INSERT INTO rooms (house_id, name) VALUES ('NTTD', '105') RETURNING id`).first<{ id: number }>();
+    const other = await lessPay('222', 77);
+    expect(storeRooms).not.toContain(d1b!.id);
+    expect(other!.id).toBeLessThan(B + G); // not in the landlord's new generation
+    const r = await rollbackOwner(e, 1);
+    okReport(r);
+    expect(await rowsOf(e.DB, `SELECT amount FROM payments WHERE account_no = '222'`)).toEqual([{ amount: 77 }]); // not overwritten
+    expect(await rowsOf(e.DB, `SELECT amount FROM payments WHERE account_no = '111' AND house_id IS NULL ORDER BY amount`)).toEqual([{ amount: 5 }, { amount: 6 }]);
+    expect(await rowsOf(e.DB, `SELECT id FROM rooms WHERE id IN (${d1a!.id}, ${d1b!.id})`)).toHaveLength(2);
+  });
+
+  it('hai chủ trọ cùng chuyển sau một rollback có dải rời nhau', async () => {
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '102')`);
+    okReport(await rollbackOwner(e, 1));
+    okReport(await migrateOwner(e, 1));
+    expect((await migrateOwner(e, 4)).ok).toBe(true);
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '104')`);
+    await sql(store(4), `INSERT INTO rooms (house_id, name) VALUES ('NTTD', '103')`);
+    const mine = (await ids(1, 'rooms')).filter((id: number) => id >= B + G); // the 1e9 row is the restored one
+    const theirs = (await ids(4, 'rooms')).filter((id: number) => id >= B);
+    expect(mine).toHaveLength(1);
+    expect(theirs).toHaveLength(1);
+    expect((mine[0] - B) % G).toBe(0);
+    expect((theirs[0] - 4 * B) % G).toBe(0);
+    expect(mine[0]).not.toBe(theirs[0]);
+  });
+});
+
+describe('khoá được nhả khi lỗi ngoài các bước đã bọc', () => {
+  const broken = { ...({} as object), DB: e.DB, TENANT: { get: () => { throw new Error('no store today'); }, idFromName: () => ({}) } } as unknown as Env;
+
+  it('migrate: tenantStub ném ngay sau khi lấy khoá → khoá được nhả về d1', async () => {
+    const r = await migrateOwner({ ...e, TENANT: broken.TENANT } as Env, 1);
+    expect(r).toMatchObject({ ok: false, errorCode: 'MIGRATION_FAILED' });
+    expect(r.error).toMatch(/no store today/);
+    expect(await lockRow()).toMatchObject({ backend: 'd1', lock_expires_at: null });
+  });
+
+  it('rollback: tenantStub ném → khoá được nhả về do (dữ liệu thật vẫn ở kho)', async () => {
+    okReport(await migrateOwner(e, 1));
+    const r = await rollbackOwner({ ...e, TENANT: broken.TENANT } as Env, 1);
+    expect(r).toMatchObject({ ok: false, errorCode: 'MIGRATION_FAILED' });
+    expect(await lockRow()).toMatchObject({ backend: 'do', lock_expires_at: null });
+    expect(await storeEmpty()).toBe(false);
   });
 });
