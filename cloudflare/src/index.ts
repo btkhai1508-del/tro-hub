@@ -13,9 +13,11 @@ import {
   actorOf, audit, developerOnly, fail, isDeveloper, isOwner, ownerOnly, requireHouse, staffOnly,
   type App, type Env, type StaffRole, type Viewer,
 } from './app.ts';
-import { TenantLockedError } from './tenant/route.ts';
+import { TenantLockedError, tenantOfOwner } from './tenant/route.ts';
+import { houseOwner } from './central/directory.ts';
 import { registerHouses, assignHousePayNumbers, assignRoomPayNumbers, houseModules, moduleCatalog, monthlyPerRoom } from './routes/houses.ts';
 import { registerPeople } from './routes/people.ts';
+import { invoiceOrSync, registerRent } from './routes/rent.ts';
 import { page, registerIntegrations, vietQrBanks } from './routes/integrations.ts';
 
 export { TenantStore } from './tenant/store.ts';
@@ -35,49 +37,7 @@ app.use('/api/houses/*', requireAuth);
 registerIntegrations(app);
 registerHouses(app);
 registerPeople(app);
-
-/** One month of invoices with their meter readings. A resident only gets their own room. */
-app.get('/api/houses/:houseId/invoices', async (c) => {
-  const viewer = c.get('viewer');
-  const houseId = c.req.param('houseId');
-  const roomFilter = viewer.kind === 'resident' ? viewer.roomId : null;
-  if (viewer.kind === 'resident' && !roomFilter) return c.json({ success: true, month: null, invoices: [] });
-
-  const month =
-    c.req.query('month') ||
-    (
-      await c.env.DB.prepare(`SELECT MAX(month) AS month FROM invoices WHERE house_id = ?${roomFilter ? ' AND room_id = ?' : ''}`)
-        .bind(...(roomFilter ? [houseId, roomFilter] : [houseId]))
-        .first<{ month: string | null }>()
-    )?.month;
-  if (!month) return c.json({ success: true, month: null, invoices: [] });
-
-  const { results } = await c.env.DB.prepare(
-    `SELECT i.*, rm.name AS room_name, m.electric_old, m.electric_new, m.water_old, m.water_new
-       FROM invoices i
-       JOIN rooms rm ON rm.id = i.room_id
-       LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
-      WHERE i.house_id = ? AND i.month = ?${roomFilter ? ' AND i.room_id = ?' : ''}
-      ORDER BY rm.name`
-  )
-    .bind(...(roomFilter ? [houseId, month, roomFilter] : [houseId, month]))
-    .all();
-  return c.json({ success: true, month, invoices: results });
-});
-
-app.get('/api/houses/:houseId/payments', staffOnly, async (c) => {
-  const { results } = await c.env.DB.prepare(
-    `SELECT p.id, p.invoice_id, p.amount, p.method, p.bank_name, p.reference, p.content, p.paid_at, p.confirmed_by,
-            i.month, rm.name AS room_name
-       FROM payments p
-       LEFT JOIN invoices i ON i.id = p.invoice_id
-       LEFT JOIN rooms rm ON rm.id = i.room_id
-      WHERE p.house_id = ? ORDER BY p.paid_at DESC LIMIT 500`
-  )
-    .bind(c.req.param('houseId'))
-    .all();
-  return c.json({ success: true, payments: results });
-});
+registerRent(app);
 
 /** Bank transfers not yet tied to a house, limited to accounts used by this Admin Tổng's houses. */
 app.use('/api/payments/unassigned', requireAuth);
@@ -193,284 +153,6 @@ app.post('/api/admin/notifications', async (c) => {
   return c.json({ success: true, notification: notificationOut(created[0].results[0]) });
 });
 
-// ---------------------------------------------------------------------------
-// Nhóm 2: tiền phòng và thanh toán trên D1, cùng đường dẫn và dạng dữ liệu với Express.
-// Số tiền vẫn đọc từ Sheet cũ (sheetSync.ts) cho tới nhóm 4; trạng thái thanh toán và cổng thanh toán
-// do D1 quyết định, và được ghi ngược sang Sheet/Apps Script để phần còn trên Express thấy giống nhau.
-// ---------------------------------------------------------------------------
-
-type InvoiceStatus = 'unpaid' | 'pending' | 'paid' | 'cash';
-
-/** 'MM/YYYY' từ app → 'YYYY-MM'; trống hoặc sai → tháng hiện tại. */
-const monthParam = (value: unknown) => fromSheetMonth(String(value ?? '')) ?? currentMonth();
-const vnDate = (iso: string | null) => (iso ? new Date(Date.parse(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`) + 7 * 3600_000).toISOString().slice(0, 10).split('-').reverse().join('/') : '');
-
-function paymentStatusOut(status: InvoiceStatus | null, paidAt: string | null) {
-  const s = status ?? 'unpaid';
-  const paid = s === 'paid' || s === 'cash';
-  const day = vnDate(paidAt);
-  return {
-    paymentStatus: paid ? 'paid' : s === 'pending' ? 'pending' : 'unpaid',
-    paymentMethod: s === 'cash' ? 'cash' : paid ? 'qr' : null,
-    sheetColor: paid ? '#b6d7a8' : s === 'pending' ? '#FFF2CC' : '#F7D1D5',
-    label: s === 'cash' ? `Đã thanh toán tiền mặt${day ? ` ngày ${day}` : ''}` : paid ? `Đã thanh toán${day ? ` ngày ${day}` : ''}` : s === 'pending' ? 'Chờ xác nhận' : 'Chưa thanh toán',
-    statusText: paid ? 'Đã đóng' : s === 'pending' ? 'Chờ xác nhận' : 'Chưa đóng',
-  };
-}
-
-/** Phòng theo mã kiểu cũ ("LVC-101", "G01"), chỉ trong các nhà người gọi được xem. */
-async function findRentRoom(db: D1Database, houseIds: string[], code: string) {
-  if (!houseIds.length) return null;
-  const place = parseLegacyRoom(code);
-  if (place && houseIds.includes(place.houseId)) {
-    const row = await db.prepare(`SELECT id, house_id, name FROM rooms WHERE house_id = ? AND name = ? AND deleted_at IS NULL`)
-      .bind(place.houseId, place.room).first<{ id: number; house_id: string; name: string }>();
-    if (row) return row;
-  }
-  // Nhà mới không có tiền tố: tên phòng phải chỉ thuộc một nhà.
-  const { results } = await db.prepare(
-    `SELECT id, house_id, name FROM rooms WHERE deleted_at IS NULL AND UPPER(name) = ? AND house_id IN (${houseIds.map(() => '?').join(',')})`
-  ).bind(String(code ?? '').trim().toUpperCase(), ...houseIds).all<{ id: number; house_id: string; name: string }>();
-  return results.length === 1 ? results[0] : null;
-}
-
-interface InvoiceRow { id: number; house_id: string; room_id: number; total: number; status: InvoiceStatus; paid_at: string | null; sheet_row: number | null }
-
-const invoiceFor = (db: D1Database, roomId: number, month: string) =>
-  db.prepare(`SELECT id, house_id, room_id, total, status, paid_at, sheet_row FROM invoices WHERE room_id = ? AND month = ?`)
-    .bind(roomId, month).first<InvoiceRow>();
-
-/** Hoá đơn của phòng trong tháng; tháng mới chưa có trên D1 thì đọc Sheet ngay một lần. */
-async function invoiceOrSync(db: D1Database, roomId: number, month: string) {
-  return (await invoiceFor(db, roomId, month)) ?? ((await ensureMonthFresh(db, month, 0)) ? invoiceFor(db, roomId, month) : null);
-}
-
-function statusResponse(houseId: string, room: string, month: string, inv: InvoiceRow | null) {
-  return {
-    success: true,
-    roomNumber: legacyRoomCode(houseId, room),
-    foundRow: inv?.sheet_row ?? -1,
-    cellAddress: inv?.sheet_row ? `P${inv.sheet_row}` : 'N/A',
-    tabName: toSheetMonth(month),
-    amount: inv?.total ?? 0,
-    ...paymentStatusOut(inv?.status ?? null, inv?.paid_at ?? null),
-  };
-}
-
-/** Cư dân xem phòng mình; quản lý xem phòng bất kỳ trong nhà mình (?room=). */
-app.use('/api/payment/status', requireAuth);
-app.get('/api/payment/status', async (c) => {
-  const v = c.get('viewer');
-  const month = monthParam(c.req.query('month'));
-  const room = v.kind === 'resident'
-    ? (v.roomId && v.roomName ? { id: v.roomId, house_id: v.houseId, name: v.roomName } : null)
-    : await findRentRoom(c.env.DB, v.houseIds, c.req.query('room') ?? '');
-  if (!room) return fail(c, 400, 'ROOM_REQUIRED', 'Thiếu mã phòng');
-  c.executionCtx.waitUntil(ensureMonthFresh(c.env.DB, month, 10 * 60_000));
-  return c.json(statusResponse(room.house_id, room.name, month, await invoiceFor(c.env.DB, room.id, month)));
-});
-
-/**
- * Cư dân bấm "đã chuyển khoản": hoá đơn chuyển sang Chờ xác nhận. Chỉ tiền về tài khoản (SePay) hoặc
- * quản lý mới đánh dấu Đã đóng được.
- */
-app.use('/api/payment/mark-paid', requireAuth);
-app.post('/api/payment/mark-paid', async (c) => {
-  const v = c.get('viewer');
-  if (v.kind !== 'resident' || !v.roomId || !v.roomName) return fail(c, 403, 'RESIDENT_ONLY', 'Chỉ cư dân của phòng mới báo đã chuyển khoản được.');
-  const body = await c.req.json<{ month?: string }>().catch(() => ({} as { month?: string }));
-  const month = monthParam(body.month);
-  const inv = await invoiceOrSync(c.env.DB, v.roomId, month);
-  if (!inv) return fail(c, 404, 'INVOICE_NOT_FOUND', `Chưa có hoá đơn tháng ${toSheetMonth(month)}.`);
-  if (inv.status === 'unpaid') {
-    await c.env.DB.prepare(`UPDATE invoices SET status = 'pending', status_by = ? WHERE id = ? AND status = 'unpaid'`).bind(actorOf(v), inv.id).run();
-    await audit(c, actorOf(v), 'rent_claimed_paid', v.houseId, `invoice:${inv.id}`);
-  }
-  const fresh = await invoiceFor(c.env.DB, v.roomId, month);
-  const status = statusResponse(v.houseId, v.roomName, month, fresh);
-  return c.json({ success: true, roomNumber: status.roomNumber, status, message: status.paymentStatus === 'paid' ? 'Hoá đơn đã được xác nhận thanh toán.' : 'Đã ghi nhận, đang chờ xác nhận tiền về.' });
-});
-
-/** Cổng thanh toán của nhà trong tháng; tháng chưa đặt thì giữ giá trị mới nhất của nhà. */
-async function gateFor(db: D1Database, houseId: string, month: string): Promise<'START' | 'STOP'> {
-  const exact = await db.prepare(`SELECT value FROM payment_gates WHERE house_id = ? AND month = ?`).bind(houseId, month).first<{ value: 'START' | 'STOP' }>();
-  if (exact) return exact.value;
-  const latest = await db.prepare(`SELECT value FROM payment_gates WHERE house_id = ? ORDER BY updated_at DESC, month DESC LIMIT 1`).bind(houseId).first<{ value: 'START' | 'STOP' }>();
-  if (latest) return latest.value;
-  // Lần đầu: lấy các tháng Express đã lưu trong Apps Script cho nhà còn dùng Sheet cũ.
-  const legacy = await legacySheet(db);
-  if (!legacy?.houses.includes(houseId)) return 'STOP';
-  const gates = await scriptGates();
-  const rows = Object.entries(gates ?? {})
-    .map(([label, g]) => ({ month: fromSheetMonth(label), value: g.value === 'START' ? 'START' : 'STOP', at: g.updatedAt ?? 0 }))
-    .filter((g): g is { month: string; value: 'START' | 'STOP'; at: number } => Boolean(g.month));
-  if (!rows.length) return 'STOP';
-  await db.batch(rows.map((g) =>
-    db.prepare(`INSERT OR IGNORE INTO payment_gates (house_id, month, value, updated_by, updated_at) VALUES (?, ?, ?, 'apps-script', ?)`)
-      .bind(houseId, g.month, g.value, new Date(g.at || Date.now()).toISOString().replace('T', ' ').slice(0, 19))
-  ));
-  return gateFor(db, houseId, month);
-}
-
-app.use('/api/payment/gate', requireAuth);
-app.get('/api/payment/gate', async (c) => {
-  const v = c.get('viewer');
-  const month = monthParam(c.req.query('month'));
-  const houseId = v.kind === 'resident' ? v.houseId : v.houseIds[0];
-  if (!houseId) return c.json({ success: true, month: toSheetMonth(month), value: 'STOP' });
-  return c.json({ success: true, month: toSheetMonth(month), value: await gateFor(c.env.DB, houseId, month) });
-});
-
-for (const path of ['/api/admin/months', '/api/admin/dashboard', '/api/admin/billing', '/api/admin/payment-status', '/api/admin/payment-gate'])
-  app.use(path, requireAuth, staffOnly);
-
-const staffHouseIds = (v: Viewer) => (v.kind === 'staff' ? v.houseIds : []);
-const inList = (ids: string[]) => ids.map(() => '?').join(',') || 'NULL';
-
-app.get('/api/admin/months', async (c) => {
-  const houseIds = staffHouseIds(c.get('viewer'));
-  const months = new Set<string>([currentMonth()]);
-  if (houseIds.length) {
-    const { results } = await c.env.DB.prepare(`SELECT DISTINCT month FROM invoices WHERE house_id IN (${inList(houseIds)})`).bind(...houseIds).all<{ month: string }>();
-    results.forEach((r) => months.add(r.month));
-    const legacy = await legacySheet(c.env.DB);
-    if (legacy && legacy.houses.some((h) => houseIds.includes(h))) (await sheetMonths(legacy.sheetId).catch(() => [])).forEach((m) => months.add(m));
-  }
-  return c.json({ success: true, months: [...months].sort().map(toSheetMonth) });
-});
-
-app.get('/api/admin/dashboard', async (c) => {
-  const houseIds = staffHouseIds(c.get('viewer'));
-  const month = monthParam(c.req.query('month'));
-  const empty = { dien: 0, nuoc: 0, tienDien: 0, tienNuoc: 0, doanhThu: 0, soNguoi: 0, soXe: 0 };
-  if (!houseIds.length) return c.json({ success: true, data: { ...empty, usageTrend: [] } });
-  await ensureMonthFresh(c.env.DB, month);
-  const marks = inList(houseIds);
-  const { results: trend } = await c.env.DB.prepare(
-    `SELECT i.month,
-            SUM(MAX(COALESCE(m.electric_new - m.electric_old, 0), 0)) AS dien,
-            SUM(MAX(COALESCE(m.water_new - m.water_old, 0), 0)) AS nuoc,
-            SUM(i.electricity) AS tienDien, SUM(i.water) AS tienNuoc, SUM(i.total) AS doanhThu
-       FROM invoices i LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
-      WHERE i.house_id IN (${marks}) AND i.month <= ?
-      GROUP BY i.month ORDER BY i.month DESC LIMIT 6`
-  ).bind(...houseIds, month).all<{ month: string; dien: number; nuoc: number; tienDien: number; tienNuoc: number; doanhThu: number }>();
-  const people = await c.env.DB.prepare(
-    `SELECT COUNT(*) AS soNguoi,
-            SUM(CASE WHEN LENGTH(TRIM(COALESCE(plate_number, ''))) >= 4 THEN 1 ELSE 0 END) AS soXe
-       FROM residents WHERE house_id IN (${marks}) AND room_id IS NOT NULL AND status = 'approved' AND deleted_at IS NULL`
-  ).bind(...houseIds).first<{ soNguoi: number; soXe: number | null }>();
-  const selected = trend.find((t) => t.month === month);
-  const counts = { soNguoi: people?.soNguoi ?? 0, soXe: people?.soXe ?? 0 };
-  const usageTrend = trend.reverse().map((t) => ({ ...t, month: toSheetMonth(t.month), ...counts }));
-  return c.json({ success: true, data: { ...empty, ...(selected ? { ...selected, month: undefined } : {}), ...counts, usageTrend } });
-});
-
-interface BillingRow {
-  id: number; house_id: string; room_id: number; room: string; month: string; room_rent: number; electricity: number; water: number;
-  trash: number; internet: number; parking: number; other: number; deposit: number; total: number; status: InvoiceStatus;
-  paid_at: string | null; sheet_row: number | null; electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null;
-}
-
-app.get('/api/admin/billing', async (c) => {
-  const houseIds = staffHouseIds(c.get('viewer'));
-  const month = monthParam(c.req.query('month'));
-  if (!houseIds.length) return c.json({ success: true, billing: [] });
-  await ensureMonthFresh(c.env.DB, month);
-  const marks = inList(houseIds);
-  const { results: invoices } = await c.env.DB.prepare(
-    `SELECT i.id, i.house_id, i.room_id, rm.name AS room, i.month, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking,
-            i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, m.electric_old, m.electric_new, m.water_old, m.water_new
-       FROM invoices i JOIN rooms rm ON rm.id = i.room_id
-       LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
-      WHERE i.house_id IN (${marks}) AND i.month = ?
-      ORDER BY COALESCE(i.sheet_row, 9999), i.house_id, rm.name`
-  ).bind(...houseIds, month).all<BillingRow>();
-  const { results: people } = await c.env.DB.prepare(
-    `SELECT room_id, full_name, phone, cccd_enc, plate_number FROM residents
-      WHERE house_id IN (${marks}) AND room_id IS NOT NULL AND status = 'approved' AND deleted_at IS NULL ORDER BY id`
-  ).bind(...houseIds).all<{ room_id: number; full_name: string; phone: string | null; cccd_enc: string | null; plate_number: string | null }>();
-  const byRoom = new Map<number, typeof people>();
-  for (const p of people) byRoom.set(p.room_id, [...(byRoom.get(p.room_id) ?? []), p]);
-  const cccd = async (enc: string | null) => (enc ? decryptText(enc, c.env.CCCD_KEY).catch(() => '') : '');
-
-  const billing = await Promise.all(invoices.map(async (i) => {
-    const occupants = (byRoom.get(i.room_id) ?? []).slice(0, 3);
-    const slot = async (n: number) => {
-      const p = occupants[n];
-      return { name: p?.full_name ?? '', cccd: await cccd(p?.cccd_enc ?? null), phone: p?.phone ?? '', plate: p?.plate_number ?? '' };
-    };
-    const [p1, p2, p3] = await Promise.all([slot(0), slot(1), slot(2)]);
-    const plates = [p1.plate, p2.plate, p3.plate].filter((x) => x.trim().length >= 4);
-    const st = paymentStatusOut(i.status, i.paid_at);
-    const eOld = i.electric_old ?? 0, eNew = i.electric_new ?? 0, wOld = i.water_old ?? 0, wNew = i.water_new ?? 0;
-    return {
-      row: i.sheet_row ?? undefined,
-      houseId: i.house_id,
-      invoiceId: i.id,
-      room: legacyRoomCode(i.house_id, i.room),
-      name: p1.name || p2.name || p3.name || `Phòng ${i.room}`,
-      phone: p1.phone || p2.phone || p3.phone || '',
-      dienCu: eOld, dienMoi: eNew, dienUsed: Math.max(eNew - eOld, 0),
-      nuocCu: wOld, nuocMoi: wNew, nuocUsed: Math.max(wNew - wOld, 0),
-      tienPhong: i.room_rent, tienDien: i.electricity, tienNuoc: i.water, tienRac: i.trash, tienNet: i.internet,
-      tienXe: i.parking, tienKhac: i.other, tienCoc: i.deposit, tongTien: i.total,
-      nguoi1: p1.name, cccd1: p1.cccd, sdt1: p1.phone, xe1: p1.plate,
-      nguoi2: p2.name, cccd2: p2.cccd, sdt2: p2.phone, xe2: p2.plate,
-      nguoi3: p3.name, cccd3: p3.cccd, sdt3: p3.phone, xe3: p3.plate,
-      soNguoi: occupants.length, soXe: plates.length, soNet: 0,
-      paymentStatus: st.paymentStatus, statusText: st.statusText, status: st.paymentStatus, paymentMethod: st.paymentMethod,
-      paidAt: vnDate(i.paid_at),
-    };
-  }));
-  return c.json({ success: true, billing });
-});
-
-/** Quản lý đổi trạng thái một phòng: 'paid' / 'cash' (đã đóng), 'pending', 'unpaid'. */
-app.post('/api/admin/payment-status', async (c) => {
-  const v = c.get('viewer');
-  const body = await c.req.json<{ roomNumber?: string; status?: string; month?: string; row?: number }>().catch(() => ({} as Record<string, never>));
-  const status: InvoiceStatus = (['paid', 'cash', 'pending'] as const).find((s) => s === body.status) ?? 'unpaid';
-  const month = monthParam(body.month);
-  const room = await findRentRoom(c.env.DB, staffHouseIds(v), String(body.roomNumber ?? ''));
-  if (!room) return fail(c, 404, 'ROOM_NOT_FOUND', 'Không tìm thấy phòng trong nhà bạn quản lý.');
-  const inv = await invoiceOrSync(c.env.DB, room.id, month);
-  if (!inv) return fail(c, 404, 'INVOICE_NOT_FOUND', `Phòng ${body.roomNumber} chưa có hoá đơn tháng ${toSheetMonth(month)}.`);
-  const paid = status === 'paid' || status === 'cash';
-  await c.env.DB.prepare(
-    `UPDATE invoices SET status = ?, paid_at = CASE WHEN ? THEN COALESCE(paid_at, datetime('now')) ELSE NULL END, status_by = ? WHERE id = ?`
-  ).bind(status, paid ? 1 : 0, actorOf(v), inv.id).run();
-  await audit(c, actorOf(v), `rent_status_${status}`, room.house_id, `invoice:${inv.id}`);
-  if (status !== 'pending') c.executionCtx.waitUntil(paintSheetPayment(c.env, room.house_id, room.name, paid, month, inv.sheet_row));
-  return c.json({ success: true, message: `Đã cập nhật trạng thái phòng ${body.roomNumber}`, roomNumber: legacyRoomCode(room.house_id, room.name), status, row: inv.sheet_row ?? undefined });
-});
-
-app.get('/api/admin/payment-gate', async (c) => {
-  const houseIds = staffHouseIds(c.get('viewer'));
-  const month = monthParam(c.req.query('month'));
-  return c.json({ success: true, month: toSheetMonth(month), value: houseIds[0] ? await gateFor(c.env.DB, houseIds[0], month) : 'STOP' });
-});
-
-/** Mở/đóng cổng cho mọi nhà quản lý này phụ trách (trang Admin hiện có một nút chung). */
-app.post('/api/admin/payment-gate', async (c) => {
-  const v = c.get('viewer');
-  const houseIds = staffHouseIds(v);
-  const body = await c.req.json<{ month?: string; value?: string }>().catch(() => ({} as Record<string, never>));
-  const month = monthParam(body.month);
-  const value = String(body.value).toUpperCase() === 'START' ? 'START' : 'STOP';
-  if (!houseIds.length) return fail(c, 403, 'HOUSE_FORBIDDEN', 'Bạn chưa được giao nhà trọ nào.');
-  await c.env.DB.batch(houseIds.map((h) =>
-    c.env.DB.prepare(
-      `INSERT INTO payment_gates (house_id, month, value, updated_by, updated_at) VALUES (?, ?, ?, ?, datetime('now'))
-       ON CONFLICT (house_id, month) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
-    ).bind(h, month, value, actorOf(v))
-  ));
-  await audit(c, actorOf(v), `payment_gate_${value.toLowerCase()}`, null, `${houseIds.join(',')}:${month}`);
-  const legacy = await legacySheet(c.env.DB);
-  if (legacy?.houses.some((h) => houseIds.includes(h))) c.executionCtx.waitUntil(saveScriptGate(c.env, month, value));
-  return c.json({ success: true, month: toSheetMonth(month), value });
-});
-
 /**
  * Tiền phòng về tài khoản (SePay, mã XXXPPPMMYYYY hoặc mã cũ): ghi vào sổ thu tiền và đánh dấu Đã đóng
  * khi tổng tiền nhận cho hoá đơn đủ số tiền của hoá đơn.
@@ -486,7 +168,7 @@ async function settleRent(env: Env, houseId: string, room: string, month: string
   const db = env.DB;
   const roomRow = await db.prepare(`SELECT id FROM rooms WHERE house_id = ? AND name = ?`).bind(houseId, room).first<{ id: number }>();
   if (!roomRow) return { settled: false, reason: 'room' as const };
-  const inv = await invoiceOrSync(db, roomRow.id, month);
+  const inv = await invoiceOrSync(db, db, roomRow.id, month); // Task 9: tenant store for the house's landlord
   const amount = Math.round(Number(t.transferAmount) || 0);
   await db.prepare(
     `INSERT OR IGNORE INTO payments (house_id, invoice_id, amount, method, bank_name, account_no, reference, content, paid_at, confirmed_by)
@@ -1015,6 +697,14 @@ export default {
     if (event.cron === DAILY_CRON) ctx.waitUntil(purgeDeletedHouses(env.DB));
     // Mỗi 10 phút: đọc lại số tiền tháng này và tháng trước từ Sheet cũ.
     const month = currentMonth();
-    ctx.waitUntil(Promise.all([month, previousMonth(month)].map((m) => syncMonthFromSheet(env.DB, m).catch((err) => console.warn('[cron] sheet sync', m, err)))));
+    // Task 9: the Sheet's houses belong to one landlord; sync into that landlord's store.
+    ctx.waitUntil((async () => {
+      const legacy = await legacySheet(env.DB);
+      let ownerId: number | null = null;
+      for (const h of legacy?.houses ?? []) if ((ownerId = await houseOwner(env.DB, h)) !== null) break;
+      if (ownerId === null) return;
+      const tenant = await tenantOfOwner(env, ownerId);
+      await Promise.all([month, previousMonth(month)].map((m) => ensureMonthFresh(env.DB, tenant, m, 0)));
+    })().catch((err) => console.warn('[cron] sheet sync', err)));
   },
 } satisfies ExportedHandler<Env>;

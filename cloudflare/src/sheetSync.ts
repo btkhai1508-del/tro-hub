@@ -8,6 +8,8 @@
  * Sheet được mở công khai ở chế độ xem, nên đọc bằng bản xuất CSV, không cần đăng nhập Google.
  */
 
+import { isReadOnly, type TenantDb, type TenantStatement } from './tenant/db.ts';
+
 export const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec';
 
@@ -113,13 +115,18 @@ const COL = { room: 0, eOld: 1, eNew: 2, wOld: 4, wNew: 5, electricity: 7, water
 export interface SyncResult { month: string; tab: boolean; invoices: number; skippedRooms: string[] }
 
 /**
- * Đọc một tháng từ Sheet cũ và ghi số tiền, chỉ số vào D1. Hoá đơn mới vào với trạng thái 'unpaid';
- * hoá đơn đã có giữ nguyên trạng thái. Dòng bị xoá trên Sheet không xoá hoá đơn trên D1.
+ * Đọc một tháng từ Sheet cũ và ghi số tiền, chỉ số vào kho của chủ trọ (`tenant`); mốc giờ đọc lưu ở
+ * D1 trung tâm (`central`). Hoá đơn mới vào với trạng thái 'unpaid'; hoá đơn đã có giữ nguyên trạng thái.
+ * Dòng bị xoá trên Sheet không xoá hoá đơn. Kho không giữ căn nào của Sheet cũ thì không tải Sheet.
  */
-export async function syncMonthFromSheet(db: D1Database, month: string): Promise<SyncResult> {
+export async function syncMonthFromSheet(central: D1Database, tenant: TenantDb, month: string): Promise<SyncResult> {
   const result: SyncResult = { month, tab: false, invoices: 0, skippedRooms: [] };
-  const legacy = await legacySheet(db);
+  const legacy = await legacySheet(central);
   if (!legacy) return result;
+  const marks = legacy.houses.map(() => '?').join(',');
+  // Only the landlord who owns the Sheet's houses has anything to sync.
+  const owned = await tenant.prepare(`SELECT COUNT(*) AS n FROM houses WHERE id IN (${marks})`).bind(...legacy.houses).first<{ n: number }>();
+  if (!owned?.n) return result;
   const tabs = await sheetTabs(legacy.sheetId);
   const gid = tabs.get(toSheetMonth(month)) ?? (await sheetTabs(legacy.sheetId, true)).get(toSheetMonth(month));
   if (!gid) return result;
@@ -131,14 +138,14 @@ export async function syncMonthFromSheet(db: D1Database, month: string): Promise
   const header = rows.findIndex((r) => (r[0] ?? '').trim() === 'Số phòng');
   if (header < 0) return result;
 
-  const { results: rooms } = await db
-    .prepare(`SELECT id, house_id, name FROM rooms WHERE deleted_at IS NULL AND house_id IN (${legacy.houses.map(() => '?').join(',')})`)
+  const { results: rooms } = await tenant
+    .prepare(`SELECT id, house_id, name FROM rooms WHERE deleted_at IS NULL AND house_id IN (${marks})`)
     .bind(...legacy.houses)
     .all<{ id: number; house_id: string; name: string }>();
   const roomId = new Map(rooms.map((r) => [`${r.house_id}/${r.name}`, r.id]));
 
   const now = new Date().toISOString();
-  const statements: D1PreparedStatement[] = [];
+  const statements: TenantStatement[] = [];
   for (let i = header + 2; i < rows.length; i++) {
     const r = rows[i];
     const place = parseLegacyRoom(r[COL.room] ?? '');
@@ -150,7 +157,7 @@ export async function syncMonthFromSheet(db: D1Database, month: string): Promise
     if (!id) { result.skippedRooms.push(legacyRoomCode(place.houseId, place.room)); continue; }
 
     statements.push(
-      db.prepare(
+      tenant.prepare(
         `INSERT INTO invoices (house_id, room_id, month, room_rent, electricity, water, trash, internet, parking, other, deposit, total, sheet_row, synced_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (room_id, month) DO UPDATE SET
@@ -162,7 +169,7 @@ export async function syncMonthFromSheet(db: D1Database, month: string): Promise
     );
     if (meters.some(Boolean)) {
       statements.push(
-        db.prepare(
+        tenant.prepare(
           `INSERT INTO meter_readings (house_id, room_id, month, electric_old, electric_new, water_old, water_new) VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (room_id, month) DO UPDATE SET electric_old = excluded.electric_old, electric_new = excluded.electric_new,
              water_old = excluded.water_old, water_new = excluded.water_new`
@@ -171,27 +178,29 @@ export async function syncMonthFromSheet(db: D1Database, month: string): Promise
     }
     result.invoices++;
   }
-  statements.push(
-    db.prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
-                ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
-      .bind(`legacy_sync:${month}`, now)
-  );
-  await db.batch(statements);
+  if (statements.length) await tenant.batch(statements);
+  await central
+    .prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+              ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+    .bind(`legacy_sync:${month}`, now)
+    .run();
   return result;
 }
 
 const syncing = new Map<string, Promise<SyncResult | null>>();
 
 /**
- * Đọc lại tháng nếu lần đọc trước đã quá maxAgeMs. Lỗi đọc Sheet không chặn trang: dữ liệu D1 sẵn có vẫn
- * được trả về. Nhiều yêu cầu cùng lúc trong một isolate dùng chung một lần đọc.
+ * Đọc lại tháng nếu lần đọc trước đã quá maxAgeMs. Lỗi đọc Sheet không chặn trang: dữ liệu sẵn có vẫn
+ * được trả về. Nhiều yêu cầu cùng lúc trong một isolate dùng chung một lần đọc. Kho đang chỉ đọc
+ * (chủ trọ đang chuyển dữ liệu) thì bỏ qua ngay, không tải Sheet: API đọc không bao giờ vướng khoá ghi.
  */
-export async function ensureMonthFresh(db: D1Database, month: string, maxAgeMs = 60_000): Promise<SyncResult | null> {
-  const last = await db.prepare(`SELECT value FROM settings WHERE key = ?`).bind(`legacy_sync:${month}`).first<{ value: string }>();
+export async function ensureMonthFresh(central: D1Database, tenant: TenantDb, month: string, maxAgeMs = 60_000): Promise<SyncResult | null> {
+  if (isReadOnly(tenant)) return null;
+  const last = await central.prepare(`SELECT value FROM settings WHERE key = ?`).bind(`legacy_sync:${month}`).first<{ value: string }>();
   if (last && Date.now() - Date.parse(last.value) < maxAgeMs) return null;
   let job = syncing.get(month);
   if (!job) {
-    job = syncMonthFromSheet(db, month)
+    job = syncMonthFromSheet(central, tenant, month)
       .catch((err) => { console.warn('[sheetSync]', month, err); return null; })
       .finally(() => syncing.delete(month));
     syncing.set(month, job);
