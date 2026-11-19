@@ -5,19 +5,36 @@
  * "Đã đóng" as soon as the money is there, not only after the replay.
  */
 
+import type { TenantDb } from '../tenant/db.ts';
+
 export type InvoiceStatus = 'unpaid' | 'pending' | 'paid' | 'cash';
 
-/** Room name → sum of deferred rent for that house and month. Almost always an empty map (partial index sepay_events_deferred). */
-export async function deferredByRoom(db: D1Database, houseId: string, month: string): Promise<Map<string, number>> {
+/** The reference a SePay rent event books its payment under; the same text on the first try and on every replay. */
+export const eventReference = (sepayId: string) => `sepay-${sepayId}`;
+
+/**
+ * Room name → sum of SePay rent money for that house and month that is not in the store yet: events
+ * 'deferred' (waiting) or 'replaying' (being booked) whose payment row `sepay-<id>` is NOT in `tenant`
+ * yet. An event whose payment is already booked counts once, through the stored payments, never twice.
+ * Almost always an empty map (partial index sepay_events_open).
+ */
+export async function deferredByRoom(db: D1Database, houseId: string, month: string, tenant: TenantDb): Promise<Map<string, number>> {
   const { results } = await db
     .prepare(
-      `SELECT room, SUM(amount) AS amount FROM sepay_events
-        WHERE house_id = ? AND month = ? AND status = 'deferred' AND kind = 'rent' AND room IS NOT NULL
-        GROUP BY room`
+      `SELECT sepay_id, room, amount FROM sepay_events
+        WHERE house_id = ? AND month = ? AND status IN ('deferred', 'replaying') AND kind = 'rent' AND room IS NOT NULL`
     )
     .bind(houseId, month)
-    .all<{ room: string; amount: number }>();
-  return new Map(results.map((r) => [r.room, r.amount ?? 0]));
+    .all<{ sepay_id: string; room: string; amount: number }>();
+  const out = new Map<string, number>();
+  if (!results.length) return out;
+  const { results: booked } = await tenant
+    .prepare(`SELECT reference FROM payments WHERE reference IN (${results.map(() => '?').join(',')})`)
+    .bind(...results.map((r) => eventReference(r.sepay_id)))
+    .all<{ reference: string }>();
+  const done = new Set(booked.map((b) => b.reference));
+  for (const r of results) if (!done.has(eventReference(r.sepay_id))) out.set(r.room, (out.get(r.room) ?? 0) + (r.amount ?? 0));
+  return out;
 }
 
 /** paid/cash stay as they are; bank money already recorded plus deferred money covering the total → 'paid'. */

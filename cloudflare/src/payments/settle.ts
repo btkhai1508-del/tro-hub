@@ -9,7 +9,7 @@
  */
 import type { Env } from '../app.ts';
 import { getStorage } from '../central/directory.ts';
-import { deferredByRoom } from '../central/deferred.ts';
+import { deferredByRoom, eventReference } from '../central/deferred.ts';
 import { invoiceFor, invoiceOrSync } from '../routes/rent.ts';
 import { paintSheetPayment } from '../sheetSync.ts';
 import { TenantLockedError, tenantOfOwner } from '../tenant/route.ts';
@@ -51,11 +51,11 @@ export async function recordUnassigned(env: Env, t: SepayTransfer, sepayId: stri
 /**
  * Records the transfer in the landlord's store and marks the invoice paid once the bank money for it
  * reaches the total. The same transfer twice books once (payments.reference is UNIQUE).
- * `paint: false` skips the old Sheet's green cell (a replay: the deferral already painted it).
+ * The payment's reference is always `sepay-<id>` (one per SePay event), so a direct booking, a retry
+ * and a replay of the same event can never book it twice. Painting the old Sheet's cell is idempotent.
  */
 export async function settleRent(
   env: Env, ownerId: number, houseId: string, room: string, month: string, t: SepayTransfer, sepayId: string,
-  opts: { paint?: boolean } = {},
 ): Promise<SettleResult> {
   const db = await tenantOfOwner(env, ownerId);
   const roomRow = await db.prepare(`SELECT id FROM rooms WHERE house_id = ? AND name = ?`).bind(houseId, room).first<{ id: number }>();
@@ -65,7 +65,7 @@ export async function settleRent(
   await db.prepare(
     `INSERT OR IGNORE INTO payments (house_id, invoice_id, amount, method, bank_name, account_no, reference, content, paid_at, confirmed_by)
      VALUES (?, ?, ?, 'bank', ?, ?, ?, ?, ?, 'sepay')`
-  ).bind(houseId, inv?.id ?? null, amount, t.gateway ?? null, t.accountNumber ?? null, t.referenceCode || `sepay-${sepayId}`,
+  ).bind(houseId, inv?.id ?? null, amount, t.gateway ?? null, t.accountNumber ?? null, eventReference(sepayId),
     String(t.content ?? '').slice(0, 300), t.transactionDate ?? new Date().toISOString()).run();
   if (!inv) return { settled: false, reason: 'invoice' };
   const sum = await db.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(inv.id).first<{ paid: number }>();
@@ -74,7 +74,7 @@ export async function settleRent(
   if (received < inv.total) return { settled: false, reason: 'short', invoiceId: inv.id, received, total: inv.total };
   await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(?, datetime('now')), status_by = 'sepay' WHERE id = ?`)
     .bind(vnTimeToUtc(t.transactionDate), inv.id).run();
-  if (opts.paint !== false) await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
+  await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
   return { settled: true, invoiceId: inv.id, received, total: inv.total };
 }
 
@@ -91,7 +91,7 @@ export async function deferRent(env: Env, ownerId: number, houseId: string, room
   const inv = roomRow ? await invoiceFor(db, roomRow.id, month) : null;
   if (!inv || inv.status === 'paid' || inv.status === 'cash') return;
   const sum = await db.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(inv.id).first<{ paid: number }>();
-  const total = (sum?.paid ?? 0) + ((await deferredByRoom(env.DB, houseId, month)).get(room) ?? 0);
+  const total = (sum?.paid ?? 0) + ((await deferredByRoom(env.DB, houseId, month, db)).get(room) ?? 0);
   // Only the transfer that crosses the line paints, so each event paints at most once.
   if (total >= inv.total && total - (event?.amount ?? 0) < inv.total) await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
 }
@@ -118,7 +118,7 @@ export async function replayDeferred(env: Env, ownerId: number): Promise<number>
     await env.DB.prepare(`UPDATE sepay_events SET status = 'replaying' WHERE sepay_id = ?`).bind(e.sepay_id).run();
     const t: SepayTransfer = { id: e.sepay_id, transferAmount: e.amount, content: e.content ?? '', accountNumber: e.account_no ?? undefined, transactionDate: e.paid_at ?? undefined };
     try {
-      const r = await settleRent(env, ownerId, e.house_id, e.room, e.month, t, e.sepay_id, { paint: false });
+      const r = await settleRent(env, ownerId, e.house_id, e.room, e.month, t, e.sepay_id);
       if (!r.settled && r.reason === 'room') await recordUnassigned(env, t, e.sepay_id);
     } catch (err) {
       // A lock refuses the first write, so nothing was booked: count the money again, as before.

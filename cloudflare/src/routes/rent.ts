@@ -52,7 +52,7 @@ export async function invoiceOrSync(tenant: TenantDb, central: D1Database, roomI
  */
 async function statusView(central: D1Database, db: TenantDb, houseIds: string[], month: string) {
   const deferred = new Map<string, Map<string, number>>();
-  await Promise.all(houseIds.map(async (h) => deferred.set(h, await deferredByRoom(central, h, month))));
+  await Promise.all(houseIds.map(async (h) => deferred.set(h, await deferredByRoom(central, h, month, db))));
   return async (inv: { id: number; house_id: string; room: string; total: number; status: InvoiceStatus }): Promise<InvoiceStatus> => {
     const waiting = deferred.get(inv.house_id)?.get(inv.room) ?? 0;
     if (waiting <= 0 || inv.status === 'paid' || inv.status === 'cash') return inv.status;

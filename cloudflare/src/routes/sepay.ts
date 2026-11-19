@@ -140,32 +140,37 @@ async function sepayWebhook(c: Context<App>) {
   const kind = service.matched ? 'service' : rent ? 'rent' : laundry ? 'laundry' : 'none';
   const houseId = place?.houseId ?? null;
   // The state is read once: a transfer that meets a landlord being moved waits centrally.
-  const deferred = Boolean(place && rent) && (await getStorage(env.DB, place!.ownerId)).backend === 'migrating';
+  const migrating = Boolean(place && rent) && (await getStorage(env.DB, place!.ownerId)).backend === 'migrating';
 
+  // A rent event starts as 'deferred' (the status APIs already count it, minus what is booked) and
+  // becomes 'done' only after it was booked: whatever fails in between, a SePay retry finds the event
+  // and the cron's replay books it. It is never 'done' without being booked.
   await env.DB.prepare(
     `INSERT OR IGNORE INTO sepay_events (sepay_id, kind, amount, content, account_no, house_id, room, month, paid_at, owner_id, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(sepayId, kind, Math.round(Number(body.transferAmount) || 0), String(body.content ?? '').slice(0, 300), body.accountNumber ?? null,
-      houseId, rent?.room ?? null, rent?.month ?? null, body.transactionDate ?? null, keyOwner, deferred ? 'deferred' : 'done')
+      houseId, rent?.room ?? null, rent?.month ?? null, body.transactionDate ?? null, keyOwner, place && rent ? 'deferred' : 'done')
     .run();
 
   let settled: Record<string, unknown> | null = null;
   if (place && rent) {
-    const book = async () => {
-      if (deferred) return false;
+    let booked = false;
+    if (!migrating) {
       try {
         const r = await settleRent(env, place.ownerId, place.houseId, rent.room, rent.month, body, sepayId);
         if (!r.settled && r.reason === 'room') await recordUnassigned(env, body, sepayId);
+        await env.DB.prepare(`UPDATE sepay_events SET status = 'done' WHERE sepay_id = ?`).bind(sepayId).run();
         settled = r;
-        return true;
+        booked = true;
       } catch (e) {
-        if (e instanceof TenantLockedError) return false; // the move began just now: nothing was written
-        throw e;
+        // A lock that began just now wrote nothing; any other failure may have written part of it.
+        // Either way the event stays 'deferred' and is booked later (the reference makes that safe).
+        if (!(e instanceof TenantLockedError)) console.warn('[sepay] settle failed, kept for replay', sepayId, e);
       }
-    };
-    if (!(await book())) {
-      await deferRent(env, place.ownerId, place.houseId, rent.room, rent.month, sepayId);
+    }
+    if (!booked) {
+      await deferRent(env, place.ownerId, place.houseId, rent.room, rent.month, sepayId).catch((e) => console.warn('[sepay] defer', sepayId, e));
       settled = { settled: false, deferred: true };
     }
   } else if (!service.matched && !laundry) {

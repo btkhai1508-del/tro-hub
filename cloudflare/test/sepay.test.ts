@@ -1,10 +1,10 @@
-import { env } from 'cloudflare:test';
+import { env, runInDurableObject } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../src/app.ts';
 import { setStorage } from '../src/central/directory.ts';
 import { deferRent, replayDeferred, replayPendingDeferred } from '../src/payments/settle.ts';
 import { findPayCode } from '../src/routes/sepay.ts';
-import { tenantOfOwner } from '../src/tenant/route.ts';
+import { tenantOfOwner, tenantStub } from '../src/tenant/route.ts';
 import { api, BACKENDS, login, PHONES, seedWorld, type BackendName } from './helpers.ts';
 
 const e = env as unknown as Env;
@@ -92,6 +92,12 @@ async function seen(tokens: { resident: string; owner: string; manager: string }
 }
 const everyone = (s: string) => ({ resident: s, statusStaff: s, ownerBilling: s, managerBilling: s, ownerInvoices: s, managerInvoices: s });
 const view = (s: Seen) => { const { dashboard, ...rest } = s; void dashboard; return rest; };
+
+/** A rent event for LVC/101 as the webhook leaves it. */
+const insertEvent = (id: string, amount: number, status = 'done') =>
+  e.DB.prepare(`INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, owner_id, status, paid_at)
+    VALUES (?, 'rent', ?, 'x', 'LVC', '101', ?, 1, ?, '2026-11-17 20:10:00')`).bind(id, amount, MONTH, status).run();
+
 
 type Mode = BackendName | 'migrating';
 const MODES: Mode[] = ['d1', 'migrating', 'do'];
@@ -212,6 +218,51 @@ describe.each(MODES)('SePay webhook, tiền trọ (%s)', (mode) => {
     expect((await api('/api/payments/unassigned', {}, tokens.resident)).status).toBe(403);
   });
 
+  it('replaying chưa có payments: cả năm màn hình vẫn thấy Đã đóng', async () => {
+    await insertEvent('RP1', 3_500_000, 'replaying');
+    expect(view(await seen(tokens))).toEqual(everyone('paid'));
+    const res = await api('/api/admin/dashboard?' + Q, {}, tokens.owner);
+    expect(res.status).toBe(200);
+  });
+
+  it('replaying đã ghi payments: không cộng trùng (thiếu tiền vẫn chưa đóng, đủ tiền đóng đúng một lần)', async () => {
+    const db = await storeOf(backend);
+    const inv = (await lvcInvoice(backend))!;
+    if (mode === 'migrating') await setStorage(e.DB, 1, 'd1');
+    await db.prepare(`INSERT INTO payments (house_id, invoice_id, amount, method, reference, paid_at) VALUES ('LVC', ?, 2000000, 'bank', 'sepay-RP2', '2026-11-17')`).bind(inv.id).run();
+    if (mode === 'migrating') await setStorage(e.DB, 1, 'migrating');
+    await insertEvent('RP2', 2_000_000, 'replaying'); // 2M booked once, the event must not add another 2M
+    expect(view(await seen(tokens))).toEqual(everyone('unpaid'));
+    await insertEvent('RP3', 1_500_000, 'deferred'); // 2M booked + 1.5M waiting = 3.5M
+    expect(view(await seen(tokens))).toEqual(everyone('paid'));
+  });
+
+  if (mode !== 'migrating') {
+    it('lỗi ghi không phải khoá: webhook vẫn thành công, hai phía thấy Đã đóng, replay ghi đúng một lần, gửi lại là duplicate', async () => {
+      const trigger = `CREATE TRIGGER boom BEFORE INSERT ON payments BEGIN SELECT RAISE(ABORT, 'boom'); END`;
+      const run = async (sql: string) =>
+        backend === 'do'
+          ? runInDurableObject(tenantStub(e, 1), (_i, state) => { state.storage.sql.exec(sql); })
+          : void (await e.DB.prepare(sql).run());
+      await run(trigger);
+      const body = { id: 4242, transferAmount: 3_500_000, content: LVC_CODE };
+      const r = await webhook(DEV_KEY, body);
+      expect(r).toMatchObject({ status: 200, body: { success: true, rent: { settled: false, deferred: true } } });
+      expect(await events()).toMatchObject([{ sepay_id: '4242', status: 'deferred' }]);
+      expect(view(await seen(tokens))).toEqual(everyone('paid'));
+      await run('DROP TRIGGER boom');
+      // SePay sends it again: nothing new is recorded.
+      expect(await webhook(DEV_KEY, body)).toMatchObject({ body: { ignored: 'duplicate' } });
+      expect(await payments(backend)).toEqual([]);
+      expect(await replayDeferred(e, 1)).toBe(1);
+      expect(await payments(backend)).toMatchObject([{ amount: 3_500_000, reference: 'sepay-4242' }]);
+      expect((await lvcInvoice(backend))!.status).toBe('paid');
+      expect(await replayDeferred(e, 1)).toBe(0);
+      expect((await payments(backend)).length).toBe(1);
+      expect(view(await seen(tokens))).toEqual(everyone('paid'));
+    });
+  }
+
   it('giặt sấy vẫn chuyển sang Express', async () => {
     const real = globalThis.fetch;
     const seenUrls: string[] = [];
@@ -246,10 +297,6 @@ describe('tiền chờ (migrating) và xử lý lại', () => {
     });
     return paints;
   }
-  const insertEvent = (id: string, amount: number, status = 'done') =>
-    e.DB.prepare(`INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, owner_id, status, paid_at)
-                  VALUES (?, 'rent', ?, 'x', 'LVC', '101', ?, 1, ?, '2026-11-17 20:10:00')`).bind(id, amount, MONTH, status).run();
-
   beforeEach(async () => {
     await world('d1');
   });
@@ -333,6 +380,43 @@ describe('tiền chờ (migrating) và xử lý lại', () => {
     expect(await replayDeferred({ ...e, DB: spyDb } as Env, 1)).toBe(1);
     expect(statusAtInsert).toEqual(['replaying']);
     expect((await events())[0].status).toBe('done');
+  });
+
+  it('giữa lúc replay (INSERT payments đang treo): các màn hình vẫn đọc Đã đóng', async () => {
+    await insertEvent('G1', 3_500_000, 'deferred');
+    await e.DB.prepare(`INSERT OR IGNORE INTO staff_houses (staff_id, house_id) VALUES (2, 'LVC')`).run();
+    const tokens = await tokensOf();
+    const real = e.DB;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    let blocked!: () => void;
+    const reached = new Promise<void>((r) => { blocked = r; });
+    const wrap = (stmt: D1PreparedStatement, hold: boolean): D1PreparedStatement => ({
+      bind: (...a: unknown[]) => wrap(stmt.bind(...a), hold),
+      first: (c?: string) => stmt.first(c as string),
+      all: () => stmt.all(),
+      raw: () => stmt.raw(),
+      run: async () => { if (hold) { blocked(); await gate; } return stmt.run(); },
+    }) as D1PreparedStatement;
+    const slow = { prepare: (sql: string) => wrap(real.prepare(sql), /INSERT OR IGNORE INTO payments/.test(sql)), batch: (x: D1PreparedStatement[]) => real.batch(x) } as unknown as D1Database;
+    const replay = replayDeferred({ ...e, DB: slow } as Env, 1);
+    await reached;
+    expect((await events())[0].status).toBe('replaying');
+    expect(view(await seen(tokens))).toEqual(everyone('paid')); // payment not written yet, money still counted
+    release();
+    expect(await replay).toBe(1);
+    expect(view(await seen(tokens))).toEqual(everyone('paid'));
+    expect((await payments('d1')).length).toBe(1);
+  });
+
+  it('replay tô Sheet "đã trả" đúng một lần khi chính nó làm hoá đơn thành paid', async () => {
+    const paints = await withSheet();
+    await insertEvent('K1', 2_000_000, 'deferred');
+    await insertEvent('K2', 1_500_000, 'deferred');
+    expect(await replayDeferred({ ...e, SHEET_WRITES: 'on' } as Env, 1)).toBe(2);
+    expect(paints.length).toBe(1);
+    expect(paints[0]).toContain('status=paid');
+    expect((await lvcInvoice('d1'))!.status).toBe('paid');
   });
 
   it('replay vào kho riêng (do)', async () => {
