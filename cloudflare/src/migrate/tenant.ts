@@ -91,6 +91,9 @@ const GENERATION = 1_000_000_000_000;
  * never meet an id D1 hands out later; a re-migration simply moves to the next generation.
  */
 export function idFloor(ownerId: number, maxId: number): number {
+  // ownerId * 1e9 and the generation step 1e12 only stay disjoint across landlords while ownerId < 1000.
+  if (!Number.isInteger(ownerId) || ownerId < 1 || ownerId >= 1000)
+    throw new Error(`Mã chủ trọ ${ownerId} nằm ngoài giới hạn 1–999 của dải id riêng; không thể chuyển sang kho riêng.`);
   const base = ownerId * OWNER_ID_BASE;
   const k = base > maxId ? 0 : Math.floor((maxId - base) / GENERATION) + 1;
   const floor = base + k * GENERATION;
@@ -103,7 +106,11 @@ export function idFloor(ownerId: number, maxId: number): number {
 async function sequenceFloors(env: Env, ownerId: number): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const t of SEQUENCE_TABLES) {
-    const row = await env.DB.prepare(`SELECT COALESCE(MAX(id), 0) AS m FROM ${t}`).first<{ m: number }>();
+    // D1's allocator may sit above MAX(id) (rows deleted at the top): the floor must clear both.
+    const row = await env.DB
+      .prepare(`SELECT MAX(COALESCE((SELECT MAX(id) FROM ${t}), 0), COALESCE((SELECT seq FROM sqlite_sequence WHERE name = ?1), 0)) AS m`)
+      .bind(t)
+      .first<{ m: number }>();
     out[t] = idFloor(ownerId, row?.m ?? 0);
   }
   return out;

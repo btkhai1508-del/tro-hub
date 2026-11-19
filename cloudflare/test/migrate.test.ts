@@ -827,6 +827,32 @@ describe('dải id theo thế hệ (R21)', () => {
     expect(() => idFloor(999, 9_007 * G)).toThrow(/Hết dải id/);
   });
 
+  it('idFloor: chủ trọ ngoài 1–999 hoặc không nguyên bị từ chối', () => {
+    for (const bad of [0, -1, 1000, 1001, 1.5, Number.NaN]) expect(() => idFloor(bad, 0), String(bad)).toThrow(/giới hạn 1–999/);
+    expect(idFloor(999, 0)).toBe(999 * B);
+  });
+
+  it('migrate chủ trọ có mã >= 1000: lỗi an toàn, khoá được nhả về d1', async () => {
+    await e.DB.prepare(`INSERT INTO staff (id, full_name, phone, password_hash, role) VALUES (1000, 'Chủ 1000', '0900000999', 'x', 'owner')`).run();
+    await e.DB.prepare(`INSERT OR IGNORE INTO tenant_storage (owner_id, backend, changed_at) VALUES (1000, 'd1', datetime('now'))`).run();
+    const r = await migrateOwner(e, 1000);
+    expect(r).toMatchObject({ ok: false, errorCode: 'MIGRATION_FAILED' });
+    expect(r.error).toMatch(/giới hạn 1–999/);
+    expect((await getStorage(e.DB, 1000)).backend).toBe('d1');
+    expect(await e.DB.prepare(`SELECT lock_expires_at FROM tenant_storage WHERE owner_id = 1000`).first()).toEqual({ lock_expires_at: null });
+  });
+
+  it('sequenceFloors đọc cả sqlite_sequence: xoá dòng id cao ở D1 không hạ sàn dưới bộ cấp id của D1', async () => {
+    const high = B + 500_000_000; // inside landlord 1's first range
+    await e.DB.prepare(`INSERT INTO rooms (id, house_id, name) VALUES (?, 'NTTD', 'tmp')`).bind(high).run();
+    await e.DB.prepare(`DELETE FROM rooms WHERE id = ?`).bind(high).run();
+    okReport(await migrateOwner(e, 1));
+    await sql(store(), `INSERT INTO rooms (house_id, name) VALUES ('LVC', '199')`);
+    const top = Math.max(...(await ids(1, 'rooms')));
+    expect(top).toBeGreaterThan(high);
+    expect(top).toBe(B + G);
+  });
+
   const ids = async (owner: number, table: string) => (await run(store(owner), (s) => s.ctx.storage.sql.exec(`SELECT id FROM ${table} ORDER BY id`).toArray())).map((r: any) => r.id as number);
 
   it('migrate → ghi → rollback → landlord d1 chèn → migrate lại → chèn → landlord d1 chèn → rollback có ghi: không đụng id, không đè khoản của chủ trọ khác', async () => {
