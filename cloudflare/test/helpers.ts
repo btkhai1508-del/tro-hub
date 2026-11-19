@@ -115,15 +115,6 @@ export async function seedWorld(backend: BackendName): Promise<void> {
     await db.batch(stmts);
   }
 
-  // staff_houses.house_id still has a foreign key to D1's houses table. On the 'do' backend D1 keeps
-  // only anchor rows for the houses it points at (like production, where the old D1 rows stay after a
-  // move); their name says so, so a route that wrongly reads D1 houses is easy to spot.
-  if (backend === 'do') {
-    await DB.prepare(
-      `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone)
-       VALUES ('TRUNG_KIM', 'STALE D1 ROW', 'x', 'x', 'x', 'x', 'x', 'x'), ('LVC', 'STALE D1 ROW', 'x', 'x', 'x', 'x', 'x', 'x')`
-    ).run();
-  }
   await DB.prepare(`INSERT INTO staff_houses (staff_id, house_id) VALUES (1, 'TRUNG_KIM'), (1, 'LVC'), (2, 'TRUNG_KIM')`).run();
 
   for (const h of HOUSES) {

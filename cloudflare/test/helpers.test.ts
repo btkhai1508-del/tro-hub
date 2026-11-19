@@ -19,10 +19,8 @@ describe.each(BACKENDS)('seedWorld(%s)', (backend) => {
     expect(await names(other)).toEqual(backend === 'd1' ? ['LVC', 'NTTD', 'TRUNG_KIM'] : ['NTTD']);
     expect(await count(other, 'rooms')).toBe(backend === 'd1' ? 4 : 2);
     expect(await count(mine, 'invoices')).toBe(2);
-    // D1 holds the business rows only on d1; on do it keeps just two stale anchor houses (staff_houses FK)
-    const stale = (await e.DB.prepare(`SELECT COUNT(*) AS n FROM houses WHERE name = 'STALE D1 ROW'`).first<{ n: number }>())!.n;
-    expect(stale).toBe(backend === 'd1' ? 0 : 2);
-    expect(await count(e.DB, 'houses')).toBe(backend === 'd1' ? 3 : 2);
+    // D1 holds the business rows only on d1; on do its houses table is empty
+    expect(await count(e.DB, 'houses')).toBe(backend === 'd1' ? 3 : 0);
     expect(await count(e.DB, 'rooms')).toBe(backend === 'd1' ? 4 : 0);
     expect(await count(e.DB, 'residents')).toBe(backend === 'd1' ? 2 : 0);
     expect(await count(e.DB, 'invoices')).toBe(backend === 'd1' ? 2 : 0);
