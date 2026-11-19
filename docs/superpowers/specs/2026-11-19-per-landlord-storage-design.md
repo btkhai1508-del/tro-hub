@@ -217,6 +217,10 @@ stateDiagram-v2
 5. **Xử lý tiền về bị hoãn:** chạy lại các `sepay_events.status='deferred'` của chủ trọ này qua `settleRent` trong kho.
 6. **Kiểm tra sau:** gọi các API đọc chính (danh sách căn, phòng, hoá đơn tháng này, cổng thanh toán) bằng phiên của chủ trọ và so với kết quả chụp ở bước 1.
 
+**Khoá tự hết hạn:** `tenant_storage` có thêm `lock_expires_at` = lúc khoá + 10 phút. Hết hạn mà chưa bật xong thì mọi request coi như `d1` và trạng thái tự trả về `d1`; kho đích được xoá trước lần chuyển sau. Trang Developer có nút "Mở khoá" làm việc tương tự ngay lập tức.
+
+**Lịch chép từ Sheet** bỏ qua chủ trọ đang `migrating`; ngay sau bước 4, Worker chép lại một lần cho chủ trọ đó vào kho mới.
+
 Thời gian khoá ghi ước tính dưới **1 phút** cho chủ trọ #1 (khoảng 900 dòng). Dữ liệu trong D1 **không bị xoá**: giữ nguyên, chỉ không dùng nữa, ít nhất 30 ngày.
 
 ### 7.2. Quay lại (rollback)
@@ -278,6 +282,9 @@ Sau khi bạn duyệt tài liệu này, mình lập **kế hoạch chi tiết t�
 | Kho "ngủ" rồi khởi động lại chậm ở request đầu | Chấp nhận được ở quy mô hiện tại; theo dõi thời gian phản hồi sau khi chuyển #4 |
 | Lệch dữ liệu giữa trung tâm và kho | Thứ tự ghi cố định (mục 6) + đối soát hằng đêm |
 | Gói Free chạm giới hạn dòng ghi/ngày khi nhiều chủ trọ | Theo dõi trên dashboard; lên gói Paid trước khi mở bán rộng |
+| Script chuyển lỗi giữa chừng, chủ trọ kẹt ở trạng thái khoá | Khoá tự hết hạn sau 10 phút, tự quay về `d1`; nút "Mở khoá" trên trang Developer |
+| Lịch chép từ Sheet ghi vào D1 trong lúc đang chuyển | Lịch chép bỏ qua chủ trọ `migrating`, chép lại một lần ngay sau khi bật |
+| Gói Free chạm giới hạn mà không ai biết | Trang Developer hiện mức sử dụng (dung lượng từng kho, tổng, dòng ghi/ngày), cảnh báo ở 70–80% |
 | PITR không chạy ở local | Chỉ thử PITR trên kho thử ở bản thật, không phụ thuộc vào nó cho việc chuyển dữ liệu |
 
 ## 12. Những gì mình tự quyết (bạn xem lại)
@@ -291,6 +298,6 @@ Sau khi bạn duyệt tài liệu này, mình lập **kế hoạch chi tiết t�
 
 ## 13. Cần bạn trả lời
 
-1. Tài khoản Cloudflare đang ở **gói Workers Free hay Paid**? Cả hai đều chạy được ở quy mô hiện tại; gói Free giới hạn 1 GB/kho, 5 GB tổng và 100.000 dòng ghi/ngày — đủ cho vài chục chủ trọ nhỏ, nhưng thương mại hoá nên lên Paid (khoảng 5 USD/tháng).
+1. ~~Gói Free hay Paid~~ — **đã chốt: Free**, lên Paid khi gần chạm giới hạn (có cảnh báo trên trang Developer).
 2. Chấp nhận **khoá ghi dưới 1 phút** cho mỗi chủ trọ lúc chuyển (vẫn xem được, chỉ tạm không sửa)?
 3. Đồng ý bật **R2** (gói miễn phí 10 GB) để lưu bản sao hằng đêm của từng kho?
