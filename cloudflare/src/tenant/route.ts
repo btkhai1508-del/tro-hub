@@ -5,7 +5,7 @@
  */
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { canAccessHouse, fail, type App, type Env } from '../app.ts';
+import { actorOf, audit, canAccessHouse, fail, type App, type Env } from '../app.ts';
 import { getStorage, houseOwner } from '../central/directory.ts';
 import { readOnlyDb, remoteTenantDb, type TenantDb } from './db.ts';
 import type { TenantStore } from './store.ts';
@@ -30,7 +30,9 @@ export async function tenantOfOwner(env: Env, ownerId: number): Promise<TenantDb
  * not open answers 403 whether it exists or not; a house missing from the directory answers 404.
  */
 export async function tenantFor(c: Context<App>, houseId: string): Promise<TenantDb> {
-  if (!canAccessHouse(c.get('viewer'), houseId)) {
+  const viewer = c.get('viewer');
+  if (!canAccessHouse(viewer, houseId)) {
+    await audit(c, actorOf(viewer), 'house_access_denied', houseId);
     throw new HTTPException(403, { res: fail(c, 403, 'HOUSE_FORBIDDEN', 'Bạn không có quyền xem nhà trọ này.') });
   }
   const ownerId = await houseOwner(c.env.DB, houseId);

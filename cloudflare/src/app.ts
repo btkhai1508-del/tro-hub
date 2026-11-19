@@ -47,6 +47,7 @@ export const isOwner = (v: Viewer) => v.kind === 'staff' && v.role === 'owner';
 export const isDeveloper = (v: Viewer) => v.kind === 'staff' && v.role === 'developer';
 
 export function canAccessHouse(viewer: Viewer, houseId: string) {
+  if (isDeveloper(viewer)) return true; // the Developer opens every house; a missing one answers 404 later
   return viewer.kind === 'resident' ? viewer.houseId === houseId : viewer.houseIds.includes(houseId);
 }
 

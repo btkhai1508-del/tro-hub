@@ -91,7 +91,7 @@ class RemoteTenantDb implements TenantDb {
   async batch<T = Record<string, SqlValue>>(statements: TenantStatement[]) {
     if (!statements.length) throw new Error('No SQL statements detected.');
     const ops = statements.map((s) => {
-      if (!(s instanceof RemoteStatement)) throw new TypeError('batch() takes statements prepared on this database');
+      if (!(s instanceof RemoteStatement) || s.db !== this) throw new TypeError('batch() takes statements prepared on this database');
       return s.op('all');
     });
     const out = await this.send(ops, true);
@@ -106,6 +106,7 @@ export function remoteTenantDb(stub: DurableObjectStub<TenantStore>): TenantDb {
 
 class ReadOnlyStatement implements TenantStatement {
   constructor(
+    readonly owner: ReadOnlyTenantDb,
     readonly inner: TenantStatement,
     readonly sql: string,
   ) {}
@@ -116,7 +117,7 @@ class ReadOnlyStatement implements TenantStatement {
   }
 
   bind(...values: SqlValue[]): TenantStatement {
-    return new ReadOnlyStatement(this.inner.bind(...values), this.sql);
+    return new ReadOnlyStatement(this.owner, this.inner.bind(...values), this.sql);
   }
 
   async first<T = Record<string, SqlValue>>(column?: string): Promise<T | null> {
@@ -139,13 +140,13 @@ class ReadOnlyTenantDb implements TenantDb {
   constructor(private readonly db: TenantDb) {}
 
   prepare(sql: string): TenantStatement {
-    return new ReadOnlyStatement(this.db.prepare(sql), sql);
+    return new ReadOnlyStatement(this, this.db.prepare(sql), sql);
   }
 
   /** One write anywhere refuses the whole batch before any statement runs. */
   async batch<T = Record<string, SqlValue>>(statements: TenantStatement[]) {
     const inner = statements.map((s) => {
-      if (!(s instanceof ReadOnlyStatement)) throw new TypeError('batch() takes statements prepared on this database');
+      if (!(s instanceof ReadOnlyStatement) || s.owner !== this) throw new TypeError('batch() takes statements prepared on this database');
       if (isWriteSql(s.sql)) throw new TenantLockedError();
       return s.inner;
     });

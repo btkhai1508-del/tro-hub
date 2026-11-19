@@ -263,5 +263,25 @@ describe('định tuyến', () => {
     expect(await (await app(staff(['TF1'])).request('/TF1', {}, e)).json()).toEqual({ success: true, name: 'trong kho' });
   });
 
-  it.todo('ghi khi migrating trả 503 TENANT_MIGRATING'); // Task 6: through SELF.fetch on a write API
+  it('403 của tenantFor ghi house_access_denied như requireHouse', async () => {
+    const a = new Hono<App>();
+    a.use(async (c, next) => {
+      c.set('viewer', { kind: 'staff', id: 77, name: 'A', phone: '0', role: 'owner', houseIds: [] });
+      await next();
+    });
+    a.get('/:houseId', async (c) => c.json({ db: Boolean(await tenantFor(c, c.req.param('houseId'))) }));
+    expect((await a.request('/AUD1', {}, e)).status).toBe(403);
+    const row = await e.DB.prepare(`SELECT house_id FROM audit_log WHERE action = 'house_access_denied' AND actor = 'staff:77'`).first<{ house_id: string }>();
+    expect(row?.house_id).toBe('AUD1');
+  });
+
+  it('batch từ chối câu lệnh chuẩn bị trên một TenantDb khác', async () => {
+    const one = remoteTenantDb(tenantStub(e, 901));
+    const two = remoteTenantDb(tenantStub(e, 902));
+    await expect(one.batch([two.prepare(`SELECT 1`)])).rejects.toBeInstanceOf(TypeError);
+    const roA = readOnlyDb(e.DB);
+    const roB = readOnlyDb(e.DB);
+    await expect(roA.batch([roB.prepare(`SELECT 1`)])).rejects.toBeInstanceOf(TypeError);
+    expect((await roA.batch([roA.prepare(`SELECT 1 AS n`).bind()]))[0].results).toEqual([{ n: 1 }]);
+  });
 });
