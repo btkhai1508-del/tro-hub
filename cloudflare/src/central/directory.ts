@@ -192,7 +192,8 @@ export async function setStorage(
   backend: Backend,
   opts: { expect?: Backend; lockMinutes?: number; note?: string } = {}
 ): Promise<boolean> {
-  const lock = backend === 'migrating' && opts.lockMinutes != null ? Date.now() + opts.lockMinutes * 60_000 : null;
+  // Every migrating row gets an expiry (default 10 minutes), so a lock can never be stuck forever.
+  const lock = backend === 'migrating' ? Date.now() + (opts.lockMinutes ?? 10) * 60_000 : null;
   const migratedAt = backend === 'do' ? new Date().toISOString() : null;
   const note = opts.note ?? null;
   // A landlord without a row is on d1: materialise it so the guarded update below has something to match.

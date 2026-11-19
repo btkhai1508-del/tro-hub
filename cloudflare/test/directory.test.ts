@@ -82,4 +82,10 @@ describe('danh bạ trung tâm', () => {
     expect((await getStorage(DB, 1, Date.now() + 11 * 60_000)).backend).toBe('d1');
     expect((await getStorage(DB, 1)).lockExpiresAt).toBeNull();
   });
+
+  it('migrating không có lockMinutes vẫn hết hạn sau 10 phút', async () => {
+    await setStorage(DB, 1, 'migrating');
+    expect((await getStorage(DB, 1)).backend).toBe('migrating');
+    expect((await getStorage(DB, 1, Date.now() + 11 * 60_000)).backend).toBe('d1');
+  });
 });
