@@ -14,6 +14,7 @@ import { listAccounts, callAccountScript } from './src/server/accountService';
 import { normalizeRoom } from './src/server/googleSheetsBackendService';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
 import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
+import { createLoginLimiter, lockedMessage } from './src/server/loginLimiter.js';
 import { registerCccdHandoff } from './src/server/cccdHandoff.js';
 import { registerWorkerSession, sourceChangedGuard } from './src/server/workerSession.js';
 import {
@@ -110,13 +111,31 @@ async function startServer() {
   registerWorkerSession(app);
 
   // Backend API Route: Authenticate tenant workflow (phone + password)
+  // 5 wrong passwords for one phone in 15 minutes lock it for 15 minutes (in-memory, one instance; see loginLimiter.ts).
+  const loginLimiter = createLoginLimiter();
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { phone, password, sheetId } = req.body || {};
+      // Keyed by the normalized phone (or the raw text, e.g. "admin"); unknown phones lock the same way.
+      const limitKey = normalizePhone(String(phone ?? '')) || String(phone ?? '').trim().toLowerCase();
+      const lock = limitKey ? loginLimiter.check(limitKey) : { locked: false, minutes: 0 };
+      if (lock.locked) {
+        return res.status(429).json({ success: false, errorCode: 'AUTH_LOCKED', error: lockedMessage(lock.minutes) });
+      }
       const result = await authenticateUser(phone, password, sheetId);
       if (!result.success || !result.user) {
+        // Only a wrong password or an unknown phone counts (not pending/rejected accounts, which passed the password).
+        const wrongCredentials = !result.errorCode || result.errorCode === 'AUTH_INVALID_CREDENTIALS' || result.errorCode === 'AUTH_TENANT_NOT_MAPPED';
+        if (limitKey && wrongCredentials) {
+          const after = loginLimiter.fail(limitKey);
+          if (after.locked) {
+            console.warn('[API /api/auth/login] login_locked');
+            return res.status(429).json({ success: false, errorCode: 'AUTH_LOCKED', error: lockedMessage(after.minutes) });
+          }
+        }
         return res.status(401).json(result);
       }
+      if (limitKey) loginLimiter.success(limitKey);
       const isRoomAdmin = Boolean(result.isAdmin) || result.user.roomNumber === 'admin' || String(phone).toLowerCase() === 'admin' || normalizePhone(result.user.phone).endsWith('902371800');
       const token = signTenantToken({
         phone: normalizePhone(result.user.phone) || '0902371800',

@@ -13,6 +13,7 @@ import { isWorkerSource } from '../billing/source.ts';
 import { ensureDraftForRoom } from '../billing/invoices.ts';
 import { encryptText, hashCccd } from '../cccd.ts';
 import { allHouses, houseDir, PhoneTakenError, releaseResident, reserveResident, residentRoute } from '../central/directory.ts';
+import { REGISTER_LIMITS, registerHit } from '../loginLimit.ts';
 import { hashPassword, normalizePhone } from '../password.ts';
 import { enqueueExport } from '../sheetExport.ts';
 import { legacyRoomCode } from '../sheetSync.ts';
@@ -94,6 +95,13 @@ export function registerTenantAccounts(app: Hono<App>): void {
     const roomId = Number(body.roomId);
     if (!name || !/^0\d{9}$/.test(phone) || password.length < 6 || (!roomName && !(roomId > 0)))
       return fail(c, 400, 'REGISTER_INVALID', 'Vui lòng điền đầy đủ họ tên, số điện thoại 10 số, phòng và mật khẩu từ 6 ký tự.');
+
+    // Throttle the public route (only well-formed attempts count): 5 per IP per hour, 3 per phone per day.
+    const ip = c.req.header('CF-Connecting-IP');
+    const withinLimit =
+      (!ip || (await registerHit(c.env.DB, 'reg_ip', ip, REGISTER_LIMITS.ip.max, REGISTER_LIMITS.ip.windowSec))) &&
+      (await registerHit(c.env.DB, 'reg_phone', phone, REGISTER_LIMITS.phone.max, REGISTER_LIMITS.phone.windowSec));
+    if (!withinLimit) return fail(c, 429, 'REGISTER_LIMIT', 'Bạn đã gửi đăng ký quá nhiều lần. Vui lòng thử lại sau hoặc liên hệ quản lý.');
 
     // The house: the one asked for, or the only active house there is.
     let dir = body.houseId ? await houseDir(c.env.DB, String(body.houseId)) : null;

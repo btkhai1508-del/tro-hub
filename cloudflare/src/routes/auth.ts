@@ -5,6 +5,7 @@
 import type { Context, Hono, Next } from 'hono';
 import { actorOf, audit, fail, type App, type StaffRole, type Viewer } from '../app.ts';
 import { residentRoute } from '../central/directory.ts';
+import { LOGIN_LIMITS, lockedMessage, loginFailure, loginStatus, loginSuccess } from '../loginLimit.ts';
 import { hashPassword, normalizePhone, verifyPassword } from '../password.ts';
 import { signToken, verifyToken } from '../token.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -105,6 +106,12 @@ async function signIn(c: Context<App>, account: Account, extra: Record<string, u
   return c.json({ success: true, token: await signToken(account.id, account.kind, c.env.JWT_SECRET, ownerId), viewer, ...extra });
 }
 
+/** 429 for a locked phone or IP; the same body whatever the phone is. */
+function locked(c: Context<App>, lockedUntil: number) {
+  c.header('Retry-After', String(Math.max(1, lockedUntil - Math.floor(Date.now() / 1000))));
+  return fail(c, 429, 'AUTH_LOCKED', lockedMessage(lockedUntil));
+}
+
 export function registerAuth(app: Hono<App>) {
   app.post('/api/auth/login', async (c) => {
     const body = await c.req.json<{ phone?: string; password?: string }>().catch(() => ({}) as { phone?: string; password?: string });
@@ -112,11 +119,24 @@ export function registerAuth(app: Hono<App>) {
     const password = String(body.password ?? '');
     if (phone.length < 10 || !password) return fail(c, 400, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
 
+    // The lock is checked before anything else and applies to any phone, registered or not, so the
+    // answer for an unknown number is the same as for a real one (no account enumeration).
+    const ip = c.req.header('CF-Connecting-IP') ?? null;
+    const status = await loginStatus(c.env.DB, phone, ip);
+    if (status.lockedUntil !== null) return locked(c, status.lockedUntil);
+
     const account = await accountByPhone(c.env, phone);
     if (!account || !(await verifyPassword(password, account.password_hash))) {
       await audit(c, 'anonymous', 'login_failed', null, phone);
+      const failed = await loginFailure(c.env.DB, phone, ip);
+      if (failed.phoneLocked || failed.ipLocked) {
+        if (failed.phoneLocked) await audit(c, 'anonymous', 'login_locked', null, phone);
+        if (failed.ipLocked) await audit(c, 'anonymous', 'login_locked', null, `ip:${ip}`);
+        return locked(c, Math.floor(Date.now() / 1000) + LOGIN_LIMITS.lockSec);
+      }
       return fail(c, 401, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
     }
+    if (status.phoneRow) await loginSuccess(c.env.DB, phone); // only when there is something to reset
     return signIn(c, account);
   });
 

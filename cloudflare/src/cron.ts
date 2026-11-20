@@ -6,6 +6,7 @@ import type { Env } from './app.ts';
 import { createDraftsDetailed } from './billing/invoices.ts';
 import { isWorkerSource } from './billing/source.ts';
 import { allHouses, getStorage, houseOwner, removeHouseDir, setHouseCounts } from './central/directory.ts';
+import { purgeStaleAttempts } from './loginLimit.ts';
 import { replayPendingDeferred } from './payments/settle.ts';
 import { drainExportQueue } from './sheetExport.ts';
 import { currentMonth, ensureMonthFresh, legacySheet, previousMonth, syncMonthFromSheet } from './sheetSync.ts';
@@ -243,6 +244,11 @@ export async function catchUpMonthStart(env: Env, now = Date.now()): Promise<num
   return startMonth(env, month, failedTries);
 }
 
+/** Daily: forgets login/register counters whose windows are long over (keeps the table tiny). */
+export async function cleanupLoginAttempts(env: Env, now = Math.floor(Date.now() / 1000)): Promise<void> {
+  await purgeStaleAttempts(env.DB, now);
+}
+
 export const FREQUENT_CRON = '*/10 * * * *';
 export const DAILY_CRON = '0 19 * * *';
 export const MONTH_CRON = '0 17 * * *'; // 00:00 Vietnam
@@ -251,7 +257,7 @@ export const MONTH_CRON = '0 17 * * *'; // 00:00 Vietnam
 export async function runCron(cron: string, env: Env, now = Date.now()): Promise<void> {
   const jobs: [string, () => Promise<unknown>][] =
     cron === DAILY_CRON
-      ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)], ['monthly drafts', () => createMonthlyDrafts(env, now)]]
+      ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)], ['monthly drafts', () => createMonthlyDrafts(env, now)], ['login attempts', () => cleanupLoginAttempts(env)]]
       : cron === MONTH_CRON
         ? [['month start', () => startCurrentMonth(env, now)]]
         : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)], ['sheet export', () => drainExportQueue(env)], ['month catch-up', () => catchUpMonthStart(env, now)]]; // drain and catch-up are no-ops unless source is worker
