@@ -3,7 +3,7 @@ import { fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
 import { getAccessToken } from '../lib/googleAuth';
 import { authService, PersonType, AuthErrorCode } from '../services/authService';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { apiFetch, workerFetch, setWorkerToken, UNAUTHORIZED_EVENT } from '../lib/api';
+import { apiFetch, workerFetch, setWorkerToken, ensureSource, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
 import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
@@ -502,7 +502,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const sheetId = sheetConfig.spreadsheetId || '1KDnhL94V8-HZwsGiFA3HQ5sBYPoBT9QbEaIIOnNsl0A';
         const cleanRoom = profile.room?.roomNumber || '';
         const cleanName = profile.name || '';
-        if (cleanRoom && !profile.isAdmin) {
+        // In worker mode the Sheet is no longer the truth: keep the previous state.
+        if (cleanRoom && !profile.isAdmin && (await ensureSource()) === 'sheet') {
           const directInvoice = await fetchMonthlyInvoicesFromSheet(sheetId, sheetConfig.monthlyTab || getCurrentMonthStr(), null, cleanRoom, profile.phone || cleanName);
           if (directInvoice && sessionIdentity() === session) {
             setInvoices(prevInvoices => {
@@ -941,6 +942,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const targetRoom = profile.room.roomNumber || sheetConfig.syncRoom;
         const targetPhone = profile.phone;
         if (!targetRoom) return;
+        if ((await ensureSource()) !== 'sheet') return;
 
         const liveInv = await fetchMonthlyInvoicesFromSheet(
           currentSheetId,

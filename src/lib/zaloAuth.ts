@@ -113,7 +113,10 @@ export async function requestZaloLogin(sheetId?: string): Promise<any> {
         method: 'POST',
         headers: { Authorization: `Bearer ${wdata.token}` }
       });
-      return await sres.json().catch(() => ({ success: false, error: `Lỗi máy chủ (${sres.status})` }));
+      const sdata = await sres.json().catch(() => ({ success: false, error: `Lỗi máy chủ (${sres.status})` }));
+      // No half session: without the Express session the Worker token must not stay either.
+      if (!sres.ok || !sdata?.success) setAuthToken(null);
+      return sdata;
     }
     const res = await apiFetch('/api/auth/zalo', {
       method: 'POST',

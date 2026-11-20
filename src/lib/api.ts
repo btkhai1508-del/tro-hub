@@ -94,6 +94,7 @@ export type DataSource = 'sheet' | 'worker';
 
 let sourceValue: DataSource | null = null;
 let sourcePromise: Promise<DataSource> | null = null;
+let sourceGen = 0;
 
 /** The last known source; `sheet` until the first answer arrives. */
 export function getSource(): DataSource {
@@ -107,16 +108,25 @@ export function getSource(): DataSource {
 export function ensureSource(): Promise<DataSource> {
   if (sourceValue) return Promise.resolve(sourceValue);
   if (!sourcePromise) {
+    const gen = sourceGen;
     sourcePromise = (async () => {
       try {
-        const res = await fetch(`${WORKER_API_URL}/api/source`);
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        let res: Response;
+        try {
+          res = await fetch(`${WORKER_API_URL}/api/source`, { signal: ctrl.signal });
+        } finally {
+          clearTimeout(timer);
+        }
         const data = await res.json().catch(() => null);
         if (res.ok && data && (data.source === 'sheet' || data.source === 'worker')) {
-          sourceValue = data.source;
-          return sourceValue as DataSource;
+          // A reset during the request means this answer belongs to an older session.
+          if (gen === sourceGen) sourceValue = data.source;
+          return data.source as DataSource;
         }
       } catch { /* fall through; the next call retries */ }
-      sourcePromise = null;
+      if (gen === sourceGen) sourcePromise = null;
       return 'sheet' as DataSource;
     })();
   }
@@ -125,6 +135,7 @@ export function ensureSource(): Promise<DataSource> {
 
 /** Forgets the memoized source so a flipped switch is picked up at the next sign-in. */
 export function resetSource(): void {
+  sourceGen++;
   sourceValue = null;
   sourcePromise = null;
 }
