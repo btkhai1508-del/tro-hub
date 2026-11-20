@@ -29,8 +29,11 @@ export function createLoginLimiter(opts: LoginLimiterOptions = {}) {
   function purge() {
     const t = now();
     for (const [k, r] of rows) if (r.windowStart + windowMs <= t && r.lockedUntil <= t) rows.delete(k);
-    // Still too big (all live): drop the oldest entries.
-    while (rows.size > maxKeys) rows.delete(rows.keys().next().value as string);
+    // Still too big: drop the oldest UNLOCKED rows only, so a flood of random phones cannot erase a lock.
+    for (const [k, r] of rows) {
+      if (rows.size <= maxKeys) break;
+      if (r.lockedUntil <= t) rows.delete(k);
+    }
   }
 
   return {

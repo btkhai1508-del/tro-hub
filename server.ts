@@ -12,11 +12,11 @@ import { getRoomColumnPStatus, setRoomColumnPStatus } from './src/server/columnP
 import { getLiveRoomPaymentStatus, fetchAllSheetColumnPStatuses } from './src/server/googleSheetColorService.js';
 import { listAccounts, callAccountScript } from './src/server/accountService';
 import { normalizeRoom } from './src/server/googleSheetsBackendService';
-import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, requireModule, tokenAllowsModule, MODULE_DISABLED_BODY, type AuthedRequest } from './src/server/authToken.js';
+import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, MODULE_DISABLED_BODY, type AuthedRequest } from './src/server/authToken.js';
 import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
 import { createLoginLimiter, lockedMessage } from './src/server/loginLimiter.js';
 import { registerCccdHandoff } from './src/server/cccdHandoff.js';
-import { registerWorkerSession, sourceChangedGuard } from './src/server/workerSession.js';
+import { registerWorkerSession, sourceChangedGuard, moduleGate } from './src/server/workerSession.js';
 import {
   getMonthList,
   getDashboardData,
@@ -643,7 +643,7 @@ async function startServer() {
   // =========================================================================
   let lastLaundryLogsScan = 0;
   // The status lists bookings with tenant names, rooms and phones, so it needs a session of a house that uses Giặt Sấy.
-  app.get('/api/laundry/status', requireAuth, requireModule('laundry'), async (_req, res) => {
+  app.get('/api/laundry/status', requireAuth, moduleGate.requireModule('laundry'), async (_req, res) => {
     try {
       const now = Date.now();
       // Periodically scan Google Sheet Logs on status requests (throttled to once every 2.5s)
@@ -662,7 +662,7 @@ async function startServer() {
   });
 
   // Register payment intent for a machine (records current tenant's room & phone for audit log)
-  app.post('/api/laundry/intent', requireAuth, requireModule('laundry'), (req: AuthedRequest, res) => {
+  app.post('/api/laundry/intent', requireAuth, moduleGate.requireModule('laundry'), (req: AuthedRequest, res) => {
     try {
       const { machineId } = req.body || {};
       if (!machineId) return res.status(400).json({ success: false, error: 'Thiếu machineId' });
@@ -686,7 +686,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/laundry/booking', requireAuth, requireModule('laundry'), async (req: AuthedRequest, res) => {
+  app.post('/api/laundry/booking', requireAuth, moduleGate.requireModule('laundry'), async (req: AuthedRequest, res) => {
     try {
       const { machineId, bookingTime, bookingDate, tenantName: inputName } = req.body || {};
       const roomNumber = req.tenant?.room || '';
@@ -707,7 +707,7 @@ async function startServer() {
   });
 
   // Test simulation endpoint for Laundry payment
-  app.post('/api/laundry/test-payment', testOnly, requireAdmin, requireModule('laundry'), async (req, res) => {
+  app.post('/api/laundry/test-payment', testOnly, requireAdmin, moduleGate.requireModule('laundry'), async (req, res) => {
     try {
       const { machineId = 'MG01', amount = 15000 } = req.body || {};
       const result = await LaundryService.processDirectPayment({
@@ -722,7 +722,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/laundry/admin/force-start', requireAdmin, requireModule('laundry'), (req, res) => {
+  app.post('/api/laundry/admin/force-start', requireAdmin, moduleGate.requireModule('laundry'), (req, res) => {
     try {
       const { machineId, cycleMinutes } = req.body || {};
       const result = LaundryService.manualForceStart(machineId, cycleMinutes);
@@ -732,7 +732,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/laundry/admin/reset', requireAdmin, requireModule('laundry'), (req, res) => {
+  app.post('/api/laundry/admin/reset', requireAdmin, moduleGate.requireModule('laundry'), (req, res) => {
     try {
       const { machineId } = req.body || {};
       const result = LaundryService.manualReset(machineId);
@@ -742,7 +742,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/laundry/admin/toggle-plug', requireAdmin, requireModule('laundry'), (req, res) => {
+  app.post('/api/laundry/admin/toggle-plug', requireAdmin, moduleGate.requireModule('laundry'), (req, res) => {
     try {
       const { machineId } = req.body || {};
       const result = LaundryService.togglePlug(machineId);
@@ -752,7 +752,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/laundry/admin/config', requireAdmin, requireModule('laundry'), (req, res) => {
+  app.post('/api/laundry/admin/config', requireAdmin, moduleGate.requireModule('laundry'), (req, res) => {
     try {
       const { machineId, ...updates } = req.body || {};
       const result = LaundryService.updateConfig(machineId, updates);
@@ -763,7 +763,7 @@ async function startServer() {
   });
 
   // Sync machines directly from Google Sheet tab "Machines"
-  app.post('/api/laundry/admin/sync-sheet', requireAdmin, requireModule('laundry'), async (_req, res) => {
+  app.post('/api/laundry/admin/sync-sheet', requireAdmin, moduleGate.requireModule('laundry'), async (_req, res) => {
     try {
       const result = await LaundryService.syncFromGoogleSheet();
       res.json(result);
@@ -821,8 +821,10 @@ async function startServer() {
     try {
       const { month = '10/2026', room, data } = req.body || {};
       // Meter readings are the Điện nước tool (marking paid is core and stays open).
-      if (data && [data.dienCu, data.dienMoi, data.nuocCu, data.nuocMoi].some((v) => v !== undefined) && !tokenAllowsModule((req as AuthedRequest).tenant, 'meter')) {
-        return res.status(403).json(MODULE_DISABLED_BODY);
+      if (data && [data.dienCu, data.dienMoi, data.nuocCu, data.nuocMoi].some((v) => v !== undefined)) {
+        const verdict = await moduleGate.check((req as AuthedRequest).tenant, 'meter');
+        if (verdict === 'expired') return res.status(401).json({ success: false, errorCode: 'AUTH_SESSION_EXPIRED', error: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' });
+        if (verdict === 'disabled') return res.status(403).json(MODULE_DISABLED_BODY);
       }
       if (room && data) {
         const dienCu = data.dienCu !== undefined ? Number(data.dienCu) : undefined;
@@ -885,11 +887,11 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/contract/config', requireModule('contract'), (req, res) => {
+  app.get('/api/admin/contract/config', moduleGate.requireModule('contract'), (req, res) => {
     res.json({ success: true, config: HOUSES_CONFIG });
   });
 
-  app.get('/api/admin/contract/history', requireModule('contract'), async (req, res) => {
+  app.get('/api/admin/contract/history', moduleGate.requireModule('contract'), async (req, res) => {
     try {
       const month = (req.query.month as string) || '10/2026';
       const houseKey = (req.query.houseKey as string) || 'TRUNG_KIM';
@@ -915,11 +917,11 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/contract/save', requireModule('contract'), (req, res) => {
+  app.post('/api/admin/contract/save', moduleGate.requireModule('contract'), (req, res) => {
     res.json({ success: true, message: 'Đã lưu hợp đồng lên hệ thống thành công' });
   });
 
-  app.get('/api/admin/declaration', requireModule('declaration'), async (req, res) => {
+  app.get('/api/admin/declaration', moduleGate.requireModule('declaration'), async (req, res) => {
     try {
       const month = (req.query.month as string) || '10/2026';
       const houseKey = ((req.query.houseKey as string) === 'LVC' ? 'LVC' : 'TRUNG_KIM') as 'LVC' | 'TRUNG_KIM';
@@ -930,7 +932,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/declaration', requireModule('declaration'), (req, res) => {
+  app.post('/api/admin/declaration', moduleGate.requireModule('declaration'), (req, res) => {
     try {
       const { month = '10/2026', houseKey = 'TRUNG_KIM', rows = [], sigDate = '' } = req.body || {};
       const result = saveDeclarationData(month, houseKey, rows, sigDate);
@@ -1055,7 +1057,7 @@ async function startServer() {
   // =========================================================================
   // NOTIFICATION SYSTEM (Admin Broadcast & Resident Notifications)
   // =========================================================================
-  app.post('/api/admin/notifications', requireModule('createNotification'), async (req, res) => {
+  app.post('/api/admin/notifications', moduleGate.requireModule('createNotification'), async (req, res) => {
     try {
       const { title, desc, type, target, customRooms, scheduledAt, time, sender, id } = req.body || {};
       if (!title || !desc) {

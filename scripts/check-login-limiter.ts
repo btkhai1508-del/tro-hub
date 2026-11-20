@@ -33,4 +33,9 @@ assert.equal(lim.check('0999999999').locked, true);
 const small = createLoginLimiter({ now: () => t, maxKeys: 10 });
 for (let i = 0; i < 100; i++) small.fail('k' + i);
 assert.ok(small.size() <= 11, 'map stays bounded');
+// a flood of random phones cannot erase a lock
+const flood = createLoginLimiter({ now: () => t, maxKeys: 10 });
+for (let i = 0; i < 5; i++) flood.fail('victim');
+for (let i = 0; i < 200; i++) flood.fail('r' + i);
+assert.equal(flood.check('victim').locked, true, 'lock survives eviction');
 console.log('login limiter: all checks passed');

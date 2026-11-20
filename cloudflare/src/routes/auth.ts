@@ -3,9 +3,9 @@
  * is a row of their landlord's store, found through the central resident index.
  */
 import type { Context, Hono, Next } from 'hono';
-import { actorOf, audit, fail, type App, type StaffRole, type Viewer } from '../app.ts';
+import { actorOf, audit, developerOnly, fail, type App, type StaffRole, type Viewer } from '../app.ts';
 import { residentRoute } from '../central/directory.ts';
-import { LOGIN_LIMITS, lockedMessage, loginFailure, loginStatus, loginSuccess } from '../loginLimit.ts';
+import { LOGIN_LIMITS, activeLocks, ipKey, lockedMessage, loginFailure, loginStatus, loginSuccess, unlockPhone } from '../loginLimit.ts';
 import { hashPassword, normalizePhone, verifyPassword } from '../password.ts';
 import { signToken, verifyToken } from '../token.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -117,7 +117,7 @@ export function registerAuth(app: Hono<App>) {
     const body = await c.req.json<{ phone?: string; password?: string }>().catch(() => ({}) as { phone?: string; password?: string });
     const phone = normalizePhone(body.phone ?? '');
     const password = String(body.password ?? '');
-    if (phone.length < 10 || !password) return fail(c, 400, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
+    if (phone.length < 10 || phone.length > 20 || !password) return fail(c, 400, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
 
     // The lock is checked before anything else and applies to any phone, registered or not, so the
     // answer for an unknown number is the same as for a real one (no account enumeration).
@@ -131,12 +131,12 @@ export function registerAuth(app: Hono<App>) {
       const failed = await loginFailure(c.env.DB, phone, ip);
       if (failed.phoneLocked || failed.ipLocked) {
         if (failed.phoneLocked) await audit(c, 'anonymous', 'login_locked', null, phone);
-        if (failed.ipLocked) await audit(c, 'anonymous', 'login_locked', null, `ip:${ip}`);
+        if (failed.ipLocked) await audit(c, 'anonymous', 'login_locked', null, `ip:${ipKey(ip)}`);
         return locked(c, Math.floor(Date.now() / 1000) + LOGIN_LIMITS.lockSec);
       }
       return fail(c, 401, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
     }
-    if (status.phoneRow) await loginSuccess(c.env.DB, phone); // only when there is something to reset
+    if (status.phoneRow) await loginSuccess(c.env.DB, phone, ip); // only when there is something to reset
     return signIn(c, account);
   });
 
@@ -162,6 +162,20 @@ export function registerAuth(app: Hono<App>) {
       return fail(c, 404, 'AUTH_TENANT_NOT_MAPPED', `Số điện thoại Zalo ${zalo.phone} chưa được đăng ký với phòng nào. Vui lòng liên hệ Chủ trọ để cập nhật SĐT.`);
     }
     return signIn(c, account, { zalo: { id: zalo.zaloId, name: zalo.name, avatar: zalo.avatar } }, 'zalo');
+  });
+
+  // Developer: see the current locks and clear one (a stranger can make a phone fail from his own address only,
+  // but the ceiling or a typo storm can still lock a real person; this is the way out).
+  app.use('/api/dev/login-locks', requireAuth, developerOnly);
+  app.use('/api/dev/login-locks/*', requireAuth, developerOnly);
+  app.get('/api/dev/login-locks', async (c) => c.json({ success: true, locks: await activeLocks(c.env.DB) }));
+  app.post('/api/dev/login-locks/unlock', async (c) => {
+    const body = await c.req.json<{ phone?: string }>().catch(() => ({}) as { phone?: string });
+    const phone = normalizePhone(body.phone ?? '');
+    if (phone.length < 10 || phone.length > 20) return fail(c, 400, 'PHONE_INVALID', 'Số điện thoại không hợp lệ.');
+    const removed = await unlockPhone(c.env.DB, phone);
+    await audit(c, actorOf(c.get('viewer')), 'login_unlock', null, phone);
+    return c.json({ success: true, cleared: removed });
   });
 
   app.use('/api/me', requireAuth);

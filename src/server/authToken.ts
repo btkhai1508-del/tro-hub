@@ -14,6 +14,8 @@ export interface TenantTokenPayload {
   zaloId?: string;        // present when logged in via Zalo
   /** Tiện ích keys the person's house(s) use, copied from the Worker when the session is issued. Absent on older / sheet-mode tokens. */
   modules?: string[];
+  /** The Worker bearer of the same login: lets Express re-read the live tiện ích list (see moduleGate.ts). */
+  wt?: string;
   iat?: number;
   exp?: number;
 }
@@ -117,11 +119,3 @@ export const MODULE_DISABLED_BODY = {
   errorCode: 'MODULE_DISABLED',
   error: 'Nhà trọ của bạn chưa đăng ký tiện ích này. Vui lòng liên hệ Developer để bật.'
 };
-
-/** Express middleware, placed after requireAuth / requireAdmin: 403 MODULE_DISABLED when the session's houses did not buy `key`. */
-export function requireModule(key: string) {
-  return (req: AuthedRequest, res: Response, next: NextFunction) => {
-    if (!tokenAllowsModule(req.tenant, key)) return res.status(403).json(MODULE_DISABLED_BODY);
-    next();
-  };
-}

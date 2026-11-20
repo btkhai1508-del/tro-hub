@@ -7,11 +7,15 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 import { authenticateUser, normalizePhone } from './googleSheetsBackendService.js';
 import { signTenantToken } from './authToken.js';
+import { createModuleGate } from './moduleGate.js';
 import { createSourceReader } from './workerSource.js';
 
 export const WORKER_API_URL = (process.env.WORKER_API_URL || 'https://tro-hub-api.trohub.workers.dev').replace(/\/+$/, '');
 
 const readSource = createSourceReader(WORKER_API_URL);
+
+/** Tiện ích gate for Express routes: re-reads the Worker's list (60 s cache) with the Worker bearer carried in the session. */
+export const moduleGate = createModuleGate(WORKER_API_URL);
 
 /**
  * Express routes that write to the Google Sheet (Apps Script) must not run once the Worker owns the data:
@@ -107,6 +111,7 @@ export function registerWorkerSession(app: Express) {
         personType: result.user.personType,
         isAdmin,
         ...(modules ? { modules } : {}),
+        wt: bearer.replace(/^Bearer\s+/i, '').trim() || undefined,
       });
       res.json({
         ...result,
