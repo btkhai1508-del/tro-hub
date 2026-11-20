@@ -159,13 +159,14 @@ export async function syncMonthFromSheet(central: D1Database, tenant: TenantDb, 
     statements.push(
       tenant.prepare(
         `INSERT INTO invoices (house_id, room_id, month, room_rent, electricity, water, trash, internet, parking, other, deposit, total, sheet_row, synced_at, issued_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
          ON CONFLICT (room_id, month) DO UPDATE SET
            room_rent = excluded.room_rent, electricity = excluded.electricity, water = excluded.water, trash = excluded.trash,
            internet = excluded.internet, parking = excluded.parking, other = excluded.other, deposit = excluded.deposit,
-           total = excluded.total, sheet_row = excluded.sheet_row, synced_at = excluded.synced_at`
+           total = excluded.total, sheet_row = excluded.sheet_row, synced_at = excluded.synced_at,
+           issued_at = COALESCE(invoices.issued_at, excluded.issued_at)`
       ).bind(place.houseId, id, month, amount('rent'), amount('electricity'), amount('water'), amount('trash'), amount('internet'),
-        amount('parking'), amount('other'), amount('deposit'), amount('total'), i + 1, now, now) // read from the Sheet = already issued (never a draft)
+        amount('parking'), amount('other'), amount('deposit'), amount('total'), i + 1, now) // read from the Sheet = issued (a draft left by migration 0022 becomes visible)
     );
     if (meters.some(Boolean)) {
       statements.push(

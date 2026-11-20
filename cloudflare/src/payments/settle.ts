@@ -75,7 +75,12 @@ export async function settleRent(
   if (!inv) return { settled: false, reason: 'invoice' };
   const received = await bankReceived(db, inv.id);
   // A draft is not yet billed to the resident: the money is kept, the status waits for issuing (issueMonth re-evaluates it).
-  if (inv.issued_at === null) return { settled: false, reason: 'draft', invoiceId: inv.id, received, total: inv.total };
+  // Read AFTER the insert: an issue that ran between our first read and the insert has already summed the money
+  // without this payment, so the invoice must be treated as issued here; an issue that comes later sums it itself.
+  const issuedAt = (await db.prepare(`SELECT issued_at FROM invoices WHERE id = ?`).bind(inv.id).first<{ issued_at: string | null }>())?.issued_at ?? null;
+  if (issuedAt === null) return { settled: false, reason: 'draft', invoiceId: inv.id, received, total: inv.total };
+  const cur = await db.prepare(`SELECT status FROM invoices WHERE id = ?`).bind(inv.id).first<{ status: typeof inv.status }>();
+  if (cur) inv.status = cur.status;
   if (inv.status === 'paid' || inv.status === 'cash') return { settled: true, already: true, invoiceId: inv.id, received, total: inv.total };
   if (received < inv.total) return { settled: false, reason: 'short', invoiceId: inv.id, received, total: inv.total };
   await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(?, datetime('now')), status_by = 'sepay' WHERE id = ?`)

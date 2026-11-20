@@ -109,8 +109,14 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
     .filter((s) => !out.has(s.id))
     .map((s) => ({ id: s.id, name: s.name, price: s.price, per: s.per, maxQty: s.max_qty, sheetCol: s.sheet_col }));
 
-  // A month with no reading row yet: nothing new to charge, the old numbers come from the earlier months.
-  const before = meter ? { electricOld: meter.electric_old, waterOld: meter.water_old } : await previousReadings(db, inv.room_id, inv.month);
+  // A month with no reading row yet: nothing new to charge.
+  // The old columns default to 0, so a row written with only new readings must not bill the whole reading:
+  // an old value is used only when it is > 0, otherwise the earlier months decide.
+  const prev = meter && (meter.electric_old ?? 0) > 0 && (meter.water_old ?? 0) > 0 ? null : await previousReadings(db, inv.room_id, inv.month);
+  const before = {
+    electricOld: meter && (meter.electric_old ?? 0) > 0 ? meter.electric_old : prev?.electricOld ?? null,
+    waterOld: meter && (meter.water_old ?? 0) > 0 ? meter.water_old : prev?.waterOld ?? null,
+  };
   const calc = computeInvoice({
     rent: room?.price ?? 0,
     electricOld: before.electricOld, electricNew: meter?.electric_new ?? null,
@@ -142,10 +148,11 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
   const waiting = opts.central ? ((await deferredByRoom(opts.central, inv.house_id, inv.month, db)).get(inv.room) ?? 0) : 0;
   const received = bank + waiting;
   if (inv.issued_at !== null) {
+    // Guarded writes: a paid/cash set by someone else after our read is never overwritten.
     if (received > 0 && received >= calc.total) {
-      await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(paid_at, datetime('now')), status_by = 'recompute' WHERE id = ?`).bind(inv.id).run();
-    } else if (inv.status !== 'pending') {
-      await db.prepare(`UPDATE invoices SET status = 'unpaid', paid_at = NULL WHERE id = ?`).bind(inv.id).run();
+      await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(paid_at, datetime('now')), status_by = 'recompute' WHERE id = ? AND status NOT IN ('paid', 'cash')`).bind(inv.id).run();
+    } else if (inv.status !== 'pending' && inv.status !== 'unpaid') {
+      await db.prepare(`UPDATE invoices SET status = 'unpaid', paid_at = NULL WHERE id = ? AND status NOT IN ('paid', 'cash')`).bind(inv.id).run();
     }
   }
   return { total: calc.total, surplus: Math.max(received - calc.total, 0) };
@@ -171,7 +178,16 @@ async function draftFor(db: TenantDb, houseId: string, roomId: number, month: st
     .bind(houseId, roomId, month).run();
   if (!ins.meta.changes) return false;
   const row = await db.prepare(`SELECT id FROM invoices WHERE room_id = ? AND month = ?`).bind(roomId, month).first<{ id: number }>();
-  await recompute(db, row!.id, { central });
+  try {
+    await recompute(db, row!.id, { central });
+  } catch (err) {
+    // Never leave a zero-total shell behind: remove it so the next run builds the draft again.
+    await db.batch([
+      db.prepare(`DELETE FROM invoice_lines WHERE invoice_id = ?`).bind(row!.id),
+      db.prepare(`DELETE FROM invoices WHERE id = ? AND issued_at IS NULL`).bind(row!.id),
+    ]).catch(() => {});
+    throw err;
+  }
   return true;
 }
 
@@ -181,7 +197,13 @@ export async function createDrafts(env: Env, ownerId: number, month: string): Pr
   let made = 0;
   for (const h of await ownerHouses(env.DB, ownerId)) {
     if (h.status !== 'active') continue;
-    for (const roomId of await roomsNeedingDraft(db, h.house_id, month)) if (await draftFor(db, h.house_id, roomId, month, env.DB)) made++;
+    for (const roomId of await roomsNeedingDraft(db, h.house_id, month)) {
+      try {
+        if (await draftFor(db, h.house_id, roomId, month, env.DB)) made++;
+      } catch (err) {
+        console.warn('[invoices] draft', h.house_id, roomId, month, err); // one failing room does not stop the others
+      }
+    }
   }
   return made;
 }
@@ -210,21 +232,39 @@ export async function issueMonth(env: Env, houseId: string, month: string, force
   if (ownerId === null) throw new Error(`House ${houseId} not found`);
   const db = await tenantOfOwner(env, ownerId);
   const { results: drafts } = await db.prepare(
-    `SELECT i.id, rm.name, (m.room_id IS NULL OR m.electric_new IS NULL OR m.water_new IS NULL) AS missing
+    `SELECT i.id, rm.name, i.status, (m.room_id IS NULL OR m.electric_new IS NULL OR m.water_new IS NULL OR (m.electric_new = 0 AND m.water_new = 0)) AS missing
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id
        LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
       WHERE i.house_id = ? AND i.month = ? AND i.issued_at IS NULL ORDER BY rm.name`
-  ).bind(houseId, month).all<{ id: number; name: string; missing: number }>();
+  ).bind(houseId, month).all<{ id: number; name: string; status: InvoiceStatus; missing: number }>();
   const missingMeters = drafts.filter((d) => d.missing).map((d) => d.name);
   if (!drafts.length || (!force && missingMeters.length)) return { issued: 0, missingMeters };
 
-  await db.batch([
-    db.prepare(`UPDATE invoices SET issued_at = datetime('now') WHERE house_id = ? AND month = ? AND issued_at IS NULL`).bind(houseId, month),
-    gateStatement(db, houseId, month, 'START', 'issue'),
-  ]);
+  // 1) Recompute every draft first (a draft keeps its status; a failure here changes nothing visible).
+  const waiting = await deferredByRoom(env.DB, houseId, month, db);
   for (const d of drafts) {
     // A draft a manager already marked paid by hand is locked: it is issued as it is.
     await recompute(db, d.id, { central: env.DB, allowPast: true }).catch((err) => { if (!(err instanceof InvoiceLockedError)) throw err; });
   }
+  // 2) One atomic batch: every invoice gets issued_at together with its status (bank money booked + deferred
+  //    money covering the total -> paid, evaluated inside the statement so a payment booked meanwhile counts),
+  //    and the gate opens. There is no moment where a visible invoice has a stale status.
+  await db.batch([
+    ...drafts.map((d) =>
+      db.prepare(
+        `UPDATE invoices SET issued_at = datetime('now'),
+           status = CASE WHEN status NOT IN ('paid', 'cash')
+                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 > 0
+                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 >= total
+                     THEN 'paid' ELSE status END,
+           paid_at = CASE WHEN status NOT IN ('paid', 'cash')
+                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 > 0
+                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 >= total
+                     THEN COALESCE(paid_at, datetime('now')) ELSE paid_at END
+         WHERE id = ?2 AND issued_at IS NULL`
+      ).bind(waiting.get(d.name) ?? 0, d.id)
+    ),
+    gateStatement(db, houseId, month, 'START', 'issue'),
+  ]);
   return { issued: drafts.length, missingMeters };
 }

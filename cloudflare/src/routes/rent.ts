@@ -53,7 +53,8 @@ export async function invoiceOrSync(tenant: TenantDb, central: D1Database, roomI
 async function statusView(central: D1Database, db: TenantDb, houseIds: string[], month: string) {
   const deferred = new Map<string, Map<string, number>>();
   await Promise.all(houseIds.map(async (h) => deferred.set(h, await deferredByRoom(central, h, month, db))));
-  return async (inv: { id: number; house_id: string; room: string; total: number; status: InvoiceStatus }): Promise<InvoiceStatus> => {
+  return async (inv: { id: number; house_id: string; room: string; total: number; status: InvoiceStatus; issued_at?: string | null }): Promise<InvoiceStatus> => {
+    if (inv.issued_at === null) return inv.status; // a draft shows its stored status: no overlay, so it never flips after the replay
     // Present = the room has an open SePay event (even a booked one: its invoice update may not have landed yet).
     const open = deferred.get(inv.house_id);
     if (!open?.has(inv.room) || inv.status === 'paid' || inv.status === 'cash') return inv.status;
@@ -176,7 +177,7 @@ export function registerRent(app: Hono<App>): void {
       .bind(...(roomFilter ? [houseId, month, roomFilter] : [houseId, month]))
       .all<{ id: number; house_id: string; room_name: string; total: number; status: InvoiceStatus; issued_at: string | null }>();
     const view = await statusView(c.env.DB, db, [houseId], month);
-    const invoices = await Promise.all(results.map(async (r) => ({ ...r, draft: r.issued_at === null, status: await view({ id: r.id, house_id: r.house_id, room: r.room_name, total: r.total, status: r.status }) })));
+    const invoices = await Promise.all(results.map(async (r) => ({ ...r, draft: r.issued_at === null, status: await view({ id: r.id, house_id: r.house_id, room: r.room_name, total: r.total, status: r.status, issued_at: r.issued_at }) })));
     return c.json({ success: true, month, invoices });
   });
 

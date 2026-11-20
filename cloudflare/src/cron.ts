@@ -175,13 +175,13 @@ export async function reconcile(env: Env): Promise<ReconcileResult> {
 }
 
 /**
- * On the 1st (Vietnam time) of a month, when the Worker owns the invoices: a draft for every room with an
+ * On days 1-3 (Vietnam time) of a month, when the Worker owns the invoices: a draft for every room with an
  * approved resident, for every landlord. The daily cron runs at 19:00 UTC = 02:00 the next day in Vietnam.
  */
 export async function createMonthlyDrafts(env: Env, now = Date.now()): Promise<number> {
   if (!(await isWorkerSource(env.DB))) return 0;
   const vn = new Date(now + 7 * 3600_000).toISOString(); // Vietnam wall clock, read as UTC
-  if (vn.slice(8, 10) !== '01') return 0;
+  if (Number(vn.slice(8, 10)) > 3) return 0; // days 1-3: createDrafts is idempotent, so a missed run is caught up
   const month = vn.slice(0, 7);
   const { results } = await env.DB.prepare(`SELECT DISTINCT owner_id FROM house_directory`).all<{ owner_id: number }>();
   let made = 0;

@@ -337,7 +337,7 @@ describe.each(BACKENDS)('hoá đơn nháp, phát hành, quy tắc sửa [%s]', (
 
   describe('cron: ngày 1 giờ Việt Nam', () => {
     const day1 = Date.UTC(2099, 0, 1, 2, 0) - 7 * 3600_000; // 2099-01-01 02:00 Vietnam
-    const day2 = day1 + 24 * 3600_000;
+    const day2 = day1 + 3 * 24 * 3600_000; // day 4: outside the 1-3 window
 
     it('worker + ngày 1: tạo nháp tháng hiện tại cho mọi chủ trọ', async () => {
       await setSource('worker');
@@ -346,7 +346,7 @@ describe.each(BACKENDS)('hoá đơn nháp, phát hành, quy tắc sửa [%s]', (
       expect((await invoiceOf('TRUNG_KIM', '101'))).toMatchObject({ issued_at: null });
     });
 
-    it('không phải ngày 1, hoặc công tắc sheet: không tạo gì', async () => {
+    it('ngoài ngày 1-3, hoặc công tắc sheet: không tạo gì', async () => {
       await setSource('worker');
       await runCron(DAILY_CRON, e, day2);
       expect(await invoiceOf('LVC', '101')).toBeNull();
@@ -363,5 +363,142 @@ describe.each(BACKENDS)('hoá đơn nháp, phát hành, quy tắc sửa [%s]', (
       await runCron(DAILY_CRON, e, day1); // owner 1 is read-only: its write is refused, logged, and the run goes on
       expect(warn).toHaveBeenCalled();
     });
+  });
+});
+
+describe.each(BACKENDS)('vòng sửa lỗi sau review [%s]', (backend) => {
+  beforeEach(async () => {
+    await seedWorld(backend);
+    await e.DB.prepare(`DELETE FROM sepay_events`).run();
+    await e.DB.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('legacy_sync:2099-01', ?)`).bind(new Date().toISOString()).run();
+    const db = await store();
+    await db.batch([
+      db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('LVC', 3500, 20000)`),
+      db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('TRUNG_KIM', 3500, 20000)`),
+    ]);
+    await setSource('worker');
+  });
+  afterEach(async () => {
+    const db = await store();
+    for (const t of ['t_fail_issue', 't_fail_lines', 't_cash_during', 't_issue_during']) await db.prepare(`DROP TRIGGER IF EXISTS ${t}`).run().catch(() => {});
+  });
+
+  it('phát hành nguyên tử: tiền đã đủ thì cư dân thấy Đã đóng ngay, không qua chưa đóng', async () => {
+    await createDrafts(e, OWNER, M);
+    await settleRent(e, OWNER, 'LVC', '101', M, transfer(3_570_000), 'AT1');
+    const resident = await login(PHONES.residentLvc);
+    await issueMonth(e, 'LVC', M, true);
+    const row = await invoiceOf('LVC', '101');
+    expect(row).toMatchObject({ status: 'paid' });
+    expect(row.issued_at).not.toBeNull();
+    const st = (await (await api(`/api/payment/status?${QM}`, {}, resident)).json()) as any;
+    expect(st.paymentStatus).toBe('paid');
+  });
+
+  it('lỗi giữa chừng khi phát hành: không phát hành gì, không mở cổng', async () => {
+    await createDrafts(e, OWNER, M);
+    const db = await store();
+    await db.prepare(
+      `CREATE TRIGGER t_fail_issue BEFORE UPDATE OF issued_at ON invoices WHEN NEW.room_id = 3 BEGIN SELECT RAISE(ABORT, 'boom'); END`
+    ).run();
+    await expect(issueMonth(e, 'LVC', M, true)).rejects.toThrow();
+    expect((await invoiceOf('LVC', '101')).issued_at).toBeNull();
+    expect(await db.prepare(`SELECT 1 FROM payment_gates WHERE house_id = 'LVC' AND month = ?`).bind(M).first()).toBeNull();
+  });
+
+  it('chỉ số cũ = 0 trong dòng đồng hồ thì lấy tháng trước; thiếu số gồm cả mới = 0', async () => {
+    await createDrafts(e, OWNER, M);
+    await setMeter('LVC', 3, '2098-12', 0, 100, 0, 10);
+    await setMeter('LVC', 3, M, 0, 130, 0, 14); // only new readings written
+    const inv = await invoiceOf('LVC', '101');
+    await recompute(await store(), inv.id, { central: e.DB });
+    expect(await invoiceOf('LVC', '101')).toMatchObject({ electricity: 30 * 3500, water: 4 * 20000 });
+    // zero new readings count as missing
+    await setMeter('TRUNG_KIM', 1, M, 0, 0, 0, 0);
+    expect(await issueMonth(e, 'TRUNG_KIM', M, false)).toEqual({ issued: 0, missingMeters: ['101'] });
+  });
+
+  it('recompute không ghi đè paid/cash đặt xen vào sau khi đọc', async () => {
+    await createDrafts(e, OWNER, M);
+    await issueMonth(e, 'LVC', M, true);
+    const inv = await invoiceOf('LVC', '101');
+    const db = await store();
+    await settleRent(e, OWNER, 'LVC', '101', M, transfer(3_570_000), 'RC1'); // paid → locked, so build the race instead:
+    await db.prepare(`UPDATE invoices SET status = 'unpaid', paid_at = NULL WHERE id = ?`).bind(inv.id).run();
+    await db.prepare(
+      `CREATE TRIGGER t_cash_during AFTER INSERT ON invoice_lines BEGIN UPDATE invoices SET status = 'cash' WHERE id = NEW.invoice_id; END`
+    ).run();
+    await recompute(db, inv.id, { central: e.DB }); // covered by bank money: wants 'paid', but cash was set meanwhile
+    expect((await invoiceOf('LVC', '101')).status).toBe('cash');
+  });
+
+  it('SePay: phát hành xen giữa lúc đọc và lúc ghi tiền vẫn ra Đã đóng', async () => {
+    await createDrafts(e, OWNER, M);
+    const db = await store();
+    await db.prepare(
+      `CREATE TRIGGER t_issue_during AFTER INSERT ON payments BEGIN UPDATE invoices SET issued_at = datetime('now') WHERE id = NEW.invoice_id; END`
+    ).run();
+    const r = await settleRent(e, OWNER, 'LVC', '101', M, transfer(3_570_000), 'RACE1');
+    expect(r).toMatchObject({ settled: true });
+    expect((await invoiceOf('LVC', '101')).status).toBe('paid');
+  });
+
+  it('nháp có sự kiện deferred mở: staff thấy trạng thái đã lưu (chưa đóng), sau phát hành thì Đã đóng', async () => {
+    await createDrafts(e, OWNER, M);
+    await e.DB.prepare(
+      `INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, owner_id, status) VALUES ('DF1', 'rent', 3570000, 'x', 'LVC', '101', ?, 1, 'deferred')`
+    ).bind(M).run();
+    const owner = await login(PHONES.owner);
+    const list = (await (await api(`/api/houses/LVC/invoices?month=${M}`, {}, owner)).json()) as any;
+    expect(list.invoices[0]).toMatchObject({ draft: true, status: 'unpaid' });
+    const st = (await (await api(`/api/payment/status?${QM}&room=LVC-101`, {}, owner)).json()) as any;
+    expect(st.paymentStatus).toBe('unpaid');
+    await issueMonth(e, 'LVC', M, true);
+    expect((await invoiceOf('LVC', '101')).status).toBe('paid'); // deferred money counted at issue
+  });
+
+  it('createDrafts: một phòng lỗi không chặn phòng khác và không để lại nháp rỗng', async () => {
+    const db = await store();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await db.prepare(
+      `CREATE TRIGGER t_fail_lines BEFORE INSERT ON invoice_lines WHEN NEW.invoice_id IN (SELECT id FROM invoices WHERE room_id = 1) BEGIN SELECT RAISE(ABORT, 'boom'); END`
+    ).run();
+    expect(await createDrafts(e, OWNER, M)).toBe(1);
+    expect(warn).toHaveBeenCalled();
+    expect(await invoiceOf('TRUNG_KIM', '101')).toBeNull();
+    expect(await invoiceOf('LVC', '101')).toMatchObject({ total: 3_570_000 });
+    await db.prepare(`DROP TRIGGER t_fail_lines`).run();
+    expect(await createDrafts(e, OWNER, M)).toBe(1); // repaired on the next run
+  });
+
+  it('cron tạo nháp vào ngày 1-3, không phải ngày 4', async () => {
+    const d = (day: number) => Date.UTC(2099, 0, day, 2, 0) - 7 * 3600_000;
+    await runCron(DAILY_CRON, e, d(4));
+    expect(await invoiceOf('LVC', '101')).toBeNull();
+    await runCron(DAILY_CRON, e, d(3));
+    expect(await invoiceOf('LVC', '101')).not.toBeNull();
+  });
+
+  it('chế độ sheet: hoá đơn nháp tồn đọng được phát hành ở lần đồng bộ Sheet sau, không bị gỡ', async () => {
+    await setSource('sheet');
+    const { syncMonthFromSheet } = await import('../src/sheetSync.ts');
+    const db = await store();
+    await db.prepare(`UPDATE invoices SET issued_at = NULL WHERE room_id = 3`).run();
+    await e.DB.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('legacy_sheet_id', 'S1'), ('legacy_sheet_houses', 'LVC')`).run();
+    const real = globalThis.fetch;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (/google\.com/.test(url)) {
+        if (url.includes('/export')) return new Response(['T', 'Số phòng,a,b', 'u', 'LVC-101,10,20,,1,3,,0,0,"4.000.000 đ",,,,,,"4.000.000 đ"'].join('\n'));
+        return new Response(`{name: "11/2026", pageUrl: "https://docs.google.com/x?gid=777"}`);
+      }
+      return real(input, init);
+    });
+    await syncMonthFromSheet(e.DB, db, '2026-11');
+    const row = await db.prepare(`SELECT issued_at FROM invoices WHERE room_id = 3 AND month = '2026-11'`).first<{ issued_at: string | null }>();
+    expect(row!.issued_at).toMatch(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/);
+    const first = row!.issued_at;
+    await syncMonthFromSheet(e.DB, db, '2026-11');
+    expect((await db.prepare(`SELECT issued_at FROM invoices WHERE room_id = 3 AND month = '2026-11'`).first<{ issued_at: string }>())!.issued_at).toBe(first);
   });
 });
