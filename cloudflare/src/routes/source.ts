@@ -4,7 +4,7 @@
  * the export queue still holds work the Sheet has not received.
  */
 import type { Hono } from 'hono';
-import { syncLegacySheets } from '../cron.ts';
+import { catchUpMonthStart, syncLegacySheets } from '../cron.ts';
 import { requeueFailed } from '../sheetExport.ts';
 import { actorOf, audit, developerOnly, fail, type App } from '../app.ts';
 import { houseOwner } from '../central/directory.ts';
@@ -75,7 +75,14 @@ export function registerSource(app: Hono<App>): void {
     await setSource(c.env.DB, next);
     await audit(c, actorOf(c.get('viewer')), 'source_set', null, next);
     if (next === 'worker' && current !== 'worker') await audit(c, actorOf(c.get('viewer')), 'source_final_sync_ok', null, 'sheet');
-    return c.json({ success: true, source: next, workerOnlyResidents: workerOnly });
+    // Flipping to worker starts the current month at once (fee snapshot + a draft for every room with a resident and no invoice
+    // yet), so the admin is told how many drafts appeared; a failure here never undoes the flip (the 10-minute cron retries).
+    let draftsCreated = 0;
+    if (next === 'worker' && current !== 'worker') {
+      draftsCreated = await catchUpMonthStart(c.env).catch((err) => { console.warn('[source] month start', err); return 0; });
+      await audit(c, actorOf(c.get('viewer')), 'source_month_started', null, String(draftsCreated));
+    }
+    return c.json({ success: true, source: next, workerOnlyResidents: workerOnly, draftsCreated });
   });
 
   /** Developer: gives the failed export rows another round (attempts back to 0). */

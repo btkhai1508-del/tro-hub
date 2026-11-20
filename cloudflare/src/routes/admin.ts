@@ -6,7 +6,7 @@
  */
 import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
-import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute } from '../billing/invoices.ts';
+import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute, recomputeDrafts } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
 import { feeConfigFor, mirrorTemplate } from '../billing/fees.ts';
 import { enqueueExport } from '../sheetExport.ts';
@@ -43,6 +43,15 @@ function pickHouse(c: Context<App>, given: unknown): string | Response {
 function pickMonth(c: Context<App>, given: unknown): string | Response {
   if (given === undefined || given === null || String(given).trim() === '') return currentMonth();
   return parseMonth(given) ?? fail(c, 400, 'MONTH_INVALID', 'Tháng không hợp lệ (dùng 11/2026 hoặc 2026-11).');
+}
+
+/** For the fee routes: a valid month that is not after next month (a typo such as 2062-11 must not store anything). */
+function pickFeeMonth(c: Context<App>, given: unknown): string | Response {
+  const month = pickMonth(c, given);
+  if (month instanceof Response) return month;
+  const [y, m] = currentMonth().split('-').map(Number);
+  const max = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+  return month <= max ? month : fail(c, 400, 'MONTH_INVALID', 'Tháng không hợp lệ: chỉ chọn đến tháng sau.');
 }
 
 // ── Reading a month of rooms ───────────────────────────────────────────────
@@ -206,6 +215,7 @@ async function loadConfig(db: TenantDb, houseId: string, month: string) {
   const fee = await feeConfigFor(db, houseId, month, { persist: false });
   return {
     month,
+    known: fee.known,
     electricPrice: fee.electricPrice,
     waterPrice: fee.waterPrice,
     services: fee.services.map((s) => ({ id: s.id, name: s.name, price: s.price, per: s.per, maxQty: s.maxQty, active: s.active })),
@@ -315,9 +325,10 @@ export function registerAdmin(app: Hono<App>): void {
   const readConfig = async (c: Context<App>) => {
     const houseId = pickHouse(c, c.req.query('houseId'));
     if (houseId instanceof Response) return houseId;
-    const month = pickMonth(c, c.req.query('month'));
+    const month = pickFeeMonth(c, c.req.query('month'));
     if (month instanceof Response) return month;
-    return c.json({ success: true, month, editable: monthEditable(month), config: await loadConfig(await tenantFor(c, houseId), houseId, month) });
+    const config = await loadConfig(await tenantFor(c, houseId), houseId, month);
+    return c.json({ success: true, month, editable: monthEditable(month), known: config.known, config });
   };
   app.get('/api/admin/config', readConfig);
 
@@ -330,7 +341,7 @@ export function registerAdmin(app: Hono<App>): void {
     const body = await readBody(c);
     const houseId = pickHouse(c, body.houseId ?? c.req.query('houseId'));
     if (houseId instanceof Response) return houseId;
-    const month = pickMonth(c, body.month ?? c.req.query('month'));
+    const month = pickFeeMonth(c, body.month ?? c.req.query('month'));
     if (month instanceof Response) return month;
     const db = await tenantFor(c, houseId);
     if (!monthEditable(month)) return fail(c, 409, 'MONTH_READONLY', `${monthLabel(month)} đã qua nên không sửa được cài đặt phí. Bạn chỉ xem được.`);
@@ -348,28 +359,28 @@ export function registerAdmin(app: Hono<App>): void {
     const isCurrent = month === currentMonth();
     await feeConfigFor(db, houseId, month); // the month's snapshot exists from here on (copied forward when it had none)
 
-    // A new service gets its stable id in the registry (house_services) first; it is switched on there only for the current
-    // month, because the registry mirrors the current month.
-    const ids: number[] = [];
-    for (const [i, s] of (services ?? []).entries()) {
-      if (s.id !== undefined) { ids.push(s.id); continue; }
-      const made = await db.prepare(`INSERT INTO house_services (house_id, name, price, per, max_qty, sort, active) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-        .bind(houseId, s.name, s.price, s.per, s.maxQty, i, isCurrent && s.active ? 1 : 0).run();
-      ids.push(made.meta.last_row_id);
-    }
-
+    // One atomic batch. A new service gets its stable id in the registry (house_services) and, in the very next statement,
+    // its snapshot row (last_insert_rowid); it is switched on in the registry only for the current month, because the
+    // registry mirrors the current month. Services missing from the list are switched off in this month, never deleted.
     const statements = [
       db.prepare(`UPDATE house_fee_months SET electricity_per_kwh = ?, water_per_m3 = ?, updated_at = datetime('now') WHERE house_id = ? AND month = ?`).bind(electric, water, houseId, month),
     ];
     if (services) {
-      // Services missing from the list are switched off in this month, never deleted: old invoice lines still point at them.
-      statements.push(db.prepare(`UPDATE house_fee_services SET active = 0 WHERE house_id = ? AND month = ? AND ${ids.length ? `service_id NOT IN (${ids.map(() => '?').join(',')})` : '1 = 1'}`).bind(houseId, month, ...ids));
+      const kept = services.flatMap((s) => (s.id === undefined ? [] : [s.id]));
+      statements.push(db.prepare(`UPDATE house_fee_services SET active = 0 WHERE house_id = ? AND month = ?${kept.length ? ` AND service_id NOT IN (${kept.map(() => '?').join(',')})` : ''}`).bind(houseId, month, ...kept));
       services.forEach((s, i) => {
-        const id = ids[i];
+        if (s.id === undefined) {
+          statements.push(
+            db.prepare(`INSERT INTO house_services (house_id, name, price, per, max_qty, sort, active) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(houseId, s.name, s.price, s.per, s.maxQty, i, isCurrent && s.active ? 1 : 0),
+            db.prepare(`INSERT INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, active, sort) VALUES (?, ?, last_insert_rowid(), ?, ?, ?, ?, ?, ?)`)
+              .bind(houseId, month, s.name, s.price, s.per, s.maxQty, s.active ? 1 : 0, i),
+          );
+          return;
+        }
         statements.push(db.prepare(
           `INSERT INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, active, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (house_id, month, service_id) DO UPDATE SET name = excluded.name, price = excluded.price, per = excluded.per, max_qty = excluded.max_qty, active = excluded.active, sort = excluded.sort`
-        ).bind(houseId, month, id, s.name, s.price, s.per, s.maxQty, s.active ? 1 : 0, i));
+        ).bind(houseId, month, s.id, s.name, s.price, s.per, s.maxQty, s.active ? 1 : 0, i));
       });
     }
     await db.batch(statements);
@@ -379,21 +390,7 @@ export function registerAdmin(app: Hono<App>): void {
       await db.batch(mirrorTemplate(db, houseId, fee));
     }
 
-    let recomputed = 0;
-    const recomputeFailed: string[] = [];
-    const { results: drafts } = await db.prepare(
-      `SELECT i.id, rm.name FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.house_id = ? AND i.month = ? AND i.issued_at IS NULL AND i.status NOT IN ('paid', 'cash') ORDER BY rm.name`
-    ).bind(houseId, month).all<{ id: number; name: string }>();
-    for (const d of drafts) {
-      try {
-        await recompute(db, d.id, { central: c.env.DB });
-        recomputed++;
-      } catch (err) {
-        if (err instanceof InvoiceLockedError) continue; // a draft marked paid by hand in the meantime stays as it is
-        console.warn('[admin] config recompute', houseId, d.id, err);
-        recomputeFailed.push(d.name); // the saved config stays saved; the screen is told which drafts to recheck
-      }
-    }
+    const { recomputed, failed: recomputeFailed } = await recomputeDrafts(db, c.env.DB, houseId, month);
     await audit(c, actorOf(c.get('viewer')), 'admin_config_save', houseId, `${month} drafts:${recomputed}`);
     if (isCurrent) {
       // The Sheet has a tab for the current month only.

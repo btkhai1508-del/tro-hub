@@ -264,13 +264,89 @@ describe.each(BACKENDS)('phí theo tháng và chuyển tháng 00:00 [%s]', (back
       expect(JSON.parse(q[0].payload)).toMatchObject({ houseId: 'LVC', month: '12/2026', dien: 3600, nuoc: 20000, rac: 30000, net: 40000, xe: 50000 });
       // A later month's fees are not on the Sheet yet.
       await e.DB.prepare(`DELETE FROM sheet_export_queue`).run();
-      expect((await call(PHONES.owner, 'PUT', '/api/admin/config', { houseId: 'LVC', month: '2027-03', electricPrice: 3700, waterPrice: 20000 })).status).toBe(200);
+      expect((await call(PHONES.owner, 'PUT', '/api/admin/config', { houseId: 'LVC', month: '2027-01', electricPrice: 3700, waterPrice: 20000 })).status).toBe(200);
       q = (await e.DB.prepare(`SELECT kind, payload FROM sheet_export_queue`).all<{ kind: string; payload: string }>()).results;
       expect(q).toEqual([]);
-      expect((await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC&month=2027-03`))).editable).toBe(true);
+      expect((await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC&month=2027-01`))).editable).toBe(true);
       // And it did not move the live template or December.
       expect((await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC`))).config.electricPrice).toBe(3600);
     });
+  });
+});
+
+describe.each(BACKENDS)('vòng sửa lỗi review 1 [%s]', (backend) => {
+  beforeEach(async () => {
+    await seedWorld(backend);
+    await e.DB.prepare(`DELETE FROM sepay_events`).run();
+    const db = await store();
+    await db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('LVC', 3500, 20000), ('TRUNG_KIM', 3500, 20000)`).run();
+    await setSource('worker');
+    await feeConfigFor(db, 'LVC', NOV);
+    await feeConfigFor(db, 'TRUNG_KIM', NOV);
+  });
+
+  it('I1: tháng trước ảnh chụp đầu tiên: known=false, chỉ xem, và không bao giờ được lưu bằng phí hiện tại', async () => {
+    const db = await store();
+    const view = await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC&month=2026-10`));
+    expect(view).toMatchObject({ month: '2026-10', editable: false, known: false });
+    expect(await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC&month=${NOV}`))).toMatchObject({ known: true });
+    // A forced recompute of an old draft prices it but must not store a snapshot for that past month.
+    await db.prepare(`INSERT INTO invoices (house_id, room_id, month, status, issued_at) VALUES ('LVC', 3, '2026-10', 'unpaid', NULL)`).run();
+    await recompute(db, (await invoiceOf('LVC', '101', '2026-10')).id, { central: e.DB, allowPast: true });
+    expect((await db.prepare(`SELECT COUNT(*) AS n FROM house_fee_months WHERE month = '2026-10'`).first<{ n: number }>())!.n).toBe(0);
+    expect((await feeConfigFor(db, 'LVC', '2026-10')).from).toBe('template');
+    expect((await db.prepare(`SELECT COUNT(*) AS n FROM house_fee_months WHERE month = '2026-10'`).first<{ n: number }>())!.n).toBe(0);
+  });
+
+  it('I2: PUT /api/houses/:id/rates ghi xuống ảnh chụp tháng hiện tại và mẫu, tính lại nháp tháng đó', async () => {
+    const db = await store();
+    await db.prepare(`UPDATE invoices SET issued_at = NULL WHERE room_id = 3`).run();
+    const res = await call(PHONES.owner, 'PUT', '/api/houses/LVC/rates', { electricity_per_kwh: 3900, water_per_m3: 21000 });
+    expect(res.status).toBe(200);
+    expect(await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC`))).toMatchObject({ config: { electricPrice: 3900, waterPrice: 21000 } });
+    expect(await db.prepare(`SELECT electricity_per_kwh AS e FROM house_rates WHERE house_id = 'LVC'`).first()).toEqual({ e: 3900 });
+    expect((await db.prepare(`SELECT electricity_per_kwh AS e FROM house_fee_months WHERE house_id = 'LVC' AND month = ?`).bind(NOV).first<any>()).e).toBe(3900);
+    expect((await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC&month=2026-10`))).config.electricPrice).toBe(3900); // template view only
+  });
+
+  it('I3: tháng sai hoặc quá xa bị từ chối 400 MONTH_INVALID; tháng sau tháng hiện tại thì được', async () => {
+    for (const m of ['2099-01', '2027-01', '2026-13', 'abc']) {
+      for (const [method, path, body] of [['GET', `/api/admin/config?houseId=LVC&month=${m}`], ['PUT', '/api/admin/config', { houseId: 'LVC', month: m, electricPrice: 1, waterPrice: 1 }]] as const) {
+        const res = await call(PHONES.owner, method, path, body);
+        expect(res.status, `${method} ${m}`).toBe(400);
+        expect((await json(res)).errorCode).toBe('MONTH_INVALID');
+      }
+    }
+    expect((await call(PHONES.owner, 'PUT', '/api/admin/config', { houseId: 'LVC', month: DEC, electricPrice: 3600, waterPrice: 20000 })).status).toBe(200);
+    expect((await (await store()).prepare(`SELECT COUNT(*) AS n FROM house_fee_months WHERE month > ?`).bind(DEC).first<{ n: number }>())!.n).toBe(0);
+  });
+
+  it('I4: bật worker giữa tháng: trả draftsCreated và ghi dấu tháng đã bắt đầu', async () => {
+    await setSource('sheet');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('<html></html>'));
+    const res = await call(PHONES.developer, 'PUT', '/api/dev/source', { source: 'worker' });
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body).toMatchObject({ success: true, source: 'worker', draftsCreated: 0 });
+    expect(await marker()).toBe(NOV); // the seeded November invoices already exist: nothing to create
+    await (await store()).prepare(`DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE room_id = 3)`).run();
+    await (await store()).prepare(`DELETE FROM invoices WHERE room_id = 3`).run();
+    await setSource('sheet');
+    await e.DB.prepare(`DELETE FROM settings WHERE key = 'month_started'`).run();
+    const again = await json(await call(PHONES.developer, 'PUT', '/api/dev/source', { source: 'worker' }));
+    expect(again.draftsCreated).toBe(1);
+  });
+
+  it('M3: thêm dịch vụ mới là một khối: lỗi giữa chừng không để lại dòng mồ côi trong house_services', async () => {
+    const db = await store();
+    const before = (await db.prepare(`SELECT COUNT(*) AS n FROM house_services`).first<{ n: number }>())!.n;
+    await db.prepare(`CREATE TRIGGER t_fee_fail BEFORE INSERT ON house_fee_services WHEN NEW.name = 'Hỏng' BEGIN SELECT RAISE(ABORT, 'boom'); END`).run();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cfg = (await json(await call(PHONES.owner, 'GET', `/api/admin/config?houseId=LVC`))).config;
+    const res = await call(PHONES.owner, 'PUT', '/api/admin/config', { houseId: 'LVC', services: [...cfg.services, { name: 'Hỏng', price: 1, per: 'room', maxQty: null }] });
+    expect(res.status).toBeGreaterThanOrEqual(500);
+    expect((await db.prepare(`SELECT COUNT(*) AS n FROM house_services`).first<{ n: number }>())!.n).toBe(before);
+    await db.prepare(`DROP TRIGGER t_fee_fail`).run();
   });
 });
 

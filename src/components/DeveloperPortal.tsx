@@ -470,11 +470,12 @@ function SourceCard() {
       if (!ok) return;
     }
     setBusy(true);
-    const d = await send<{ source: string; workerOnlyResidents?: number; errorCode?: string }>('/api/dev/source', 'PUT', { source: toWorker ? 'worker' : 'sheet', ...(acknowledgeFailed && { acknowledgeFailed: true }) });
+    const d = await send<{ source: string; workerOnlyResidents?: number; draftsCreated?: number; errorCode?: string }>('/api/dev/source', 'PUT', { source: toWorker ? 'worker' : 'sheet', ...(acknowledgeFailed && { acknowledgeFailed: true }) });
     setBusy(false);
     if (d.success) {
       const n = d.workerOnlyResidents ?? 0;
-      setNotice({ ok: true, text: `Đã chuyển nguồn dữ liệu sang ${d.source === 'worker' ? 'Worker' : 'Google Sheet'}.${n > 0 ? ` Cảnh báo: ${n} cư dân chỉ có ở Worker, chưa có trên Sheet.` : ''}` });
+      const drafts = d.draftsCreated ?? 0;
+      setNotice({ ok: true, text: `Đã chuyển nguồn dữ liệu sang ${d.source === 'worker' ? 'Worker' : 'Google Sheet'}.${n > 0 ? ` Cảnh báo: ${n} cư dân chỉ có ở Worker, chưa có trên Sheet.` : ''}${drafts > 0 ? ` Đã tạo ${drafts} hoá đơn nháp cho tháng hiện tại.` : ''}` });
     } else if (d.errorCode === 'EXPORT_FAILED') {
       setNotice({ ok: false, text: d.error || 'Có dòng không chép được sang Google Sheet.' });
       if (window.confirm(`${d.error ?? ''}\n\nBỏ qua các dòng lỗi và vẫn quay về Sheet? Số liệu các dòng đó sẽ không có trên Sheet.`)) return flip(true);

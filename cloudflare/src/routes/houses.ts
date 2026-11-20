@@ -4,6 +4,9 @@
  * directory first, then the store, then the counters.
  */
 import type { Context, Hono } from 'hono';
+import { feeConfigFor } from '../billing/fees.ts';
+import { recomputeDrafts } from '../billing/invoices.ts';
+import { currentMonth } from '../sheetSync.ts';
 import { normalizePhone } from '../password.ts';
 import {
   actorOf, audit, developerOnly, fail, isDeveloper, isOwner, requireHouse, staffOnly, type App, type Env,
@@ -391,8 +394,15 @@ export function registerHouses(app: Hono<App>): void {
     )
       .bind(houseId, ...values)
       .run();
-    await audit(c, actorOf(c.get('viewer')), 'rates_update', houseId);
-    return c.json({ success: true });
+    // Billing reads the month's snapshot, not house_rates: write the electricity and water prices through to the CURRENT
+    // month (as the fee screen does) and recompute that month's drafts. Other months keep their own fees.
+    const month = currentMonth();
+    await feeConfigFor(db, houseId, month);
+    await db.prepare(`UPDATE house_fee_months SET electricity_per_kwh = ?, water_per_m3 = ?, updated_at = datetime('now') WHERE house_id = ? AND month = ?`)
+      .bind(values[RATE_FIELDS.indexOf('electricity_per_kwh')], values[RATE_FIELDS.indexOf('water_per_m3')], houseId, month).run();
+    const { recomputed, failed } = await recomputeDrafts(db, c.env.DB, houseId, month);
+    await audit(c, actorOf(c.get('viewer')), 'rates_update', houseId, `${month} drafts:${recomputed}`);
+    return c.json({ success: true, recomputed, recomputeFailed: failed });
   });
 
   app.get('/api/houses/:houseId/rooms', staffOnly, async (c) => {

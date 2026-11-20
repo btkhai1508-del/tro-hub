@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
 
@@ -10,6 +10,7 @@ const digits = (s: string) => s.replace(/\D/g, '');
 const show = (s: string) => (s === '' ? '' : money(Number(s)));
 const field = 'w-full bg-white dark:bg-neutral-900 px-3 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500';
 const vnMonth = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7); // current month, Vietnam time, YYYY-MM
+const nextMonth = () => { const [y, m] = vnMonth().split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; }; // latest month the server accepts
 const monthLabel = (m: string) => `Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}`;
 let seq = 0;
 const nextKey = () => `n${++seq}`;
@@ -23,6 +24,9 @@ export default function FeeSettings() {
   const [loaded, setLoaded] = useState(false);
   const [month, setMonth] = useState(vnMonth); // fees are per month; a past month is read-only
   const [editable, setEditable] = useState(true);
+  const [known, setKnown] = useState(true); // false: the month predates stored fees, the numbers shown are today's
+  const view = useRef({ houseId: '', month: '' }); // what the screen shows now, to drop a slow answer for an old choice
+  view.current = { houseId, month };
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -35,6 +39,7 @@ export default function FeeSettings() {
       if (!live) return;
       if (!r.ok) return setMessage({ ok: false, text: r.error });
       setEditable(r.data.editable !== false);
+      setKnown(r.data.known !== false);
       const cfg = r.data.config;
       setElectric(String(cfg.electricPrice ?? 0));
       setWater(String(cfg.waterPrice ?? 0));
@@ -65,6 +70,7 @@ export default function FeeSettings() {
     };
     const r = await workerCall('/api/admin/config', { method: 'PUT', body: JSON.stringify(body) });
     setSaving(false);
+    if (view.current.houseId !== body.houseId || view.current.month !== body.month) return; // the admin moved on: do not paint this answer over the other month
     if (!r.ok) return setMessage({ ok: false, text: r.error });
     const cfg = r.data.config;
     if (cfg) {
@@ -98,10 +104,11 @@ export default function FeeSettings() {
       <div className="flex flex-wrap items-end gap-4">
         <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase">
           Tháng
-          <input type="month" aria-label="Chọn tháng" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className={`${field} mt-2`} />
+          <input type="month" aria-label="Chọn tháng" value={month} max={nextMonth()} onChange={(e) => e.target.value && setMonth(e.target.value)} className={`${field} mt-2`} />
         </label>
         <p className="text-sm font-bold text-neutral-900 dark:text-white pb-3">{monthLabel(month)}</p>
       </div>
+      {loaded && !known && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">Chưa lưu phí của {monthLabel(month)}: đang hiện phí hiện tại để tham khảo.</p>}
       {loaded && !editable && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">{monthLabel(month)} đã qua nên chỉ xem, không sửa được.</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -172,6 +172,26 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
   return { total: calc.total, surplus: Math.max(received - calc.total, 0) };
 }
 
+/** Recomputes the DRAFT invoices (not issued, not paid by hand) of one house and month; failures are listed, never thrown. */
+export async function recomputeDrafts(db: TenantDb, central: D1Database, houseId: string, month: string): Promise<{ recomputed: number; failed: string[] }> {
+  let recomputed = 0;
+  const failed: string[] = [];
+  const { results: drafts } = await db.prepare(
+    `SELECT i.id, rm.name FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.house_id = ? AND i.month = ? AND i.issued_at IS NULL AND i.status NOT IN ('paid', 'cash') ORDER BY rm.name`
+  ).bind(houseId, month).all<{ id: number; name: string }>();
+  for (const d of drafts) {
+    try {
+      await recompute(db, d.id, { central });
+      recomputed++;
+    } catch (err) {
+      if (err instanceof InvoiceLockedError) continue; // a draft marked paid by hand in the meantime stays as it is
+      console.warn('[invoices] draft recompute', houseId, d.id, err);
+      failed.push(d.name);
+    }
+  }
+  return { recomputed, failed };
+}
+
 // ── Drafts ─────────────────────────────────────────────────────────────────
 
 /** Rooms of a house that have an approved resident and no invoice for `month` (optionally only one room). */

@@ -9,6 +9,7 @@
  * no earlier one. Services missing from a month's snapshot do not exist in that month.
  */
 import type { TenantDb, TenantStatement } from '../tenant/db.ts';
+import { currentMonth } from '../sheetSync.ts';
 import type { Per } from './compute.ts';
 
 export interface FeeService {
@@ -19,6 +20,8 @@ export interface FeeConfig {
   electricPrice: number;
   waterPrice: number;
   services: FeeService[];
+  /** false = nothing was ever stored for this month (it predates the first snapshot): the numbers shown are today's, not its own. */
+  known: boolean;
   /** Where the numbers came from: this month's snapshot, or (not stored yet) a copy of an earlier one / the template. */
   from: 'snapshot' | 'copy' | 'template';
 }
@@ -31,7 +34,7 @@ const shape = (r: ServiceRow): FeeService => ({
 
 const SNAPSHOT_SERVICES = `SELECT service_id AS id, name, price, per, max_qty, sheet_col, active, sort FROM house_fee_services WHERE house_id = ? AND month = ? ORDER BY sort, service_id`;
 
-async function readSnapshot(db: TenantDb, houseId: string, month: string): Promise<Omit<FeeConfig, 'from'> | null> {
+async function readSnapshot(db: TenantDb, houseId: string, month: string): Promise<Omit<FeeConfig, 'from' | 'known'> | null> {
   const [head, services] = await Promise.all([
     db.prepare(`SELECT electricity_per_kwh AS e, water_per_m3 AS w FROM house_fee_months WHERE house_id = ? AND month = ?`).bind(houseId, month).first<{ e: number; w: number }>(),
     db.prepare(SNAPSHOT_SERVICES).bind(houseId, month).all<ServiceRow>(),
@@ -51,10 +54,10 @@ export interface FeeOptions {
  */
 export async function feeConfigFor(db: TenantDb, houseId: string, month: string, opts: FeeOptions = {}): Promise<FeeConfig> {
   const own = await readSnapshot(db, houseId, month);
-  if (own) return { ...own, from: 'snapshot' };
+  if (own) return { ...own, from: 'snapshot', known: true };
 
   const earlier = await db.prepare(`SELECT month FROM house_fee_months WHERE house_id = ? AND month < ? ORDER BY month DESC LIMIT 1`).bind(houseId, month).first<{ month: string }>();
-  let base: Omit<FeeConfig, 'from'>;
+  let base: Omit<FeeConfig, 'from' | 'known'>;
   let from: FeeConfig['from'];
   if (earlier) {
     base = { ...(await readSnapshot(db, houseId, earlier.month))!, month };
@@ -67,7 +70,8 @@ export async function feeConfigFor(db: TenantDb, houseId: string, month: string,
     base = { month, electricPrice: rates?.e ?? 0, waterPrice: rates?.w ?? 0, services: services.results.map(shape) };
     from = 'template';
   }
-  if (opts.persist === false) return { ...base, from };
+  // A past month that predates every snapshot would be stored with TODAY's fees as if they were its own: never.
+  if (opts.persist === false || (from === 'template' && month < currentMonth())) return { ...base, from, known: from !== 'template' };
 
   // INSERT OR IGNORE: a concurrent creator wrote the same content, whoever is first wins.
   const head = earlier
@@ -77,7 +81,7 @@ export async function feeConfigFor(db: TenantDb, houseId: string, month: string,
     ? db.prepare(`INSERT OR IGNORE INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, sheet_col, active, sort) SELECT house_id, ?, service_id, name, price, per, max_qty, sheet_col, active, sort FROM house_fee_services WHERE house_id = ? AND month = ?`).bind(month, houseId, earlier.month)
     : db.prepare(`INSERT OR IGNORE INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, sheet_col, active, sort) SELECT house_id, ?, id, name, price, per, max_qty, sheet_col, active, sort FROM house_services WHERE house_id = ?`).bind(month, houseId);
   await db.batch([head, rows]);
-  return { ...base, from: 'snapshot' };
+  return { ...base, from: 'snapshot', known: true };
 }
 
 /** Whether a house already has a snapshot for `month` (one cheap read; the catch-up check). */

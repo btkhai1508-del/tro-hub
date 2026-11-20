@@ -35,7 +35,7 @@ const FRONTEND_DETAIL_KEYS = [
   'tienKhac', 'tienCoc', 'tongTien', 'nguoi1', 'nguoi2', 'nguoi3', 'soNguoi', 'soXe', 'soNet', 'statusHTML', 'paymentStatus', 'draft', 'surplus',
 ];
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]', (backend) => {
   let owner: string;
@@ -247,9 +247,14 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
     });
 
     it('PUT đổi giá/dịch vụ của một tháng: nháp tháng đó tính lại, tháng khác và hoá đơn đã phát hành giữ nguyên; dịch vụ bỏ khỏi danh sách chỉ tắt', async () => {
-      await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
+      // Fee edits are limited to this month and the next: pin the clock to November 2026 (Vietnam) and use it with December.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.UTC(2026, 10, 20, 5, 0, 0));
+      owner = await login(PHONES.owner);
+      const [A, B] = ['2026-11', '2026-12'];
+      await enter('11/2026', { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
       await (await store()).prepare(`UPDATE invoices SET issued_at = datetime('now') WHERE month = ?`).bind(A).run();
-      await enter(B, { dienMoi: 180, nuocMoi: 18 });
+      await enter('12/2026', { dienMoi: 180, nuocMoi: 18 });
       expect((await invoiceOf('LVC', '101', B)).total).toBe(3_749_000);
 
       const before = await getConfig('LVC', B);
@@ -278,6 +283,7 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       expect(hidden.p).toBe(3300);
       // The other house keeps its rates.
       expect((await getConfig('TRUNG_KIM')).electricPrice).toBe(3500);
+      vi.useRealTimers();
     });
 
     it('POST cũng lưu được, dạng { config: {...} }', async () => {
