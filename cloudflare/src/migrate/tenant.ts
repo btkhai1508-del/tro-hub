@@ -20,7 +20,7 @@ import { replayDeferred } from '../payments/settle.ts';
 import { tenantStub } from '../tenant/route.ts';
 import { TENANT_TABLES, type SqlValue, type TenantTable } from '../tenant/schema.ts';
 import type { TenantStore } from '../tenant/store.ts';
-import { digestRows, ownerRowsFromD1 } from './digest.ts';
+import { digestRows, ownerChildWhere, ownerRowsFromD1 } from './digest.ts';
 
 type Row = Record<string, SqlValue>;
 type Store = DurableObjectStub<TenantStore>;
@@ -79,7 +79,7 @@ export const config = { drainMs: DRAIN_MS };
 const sleep = (ms: number) => (ms > 0 ? new Promise<void>((r) => setTimeout(r, ms)) : Promise.resolve());
 
 /** AUTOINCREMENT tables of a store (residents get their ids from the central index). */
-const SEQUENCE_TABLES = ['rooms', 'invoices', 'meter_readings', 'payments', 'notifications'];
+const SEQUENCE_TABLES = ['rooms', 'invoices', 'meter_readings', 'payments', 'notifications', 'house_services', 'invoice_lines'];
 const OWNER_ID_BASE = 1_000_000_000;
 
 const GENERATION = 1_000_000_000_000;
@@ -396,7 +396,7 @@ function deleteOwnerRows(env: Env, ownerId: number, t: TenantTable): D1PreparedS
   let where: string;
   if (t.name === 'houses') where = 'owner_id = ?1';
   else if (t.name === 'payments') where = `house_id IN (${OWNER_HOUSE_IDS})`; // house-less ones: see restoreToD1
-  else where = `house_id IN (${OWNER_HOUSE_IDS})`;
+  else where = ownerChildWhere(t.name) ?? `house_id IN (${OWNER_HOUSE_IDS})`;
   return env.DB.prepare(`DELETE FROM ${t.name} WHERE ${where}`).bind(ownerId);
 }
 

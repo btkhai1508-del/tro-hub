@@ -1,5 +1,5 @@
-// Schema of a per-landlord Durable Object store: the 9 business tables copied from D1 (final shape
-// after migrations 0001-0018) plus a `meta` key/value table. The only change: `houses.owner_id` has
+// Schema of a per-landlord Durable Object store: the business tables copied from D1 (final shape
+// after migrations 0001-0022) plus a `meta` key/value table. The only change: `houses.owner_id` has
 // no REFERENCES staff(id) because staff lives in the central D1 only.
 
 export type SqlValue = string | number | null;
@@ -32,6 +32,9 @@ export const TENANT_TABLES: readonly TenantTable[] = [
   { name: 'rooms', pk: ['id'] },
   { name: 'residents', pk: ['id'] },
   { name: 'invoices', pk: ['id'] },
+  { name: 'house_services', pk: ['id'] },
+  { name: 'room_service_optouts', pk: ['room_id', 'service_id'] },
+  { name: 'invoice_lines', pk: ['id'] },
   { name: 'meter_readings', pk: ['id'] },
   { name: 'payments', pk: ['id'] },
   { name: 'payment_gates', pk: ['house_id', 'month'] },
@@ -188,5 +191,63 @@ CREATE INDEX notifications_house ON notifications(house_id, created_at);
 CREATE UNIQUE INDEX houses_pay_no ON houses(pay_no);
 
 CREATE UNIQUE INDEX rooms_pay_no ON rooms(house_id, pay_no);
+`,
+
+  // 0022: service fees, invoice lines, draft invoices. Mirrors D1 migration 0022 (store part, incl. seed and backfill).
+  `
+ALTER TABLE houses ADD COLUMN actual_electric_price INTEGER;
+
+ALTER TABLE invoices ADD COLUMN issued_at TEXT;  -- NULL = draft (never shown to residents)
+
+CREATE TABLE house_services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  house_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  price INTEGER NOT NULL,
+  per TEXT NOT NULL CHECK (per IN ('room', 'person', 'vehicle')),
+  max_qty INTEGER,
+  sheet_col TEXT CHECK (sheet_col IN ('K', 'L', 'M')),
+  sort INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE room_service_optouts (
+  room_id INTEGER NOT NULL,
+  service_id INTEGER NOT NULL,
+  PRIMARY KEY (room_id, service_id)
+);
+
+CREATE TABLE invoice_lines (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_id INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('room', 'electricity', 'water', 'service', 'other')),
+  service_id INTEGER,
+  name TEXT NOT NULL,
+  qty INTEGER NOT NULL,
+  unit_price INTEGER NOT NULL,
+  amount INTEGER NOT NULL
+);
+
+-- Seed for the two houses that exist today; a database without them stays unchanged.
+INSERT INTO house_services (house_id, name, price, per, max_qty, sheet_col, sort)
+SELECT h.id, s.name, s.price, s.per, s.max_qty, s.sheet_col, s.sort
+FROM houses h
+JOIN (
+  SELECT 'Rác' AS name, 30000 AS price, 'room' AS per, NULL AS max_qty, 'K' AS sheet_col, 1 AS sort
+  UNION ALL SELECT 'Internet', 40000, 'person', 2, 'L', 2
+  UNION ALL SELECT 'Xe máy', 50000, 'vehicle', NULL, 'M', 3
+) s
+WHERE h.id IN ('TRUNG_KIM', 'LVC');
+
+UPDATE houses SET actual_electric_price = 3300 WHERE id IN ('TRUNG_KIM', 'LVC');
+
+-- Existing invoices: an earlier month is issued; the current month (Vietnam time) is issued only when
+-- its payment gate is START, otherwise it stays a draft (issued_at NULL).
+UPDATE invoices SET issued_at = created_at
+WHERE issued_at IS NULL AND (
+  month < strftime('%Y-%m', 'now', '+7 hours')
+  OR (month = strftime('%Y-%m', 'now', '+7 hours')
+      AND EXISTS (SELECT 1 FROM payment_gates g WHERE g.house_id = invoices.house_id AND g.month = invoices.month AND g.value = 'START'))
+);
 `,
 ];

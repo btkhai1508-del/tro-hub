@@ -46,7 +46,14 @@ const RESIDENTS: [string, number, string, string][] = [
   ['LVC', 3, 'Cư dân LVC', PHONES.residentLvc],
 ];
 
-const BUSINESS_TABLES = ['notifications', 'payment_gates', 'payments', 'meter_readings', 'invoices', 'residents', 'rooms', 'house_rates', 'houses'];
+// [name, price, per, max_qty, sheet_col, sort]
+const SERVICES: [string, number, string, number | null, string, number][] = [
+  ['Rác', 30000, 'room', null, 'K', 1],
+  ['Internet', 40000, 'person', 2, 'L', 2],
+  ['Xe máy', 50000, 'vehicle', null, 'M', 3],
+];
+
+const BUSINESS_TABLES = ['invoice_lines', 'room_service_optouts', 'house_services', 'notifications', 'payment_gates', 'payments', 'meter_readings', 'invoices', 'residents', 'rooms', 'house_rates', 'houses'];
 
 export async function seedWorld(backend: BackendName): Promise<void> {
   const DB = e.DB;
@@ -57,6 +64,7 @@ export async function seedWorld(backend: BackendName): Promise<void> {
     DB.prepare(`DELETE FROM staff_houses`),
     ...BUSINESS_TABLES.map((t) => DB.prepare(`DELETE FROM ${t}`)),
     DB.prepare(`DELETE FROM staff`),
+    DB.prepare(`DELETE FROM sheet_export_queue`),
     DB.prepare(`DELETE FROM house_directory`),
     DB.prepare(`DELETE FROM resident_index`),
     DB.prepare(`DELETE FROM sqlite_sequence WHERE name = 'resident_index'`),
@@ -99,6 +107,17 @@ export async function seedWorld(backend: BackendName): Promise<void> {
       ...rooms.map(([id, house, name, price]) =>
         db.prepare(`INSERT INTO rooms (id, house_id, name, price) VALUES (?, ?, ?, ?)`).bind(id, house, name, price)
       ),
+      // Service fees of the two houses that have them in production (same rows as migration 0022).
+      ...houses
+        .filter((h) => h.id !== 'NTTD')
+        .flatMap((h) => [
+          db.prepare(`UPDATE houses SET actual_electric_price = 3300 WHERE id = ?`).bind(h.id),
+          ...SERVICES.map(([name, price, per, maxQty, col, sort]) =>
+            db
+              .prepare(`INSERT INTO house_services (house_id, name, price, per, max_qty, sheet_col, sort) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+              .bind(h.id, name, price, per, maxQty, col, sort)
+          ),
+        ]),
       ...residents.map(({ r: [house, room, name, phone], id }) =>
         db
           .prepare(`INSERT INTO residents (id, house_id, room_id, full_name, phone, password_hash, status) VALUES (?, ?, ?, ?, ?, ?, 'approved')`)

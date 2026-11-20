@@ -10,6 +10,7 @@ const e = env as unknown as Env;
 type Row = Record<string, SqlValue>;
 const MAX = Number.MAX_SAFE_INTEGER; // 2^53 - 1
 let n = 0;
+const table = (name: string) => TENANT_TABLES.find((t) => t.name === name)!;
 const fresh = () => e.TENANT.get(e.TENANT.idFromName(`digest:${++n}`));
 
 describe('digestRows', () => {
@@ -58,6 +59,11 @@ async function seedExtras() {
       (603, NULL, NULL, 789, 'bank', '000000000', 'REF-4', 'ai đó', '2026-10-08'),
       (604, 'NTTD', NULL, 5, 'cash', NULL, NULL, NULL, '2026-10-09')`).bind(MAX),
     DB.prepare(`INSERT INTO payment_gates (house_id, month, value, updated_by) VALUES ('TRUNG_KIM', '2026-11', 'STOP', NULL), ('LVC', '2026-11', 'START', 'staff:1'), ('NTTD', '2026-11', 'START', NULL)`),
+    DB.prepare(`INSERT INTO invoices (id, house_id, room_id, month, total) VALUES (801, 'NTTD', 5, '2026-10', 7)`),
+    DB.prepare(`INSERT INTO house_services (id, house_id, name, price, per, max_qty, sheet_col, sort) VALUES (900, 'NTTD', 'Rác – đặc biệt', 1, 'room', NULL, NULL, 0)`),
+    DB.prepare(`INSERT INTO room_service_optouts (room_id, service_id) VALUES (900, 1), (5, 900)`),
+    DB.prepare(`INSERT INTO invoice_lines (id, invoice_id, kind, service_id, name, qty, unit_price, amount) VALUES
+      (950, 800, 'service', 1, 'Rác', 1, 30000, 30000), (951, 801, 'room', NULL, 'Tiền phòng', 1, 7, 7)`),
     DB.prepare(`INSERT INTO notifications (id, house_id, room_names, title, content, created_by) VALUES (500, 'TRUNG_KIM', NULL, 'Thông báo', 'Nội dung có dấu: ắ ề ỗ ữ 😀', 'staff:1'), (501, 'NTTD', '1', 't', 'c', 'x')`),
   ]);
 }
@@ -87,21 +93,30 @@ describe('ownerRowsFromD1 and store digest', () => {
     }
   });
 
+  it('child tables without house_id are reached through their invoice or room', async () => {
+    expect((await exportAll(1, table('invoice_lines'))).map((r) => r.id)).toEqual([950]);
+    expect((await exportAll(4, table('invoice_lines'))).map((r) => r.id)).toEqual([951]);
+    expect((await exportAll(1, table('room_service_optouts'))).map((r) => r.room_id)).toEqual([900]);
+    expect((await exportAll(4, table('room_service_optouts'))).map((r) => r.room_id)).toEqual([5]);
+    expect((await exportAll(1, table('house_services'))).map((r) => r.house_id).sort()).toEqual(['LVC', 'LVC', 'LVC', 'TRUNG_KIM', 'TRUNG_KIM', 'TRUNG_KIM']);
+    expect((await exportAll(4, table('house_services'))).map((r) => r.id)).toEqual([900]);
+  });
+
   it('payments: includes house-less rows of the owner’s bank accounts only', async () => {
-    const ids = (await exportAll(1, TENANT_TABLES[6])).map((r) => r.id);
+    const ids = (await exportAll(1, table('payments'))).map((r) => r.id);
     expect(ids).toEqual([600, 601]);
-    const ids4 = (await exportAll(4, TENANT_TABLES[6])).map((r) => r.id);
+    const ids4 = (await exportAll(4, table('payments'))).map((r) => r.id);
     expect(ids4).toEqual([602, 604]);
   });
 
   it('pages are stable and complete', async () => {
-    const all = await ownerRowsFromD1(e, 1, TENANT_TABLES[0], 0, 100);
-    const paged = [...(await ownerRowsFromD1(e, 1, TENANT_TABLES[0], 0, 1)), ...(await ownerRowsFromD1(e, 1, TENANT_TABLES[0], 1, 1))];
+    const all = await ownerRowsFromD1(e, 1, table('houses'), 0, 100);
+    const paged = [...(await ownerRowsFromD1(e, 1, table('houses'), 0, 1)), ...(await ownerRowsFromD1(e, 1, table('houses'), 1, 1))];
     expect(paged).toEqual(all);
     expect(all.length).toBe(2);
   });
 
-  it('round trip: store digest equals digest of the D1 rows, for all 9 tables', async () => {
+  it('round trip: store digest equals digest of the D1 rows, for every table', async () => {
     const stub = fresh();
     for (const t of TENANT_TABLES) {
       const rows = await exportAll(1, t);
@@ -118,15 +133,15 @@ describe('ownerRowsFromD1 and store digest', () => {
 
   it('large integers survive exactly', async () => {
     const stub = fresh();
-    await stub.importRows('houses', await exportAll(1, TENANT_TABLES[0]));
+    await stub.importRows('houses', await exportAll(1, table('houses')));
     const r = await stub.query([{ sql: `SELECT floors FROM houses WHERE id = 'TRUNG_KIM'`, params: [], mode: 'first' }], false);
     expect(r.ok && r.results[0].results[0].floors).toBe(MAX);
   });
 
   it('digest detects a changed cell in the store', async () => {
     const stub = fresh();
-    await stub.importRows('houses', await exportAll(1, TENANT_TABLES[0]));
-    const rows = await exportAll(1, TENANT_TABLES[2]);
+    await stub.importRows('houses', await exportAll(1, table('houses')));
+    const rows = await exportAll(1, table('rooms'));
     await stub.importRows('rooms', rows);
     await stub.query([{ sql: `UPDATE rooms SET name = name || ' ' WHERE id = 900`, params: [], mode: 'run' }], false);
     expect(await stub.digest('rooms')).toMatchObject({ ok: true, sha256: expect.not.stringMatching(await digestRows(rows, ['id'])) });
@@ -154,7 +169,7 @@ describe('ownerRowsFromD1 and store digest', () => {
 
   it('a 200-row batch of the widest table imports in one call', async () => {
     const stub = fresh();
-    await stub.importRows('houses', await exportAll(1, TENANT_TABLES[0]));
+    await stub.importRows('houses', await exportAll(1, table('houses')));
     const rows: Row[] = Array.from({ length: 200 }, (_, i) => ({
       id: 10000 + i, house_id: 'LVC', full_name: `Cư dân ${i}`, password_hash: 'p', phone: `09${String(i).padStart(8, '0')}`,
       gender: null, cccd_enc: null, cccd_last4: null, cccd_hash: null, email: null, dob: null, address_detail: null, ward: null,

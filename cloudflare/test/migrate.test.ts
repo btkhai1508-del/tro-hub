@@ -4,7 +4,7 @@ import type { Env } from '../src/app.ts';
 import { getStorage, ROLLBACK_NOTE, setStorage } from '../src/central/directory.ts';
 import { config, DRAIN_MS, idFloor, migrateOwner, rollbackOwner, unlockOwner, type MigrationReport } from '../src/migrate/tenant.ts';
 import { replayDeferred, replayPendingDeferred } from '../src/payments/settle.ts';
-import { TENANT_TABLES } from '../src/tenant/schema.ts';
+import { TENANT_MIGRATIONS, TENANT_TABLES } from '../src/tenant/schema.ts';
 import { tenantOfOwner, tenantStub } from '../src/tenant/route.ts';
 import type { TenantStore } from '../src/tenant/store.ts';
 import { api, login, PHONES, seedWorld } from './helpers.ts';
@@ -113,7 +113,7 @@ async function statusSeen(tokens: { resident: string; owner: string; manager: st
 const okReport = (r: MigrationReport) => {
   expect(r.error, JSON.stringify(r.error)).toBeUndefined();
   expect(r.ok).toBe(true);
-  expect(r.tables).toHaveLength(9);
+  expect(r.tables).toHaveLength(TENANT_TABLES.length);
   expect(r.tables.every((t) => t.ok && t.d1Sha === t.doSha && t.d1Count === t.doCount)).toBe(true);
   expect(r.months.length).toBeGreaterThan(0);
   expect(r.months.every((m) => m.ok)).toBe(true);
@@ -157,7 +157,7 @@ describe('chạy thử', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
     expect(body).toMatchObject({ success: true, report: { ownerId: 1, mode: 'dry-run', ok: true } });
-    expect(body.report.tables).toHaveLength(9);
+    expect(body.report.tables).toHaveLength(TENANT_TABLES.length);
     expect((await api('/api/dev/storage/999/dry-run', { method: 'POST' }, tokens.dev)).status).toBe(404);
     expect((await api('/api/dev/storage/abc/migrate', { method: 'POST' }, tokens.dev)).status).toBe(404);
     // A landlord who is on the shared D1 only: a staff id that is not an owner is not found either.
@@ -632,7 +632,7 @@ describe('API Developer', () => {
     expect(body.newOwnerBackend).toBe('d1');
     const [one, four] = body.owners;
     expect(one).toMatchObject({ ownerId: 1, houses: 2, backend: 'do', lockExpiresAt: null });
-    expect(one.store).toMatchObject({ migratedFrom: 'd1', schemaVersion: 1 });
+    expect(one.store).toMatchObject({ migratedFrom: 'd1', schemaVersion: TENANT_MIGRATIONS.length });
     expect(four).toMatchObject({ ownerId: 4, houses: 1, backend: 'migrating' });
     expect(four.lockExpiresAt).toBeGreaterThan(Date.now());
     expect(body.owners.map((o: any) => o.ownerId)).toEqual([1, 4]);

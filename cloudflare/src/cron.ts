@@ -36,7 +36,7 @@ export async function syncLegacySheets(env: Env, onlyOwner?: number): Promise<vo
 }
 
 // Children first: foreign keys are on, in D1 and in a landlord's store alike.
-const HOUSE_TABLES = ['payments', 'meter_readings', 'invoices', 'notifications', 'payment_gates', 'residents', 'rooms', 'house_rates'];
+const HOUSE_TABLES = ['house_services', 'payments', 'meter_readings', 'invoices', 'notifications', 'payment_gates', 'residents', 'rooms', 'house_rates'];
 
 /**
  * Removes the houses whose grace period is over: the landlord's store first, then the resident index,
@@ -60,6 +60,9 @@ export async function purgeDeletedHouses(env: Env, hooks: { beforeDelete?: (hous
         .first();
       if (!stillDue) continue;
       await store.batch([
+        // Children without a house_id first: they are reached through their invoice or room.
+        store.prepare(`DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE house_id = ?)`).bind(houseId),
+        store.prepare(`DELETE FROM room_service_optouts WHERE room_id IN (SELECT id FROM rooms WHERE house_id = ?)`).bind(houseId),
         ...HOUSE_TABLES.map((t) => store.prepare(`DELETE FROM ${t} WHERE house_id = ?`).bind(houseId)),
         store.prepare(`DELETE FROM houses WHERE id = ?`).bind(houseId),
       ]);

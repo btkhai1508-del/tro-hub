@@ -37,6 +37,16 @@ export async function digestRows(rows: Row[], pk: string[]): Promise<string> {
 
 const OWNER_HOUSES = 'SELECT id FROM houses WHERE owner_id = ?1';
 
+/**
+ * WHERE clause (owner id bound as ?1) of the child tables that carry no house_id: reached through their
+ * invoice or room. Null for tables that have house_id themselves.
+ */
+export function ownerChildWhere(table: string): string | null {
+  if (table === 'invoice_lines') return `invoice_id IN (SELECT id FROM invoices WHERE house_id IN (${OWNER_HOUSES}))`;
+  if (table === 'room_service_optouts') return `room_id IN (SELECT id FROM rooms WHERE house_id IN (${OWNER_HOUSES}))`;
+  return null;
+}
+
 /** One owner's rows of `table` from the shared D1, ordered by primary key (stable paging). */
 export async function ownerRowsFromD1(env: Env, ownerId: number, table: TenantTable, offset: number, limit: number): Promise<Row[]> {
   const order = table.pk.map((c) => `${table.name}.${c}`).join(', ');
@@ -44,7 +54,7 @@ export async function ownerRowsFromD1(env: Env, ownerId: number, table: TenantTa
   if (table.name === 'houses') where = 'owner_id = ?1';
   else if (table.name === 'payments') {
     where = `(house_id IN (${OWNER_HOUSES}) OR (house_id IS NULL AND account_no IN (SELECT bank_account_no FROM houses WHERE owner_id = ?1 AND bank_account_no IS NOT NULL)))`;
-  } else where = `house_id IN (${OWNER_HOUSES})`;
+  } else where = ownerChildWhere(table.name) ?? `house_id IN (${OWNER_HOUSES})`;
   const res = await env.DB.prepare(`SELECT * FROM ${table.name} WHERE ${where} ORDER BY ${order} LIMIT ?2 OFFSET ?3`)
     .bind(ownerId, limit, offset)
     .all();
