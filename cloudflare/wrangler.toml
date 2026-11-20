@@ -26,6 +26,8 @@ storage = "sqlite"
 crons = ["0 19 * * *", "0 17 * * *", "*/10 * * * *"] # 19:00 UTC: xoá nhà hết hạn; 17:00 UTC (00:00 giờ VN): chuyển sang tháng mới; mỗi 10 phút: đọc Sheet cũ, bắt kịp tháng mới
 
 [vars]
+# SePay Bank Hub: môi trường sandbox (đổi thành https://bankhub-api.sepay.vn khi chạy thật). Khoá/secret đặt trên Cloudflare, không để ở đây.
+BANKHUB_BASE = "https://bankhub-api-sandbox.sepay.vn"
 # Trang được phép gọi API từ trình duyệt: app chạy trên máy, bản trên Render, Zalo Mini App.
 ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:5199,https://tro-hub.onrender.com,https://h5.zdn.vn,zbrowser://h5.zdn.vn"
 # Tài khoản đã đăng ký với Zalo Checkout ("<BIN ngân hàng>:<STK>"). Nhà nào nhận tiền đúng tài khoản này
