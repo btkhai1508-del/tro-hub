@@ -7,8 +7,11 @@
 import type { Express } from 'express';
 import { authenticateUser, normalizePhone } from './googleSheetsBackendService.js';
 import { signTenantToken } from './authToken.js';
+import { createSourceReader } from './workerSource.js';
 
 export const WORKER_API_URL = (process.env.WORKER_API_URL || 'https://tro-hub-api.trohub.workers.dev').replace(/\/+$/, '');
+
+const readSource = createSourceReader(WORKER_API_URL);
 
 interface WorkerViewer {
   kind: 'resident' | 'staff';
@@ -64,8 +67,20 @@ export function registerWorkerSession(app: Express) {
     try {
       // The Worker already checked the password, so the sheet row is found by phone alone.
       // Staff created on the Worker (Admin Tổng, Admin căn) have no sheet row: their profile comes from the Worker.
-      let result = await authenticateUser(viewer.phone, '', undefined, { verifiedPhone: true });
-      if ((!result.success || !result.user) && viewer.kind === 'staff') result = staffOnlyProfile(viewer);
+      // With source 'worker' the Worker answers for everyone (residents and staff) and the Sheet is not read.
+      let result: Awaited<ReturnType<typeof authenticateUser>>;
+      if ((await readSource()) === 'worker') {
+        // The Worker owns profiles and invoices: take them from it (same Bearer) instead of the Sheet.
+        const session = await fetch(`${WORKER_API_URL}/api/tenant/session`, { headers: { Authorization: bearer } }).catch(() => null);
+        const data = session?.ok ? await session.json().catch(() => null) : null;
+        if (!data?.success || !data.user) {
+          return res.status(502).json({ success: false, error: 'Không lấy được dữ liệu từ máy chủ. Vui lòng thử lại.' });
+        }
+        result = { success: true, user: data.user, invoices: data.invoices ?? [] } as typeof result;
+      } else {
+        result = await authenticateUser(viewer.phone, '', undefined, { verifiedPhone: true });
+        if ((!result.success || !result.user) && viewer.kind === 'staff') result = staffOnlyProfile(viewer);
+      }
       if (!result.success || !result.user) return res.status(401).json(result);
 
       const isAdmin = viewer.kind === 'staff';
