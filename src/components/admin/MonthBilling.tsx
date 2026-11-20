@@ -4,7 +4,7 @@ import { Lock, Send } from 'lucide-react';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
 
 interface Row {
-  roomId: number; roomName: string; invoiceId: number | null; draft: boolean; paymentStatus: string; surplus: number;
+  houseId?: string; roomId: number; roomName: string; invoiceId: number | null; draft: boolean; paymentStatus: string; surplus: number;
   dienCu: number; dienMoi: number; nuocCu: number; nuocMoi: number; tongTien: number | null; missingMeters: boolean;
 }
 type Edits = Record<number, { e?: string; w?: string }>;
@@ -35,13 +35,17 @@ export default function MonthBilling({ month }: { month: string }) {
   // Saves of one room run one after another, so two quick blurs cannot overtake each other.
   const queue = useRef<Record<number, Promise<unknown>>>({});
 
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
     if (!houseId) return;
+    const seq = ++loadSeq.current;
+    setRooms([]);
     setLoaded(false);
     setLoadError('');
     setEdits({});
     setRowError({});
     const r = await workerCall(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(houseId)}`);
+    if (seq !== loadSeq.current) return; // a newer house/month request replaced this one
     if (!r.ok) { setLoadError(r.error); return; }
     setRooms(r.data.rooms ?? []);
     setLoaded(true);
@@ -59,7 +63,7 @@ export default function MonthBilling({ month }: { month: string }) {
     const clear = () => setEdits((cur) => { const { [key]: _gone, ...rest } = cur[room.roomId] ?? {}; return { ...cur, [room.roomId]: rest }; });
     // Empty or unchanged: nothing to save, no write.
     if (text === '' || Number(text) === current) { clear(); return; }
-    const body = { month, houseId, room: room.roomName, data: key === 'e' ? { dienMoi: Number(text) } : { nuocMoi: Number(text) } };
+    const body = { month, houseId: (room as Row & { houseId?: string }).houseId || houseId, room: room.roomName, data: key === 'e' ? { dienMoi: Number(text) } : { nuocMoi: Number(text) } };
     const run = async () => {
       setSaving((cur) => ({ ...cur, [room.roomId]: true }));
       const r = await workerCall('/api/admin/room-detail', { method: 'POST', body: JSON.stringify(body) });
@@ -136,13 +140,13 @@ export default function MonthBilling({ month }: { month: string }) {
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
                   Điện mới (cũ {r.dienCu})
-                  <input type="text" inputMode="numeric" value={e} disabled={paid} aria-label={`Điện mới phòng ${r.roomName}`} placeholder="0"
+                  <input type="text" inputMode="numeric" value={e} disabled={paid || !loaded} aria-label={`Điện mới phòng ${r.roomName}`} placeholder="0"
                     onChange={(ev) => setEdit(r.roomId, 'e', ev.target.value)} onBlur={() => saveField(r, 'e')}
                     onKeyDown={(ev) => { if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur(); }} className={`${inputCls} mt-1`} />
                 </label>
                 <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
                   Nước mới (cũ {r.nuocCu})
-                  <input type="text" inputMode="numeric" value={w} disabled={paid} aria-label={`Nước mới phòng ${r.roomName}`} placeholder="0"
+                  <input type="text" inputMode="numeric" value={w} disabled={paid || !loaded} aria-label={`Nước mới phòng ${r.roomName}`} placeholder="0"
                     onChange={(ev) => setEdit(r.roomId, 'w', ev.target.value)} onBlur={() => saveField(r, 'w')}
                     onKeyDown={(ev) => { if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur(); }} className={`${inputCls} mt-1`} />
                 </label>

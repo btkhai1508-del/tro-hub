@@ -49,7 +49,7 @@ import { useApp, RegisteredAccount } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
 import { cn, getCurrentMonthStr, DEFAULT_ROOM_NUMBERS } from '../lib/utils';
-import { apiFetch, ensureSource, getSource } from '../lib/api';
+import { apiFetch, ensureSource, getSource, workerFetch } from '../lib/api';
 import FeeSettings from './admin/FeeSettings';
 import MonthBilling from './admin/MonthBilling';
 import { HOUSES, houseFromRoom } from '../lib/houses';
@@ -788,6 +788,8 @@ export function AdminPortal() {
     } else if (menuKey === 'declaration') {
       loadDeclaration(month, declarationHouse);
     } else if (menuKey === 'config') {
+      // Worker mode: FeeSettings loads its own per-house config.
+      if (getSource() === 'worker') return;
       apiFetch(`/api/admin/config?month=${month}`)
         .then(res => {
           const ct = res.headers.get('content-type') || '';
@@ -818,14 +820,29 @@ export function AdminPortal() {
     }
   };
 
+  // Worker mode: the room list is per house, so ask for each house the admin manages and merge the answers.
+  const fetchWorkerRooms = async (month: string): Promise<any> => {
+    const hr = await workerFetch('/api/houses');
+    const hd = await hr.json();
+    if (!hr.ok || !hd?.success) return { success: false };
+    const ids: string[] = (hd.houses || []).map((h: any) => h.id).filter(Boolean);
+    const parts = await Promise.all(ids.map(async (id) => {
+      const r = await workerFetch(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(id)}`);
+      return r.json().catch(() => ({ success: false }));
+    }));
+    if (parts.some((d) => !d?.success)) return { success: false };
+    return { success: true, rooms: parts.flatMap((d) => d.rooms || []) };
+  };
+
   const fetchRooms = (month: string, background = false) => {
     if (!background) setIsLoading(true);
-    apiFetch(`/api/admin/rooms?month=${month}`)
-      .then(res => {
+    (getSource() === 'worker' ? fetchWorkerRooms(month) : apiFetch(`/api/admin/rooms?month=${month}`)
+      .then((res: any) => {
+        if (!(res instanceof Response)) return res;
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('application/json')) throw new Error('Not JSON');
         return res.json();
-      })
+      }))
       .then(d => {
         if (month !== selectedMonthRef.current) return;
         setIsLoading(false);

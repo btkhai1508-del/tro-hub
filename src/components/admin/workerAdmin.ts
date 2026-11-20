@@ -9,7 +9,7 @@ export interface WorkerResult<T = any> { ok: boolean; status: number; data: T | 
 const NETWORK_ERROR = 'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.';
 
 const HINTS: Record<string, string> = {
-  INVOICE_LOCKED: 'Phòng này đã đóng tiền nên không sửa được. Hãy bỏ "đã đóng" trước.',
+  INVOICE_LOCKED: 'Phòng này đã đóng tiền nên không sửa được. Hãy bỏ "đã đóng" ở tab Thu tiền trước.',
   INVOICE_FROZEN: 'Hoá đơn tháng cũ đã chốt, không sửa được.',
   METER_INVALID: 'Chỉ số mới không được nhỏ hơn chỉ số cũ.',
   HOUSE_REQUIRED: 'Hãy chọn nhà trọ.',
