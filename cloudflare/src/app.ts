@@ -19,6 +19,7 @@ export interface Env {
   SEPAY_OAUTH_BASE?: string; // mặc định https://my.sepay.vn; trỏ sang mock khi thử trên máy
   SEPAY_WEBHOOK_ORIGIN?: string; // địa chỉ public SePay gửi webhook về, nếu khác địa chỉ Worker
   SHEET_WRITES?: string; // 'off': không tô cột P / không ghi cổng thanh toán sang Apps Script (chạy thử trên máy)
+  ZALO_APP_SECRET?: string; // khoá bí mật ứng dụng Zalo Mini App (secret)
   EXPRESS_ORIGIN?: string; // server Express còn chạy giặt sấy, mặc định https://tro-hub.onrender.com
 }
 
@@ -31,7 +32,7 @@ export type StaffRole = 'developer' | 'owner' | 'manager';
 
 export type App = { Bindings: Env; Variables: { viewer: Viewer } };
 
-export const fail = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 503, errorCode: string, error: string) =>
+export const fail = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 502 | 503, errorCode: string, error: string) =>
   c.json({ success: false, errorCode, error }, status);
 
 export async function audit(c: Context<App>, actor: string, action: string, houseId: string | null = null, target: string | null = null) {

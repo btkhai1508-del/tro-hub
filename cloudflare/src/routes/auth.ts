@@ -9,6 +9,7 @@ import { hashPassword, normalizePhone, verifyPassword } from '../password.ts';
 import { signToken, verifyToken } from '../token.ts';
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantOfOwner } from '../tenant/route.ts';
+import { ZaloError, zaloPhone } from '../zalo.ts';
 
 type ResidentRow = { id: number; full_name: string; phone: string | null; house_id: string; room_id: number | null; room_name: string | null };
 
@@ -66,6 +67,44 @@ export async function requireAuth(c: Context<App>, next: Next) {
   await next();
 }
 
+type Account =
+  | { kind: 'staff'; id: number; password_hash: string; status: string }
+  | { kind: 'resident'; id: number; password_hash: string; status: string; house_id: string; ownerId: number };
+
+/** The account a phone belongs to: staff first, then the resident in their landlord's store. */
+async function accountByPhone(env: App['Bindings'], phone: string): Promise<Account | null> {
+  const staff = await env.DB.prepare(`SELECT id, password_hash, status FROM staff WHERE phone = ?`)
+    .bind(phone)
+    .first<{ id: number; password_hash: string; status: string }>();
+  if (staff) return { kind: 'staff', ...staff };
+  const route = await residentRoute(env.DB, { phone });
+  if (!route) return null;
+  const resident = await (await tenantOfOwner(env, route.owner_id))
+    .prepare(`SELECT id, password_hash, status, house_id FROM residents WHERE phone = ? AND deleted_at IS NULL`)
+    .bind(phone)
+    .first<{ id: number; password_hash: string; status: string; house_id: string }>();
+  return resident ? { kind: 'resident', ...resident, ownerId: route.owner_id } : null;
+}
+
+/**
+ * Status rules, audit and token shared by the password login and the Zalo login. The caller has
+ * already proven who the phone belongs to; this decides whether that account may sign in now.
+ */
+async function signIn(c: Context<App>, account: Account, extra: Record<string, unknown> = {}, auditTarget: string | null = null) {
+  if (account.kind === 'staff' && account.status !== 'active') return fail(c, 403, 'AUTH_REJECTED', 'Tài khoản quản lý đã bị khoá.');
+  if (account.kind === 'resident' && account.status === 'pending')
+    return fail(c, 403, 'AUTH_PENDING_APPROVAL', 'Tài khoản đang chờ quản lý duyệt.');
+  if (account.kind === 'resident' && account.status !== 'approved')
+    return fail(c, 403, 'AUTH_REJECTED', 'Tài khoản không còn hoạt động. Vui lòng liên hệ quản lý.');
+
+  const ownerId = account.kind === 'resident' ? account.ownerId : undefined;
+  const viewer = await loadViewer(c.env, account.id, account.kind, Infinity, ownerId);
+  if (!viewer) return fail(c, 403, 'AUTH_REJECTED', 'Tài khoản không còn hoạt động. Vui lòng liên hệ quản lý.');
+
+  await audit(c, actorOf(viewer), 'login', account.kind === 'resident' ? account.house_id : null, auditTarget);
+  return c.json({ success: true, token: await signToken(account.id, account.kind, c.env.JWT_SECRET, ownerId), viewer, ...extra });
+}
+
 export function registerAuth(app: Hono<App>) {
   app.post('/api/auth/login', async (c) => {
     const body = await c.req.json<{ phone?: string; password?: string }>().catch(() => ({}) as { phone?: string; password?: string });
@@ -73,40 +112,36 @@ export function registerAuth(app: Hono<App>) {
     const password = String(body.password ?? '');
     if (phone.length < 10 || !password) return fail(c, 400, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
 
-    const staff = await c.env.DB.prepare(`SELECT id, password_hash, status FROM staff WHERE phone = ?`)
-      .bind(phone)
-      .first<{ id: number; password_hash: string; status: string }>();
-    let ownerId: number | null = null;
-    let resident: { id: number; password_hash: string; status: string; house_id: string } | null = null;
-    if (!staff) {
-      const route = await residentRoute(c.env.DB, { phone });
-      if (route) {
-        ownerId = route.owner_id;
-        resident = await (await tenantOfOwner(c.env, route.owner_id))
-          .prepare(`SELECT id, password_hash, status, house_id FROM residents WHERE phone = ? AND deleted_at IS NULL`)
-          .bind(phone)
-          .first<{ id: number; password_hash: string; status: string; house_id: string }>();
-      }
-    }
-    const account = staff ?? resident;
-
+    const account = await accountByPhone(c.env, phone);
     if (!account || !(await verifyPassword(password, account.password_hash))) {
       await audit(c, 'anonymous', 'login_failed', null, phone);
       return fail(c, 401, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
     }
+    return signIn(c, account);
+  });
 
-    if (staff && staff.status !== 'active') return fail(c, 403, 'AUTH_REJECTED', 'Tài khoản quản lý đã bị khoá.');
-    if (resident && resident.status === 'pending')
-      return fail(c, 403, 'AUTH_PENDING_APPROVAL', 'Tài khoản đang chờ quản lý duyệt.');
-    if (resident && resident.status !== 'approved')
-      return fail(c, 403, 'AUTH_REJECTED', 'Tài khoản không còn hoạt động. Vui lòng liên hệ quản lý.');
+  /**
+   * Mini App login: Zalo vouches for the phone number (no password), then the same rules as the
+   * password login apply. Public, like /api/auth/login.
+   */
+  app.post('/api/auth/zalo', async (c) => {
+    const body = await c.req.json<{ accessToken?: string; phoneToken?: string }>().catch(() => ({}) as { accessToken?: string; phoneToken?: string });
+    const accessToken = String(body.accessToken ?? '');
+    const phoneToken = String(body.phoneToken ?? '');
+    if (!accessToken || !phoneToken) return fail(c, 400, 'AUTH_INVALID_CREDENTIALS', 'Thiếu accessToken hoặc phoneToken từ Zalo.');
 
-    const kind = staff ? 'staff' : 'resident';
-    const viewer = await loadViewer(c.env, account.id, kind, Infinity, ownerId ?? undefined);
-    if (!viewer) return fail(c, 403, 'AUTH_REJECTED', 'Tài khoản không còn hoạt động. Vui lòng liên hệ quản lý.');
-
-    await audit(c, actorOf(viewer), 'login', resident?.house_id ?? null);
-    return c.json({ success: true, token: await signToken(account.id, kind, c.env.JWT_SECRET, ownerId ?? undefined), viewer });
+    let zalo: Awaited<ReturnType<typeof zaloPhone>>;
+    try {
+      zalo = await zaloPhone(c.env, accessToken, phoneToken);
+    } catch (e) {
+      if (e instanceof ZaloError) return fail(c, e.status, e.code, e.message);
+      throw e;
+    }
+    const account = await accountByPhone(c.env, zalo.phone);
+    if (!account) {
+      return fail(c, 404, 'AUTH_TENANT_NOT_MAPPED', `Số điện thoại Zalo ${zalo.phone} chưa được đăng ký với phòng nào. Vui lòng liên hệ Chủ trọ để cập nhật SĐT.`);
+    }
+    return signIn(c, account, { zalo: { id: zalo.zaloId, name: zalo.name, avatar: zalo.avatar } }, 'zalo');
   });
 
   app.use('/api/me', requireAuth);

@@ -18,6 +18,7 @@ export default defineConfig(async () => {
             JWT_SECRET: 'test-jwt-secret-only-for-vitest',
             CCCD_KEY: 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=', // 32 test bytes, base64
             SHEET_WRITES: 'off',
+            ZALO_APP_SECRET: 'test-zalo-secret',
           },
         },
       }),
