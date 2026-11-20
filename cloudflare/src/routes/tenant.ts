@@ -13,6 +13,8 @@ import { ensureDraftForRoom } from '../billing/invoices.ts';
 import { encryptText, hashCccd } from '../cccd.ts';
 import { allHouses, houseDir, PhoneTakenError, releaseResident, reserveResident, residentRoute } from '../central/directory.ts';
 import { hashPassword, normalizePhone } from '../password.ts';
+import { enqueueExport } from '../sheetExport.ts';
+import { legacyRoomCode } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantFor, tenantOfOwner } from '../tenant/route.ts';
 import { requireAuth } from './auth.ts';
@@ -63,6 +65,13 @@ async function findAccount(c: Context<App>, body: Record<string, unknown>) {
     .bind(route.resident_id)
     .first<AccountRow>();
   return { route, db, row };
+}
+
+/** Room code as the Sheet writes it (LVC-101), '' when the resident has no room. */
+async function roomCode(db: TenantDb, houseId: string, roomId: number | null | undefined): Promise<string> {
+  if (!roomId) return '';
+  const r = await db.prepare(`SELECT name FROM rooms WHERE id = ?`).bind(roomId).first<{ name: string }>();
+  return r ? legacyRoomCode(houseId, r.name) : '';
 }
 
 const accountNotFound = (c: Context<App>) => fail(c, 404, 'ACCOUNT_NOT_FOUND', 'Không tìm thấy tài khoản.');
@@ -116,6 +125,11 @@ export function registerTenantAccounts(app: Hono<App>): void {
       throw e;
     }
     await audit(c, 'anonymous', 'register', dir.house_id, `resident:${id}`);
+    // The password is never exported (only its hash exists here); the Sheet row is created without one.
+    await enqueueExport(c.env.DB, 'register_account', {
+      houseId: dir.house_id, name, phone, email: String(body.email ?? '').trim(), gender: String(body.gender ?? '').trim(),
+      password: '', room: legacyRoomCode(dir.house_id, room.name), approved: false,
+    });
     return c.json({ success: true, approved: false, joinedAt: today() });
   });
 
@@ -199,6 +213,9 @@ export function registerTenantAccounts(app: Hono<App>): void {
     await refreshCounts(c.env, db, row.house_id);
     if (status === 'approved' && roomId) await ensureDraftForRoom(c.env, route.owner_id, row.house_id, roomId).catch((err) => console.warn('[tenant] draft for room', err));
     await audit(c, actorOf(viewer), `account_${status}`, row.house_id, `resident:${row.id}`);
+    await enqueueExport(c.env.DB, 'update_account_status', {
+      houseId: row.house_id, phone: row.phone ?? '', name: row.full_name, room: await roomCode(db, row.house_id, roomId), status,
+    });
     return c.json({ success: true });
   });
 
@@ -222,6 +239,7 @@ export function registerTenantAccounts(app: Hono<App>): void {
       await releaseResident(c.env.DB, route.resident_id);
     }
     await refreshCounts(c.env, db, route.house_id);
+    if (row) await enqueueExport(c.env.DB, 'delete_resident', { houseId: route.house_id, phone: row.phone ?? '', name: row.full_name, room: await roomCode(db, route.house_id, row.room_id), mode });
     await audit(c, actorOf(viewer), mode === 'account' ? 'account_delete' : 'account_remove_from_room', route.house_id, `resident:${route.resident_id}`);
     return c.json({ success: true });
   });
@@ -285,6 +303,17 @@ export function registerTenantAccounts(app: Hono<App>): void {
 
     if (sets.length) await db.prepare(`UPDATE residents SET ${sets.join(', ')} WHERE id = ?`).bind(...values, viewer.id).run();
     await audit(c, actorOf(viewer), 'profile_update', viewer.houseId, `resident:${viewer.id}`);
+    // Same parameters as Express' update_profile; the CCCD is not copied into the queue (personal data).
+    const mine = await db.prepare(`SELECT house_id, room_id FROM residents WHERE id = ?`).bind(viewer.id).first<{ house_id: string; room_id: number | null }>();
+    if (mine) {
+      await enqueueExport(c.env.DB, 'update_profile', {
+        houseId: mine.house_id, room: await roomCode(db, mine.house_id, mine.room_id), currentPhone: normalizePhone(current.phone ?? ''),
+        name: body.name || '', phone: body.phone || '', plateNumber: body.plateNumber || body.vehicle?.plateNumber || '',
+        email: body.email || '', dob: body.dob || '', gender: body.gender || '', address: body.address || '',
+        vehicleType: body.vehicleType || body.vehicle?.type || 'Xe máy', emergencyName: body.emergencyName || body.emergencyContact?.name || '',
+        emergencyPhone: body.emergencyPhone || body.emergencyContact?.phone || '', emergencyRelation: body.emergencyRelation || body.emergencyContact?.relationship || '',
+      });
+    }
     const { cccd: _c, citizenId: _z, ...profile } = body;
     return c.json({ success: true, message: 'Đã lưu thông tin cá nhân', profile });
   });

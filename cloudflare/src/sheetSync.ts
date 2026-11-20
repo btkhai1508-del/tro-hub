@@ -10,6 +10,7 @@
 
 import { isReadOnly, tenantLabel, type TenantDb, type TenantStatement } from './tenant/db.ts';
 import { isWorkerSource } from './billing/source.ts';
+import { enqueueExport } from './sheetExport.ts';
 
 export const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec';
@@ -220,6 +221,9 @@ export interface SheetEnv { DB: D1Database; SHEET_WRITES?: string }
 
 export async function paintSheetPayment(env: SheetEnv, houseId: string, room: string, paid: boolean, month: string, row: number | null) {
   if (env.SHEET_WRITES === 'off') return;
+  const params_ = { room: legacyRoomCode(houseId, room), status: paid ? 'paid' : 'unpaid', month: toSheetMonth(month), row: row ? row : '' };
+  // The Worker owns the data: the Sheet is written from the export queue (retried, in order), never directly.
+  if (await isWorkerSource(env.DB)) return enqueueExport(env.DB, 'payment', { houseId, ...params_ });
   const legacy = await legacySheet(env.DB);
   if (!legacy?.houses.includes(houseId)) return;
   const params = new URLSearchParams({

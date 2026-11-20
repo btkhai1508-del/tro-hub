@@ -7,6 +7,7 @@ import { createDrafts } from './billing/invoices.ts';
 import { isWorkerSource } from './billing/source.ts';
 import { allHouses, getStorage, houseOwner, removeHouseDir, setHouseCounts } from './central/directory.ts';
 import { replayPendingDeferred } from './payments/settle.ts';
+import { drainExportQueue } from './sheetExport.ts';
 import { currentMonth, ensureMonthFresh, legacySheet, previousMonth } from './sheetSync.ts';
 import { tenantOfOwner } from './tenant/route.ts';
 
@@ -204,7 +205,7 @@ export async function runCron(cron: string, env: Env, now = Date.now()): Promise
   const jobs: [string, () => Promise<unknown>][] =
     cron === DAILY_CRON
       ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)], ['monthly drafts', () => createMonthlyDrafts(env, now)]]
-      : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)]];
+      : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)], ['sheet export', () => drainExportQueue(env)]]; // drain is a no-op unless source is worker
   // One after another (purge before reconcile, so reconcile sees the purged state); each fails alone.
   for (const [name, job] of jobs) await job().catch((err) => console.warn('[cron]', name, err));
 }

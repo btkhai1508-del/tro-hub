@@ -4,6 +4,8 @@
  */
 import type { Context, Hono } from 'hono';
 import { actorOf, audit, type App } from '../app.ts';
+import { getSource } from '../billing/source.ts';
+import { exportQueueStatus } from '../sheetExport.ts';
 import { getStorage, newOwnerBackend } from '../central/directory.ts';
 import { clearStore, migrateOwner, rollbackOwner, unlockOwner, type MigrationErrorCode, type MigrationReport } from '../migrate/tenant.ts';
 import { ownerRowsFromD1 } from '../migrate/digest.ts';
@@ -82,6 +84,7 @@ export function registerStorage(app: Hono<App>): void {
     if (lr) { try { lastReconcile = JSON.parse(lr.value); } catch { lastReconcile = null; } }
     return c.json({
       success: true, newOwnerBackend: await newOwnerBackend(c.env.DB), owners, totalBytes, rowsWrittenToday, freeLimits: FREE_LIMITS,
+      source: await getSource(c.env.DB), exportQueue: await exportQueueStatus(c.env.DB),
       warnings: [...failed, ...storageWarnings({ owners, totalBytes, rowsWrittenToday })], lastReconcile,
     });
   });

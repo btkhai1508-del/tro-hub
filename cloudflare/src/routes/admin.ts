@@ -8,7 +8,8 @@ import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
-import { currentMonth, legacyRoomCode, parseLegacyRoom } from '../sheetSync.ts';
+import { enqueueExport } from '../sheetExport.ts';
+import { currentMonth, legacyRoomCode, parseLegacyRoom, toSheetMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantFor } from '../tenant/route.ts';
 import { requireAuth } from './auth.ts';
@@ -296,6 +297,11 @@ export function registerAdmin(app: Hono<App>): void {
         if (inv) await recompute(db, inv.id, { central: c.env.DB });
         else await ensureDraft(db, room.house_id, room.id, month, c.env.DB); // makes the draft (and prices it) when the room has residents
         await audit(c, actorOf(viewer), 'admin_meter_save', room.house_id, `${room.name}:${month}`);
+        // Full state of the room's month (overwrite-style on the Sheet); an entered 0 means "not entered" and is sent empty.
+        await enqueueExport(c.env.DB, 'meters', {
+          houseId: room.house_id, room: legacyRoomCode(room.house_id, room.name), month: toSheetMonth(month),
+          dienCu: oldE, dienMoi: next.en > 0 ? next.en : '', nuocCu: oldW, nuocMoi: next.wn > 0 ? next.wn : '', status: '',
+        });
       }
 
       const [row] = await loadRooms(c, db, room.house_id, month, room.id);
@@ -361,6 +367,14 @@ export function registerAdmin(app: Hono<App>): void {
       }
     }
     await audit(c, actorOf(c.get('viewer')), 'admin_config_save', houseId, `drafts:${recomputed}`);
+    const saved = await loadConfig(db, houseId);
+    const priceOf = async (col: 'K' | 'L' | 'M') =>
+      (await db.prepare(`SELECT price FROM house_services WHERE house_id = ? AND sheet_col = ? AND active = 1 ORDER BY sort LIMIT 1`).bind(houseId, col).first<{ price: number }>())?.price;
+    const [rac, net, xe] = await Promise.all([priceOf('K'), priceOf('L'), priceOf('M')]);
+    await enqueueExport(c.env.DB, 'config', {
+      houseId, month: toSheetMonth(currentMonth()), dien: saved.electricPrice, nuoc: saved.waterPrice,
+      ...(rac !== undefined && { rac }), ...(net !== undefined && { net }), ...(xe !== undefined && { xe }),
+    });
     return c.json({ success: true, config: await loadConfig(db, houseId), recomputed, recomputeFailed });
   };
   app.put('/api/admin/config', saveConfig);
