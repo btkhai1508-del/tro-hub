@@ -271,17 +271,18 @@ describe.each(MODES)('Bank Hub: balance-change IPN (%s)', (mode) => {
     expect(r).toMatchObject({ status: 200, body: { success: true, kind: 'rent', houseId: 'LVC', room: '101', month: MONTH } });
     if (mode === 'migrating') {
       expect(await payments('d1' as any)).toEqual([]);
-      expect(await events()).toMatchObject([{ sepay_id: 'bh-tx-' + seq, kind: 'rent', status: 'deferred', house_id: 'LVC', owner_id: 1 }]);
+      expect(await events()).toMatchObject([{ sepay_id: 'bh-sbx-tx-' + seq, kind: 'rent', status: 'deferred', house_id: 'LVC', owner_id: 1 }]);
       expect((await lvcInvoice())!.status).toBe('unpaid');
       // When the move ends the cron replay books it exactly once.
       await setStorage(e.DB, 1, 'd1');
       expect(await replayDeferred(e, 1)).toBe(1);
       expect(await replayDeferred(e, 1)).toBe(0);
-      expect(await payments()).toMatchObject([{ house_id: 'LVC', amount: 3_500_000, reference: `sepay-bh-tx-${seq}` }]);
+      expect(await payments()).toMatchObject([{ house_id: 'LVC', amount: 3_500_000, reference: `sepay-bh-sbx-tx-${seq}` }]);
     } else {
       expect(await payments()).toMatchObject([{ house_id: 'LVC', amount: 3_500_000 }]);
       expect(await events()).toMatchObject([{ kind: 'rent', status: 'done', house_id: 'LVC', owner_id: 1 }]);
     }
+    expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM unassigned_payments`).first<{ n: number }>())!.n).toBe(0);
     expect((await lvcInvoice())!.status).toBe('paid');
     if (mode !== 'migrating') expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'bankhub_ipn_settled'`).first<{ n: number }>())!.n).toBe(1);
   });
@@ -312,13 +313,17 @@ describe.each(MODES)('Bank Hub: balance-change IPN (%s)', (mode) => {
 
   it('an unknown bank_account_xid is not settled', async () => {
     const r = await ipn({ amount: 3_500_000, content: LVC_CODE, bank_account_xid: 'ffffffff-0000-4000-8000-000000000000' });
-    expect(r).toEqual({ status: 200, body: { success: true, ignored: 'unknown_account' } });
+    expect(r).toEqual({ status: 200, body: { success: true, ignored: 'unknown_account', unassigned: true } });
+    // Kept in the same unassigned-payments mechanism as the SePay webhook, for a hand assignment.
+    expect((await e.DB.prepare(`SELECT amount, account_no, sepay_id FROM unassigned_payments`).all<any>()).results)
+      .toEqual([{ amount: 3_500_000, account_no: '0123456789', sepay_id: `bh-sbx-tx-${seq}` }]);
     expect(await payments()).toEqual([]);
     expect((await lvcInvoice())!.status).toBe('unpaid');
     expect(await events()).toMatchObject([{ kind: 'none', owner_id: null }]);
     expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'bankhub_ipn_unknown_account'`).first<{ n: number }>())!.n).toBe(1);
     const missing = await ipn({ amount: 3_500_000, content: LVC_CODE, bank_account_xid: undefined });
     expect(missing.body.ignored).toBe('unknown_account');
+    expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM unassigned_payments`).first<{ n: number }>())!.n).toBe(2);
   });
 
   it('the same transaction_id books once', async () => {
@@ -355,5 +360,81 @@ describe.each(MODES)('Bank Hub: balance-change IPN (%s)', (mode) => {
     expect(r.body).toEqual({ success: true, unassigned: true });
     expect(await events()).toMatchObject([{ kind: 'none', owner_id: 1 }]);
     expect(await payments()).toEqual([]);
+  });
+
+  it('rejects amounts that are not a positive whole number of đồng: 200 ignored, audited, never booked', async () => {
+    for (const amount of [-3_500_000, 0, 'abc', '3500000', 1e30, 1.5, null, 100_000_000_001, Number.NaN]) {
+      const r = await ipn({ amount, content: LVC_CODE });
+      expect(r, String(amount)).toEqual({ status: 200, body: { success: true, ignored: 'bad_amount' } });
+    }
+    expect(await events()).toEqual([]);
+    expect(await payments()).toEqual([]);
+    expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'bankhub_ipn_bad_amount'`).first<{ n: number }>())!.n).toBe(9);
+    expect((await ipn({ amount: 100_000_000_000, content: 'tien an' })).body).toEqual({ success: true, unassigned: true }); // the cap itself is allowed
+  });
+
+  it('a failure after the event is stored still answers 200 and keeps the money for hand assignment', async () => {
+    await e.DB.prepare(`ALTER TABLE bankhub_accounts RENAME TO bankhub_accounts_off`).run();
+    try {
+      const r = await ipn({ amount: 3_500_000, content: LVC_CODE });
+      expect(r).toEqual({ status: 200, body: { success: true, deferred: true } });
+    } finally {
+      await e.DB.prepare(`ALTER TABLE bankhub_accounts_off RENAME TO bankhub_accounts`).run();
+    }
+    expect(await payments()).toEqual([]);
+    expect((await e.DB.prepare(`SELECT amount FROM unassigned_payments`).all<any>()).results).toEqual([{ amount: 3_500_000 }]);
+    expect(await events()).toMatchObject([{ kind: 'none', status: 'done' }]);
+    expect((await ipn({ amount: 3_500_000, content: LVC_CODE, transaction_id: `tx-${seq}` })).body.ignored).toBe('duplicate');
+  });
+
+  it('old-style codes stay inside the account owner\'s houses (room 102 exists only at landlord 4)', async () => {
+    // Landlord 4's house declares the very account number landlord 1's linked account reports.
+    await (await storeOf(4)).prepare(`UPDATE houses SET bank_account_no = '0123456789' WHERE id = 'NTTD'`).run();
+    const r = await ipn({ amount: 2_500_000, content: '102-T11-2026' });
+    expect(r.body).toEqual({ success: true, unassigned: true });
+    expect(await payments(4)).toEqual([]);
+    expect(await payments(1)).toEqual([]);
+    // On landlord 4's own account the same code books his house.
+    const ok = await ipn({ amount: 2_500_000, content: '102-T11-2026', bank_account_xid: XID_B, account_number: '0123456789' });
+    expect(ok.body).toMatchObject({ kind: 'rent', houseId: 'NTTD', room: '102' });
+  });
+});
+
+describe('Bank Hub: base URL, id namespaces, probes', () => {
+  beforeEach(async () => { await seedWorld('d1'); await clearBankHub(); });
+
+  it('BANKHUB_BASE must be https on sepay.vn; otherwise the feature stays off and no credentials are sent', async () => {
+    configure(true);
+    mockBankHub();
+    const dev = await login(PHONES.developer);
+    for (const bad of ['http://bankhub-api-sandbox.sepay.vn', 'https://evil.example', 'https://sepay.vn.evil.example', 'https://user@bankhub-api.sepay.vn.evil.com', 'http://localhost:8787', 'not a url']) {
+      ee.BANKHUB_BASE = bad;
+      const r = await post('/api/dev/landlords/1/bankhub/company', {}, {}, dev);
+      expect(r.status, bad).toBe(503);
+    }
+    expect(calls).toHaveLength(0);
+    ee.BANKHUB_BASE = 'http://localhost:8787';
+    ee.BANKHUB_ALLOW_LOCAL = '1';
+    expect(((await (await api('/api/dev/bankhub', {}, dev)).json()) as any).configured).toBe(true);
+    ee.BANKHUB_ALLOW_LOCAL = undefined;
+    ee.BANKHUB_BASE = 'https://bankhub-api.sepay.vn';
+    expect(((await (await api('/api/dev/bankhub', {}, dev)).json()) as any).configured).toBe(true);
+  });
+
+  it('sandbox and production transaction ids do not collide', async () => {
+    configure(true);
+    await e.DB.prepare(`INSERT INTO bankhub_accounts (bank_account_xid, owner_id, status) VALUES (?, 1, 'active')`).bind(XID_A).run();
+    await ipn({ transaction_id: 'same', amount: 100, content: 'a' });
+    ee.BANKHUB_BASE = 'https://bankhub-api.sepay.vn';
+    expect((await ipn({ transaction_id: 'same', amount: 100, content: 'a' })).body).not.toMatchObject({ ignored: 'duplicate' });
+    expect((await e.DB.prepare(`SELECT sepay_id FROM sepay_events ORDER BY rowid`).all<any>()).results.map((r) => r.sepay_id)).toEqual(['bh-sbx-same', 'bh-same']);
+  });
+
+  it('with the key unset a probe is rejected without writing an audit row', async () => {
+    configure(false);
+    await e.DB.prepare(`DELETE FROM audit_log`).run();
+    expect((await post('/api/bankhub/ipn', {}, { Authorization: 'Apikey x' })).status).toBe(401);
+    expect((await post('/api/bankhub/events', {}, { Authorization: 'Apikey x' })).status).toBe(401);
+    expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM audit_log`).first<{ n: number }>())!.n).toBe(0);
   });
 });

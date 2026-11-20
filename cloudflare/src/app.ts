@@ -24,6 +24,7 @@ export interface Env {
   BANKHUB_BASE?: string; // SePay Bank Hub; mặc định https://bankhub-api.sepay.vn, sandbox: https://bankhub-api-sandbox.sepay.vn
   BANKHUB_CLIENT_ID?: string; // (secret)
   BANKHUB_CLIENT_SECRET?: string; // (secret)
+  BANKHUB_ALLOW_LOCAL?: string; // '1': cho BANKHUB_BASE là http://localhost (chỉ khi chạy thử)
   BANKHUB_IPN_KEY?: string; // Apikey SePay gửi kèm IPN và webhook Bank Hub (secret); không đặt = từ chối hết
 }
 

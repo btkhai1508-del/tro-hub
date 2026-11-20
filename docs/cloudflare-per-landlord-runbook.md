@@ -180,4 +180,6 @@ Tính năng tắt mặc định và không đổi gì ở bản đang chạy: ch
 
 **Chưa quyết (thương mại):** có bắt buộc mã số thuế / pháp nhân cho công ty Bank Hub của từng chủ trọ không (sandbox chỉ cần tên công ty); hạn mức lượt giao dịch tính cho ai (Trọ Hub hay từng chủ trọ). Cần hỏi SePay trước khi chạy thật.
 
+**Khôi phục tiền:** SePay không gửi lại IPN khi Worker đã trả 200. Mọi IPN hợp lệ được lưu trước khi xử lý (`unassigned_payments` cho tới khi gán được căn; mã `bh-sbx-…` là sandbox, `bh-…` là thật). IPN lỗi số tiền (không nguyên dương, quá 100 tỷ) bị bỏ qua và ghi audit `bankhub_ipn_bad_amount`. Giao dịch nghi sót: đối chiếu bằng `GET /v1/transaction` của Bank Hub. `BANKHUB_BASE` phải là https trên `*.sepay.vn`, sai thì tính năng coi như chưa cấu hình.
+
 **Tắt:** xoá `BANKHUB_IPN_KEY` (`wrangler secret delete BANKHUB_IPN_KEY`): `/api/bankhub/ipn` và `/api/bankhub/events` từ chối mọi yêu cầu ngay. Xoá thêm `BANKHUB_CLIENT_ID` / `BANKHUB_CLIENT_SECRET` để các nút Developer ngừng gọi SePay. Dữ liệu đã ghi (tiền trọ, `sepay_events` mã `bh-…`) giữ nguyên.

@@ -9,14 +9,28 @@ export interface BankHubEnv {
   BANKHUB_CLIENT_ID?: string;
   BANKHUB_CLIENT_SECRET?: string;
   BANKHUB_IPN_KEY?: string;
+  BANKHUB_ALLOW_LOCAL?: string; // '1' lets BANKHUB_BASE be http://localhost (tests only)
 }
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export const DEFAULT_BANKHUB_BASE = 'https://bankhub-api.sepay.vn';
-export const bankHubBase = (env: BankHubEnv) => (env.BANKHUB_BASE || DEFAULT_BANKHUB_BASE).replace(/\/+$/, '');
-/** The API can be called only when both credentials are set. */
-export const bankHubConfigured = (env: BankHubEnv) => Boolean(env.BANKHUB_CLIENT_ID && env.BANKHUB_CLIENT_SECRET);
+const rawBase = (env: BankHubEnv) => (env.BANKHUB_BASE || DEFAULT_BANKHUB_BASE).replace(/\/+$/, '');
+/** The base must be https on *.sepay.vn (the Basic header carries the client secret); http://localhost only when BANKHUB_ALLOW_LOCAL=1 (tests). */
+export function bankHubBaseOk(env: BankHubEnv & { BANKHUB_ALLOW_LOCAL?: string }): boolean {
+  try {
+    const u = new URL(rawBase(env));
+    if (env.BANKHUB_ALLOW_LOCAL === '1' && u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1')) return true;
+    return u.protocol === 'https:' && !u.username && (u.hostname === 'sepay.vn' || u.hostname.endsWith('.sepay.vn'));
+  } catch {
+    return false;
+  }
+}
+export const bankHubBase = (env: BankHubEnv) => (bankHubBaseOk(env) ? rawBase(env) : DEFAULT_BANKHUB_BASE);
+/** The API can be called only when both credentials are set and the base is acceptable. */
+export const bankHubConfigured = (env: BankHubEnv) => Boolean(env.BANKHUB_CLIENT_ID && env.BANKHUB_CLIENT_SECRET) && bankHubBaseOk(env);
+/** Transaction ids of the sandbox and production are separate namespaces: only the production host keeps the plain 'bh-' prefix. */
+export const bankHubIdPrefix = (env: BankHubEnv) => (new URL(bankHubBase(env)).hostname === 'bankhub-api.sepay.vn' ? 'bh-' : 'bh-sbx-');
 
 export class BankHubError extends Error {
   constructor(public status: number, message: string) {

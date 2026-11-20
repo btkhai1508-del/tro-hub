@@ -8,7 +8,7 @@
 import type { Context, Hono } from 'hono';
 import { audit, developerOnly, fail, type App } from '../app.ts';
 import { getStorage } from '../central/directory.ts';
-import { BankHubError, bankHubBase, bankHubClient, bankHubConfigured, type BankHubAccount } from '../bankhub.ts';
+import { BankHubError, bankHubBase, bankHubIdPrefix, bankHubBaseOk, bankHubClient, bankHubConfigured, type BankHubAccount } from '../bankhub.ts';
 import { deferRent, recordUnassigned, settleRent, unassignedStatement, type SepayTransfer } from '../payments/settle.ts';
 import { TenantLockedError } from '../tenant/route.ts';
 import { requireAuth } from './auth.ts';
@@ -78,7 +78,7 @@ const LINK_STATUS: Record<string, string> = {
 
 async function bankHubEvents(c: Context<App>) {
   if (!(await authorized(c))) {
-    await audit(c, 'anonymous', 'bankhub_event_rejected');
+    if (c.env.BANKHUB_IPN_KEY) await audit(c, 'anonymous', 'bankhub_event_rejected'); // unset key: reject without a D1 write per probe
     return c.json({ success: false, error: 'Sai API key.' }, 401);
   }
   const body = await c.req.json<{ event?: string; xid?: string; metadata?: Record<string, any> }>().catch(() => null);
@@ -122,10 +122,12 @@ interface Ipn {
   reference_code?: string | null; accumulated?: number; transaction_id?: string | number;
 }
 
+const MAX_AMOUNT = 100_000_000_000; // 100 tỷ đồng: far above any rent, far below float noise
+
 async function bankHubIpn(c: Context<App>) {
   const env = c.env;
   if (!(await authorized(c))) {
-    await audit(c, 'anonymous', 'bankhub_ipn_rejected');
+    if (env.BANKHUB_IPN_KEY) await audit(c, 'anonymous', 'bankhub_ipn_rejected'); // unset key: reject without a D1 write per probe
     return c.json({ success: false, error: 'Sai API key.' }, 401);
   }
   const body = await c.req.json<Ipn>().catch(() => null);
@@ -134,74 +136,83 @@ async function bankHubIpn(c: Context<App>) {
   const txId = String(body.transaction_id ?? '').trim();
   if (!txId) return c.json({ success: false, error: 'Thiếu transaction_id.' }, 400);
 
-  const sepayId = `bh-${txId}`;
+  const sepayId = `${bankHubIdPrefix(env)}${txId}`;
+  // Only a whole, positive, sane number of đồng is ever booked. SePay does not retry, so answer 200 and keep an audit.
+  const raw = body.amount;
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw <= 0 || raw > MAX_AMOUNT) {
+    await audit(c, 'bankhub', 'bankhub_ipn_bad_amount', null, sepayId);
+    return c.json({ success: true, ignored: 'bad_amount' });
+  }
+  const amount = raw;
   if (await env.DB.prepare(`SELECT 1 FROM sepay_events WHERE sepay_id = ?`).bind(sepayId).first())
     return c.json({ success: true, ignored: 'duplicate' });
 
   const transfer: SepayTransfer = {
     id: sepayId, gateway: body.gateway, transactionDate: body.transaction_date, accountNumber: body.account_number,
-    content: body.content ?? '', transferType: 'in', transferAmount: Number(body.amount) || 0, referenceCode: body.reference_code ?? undefined,
+    content: body.content ?? '', transferType: 'in', transferAmount: amount, referenceCode: body.reference_code ?? undefined,
   };
-  const amount = Math.round(Number(body.amount) || 0);
-  const account = typeof body.bank_account_xid === 'string' && body.bank_account_xid
-    ? await env.DB.prepare(`SELECT owner_id FROM bankhub_accounts WHERE bank_account_xid = ?`).bind(body.bank_account_xid).first<{ owner_id: number }>()
-    : null;
 
-  const insertPlain = (owner: number | null) => env.DB.prepare(
-    `INSERT OR IGNORE INTO sepay_events (sepay_id, kind, amount, content, account_no, house_id, room, month, paid_at, owner_id, status)
-     VALUES (?, 'none', ?, ?, ?, NULL, NULL, NULL, ?, ?, 'done')`
-  ).bind(sepayId, amount, String(body.content ?? '').slice(0, 300), body.account_number ?? null, body.transaction_date ?? null, owner);
+  // The event row and an unassigned row go in FIRST, in one batch, before anything that can fail: SePay does
+  // not retry a 5xx, so from here on the money is always kept (unassigned until a house is found, then 'deferred'
+  // or booked). Only a failure of this batch, where nothing is persisted, answers 5xx and lets SePay's network retry apply.
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO sepay_events (sepay_id, kind, amount, content, account_no, house_id, room, month, paid_at, owner_id, status)
+       VALUES (?, 'none', ?, ?, ?, NULL, NULL, NULL, ?, NULL, 'done')`
+    ).bind(sepayId, amount, String(body.content ?? '').slice(0, 300), body.account_number ?? null, body.transaction_date ?? null),
+    unassignedStatement(env, transfer, sepayId),
+  ]);
 
-  if (!account) {
-    // Unknown bank account: nobody to give the money to and no guessing. Kept as an ignored event for the Developer.
-    await insertPlain(null).run();
-    await audit(c, 'bankhub', 'bankhub_ipn_unknown_account', null, `${sepayId}:${String(body.bank_account_xid ?? '').slice(0, 40)}`);
-    return c.json({ success: true, ignored: 'unknown_account' });
-  }
-
-  const ownerId = account.owner_id;
-  const text = `${body.content ?? ''} ${body.payment_code ?? ''}`;
-  const payCode = await findPayCode(env, text, ownerId);
-  const oldCode = payCode ? null : parseRentCode(text);
-  const place = payCode
-    ? { houseId: payCode.houseId, ownerId: payCode.ownerId }
-    : oldCode ? await houseForRent(env, oldCode, body.account_number, ownerId) : null;
-  const rent = payCode ?? (oldCode ? { room: oldCode.room, month: oldCode.month } : null);
-  const migrating = Boolean(place && rent) && (await getStorage(env.DB, ownerId)).backend === 'migrating';
-
-  // Same ordering as the SePay webhook: a rent event is 'deferred' until it is booked, so a failure in
-  // between is picked up by the retry or the cron replay and never counted twice.
-  const insertEvent = env.DB.prepare(
-    `INSERT OR IGNORE INTO sepay_events (sepay_id, kind, amount, content, account_no, house_id, room, month, paid_at, owner_id, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(sepayId, rent ? 'rent' : 'none', amount, String(body.content ?? '').slice(0, 300), body.account_number ?? null,
-    place?.houseId ?? null, rent?.room ?? null, rent?.month ?? null, body.transaction_date ?? null, ownerId, place && rent ? 'deferred' : 'done');
-  if (!(place && rent)) {
-    await env.DB.batch([insertEvent, unassignedStatement(env, transfer, sepayId)]);
-    await audit(c, 'bankhub', 'bankhub_ipn_unassigned', null, `${sepayId}:${ownerId}`);
-    return c.json({ success: true, unassigned: true });
-  }
-  await insertEvent.run();
-
-  let settled: Record<string, unknown>;
-  let booked = false;
-  if (!migrating) {
-    try {
-      const r = await settleRent(env, place.ownerId, place.houseId, rent.room, rent.month, transfer, sepayId);
-      if (!r.settled && r.reason === 'room') await recordUnassigned(env, transfer, sepayId);
-      await env.DB.prepare(`UPDATE sepay_events SET status = 'done' WHERE sepay_id = ?`).bind(sepayId).run();
-      settled = r;
-      booked = true;
-    } catch (e) {
-      if (!(e instanceof TenantLockedError)) console.warn('[bankhub] settle failed, kept for replay', sepayId, e);
-      settled = { settled: false, deferred: true };
+  try {
+    const account = typeof body.bank_account_xid === 'string' && body.bank_account_xid
+      ? await env.DB.prepare(`SELECT owner_id FROM bankhub_accounts WHERE bank_account_xid = ?`).bind(body.bank_account_xid).first<{ owner_id: number }>()
+      : null;
+    if (!account) {
+      // Unknown bank account: nobody to give the money to and no guessing. It stays in unassigned_payments for a hand assignment.
+      await audit(c, 'bankhub', 'bankhub_ipn_unknown_account', null, `${sepayId}:${String(body.bank_account_xid ?? '').slice(0, 40)}`);
+      return c.json({ success: true, ignored: 'unknown_account', unassigned: true });
     }
-  } else {
-    settled = { settled: false, deferred: true };
+    const ownerId = account.owner_id;
+    await env.DB.prepare(`UPDATE sepay_events SET owner_id = ? WHERE sepay_id = ?`).bind(ownerId, sepayId).run();
+    const text = `${body.content ?? ''} ${body.payment_code ?? ''}`;
+    const payCode = await findPayCode(env, text, ownerId);
+    const oldCode = payCode ? null : parseRentCode(text);
+    const place = payCode
+      ? { houseId: payCode.houseId, ownerId: payCode.ownerId }
+      : oldCode ? await houseForRent(env, oldCode, body.account_number, ownerId) : null;
+    const rent = payCode ?? (oldCode ? { room: oldCode.room, month: oldCode.month } : null);
+    if (!(place && rent)) {
+      await audit(c, 'bankhub', 'bankhub_ipn_unassigned', null, `${sepayId}:${ownerId}`);
+      return c.json({ success: true, unassigned: true });
+    }
+    const migrating = (await getStorage(env.DB, ownerId)).backend === 'migrating';
+    // As in the SePay webhook a rent event is 'deferred' until booked, so a failure after this point is replayed by the cron.
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE sepay_events SET kind = 'rent', house_id = ?, room = ?, month = ?, status = 'deferred' WHERE sepay_id = ?`)
+        .bind(place.houseId, rent.room, rent.month, sepayId),
+      env.DB.prepare(`DELETE FROM unassigned_payments WHERE sepay_id = ?`).bind(sepayId),
+    ]);
+    let settled: Record<string, unknown> = { settled: false, deferred: true };
+    let booked = false;
+    if (!migrating) {
+      try {
+        const r = await settleRent(env, place.ownerId, place.houseId, rent.room, rent.month, transfer, sepayId);
+        if (!r.settled && r.reason === 'room') await recordUnassigned(env, transfer, sepayId);
+        await env.DB.prepare(`UPDATE sepay_events SET status = 'done' WHERE sepay_id = ?`).bind(sepayId).run();
+        settled = r;
+        booked = true;
+      } catch (e) {
+        if (!(e instanceof TenantLockedError)) console.warn('[bankhub] settle failed, kept for replay', sepayId, e);
+      }
+    }
+    if (!booked) await deferRent(env, place.ownerId, place.houseId, rent.room, rent.month, sepayId).catch((e) => console.warn('[bankhub] defer', sepayId, e));
+    await audit(c, 'bankhub', booked ? 'bankhub_ipn_settled' : 'bankhub_ipn_deferred', place.houseId, `${sepayId}:${rent.room}:${rent.month}`);
+    return c.json({ success: true, kind: 'rent', houseId: place.houseId, room: rent.room, month: rent.month, rent: settled });
+  } catch (e) {
+    // The transaction is already stored (unassigned or deferred): answer 200 so it is not lost, and log for the Developer.
+    console.warn('[bankhub] ipn kept for hand assignment', sepayId, e);
+    return c.json({ success: true, deferred: true });
   }
-  if (!booked) await deferRent(env, place.ownerId, place.houseId, rent.room, rent.month, sepayId).catch((e) => console.warn('[bankhub] defer', sepayId, e));
-  await audit(c, 'bankhub', booked ? 'bankhub_ipn_settled' : 'bankhub_ipn_deferred', place.houseId, `${sepayId}:${rent.room}:${rent.month}`);
-  return c.json({ success: true, kind: 'rent', houseId: place.houseId, room: rent.room, month: rent.month, rent: settled });
 }
 
 // ---------------------------------------------------------------------------
@@ -228,7 +239,7 @@ export function registerBankHub(app: Hono<App>): void {
     }
     const origin = new URL(c.req.url).origin;
     return c.json({
-      success: true, configured: bankHubConfigured(c.env), ipnKeySet: Boolean(c.env.BANKHUB_IPN_KEY), base: bankHubBase(c.env),
+      success: true, configured: bankHubConfigured(c.env), baseInvalid: !bankHubBaseOk(c.env), ipnKeySet: Boolean(c.env.BANKHUB_IPN_KEY), base: bankHubBase(c.env),
       ipnUrl: `${origin}/api/bankhub/ipn`, eventsUrl: `${origin}/api/bankhub/events`, landlords,
     });
   });
