@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import '../styles/resident-tahoe.css';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, LockKeyhole, ReceiptText, WalletCards } from './AppIcons';
+import { ArrowUpRight, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, LockKeyhole, WalletCards } from './AppIcons';
+import { InvoiceSearch } from './LineIcons';
 import { IconWallet3D } from './Icons3D';
 import { useApp, type Invoice } from '../context/AppContext';
 import { PaymentHistoryExportModal } from './PaymentHistoryExportModal';
@@ -56,7 +57,7 @@ export function InvoicesAndPayment() {
           {currentUnpaidInvoice && (
             <div className="relative flex flex-col gap-2.5 sm:flex-row md:self-end">
               <button type="button" onClick={() => openInvoiceDetailModal(currentUnpaidInvoice)} className="soft-button inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control kit-text-secondary">
-                <ReceiptText size={17} />Xem hóa đơn
+                <InvoiceSearch size={17} />Xem hóa đơn
               </button>
               <button type="button" onClick={() => handlePay(currentUnpaidInvoice.id)} className="primary-button inline-flex min-h-12 items-center justify-center gap-2.5 px-6 py-3.5 apple-control">
                 {paymentGateStatus === 'STOP' ? <LockKeyhole size={17} /> : <CreditCard size={17} />}
