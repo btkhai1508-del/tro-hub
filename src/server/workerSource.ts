@@ -13,13 +13,15 @@ export function createSourceReader(baseUrl: string, fetchImpl: FetchLike = fetch
   let cached: { value: DataSource; at: number } | null = null;
   return async function readSource(): Promise<DataSource> {
     if (cached && now() - cached.at < SOURCE_TTL_MS) return cached.value;
-    let value: DataSource = 'sheet';
+    // A failed call keeps the last known value (the Sheet only when nothing is known yet) and is not cached.
+    let value: DataSource = cached?.value ?? 'sheet';
     try {
       const res = await fetchImpl(`${baseUrl}/api/source`, { signal: AbortSignal.timeout(5000) });
       const body = res.ok ? await res.json().catch(() => null) : null;
-      if (body?.source === 'worker') value = 'worker';
+      if (body?.source !== 'worker' && body?.source !== 'sheet') return value;
+      value = body.source;
     } catch {
-      value = 'sheet';
+      return value;
     }
     cached = { value, at: now() };
     return value;

@@ -100,8 +100,10 @@ describe.each(BACKENDS)('công tắc nguồn dữ liệu [%s]', (backend) => {
     const res0 = await putSource('worker', developer);
     expect(((await res0.json()) as any).workerOnlyResidents).toBe(0);
     await db.prepare(`INSERT INTO residents (house_id, room_id, full_name, phone, password_hash, status, created_at) VALUES ('TRUNG_KIM', 1, 'Mới', '0900000999', 'x', 'approved', '2999-01-01 00:00:00')`).run();
-    // a house without a legacy Sheet is not counted
-    await db.prepare(`INSERT INTO residents (house_id, room_id, full_name, phone, password_hash, status, created_at) VALUES ('NTTD', 5, 'Khác', '0900000998', 'x', 'approved', '2999-01-01 00:00:00')`).run().catch(() => {});
+    // a house without a legacy Sheet (another landlord's NTTD) is not counted; the insert must really happen
+    const other = await tenantOfOwner(e, 4);
+    await other.prepare(`INSERT INTO residents (house_id, room_id, full_name, phone, password_hash, status, created_at) VALUES ('NTTD', 5, 'Khác', '0900000998', 'x', 'approved', '2999-01-01 00:00:00')`).run();
+    expect((await other.prepare(`SELECT COUNT(*) AS n FROM residents WHERE house_id = 'NTTD' AND created_at >= '2999'`).first<{ n: number }>())!.n).toBe(1);
     const res = await putSource('sheet', developer);
     expect(res.status).toBe(200);
     expect(((await res.json()) as any).workerOnlyResidents).toBe(1);
@@ -209,6 +211,18 @@ describe.each(BACKENDS)('phiên cư dân từ Worker [%s]', (backend) => {
     expect(novInv.paidAt).toContain('Đã thanh toán');
     expect(oct).toMatchObject({ status: 'paid', paymentMethod: 'cash' });
     expect(oct.paidAt).toContain('03/10/2026');
+  });
+
+  it('tiền chờ của phòng khác không đổi trạng thái phòng 101', async () => {
+    await e.DB.prepare(`INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, owner_id, status) VALUES ('S2', 'rent', 3000000, 'x', 'TRUNG_KIM', '102', '2026-11', 1, 'deferred')`).run();
+    await e.DB.prepare(`INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, owner_id, status) VALUES ('S3', 'rent', 3000000, 'x', 'LVC', '101', '2026-11', 1, 'deferred')`).run();
+    expect((await session()).invoices.find((i: any) => i.id === `INV-${nov}`).status).toBe('unpaid');
+  });
+
+  it('cư dân LVC: roomNumber theo mã cũ LVC-<phòng>', async () => {
+    const body = await session(await login(PHONES.residentLvc));
+    expect(body.user.roomNumber).toBe('LVC-101');
+    expect(body.house).toEqual({ role: 'resident', houseIds: ['LVC'] });
   });
 
   it('chờ xác nhận hiện pending', async () => {

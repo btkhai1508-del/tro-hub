@@ -6,7 +6,7 @@
 import type { Context } from 'hono';
 import { bankReceived, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
 import { paymentStatusOut, statusView, vnDate } from '../routes/rent.ts';
-import { toSheetMonth } from '../sheetSync.ts';
+import { legacyRoomCode, toSheetMonth } from '../sheetSync.ts';
 import { tenantFor } from '../tenant/route.ts';
 import type { App, Viewer } from '../app.ts';
 
@@ -99,7 +99,7 @@ export async function residentProfile(c: Context<App>, viewer: Resident, invoice
     address: r?.address_detail ?? '',
     vehicleType: r?.vehicle_type || 'Xe máy',
     plateNumber: r?.plate_number ?? '',
-    roomNumber: r?.room_name ?? '',
+    roomNumber: r?.room_name ? legacyRoomCode(viewer.houseId, r.room_name) : '',
     building: r?.house_name ?? '',
     floor: r?.floor == null ? '' : String(r.floor),
     startDate: r?.move_in_date ?? '',
