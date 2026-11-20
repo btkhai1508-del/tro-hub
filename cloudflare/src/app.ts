@@ -31,7 +31,7 @@ export type StaffRole = 'developer' | 'owner' | 'manager';
 
 export type App = { Bindings: Env; Variables: { viewer: Viewer } };
 
-export const fail = (c: Context, status: 400 | 401 | 403 | 404 | 503, errorCode: string, error: string) =>
+export const fail = (c: Context, status: 400 | 401 | 403 | 404 | 409 | 503, errorCode: string, error: string) =>
   c.json({ success: false, errorCode, error }, status);
 
 export async function audit(c: Context<App>, actor: string, action: string, houseId: string | null = null, target: string | null = null) {

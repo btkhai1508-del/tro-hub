@@ -43,6 +43,12 @@ export function assertEditable(inv: { status: InvoiceStatus }): void {
   if (!canEdit(inv)) throw new InvoiceLockedError();
 }
 
+/** What `recompute` checks first: locked (paid/cash), then frozen (issued in an earlier month, unless `allowPast`). */
+export function assertCanRecompute(inv: { status: InvoiceStatus; issued_at: string | null; month: string }, allowPast = false): void {
+  assertEditable(inv);
+  if (inv.issued_at !== null && inv.month < currentMonth() && !allowPast) throw new InvoiceFrozenError();
+}
+
 // ── Inputs ─────────────────────────────────────────────────────────────────
 
 /**
@@ -88,8 +94,7 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.id = ?`
   ).bind(invoiceId).first<InvoiceHead>();
   if (!inv) throw new Error(`Invoice ${invoiceId} not found`);
-  assertEditable(inv);
-  if (inv.issued_at !== null && inv.month < currentMonth() && !opts.allowPast) throw new InvoiceFrozenError();
+  assertCanRecompute(inv, opts.allowPast);
 
   const [room, house, rates, meter, services, optouts, people] = await Promise.all([
     db.prepare(`SELECT price FROM rooms WHERE id = ?`).bind(inv.room_id).first<{ price: number }>(),
@@ -206,6 +211,16 @@ export async function createDrafts(env: Env, ownerId: number, month: string): Pr
     }
   }
   return made;
+}
+
+/**
+ * The invoice of a room for `month`, making its draft first when there is none and the room has an approved
+ * resident. null = no invoice and none to make (an empty room). Not tied to the source switch: the admin API decides.
+ */
+export async function ensureDraft(db: TenantDb, houseId: string, roomId: number, month: string, central?: D1Database): Promise<number | null> {
+  for (const id of await roomsNeedingDraft(db, houseId, month, roomId)) await draftFor(db, houseId, id, month, central);
+  const row = await db.prepare(`SELECT id FROM invoices WHERE room_id = ? AND month = ?`).bind(roomId, month).first<{ id: number }>();
+  return row?.id ?? null;
 }
 
 /**

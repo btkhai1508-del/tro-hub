@@ -17,11 +17,18 @@ import { isReadOnly, type TenantDb } from '../tenant/db.ts';
 import { tenantFor, tenantOfOwner } from '../tenant/route.ts';
 import { requireAuth } from './auth.ts';
 
-/** 'MM/YYYY' từ app → 'YYYY-MM'; trống hoặc sai → tháng hiện tại. */
-const monthParam = (value: unknown) => fromSheetMonth(String(value ?? '')) ?? currentMonth();
-const vnDate = (iso: string | null) => (iso ? new Date(Date.parse(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`) + 7 * 3600_000).toISOString().slice(0, 10).split('-').reverse().join('/') : '');
+/** 'MM/YYYY' (app) or 'YYYY-MM' → 'YYYY-MM'; anything else → null. */
+export function parseMonth(value: unknown): string | null {
+  const text = String(value ?? '').trim();
+  const iso = text.match(/^(\d{4})-(\d{2})$/);
+  if (iso) return Number(iso[2]) >= 1 && Number(iso[2]) <= 12 ? text : null;
+  return fromSheetMonth(text);
+}
+/** 'MM/YYYY' or 'YYYY-MM' từ app → 'YYYY-MM'; trống hoặc sai → tháng hiện tại. */
+const monthParam = (value: unknown) => parseMonth(value) ?? currentMonth();
+export const vnDate = (iso: string | null) => (iso ? new Date(Date.parse(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`) + 7 * 3600_000).toISOString().slice(0, 10).split('-').reverse().join('/') : '');
 
-function paymentStatusOut(status: InvoiceStatus | null, paidAt: string | null) {
+export function paymentStatusOut(status: InvoiceStatus | null, paidAt: string | null) {
   const s = status ?? 'unpaid';
   const paid = s === 'paid' || s === 'cash';
   const day = vnDate(paidAt);
@@ -50,7 +57,7 @@ export async function invoiceOrSync(tenant: TenantDb, central: D1Database, roomI
  * looked up every time (a cheap partial index, an empty map almost always); only a room that has some
  * reads the bank money already recorded for its invoice.
  */
-async function statusView(central: D1Database, db: TenantDb, houseIds: string[], month: string) {
+export async function statusView(central: D1Database, db: TenantDb, houseIds: string[], month: string) {
   const deferred = new Map<string, Map<string, number>>();
   await Promise.all(houseIds.map(async (h) => deferred.set(h, await deferredByRoom(central, h, month, db))));
   return async (inv: { id: number; house_id: string; room: string; total: number; status: InvoiceStatus; issued_at?: string | null }): Promise<InvoiceStatus> => {
@@ -75,8 +82,19 @@ function statusResponse(houseId: string, room: string, month: string, inv: Invoi
   };
 }
 
-const staffHouseIds = (v: Viewer) => (v.kind === 'staff' ? v.houseIds : []);
+export const staffHouseIds = (v: Viewer) => (v.kind === 'staff' ? v.houseIds : []);
 const inList = (ids: string[]) => ids.map(() => '?').join(',') || 'NULL';
+
+/** Sets one invoice's status by hand (the manager's switch): writes it, audits it and paints the legacy Sheet. */
+export async function applyPaymentStatus(c: Context<App>, room: { db: TenantDb; house_id: string; name: string }, inv: { id: number; sheet_row: number | null }, status: InvoiceStatus, month: string): Promise<void> {
+  const v = c.get('viewer');
+  const paid = status === 'paid' || status === 'cash';
+  await room.db.prepare(
+    `UPDATE invoices SET status = ?, paid_at = CASE WHEN ? THEN COALESCE(paid_at, datetime('now')) ELSE NULL END, status_by = ? WHERE id = ?`
+  ).bind(status, paid ? 1 : 0, actorOf(v), inv.id).run();
+  await audit(c, actorOf(v), `rent_status_${status}`, room.house_id, `invoice:${inv.id}`);
+  if (status !== 'pending') c.executionCtx.waitUntil(paintSheetPayment(c.env, room.house_id, room.name, paid, month, inv.sheet_row));
+}
 
 /** The caller's houses grouped by the landlord whose store holds them. */
 async function storesOf(c: Context<App>, houseIds: string[]): Promise<{ db: TenantDb; houseIds: string[] }[]> {
@@ -91,7 +109,7 @@ async function storesOf(c: Context<App>, houseIds: string[]): Promise<{ db: Tena
 interface RentRoom { id: number; house_id: string; name: string }
 
 /** Phòng theo mã kiểu cũ ("LVC-101", "G01"), chỉ trong các nhà người gọi được xem. */
-async function findRentRoom(c: Context<App>, houseIds: string[], code: string): Promise<(RentRoom & { db: TenantDb }) | null> {
+export async function findRentRoom(c: Context<App>, houseIds: string[], code: string): Promise<(RentRoom & { db: TenantDb }) | null> {
   if (!houseIds.length) return null;
   const place = parseLegacyRoom(code);
   if (place && houseIds.includes(place.houseId)) {
@@ -324,12 +342,7 @@ export function registerRent(app: Hono<App>): void {
     if (!room) return fail(c, 404, 'ROOM_NOT_FOUND', 'Không tìm thấy phòng trong nhà bạn quản lý.');
     const inv = await invoiceOrSync(room.db, c.env.DB, room.id, month);
     if (!inv) return fail(c, 404, 'INVOICE_NOT_FOUND', `Phòng ${body.roomNumber} chưa có hoá đơn tháng ${toSheetMonth(month)}.`);
-    const paid = status === 'paid' || status === 'cash';
-    await room.db.prepare(
-      `UPDATE invoices SET status = ?, paid_at = CASE WHEN ? THEN COALESCE(paid_at, datetime('now')) ELSE NULL END, status_by = ? WHERE id = ?`
-    ).bind(status, paid ? 1 : 0, actorOf(v), inv.id).run();
-    await audit(c, actorOf(v), `rent_status_${status}`, room.house_id, `invoice:${inv.id}`);
-    if (status !== 'pending') c.executionCtx.waitUntil(paintSheetPayment(c.env, room.house_id, room.name, paid, month, inv.sheet_row));
+    await applyPaymentStatus(c, room, inv, status, month);
     return c.json({ success: true, message: `Đã cập nhật trạng thái phòng ${body.roomNumber}`, roomNumber: legacyRoomCode(room.house_id, room.name), status, row: inv.sheet_row ?? undefined });
   });
 
