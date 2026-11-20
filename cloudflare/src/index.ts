@@ -13,6 +13,7 @@ import { registerAdmin } from './routes/admin.ts';
 import { registerBilling } from './routes/billing.ts';
 import { registerSepay } from './routes/sepay.ts';
 import { registerStorage } from './routes/storage.ts';
+import { registerTenantAccounts } from './routes/tenant.ts';
 
 export { TenantStore } from './tenant/store.ts';
 
@@ -32,6 +33,7 @@ registerIntegrations(app);
 registerHouses(app);
 registerPeople(app);
 registerRent(app);
+registerTenantAccounts(app); // before registerAdmin: /api/admin/accounts is handled here
 registerAdmin(app);
 registerBilling(app);
 registerSepay(app);
