@@ -309,7 +309,8 @@ async function startServer() {
         return res.status(401).json({ success: false, error: 'Sai API key.' });
       }
     } else if (isProduction) {
-      console.warn('[SePAY Webhook] SEPAY_WEBHOOK_KEY is not set: anyone can post fake transfers. Set it on Render and in SePay.');
+      console.warn('[SePAY Webhook] SEPAY_WEBHOOK_KEY is not set: rejecting (anyone could post fake transfers). Set it on Render and in SePay.');
+      return res.status(503).json({ success: false, error: 'Webhook chưa được cấu hình khoá.' });
     }
     try {
       const payload = req.body || {};
@@ -426,7 +427,7 @@ async function startServer() {
     res.json({ returnCode: 1, returnMessage: 'Success' });
   });
 
-  app.post('/api/payment/mark-paid', sourceChangedGuard, requireAuth, async (req: AuthedRequest, res) => {
+  app.post('/api/payment/mark-paid', sourceChangedGuard, requireAdmin, async (req: AuthedRequest, res) => {
     try {
       const { method = 'qr', amount, month = '10/2026', transactionId } = req.body || {};
       const roomNumber = req.tenant!.room || (req.body || {}).roomNumber;
@@ -547,18 +548,11 @@ async function startServer() {
 
   // Backend API: Query Live Payment Status from Google Sheet Column P
   // GOOGLE SHEET = SINGLE SOURCE OF TRUTH
-  app.get('/api/payment/status', async (req, res) => {
+  app.get('/api/payment/status', requireAuth, async (req: AuthedRequest, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      let authedRoom = '';
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const payload = verifyTenantToken(authHeader.slice(7));
-          authedRoom = payload?.room || '';
-        } catch {}
-      }
-      const room = authedRoom || (req.query.room as string) || '';
-      const sheetId = (req.query.sheetId as string) || DEFAULT_SPREADSHEET_ID;
+      // A resident reads only their own room; staff may ask for any room. The spreadsheet is never chosen by the client.
+      const room = req.tenant!.isAdmin ? ((req.query.room as string) || req.tenant!.room || '') : (req.tenant!.room || '');
+      const sheetId = DEFAULT_SPREADSHEET_ID;
       const month = (req.query.month as string) || '';
       if (!room) {
         return res.status(400).json({ success: false, error: 'Thiếu mã phòng' });
@@ -572,9 +566,9 @@ async function startServer() {
   });
 
   // Query ALL room Column P statuses for a given month directly from Google Sheet
-  app.get('/api/payment/all-statuses', async (req, res) => {
+  app.get('/api/payment/all-statuses', requireAdmin, async (req, res) => {
     try {
-      const sheetId = (req.query.sheetId as string) || DEFAULT_SPREADSHEET_ID;
+      const sheetId = DEFAULT_SPREADSHEET_ID;
       const month = (req.query.month as string) || '';
       const data = await fetchAllSheetColumnPStatuses(sheetId, month);
       res.json({ success: true, ...data });
@@ -585,10 +579,10 @@ async function startServer() {
   });
 
   // Backend API: Query Column P status for a room (compatible with legacy callers)
-  app.get('/api/payment/column-p-status', async (req, res) => {
+  app.get('/api/payment/column-p-status', requireAdmin, async (req, res) => {
     try {
       const room = (req.query.room as string) || '';
-      const sheetId = (req.query.sheetId as string) || DEFAULT_SPREADSHEET_ID;
+      const sheetId = DEFAULT_SPREADSHEET_ID;
       if (!room) {
         return res.status(400).json({ success: false, error: 'Thiếu mã phòng' });
       }
@@ -648,7 +642,7 @@ async function startServer() {
   });
 
   // Register payment intent for a machine (records current tenant's room & phone for audit log)
-  app.post('/api/laundry/intent', (req, res) => {
+  app.post('/api/laundry/intent', requireAuth, (req: AuthedRequest, res) => {
     try {
       const { machineId } = req.body || {};
       if (!machineId) return res.status(400).json({ success: false, error: 'Thiếu machineId' });
