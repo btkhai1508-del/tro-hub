@@ -67,18 +67,22 @@ export async function createAccountOnWorker(input: {
   };
 }
 
+/** Tools every house has (core); shown while the purchased list is loading or if loading fails. */
+const CORE_MODULES = ['accountManagement', 'invoices', 'config', 'paymentPortal'];
+
 /**
- * The Tiện ích tools the signed-in staff member's houses pay for (set by the Developer).
- * null while unknown or without a Worker session: every tool stays visible.
+ * The Tiện ích tools the signed-in staff member's houses pay for (set by the Developer when the house is created).
+ * null only without a Worker session (nothing to filter by). With one, only the core tools show until the purchased
+ * list arrives (and if it cannot be loaded): never every tool.
  */
 export function useEnabledModules(enabled: boolean): Set<string> | null {
-  const [modules, setModules] = useState<Set<string> | null>(null);
+  const [modules, setModules] = useState<Set<string>>(() => new Set(CORE_MODULES));
   useEffect(() => {
     if (!enabled) return;
     workerFetch('/api/modules')
       .then((res) => res.json())
-      .then((data) => { if (data?.success && Array.isArray(data.modules)) setModules(new Set(data.modules)); })
+      .then((data) => { if (data?.success && Array.isArray(data.modules)) setModules(new Set([...CORE_MODULES, ...data.modules])); })
       .catch(() => {});
   }, [enabled]);
-  return modules;
+  return enabled ? modules : null;
 }
