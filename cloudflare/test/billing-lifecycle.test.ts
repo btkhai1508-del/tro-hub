@@ -43,6 +43,19 @@ describe.each(BACKENDS)('hoá đơn nháp, phát hành, quy tắc sửa [%s]', (
     await setSource('sheet');
   });
 
+  describe('effectiveOld', () => {
+    it('đồng hồ mới (chưa có số tháng trước): số cũ 0 của dòng là thật; có số tháng trước thì 0 nhường số tháng trước', async () => {
+      await createDrafts(e, OWNER, M);
+      const id = (await invoiceOf('LVC', '101'))!.id;
+      await setMeter('LVC', 3, M, 0, 150, 0, 10);
+      await recompute(await store(), id, { central: e.DB });
+      expect(await invoiceOf('LVC', '101')).toMatchObject({ electricity: 150 * 3500, water: 10 * 20_000 });
+      await setMeter('LVC', 3, '2098-12', 100, 120, 5, 8); // an earlier reading now exists: row old 0 → its new (120)
+      await recompute(await store(), id, { central: e.DB });
+      expect(await invoiceOf('LVC', '101')).toMatchObject({ electricity: 30 * 3500, water: 2 * 20_000 });
+    });
+  });
+
   describe('createDrafts', () => {
     it('tạo nháp cho phòng có cư dân đã duyệt: tiền phòng + dịch vụ, chưa phát hành', async () => {
       expect(await createDrafts(e, OWNER, M)).toBe(2);

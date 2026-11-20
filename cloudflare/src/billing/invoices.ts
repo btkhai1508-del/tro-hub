@@ -63,6 +63,16 @@ export async function previousReadings(db: TenantDb, roomId: number, month: stri
   return { electricOld: e?.v ?? null, waterOld: w?.v ?? null };
 }
 
+/**
+ * The old reading a month is billed from. With an earlier reading: the row's own old value when > 0, else the
+ * earlier month's new reading. With no earlier reading: the row's own old value, 0 included (a brand-new meter
+ * starting at 0). null = no row and nothing earlier (never read: usage 0).
+ */
+export function effectiveOld(rowOld: number | null, previous: number | null): number | null {
+  if (previous === null) return rowOld;
+  return rowOld !== null && rowOld > 0 ? rowOld : previous;
+}
+
 interface ServiceRow { id: number; name: string; price: number; per: Per; max_qty: number | null; sheet_col: 'K' | 'L' | 'M' | null }
 
 interface InvoiceHead { id: number; house_id: string; room_id: number; month: string; status: InvoiceStatus; issued_at: string | null; room: string }
@@ -119,8 +129,8 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
   // an old value is used only when it is > 0, otherwise the earlier months decide.
   const prev = meter && (meter.electric_old ?? 0) > 0 && (meter.water_old ?? 0) > 0 ? null : await previousReadings(db, inv.room_id, inv.month);
   const before = {
-    electricOld: meter && (meter.electric_old ?? 0) > 0 ? meter.electric_old : prev?.electricOld ?? null,
-    waterOld: meter && (meter.water_old ?? 0) > 0 ? meter.water_old : prev?.waterOld ?? null,
+    electricOld: effectiveOld(meter ? meter.electric_old : null, prev?.electricOld ?? null),
+    waterOld: effectiveOld(meter ? meter.water_old : null, prev?.waterOld ?? null),
   };
   const calc = computeInvoice({
     rent: room?.price ?? 0,

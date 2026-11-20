@@ -6,7 +6,7 @@
  */
 import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
-import { assertCanRecompute, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute } from '../billing/invoices.ts';
+import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
 import { currentMonth, legacyRoomCode, parseLegacyRoom } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -15,6 +15,7 @@ import { requireAuth } from './auth.ts';
 import { applyPaymentStatus, findRentRoom, invoiceFor, parseMonth, paymentStatusOut, staffHouseIds, statusView, vnDate } from './rent.ts';
 
 const MAX_MONEY = 100_000_000;
+const MAX_READING = 10_000_000;
 const isMoney = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= MAX_MONEY;
 
 const fromHandler = async <T>(c: Context<App>, run: () => Promise<T>): Promise<T | Response> => {
@@ -90,8 +91,8 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
     const slot = (n: number) => ({ name: occupants[n]?.full_name ?? '', phone: occupants[n]?.phone ?? '', plate: occupants[n]?.plate_number ?? '' });
     const [p1, p2, p3] = [slot(0), slot(1), slot(2)];
     // The old reading of a month is the stored one when > 0, else the latest earlier reading (as recompute does).
-    const eOld = (r.electric_old ?? 0) > 0 ? r.electric_old : r.prev_e;
-    const wOld = (r.water_old ?? 0) > 0 ? r.water_old : r.prev_w;
+    const eOld = effectiveOld(r.has_meter ? r.electric_old : null, r.prev_e);
+    const wOld = effectiveOld(r.has_meter ? r.water_old : null, r.prev_w);
     const eNew = r.has_meter ? r.electric_new : null;
     const wNew = r.has_meter ? r.water_new : null;
     const missing = !r.has_meter || ((eNew ?? 0) === 0 && (wNew ?? 0) === 0);
@@ -168,7 +169,7 @@ const METER_KEYS = ['dienCu', 'dienMoi', 'nuocCu', 'nuocMoi'] as const;
 function reading(v: unknown): number | undefined | null {
   if (v === undefined || v === null || v === '') return undefined;
   const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
-  return Number.isInteger(n) && n >= 0 ? n : null;
+  return Number.isInteger(n) && n >= 0 && n <= MAX_READING ? n : null;
 }
 
 // ── Fee settings ───────────────────────────────────────────────────────────
@@ -249,12 +250,16 @@ export function registerAdmin(app: Hono<App>): void {
     };
     if (METER_KEYS.some((k) => given[k] === null)) return fail(c, 400, 'METER_INVALID', 'Chỉ số điện nước phải là số nguyên không âm.');
 
+    const want = data.paymentStatus === 'paid' || data.paymentStatus === 'unpaid' ? data.paymentStatus : null;
+    if (want && METER_KEYS.some((k) => given[k] !== undefined)) {
+      return fail(c, 400, 'COMBINED_EDIT', 'Hãy bỏ "đã đóng" trước, rồi lưu chỉ số ở một lần lưu khác.');
+    }
+
     return fromHandler(c, async () => {
       const viewer = c.get('viewer');
       let inv = await invoiceFor(db, room.id, month);
 
-      // 1) "Đã đóng" switch: only when it changes whether the invoice is paid (the screen resends the status on every save).
-      const want = [data.paymentStatus, data.status, body.status].find((s) => s === 'paid' || s === 'unpaid');
+      // 1) "Đã đóng" switch: only on an explicit data.paymentStatus, and only when it flips paid-ness.
       if (want) {
         const paid = inv?.status === 'paid' || inv?.status === 'cash';
         if (!inv && want === 'paid') return fail(c, 404, 'INVOICE_NOT_FOUND', 'Phòng này chưa có hoá đơn tháng này.');
@@ -262,27 +267,31 @@ export function registerAdmin(app: Hono<App>): void {
           await applyPaymentStatus(c, room, inv, want, month);
           inv = (await invoiceFor(db, room.id, month))!;
         }
+        const [row] = await loadRooms(c, db, room.house_id, month, room.id);
+        return c.json({ success: true, message: 'Đã lưu thông tin phòng.', invoice: summaryOf(row), data: await detailOf(db, row) });
       }
 
       // 2) Meters: only what was given; an old reading of 0 (or the one already shown) leaves the stored one.
       const stored = await db.prepare(`SELECT electric_old AS eo, electric_new AS en, water_old AS wo, water_new AS wn FROM meter_readings WHERE room_id = ? AND month = ?`)
         .bind(room.id, month).first<{ eo: number; en: number; wo: number; wn: number }>();
       const before = await previousReadings(db, room.id, month);
-      const effOld = { e: (stored?.eo ?? 0) > 0 ? stored!.eo : before.electricOld ?? 0, w: (stored?.wo ?? 0) > 0 ? stored!.wo : before.waterOld ?? 0 };
+      const effOld = { e: effectiveOld(stored ? stored.eo : null, before.electricOld) ?? 0, w: effectiveOld(stored ? stored.wo : null, before.waterOld) ?? 0 };
       const oldVal = (v: number | undefined | null, storedOld: number, eff: number) => (!v || (storedOld === 0 && v === eff) ? storedOld : v);
       const next = {
         eo: oldVal(given.dienCu, stored?.eo ?? 0, effOld.e), en: (given.dienMoi as number | undefined) ?? stored?.en ?? 0,
         wo: oldVal(given.nuocCu, stored?.wo ?? 0, effOld.w), wn: (given.nuocMoi as number | undefined) ?? stored?.wn ?? 0,
       };
-      const oldE = next.eo > 0 ? next.eo : effOld.e, oldW = next.wo > 0 ? next.wo : effOld.w;
+      const oldE = effectiveOld(next.eo, before.electricOld) ?? 0, oldW = effectiveOld(next.wo, before.waterOld) ?? 0;
       if ((next.en > 0 && next.en < oldE) || (next.wn > 0 && next.wn < oldW)) return fail(c, 400, 'METER_INVALID', 'Chỉ số mới không được nhỏ hơn chỉ số cũ.');
       const changed = stored ? next.eo !== stored.eo || next.en !== stored.en || next.wo !== stored.wo || next.wn !== stored.wn : Object.values(next).some((n) => n !== 0);
 
       if (changed) {
         if (inv) assertCanRecompute({ status: inv.status, issued_at: inv.issued_at, month }); // before writing anything
+        // Only the columns that changed are updated, so two tabs editing different fields do not clobber each other.
+        const cols = ([['electric_old', 'eo'], ['electric_new', 'en'], ['water_old', 'wo'], ['water_new', 'wn']] as const).filter(([, k]) => next[k] !== (stored?.[k] ?? 0));
         await db.prepare(
           `INSERT INTO meter_readings (house_id, room_id, month, electric_old, electric_new, water_old, water_new) VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT (room_id, month) DO UPDATE SET electric_old = excluded.electric_old, electric_new = excluded.electric_new, water_old = excluded.water_old, water_new = excluded.water_new`
+           ON CONFLICT (room_id, month) DO UPDATE SET ${cols.map(([col]) => `${col} = excluded.${col}`).join(', ')}`
         ).bind(room.house_id, room.id, month, next.eo, next.en, next.wo, next.wn).run();
         if (inv) await recompute(db, inv.id, { central: c.env.DB });
         else await ensureDraft(db, room.house_id, room.id, month, c.env.DB); // makes the draft (and prices it) when the room has residents
@@ -337,17 +346,22 @@ export function registerAdmin(app: Hono<App>): void {
     await db.batch(statements);
 
     let recomputed = 0;
-    const { results: drafts } = await db.prepare(`SELECT id FROM invoices WHERE house_id = ? AND issued_at IS NULL AND status NOT IN ('paid', 'cash')`).bind(houseId).all<{ id: number }>();
+    const recomputeFailed: string[] = [];
+    const { results: drafts } = await db.prepare(
+      `SELECT i.id, rm.name FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.house_id = ? AND i.issued_at IS NULL AND i.status NOT IN ('paid', 'cash') ORDER BY rm.name`
+    ).bind(houseId).all<{ id: number; name: string }>();
     for (const d of drafts) {
       try {
         await recompute(db, d.id, { central: c.env.DB });
         recomputed++;
       } catch (err) {
-        if (!(err instanceof InvoiceLockedError)) throw err; // a draft marked paid by hand in the meantime stays as it is
+        if (err instanceof InvoiceLockedError) continue; // a draft marked paid by hand in the meantime stays as it is
+        console.warn('[admin] config recompute', houseId, d.id, err);
+        recomputeFailed.push(d.name); // the saved config stays saved; the screen is told which drafts to recheck
       }
     }
     await audit(c, actorOf(c.get('viewer')), 'admin_config_save', houseId, `drafts:${recomputed}`);
-    return c.json({ success: true, config: await loadConfig(db, houseId), recomputed });
+    return c.json({ success: true, config: await loadConfig(db, houseId), recomputed, recomputeFailed });
   };
   app.put('/api/admin/config', saveConfig);
   app.post('/api/admin/config', saveConfig); // the screen posts today

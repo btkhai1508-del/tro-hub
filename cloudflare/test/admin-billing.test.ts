@@ -116,9 +116,48 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       expect((await invoiceOf('LVC', '101', A)).electricity).toBe(175_000);
       // The screen resends the same numbers with every save: nothing changed, so nothing is locked.
       expect((await enter(A, { dienCu: 100, dienMoi: 150 })).status).toBe(200);
-      const open = await enter(A, { paymentStatus: 'unpaid', dienMoi: 170 });
+      expect((await json(await enter(A, { paymentStatus: 'unpaid' }))).invoice).toMatchObject({ status: 'unpaid' });
+      const open = await enter(A, { dienMoi: 170 });
       expect(open.status).toBe(200);
       expect((await json(open)).invoice).toMatchObject({ status: 'unpaid', total: 3_500_000 + 245_000 + 70_000 - 14_000 });
+    });
+
+    it('một lần lưu vừa đổi "đã đóng" vừa sửa số: 400 COMBINED_EDIT, không ghi gì; status cũ không được tính', async () => {
+      await enter(A, { dienCu: 100, dienMoi: 150 });
+      await (await store()).prepare(`UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE month = ?`).bind(A).run();
+      const combined = await enter(A, { paymentStatus: 'unpaid', dienMoi: 170 });
+      expect(combined.status).toBe(400);
+      expect((await json(combined)).errorCode).toBe('COMBINED_EDIT');
+      // A stale screen resends data.status and meter fields: the status is ignored, the paid invoice is locked.
+      const stale = await enter(A, { status: 'unpaid', dienMoi: 170 });
+      expect(stale.status).toBe(409);
+      expect((await json(stale)).errorCode).toBe('INVOICE_LOCKED');
+      const meter = await (await store()).prepare(`SELECT electric_new AS n FROM meter_readings WHERE month = ?`).bind(A).first<any>();
+      expect(meter.n).toBe(150);
+      expect(await invoiceOf('LVC', '101', A)).toMatchObject({ status: 'paid', electricity: 175_000 });
+    });
+
+    it('sửa hai trường từ hai tab: không ghi đè nhau; chỉ số trên 10.000.000 bị từ chối', async () => {
+      await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
+      // Another tab changed water between our read and write: only the electric column is written by us.
+      await (await store()).prepare(`UPDATE meter_readings SET water_new = 30 WHERE month = ?`).bind(A).run();
+      await enter(A, { dienMoi: 160 });
+      const row = await (await store()).prepare(`SELECT electric_new AS en, water_new AS wn FROM meter_readings WHERE month = ?`).bind(A).first<any>();
+      expect(row).toEqual({ en: 160, wn: 30 });
+      const huge = await enter(A, { dienMoi: 10_000_001 });
+      expect(huge.status).toBe(400);
+      expect((await json(huge)).errorCode).toBe('METER_INVALID');
+    });
+
+    it('đồng hồ mới bắt đầu từ 0, chưa có tháng trước: số cũ 0 là số cũ thật, tính 150 kWh; có tháng trước thì giữ luật cũ', async () => {
+      const res = await json(await enter(A, { dienCu: 0, dienMoi: 150, nuocCu: 0, nuocMoi: 10 }));
+      expect(res.invoice.total).toBe(3_500_000 + 150 * 3500 + 10 * 20_000 + 70_000 - 150 * 200);
+      expect(res.data).toMatchObject({ dienUsed: 150, nuocUsed: 10 });
+      const list = (await json(await call(owner, 'GET', `/api/admin/rooms?month=${A}&houseId=LVC`))).rooms[0];
+      expect(list).toMatchObject({ dienCu: 0, dienMoi: 150, dienUsed: 150 });
+      // Next month: old 0 in the row → the earlier month's new reading (150) is the old.
+      const next = await json(await enter(B, { dienMoi: 180 }));
+      expect(next.data).toMatchObject({ dienCu: 150, dienUsed: 30 });
     });
 
     it('paymentStatus paid đánh dấu đã đóng như /api/admin/payment-status', async () => {
@@ -242,6 +281,11 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       const res = await call(owner, 'POST', '/api/admin/config', { houseId: 'LVC', config: { electricPrice: 3600, waterPrice: 21000, services: cfg.services } });
       expect(res.status).toBe(200);
       expect(await getConfig()).toMatchObject({ electricPrice: 3600, waterPrice: 21000 });
+    });
+
+    it('PUT trả recomputeFailed (rỗng khi ổn)', async () => {
+      const res = await json(await call(owner, 'PUT', '/api/admin/config', { houseId: 'LVC', electricPrice: 3600, waterPrice: 20000 }));
+      expect(res).toMatchObject({ success: true, recomputeFailed: [] });
     });
 
     it('dịch vụ sai: 400 SERVICE_INVALID, không lưu gì', async () => {
