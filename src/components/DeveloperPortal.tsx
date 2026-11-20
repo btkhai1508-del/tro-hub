@@ -212,6 +212,7 @@ export function DeveloperPortal() {
         ) : tab === 'storage' ? (
           <>
             <SourceCard />
+            <HouseDeleteModeCard />
             <StorageCard />
           </>
         ) : (
@@ -368,7 +369,7 @@ export function DeveloperPortal() {
         <HouseEditor
           houseId={editHouse}
           onClose={() => { setEditHouse(null); load(); }}
-          onDeleted={(name, when) => { setEditHouse(null); setNotice({ ok: true, text: `${name} sẽ bị xoá hẳn lúc ${d1Time(when)}. Trước đó bạn vẫn tải sao lưu hoặc khôi phục được.` }); load(); }}
+          onDeleted={(name, when) => { setEditHouse(null); setNotice({ ok: true, text: when ? `${name} sẽ bị xoá hẳn lúc ${d1Time(when)}. Trước đó bạn vẫn tải sao lưu hoặc khôi phục được.` : `Đã xoá hẳn ${name}` }); load(); }}
         />
       )}
     </div>
@@ -507,6 +508,61 @@ function SourceCard() {
               {toWorker ? 'Chuyển sang Worker' : 'Quay lại Sheet'}
             </button>
           </div>
+        </div>
+      ) : (
+        <p className="mt-2 px-1 text-[13px] kit-text-secondary">Đang tải…</p>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Chế độ xoá căn: 7-day grace period (default, for production) or immediate (testing only)
+
+function HouseDeleteModeCard() {
+  const [mode, setMode] = useState<'grace' | 'immediate' | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    send<{ mode: 'grace' | 'immediate' }>('/api/dev/house-delete-mode', 'GET').then((d) => {
+      if (d.success) setMode(d.mode);
+      else setNotice({ ok: false, text: d.error || 'Chưa tải được chế độ xoá căn.' });
+    });
+  }, []);
+
+  const choose = async (next: 'grace' | 'immediate') => {
+    if (next === mode) return;
+    if (next === 'immediate' && !window.confirm('Chuyển sang xoá ngay? Căn bị xoá sẽ mất hẳn tức thì, không có thời gian chờ 7 ngày, không sao lưu và không hoàn tác được. Chỉ dùng cho tài khoản thử nghiệm.')) return;
+    setBusy(true);
+    const d = await send<{ mode: 'grace' | 'immediate' }>('/api/dev/house-delete-mode', 'PUT', { mode: next });
+    setBusy(false);
+    if (d.success) {
+      setMode(d.mode);
+      setNotice({ ok: true, text: d.mode === 'immediate' ? 'Đã bật xoá ngay (thử nghiệm).' : 'Đã chuyển về chờ 7 ngày.' });
+    } else setNotice({ ok: false, text: d.error || 'Chưa đổi được chế độ xoá căn.' });
+  };
+
+  return (
+    <section className="liquid-panel mb-4 rounded-[28px] p-3 sm:p-4" aria-label="Chế độ xoá căn">
+      <h2 className="apple-headline kit-text-primary px-1">Chế độ xoá căn</h2>
+      {notice && <p role="status" className={cn('mt-2 rounded-2xl px-3 py-2 text-[13px] font-semibold', notice.ok ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/10 text-rose-700 dark:text-rose-300')}>{notice.text}</p>}
+      {mode ? (
+        <div className="mt-3 space-y-3 px-1">
+          <p className="flex flex-wrap items-center gap-2 text-[13.5px] kit-text-primary">
+            Đang dùng: <Pill tone={mode === 'immediate' ? 'red' : 'green'}>{mode === 'immediate' ? 'Xoá ngay' : 'Chờ 7 ngày'}</Pill>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} aria-pressed={mode === 'immediate'} onClick={() => choose('immediate')} className={cn('min-h-11 rounded-2xl px-3 text-sm font-semibold disabled:opacity-50', mode === 'immediate' ? 'bg-rose-600 text-white' : 'soft-button')}>
+              Xoá ngay (đang thử nghiệm)
+            </button>
+            <button type="button" disabled={busy} aria-pressed={mode === 'grace'} onClick={() => choose('grace')} className={cn('min-h-11 rounded-2xl px-3 text-sm font-semibold disabled:opacity-50', mode === 'grace' ? 'bg-emerald-600 text-white' : 'soft-button')}>
+              Chờ 7 ngày (khuyến nghị khi chạy thật)
+            </button>
+          </div>
+          <p className="text-[12.5px] font-semibold text-rose-600">
+            Xoá ngay không thể hoàn tác và không có thời gian sao lưu: căn, phòng, cư dân, hoá đơn và thu tiền mất hẳn tức thì. Chỉ bật cho tài khoản thử nghiệm.
+          </p>
         </div>
       ) : (
         <p className="mt-2 px-1 text-[13px] kit-text-secondary">Đang tải…</p>
@@ -1497,8 +1553,9 @@ function nextRoomName(floor: number, onFloor: string[], all: Set<string>): strin
   return `${prefix}${pad(n, width)}`;
 }
 
-function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose: () => void; onDeleted: (name: string, deleteAfter: string) => void }) {
+function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose: () => void; onDeleted: (name: string, deleteAfter: string | null) => void }) {
   const [tab, setTab] = useState<'info' | 'rooms'>('rooms');
+  const [immediateDelete, setImmediateDelete] = useState(false);
   const [house, setHouse] = useState<EditHouse | null>(null);
   const [form, setForm] = useState<EditHouse | null>(null);
   const [rooms, setRooms] = useState<EditRoom[]>([]);
@@ -1509,6 +1566,9 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmHouseDelete, setConfirmHouseDelete] = useState(false);
   const catalog = useCatalog();
+  useEffect(() => {
+    send<{ mode: string }>('/api/dev/house-delete-mode', 'GET').then((d) => setImmediateDelete(d.success && d.mode === 'immediate'));
+  }, []);
 
   const load = useCallback(async () => {
     const data = await send<{ house: EditHouse; rooms: EditRoom[] }>(`/api/dev/houses/${encodeURIComponent(houseId)}`, 'GET');
@@ -1569,11 +1629,11 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
     if (!house) return;
     if (!confirmHouseDelete) return setConfirmHouseDelete(true);
     setBusy(true);
-    const data = await send<{ deleteAfter: string }>(`${base}/delete`, 'POST');
+    const data = await send<{ deleteAfter?: string; deleted?: boolean }>(`${base}/delete`, 'POST');
     setBusy(false);
     setConfirmHouseDelete(false);
     if (!data.success) return setNotice({ ok: false, text: data.error || 'Chưa xoá được căn trọ.' });
-    onDeleted(house.name, data.deleteAfter);
+    onDeleted(house.name, data.deleted ? null : data.deleteAfter ?? null);
   };
 
   const saveInfo = () => {
@@ -1648,9 +1708,15 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
           </div>
           <div className="border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
             <p className="apple-headline text-rose-600">Xoá căn trọ</p>
+            {immediateDelete ? (
+              <p className="apple-callout mt-1 font-semibold text-rose-600">
+                Đang ở chế độ xoá ngay (thử nghiệm): căn bị xoá hẳn tức thì, không có thời gian chờ, không sao lưu và không hoàn tác được.
+              </p>
+            ) : (
             <p className="apple-callout kit-text-secondary mt-1">
               Căn chuyển sang <b>chờ xoá</b> trong 7 ngày. Trong thời gian đó bạn tải được bản sao lưu (phòng, cư dân, hoá đơn, thu tiền, thông báo) hoặc khôi phục lại. Hết 7 ngày, mọi dữ liệu của căn bị xoá hẳn và không lấy lại được.
             </p>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1666,7 +1732,7 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
                 disabled={busy}
                 className={cn('min-h-11 rounded-2xl px-4 text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50', confirmHouseDelete ? 'bg-rose-600 text-white' : 'soft-button text-rose-600')}
               >
-                <Trash2 size={15} /> {confirmHouseDelete ? 'Bấm lần nữa để xoá sau 7 ngày' : 'Xoá căn trọ'}
+                <Trash2 size={15} /> {immediateDelete ? (confirmHouseDelete ? 'Bấm lần nữa: xoá ngay, không hoàn tác' : 'Xoá ngay, không hoàn tác') : confirmHouseDelete ? 'Bấm lần nữa để xoá sau 7 ngày' : 'Xoá căn trọ'}
               </button>
             </div>
           </div>

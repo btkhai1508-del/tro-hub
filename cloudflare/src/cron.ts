@@ -10,7 +10,7 @@ import { purgeStaleAttempts } from './loginLimit.ts';
 import { replayPendingDeferred } from './payments/settle.ts';
 import { drainExportQueue } from './sheetExport.ts';
 import { currentMonth, ensureMonthFresh, legacySheet, previousMonth, syncMonthFromSheet } from './sheetSync.ts';
-import { tenantOfOwner } from './tenant/route.ts';
+import { TenantLockedError, tenantOfOwner } from './tenant/route.ts';
 
 async function warn(env: Env, action: string, houseId: string | null, target: string): Promise<void> {
   await env.DB.prepare(`INSERT INTO audit_log (actor, action, house_id, target) VALUES ('system', ?, ?, ?)`)
@@ -48,54 +48,94 @@ export async function syncLegacySheets(env: Env, onlyOwner?: number, strict = fa
 // Children first: foreign keys are on, in D1 and in a landlord's store alike.
 const HOUSE_TABLES = ['house_fee_services', 'house_fee_months', 'house_services', 'payments', 'meter_readings', 'invoices', 'notifications', 'payment_gates', 'residents', 'rooms', 'house_rates'];
 
+export interface PurgeOutcome {
+  /** purged: the store's data is gone; busy: the landlord's store is locked (nothing changed); not_due: restored or no longer due; failed: the store step failed (nothing changed). */
+  status: 'purged' | 'busy' | 'not_due' | 'missing' | 'failed';
+  /** False when a step after the store failed: a warning is in the audit log and the nightly run / reconcile finishes it. */
+  complete: boolean;
+  counts: { rooms: number; residents: number; invoices: number; payments: number };
+}
+
+const NO_COUNTS = { rooms: 0, residents: 0, invoices: 0, payments: 0 };
+
 /**
- * Removes the houses whose grace period is over: the landlord's store first, then the resident index,
- * then the directory (and the staff links that point at it). A later step that fails leaves a warning
- * in the audit log and the rest for the nightly reconcile / next run.
+ * Removes one house for good: the landlord's store first, then the resident index, then the directory
+ * (and the staff links that point at it). Shared by the daily cron (`onlyIfDue`: the grace period must be over,
+ * checked again right before deleting) and the Developer's immediate delete (`force`). A later step that fails
+ * leaves a warning in the audit log and the rest for the nightly reconcile / next run.
  */
-export async function purgeDeletedHouses(env: Env, hooks: { beforeDelete?: (houseId: string) => Promise<void> } = {}): Promise<string[]> {
-  const { results } = await env.DB
-    .prepare(`SELECT house_id, owner_id FROM house_directory WHERE delete_after IS NOT NULL AND delete_after <= datetime('now')`)
-    .all<{ house_id: string; owner_id: number }>();
-  const purged: string[] = [];
-  for (const { house_id: houseId, owner_id: ownerId } of results) {
-    try {
-      if ((await getStorage(env.DB, ownerId)).backend === 'migrating') continue; // retried on the next run
-      const store = await tenantOfOwner(env, ownerId);
-      await hooks.beforeDelete?.(houseId);
-      // The list above may be minutes old: a house restored meanwhile must survive, so look again right before deleting.
+export async function purgeHouse(
+  env: Env,
+  houseId: string,
+  opts: { onlyIfDue?: boolean; beforeDelete?: (houseId: string) => Promise<void> } = {}
+): Promise<PurgeOutcome> {
+  const ownerId = await houseOwner(env.DB, houseId);
+  if (ownerId === null) return { status: 'missing', complete: false, counts: NO_COUNTS };
+  let counts = NO_COUNTS;
+  try {
+    if ((await getStorage(env.DB, ownerId)).backend === 'migrating') return { status: 'busy', complete: false, counts }; // retried on the next run
+    const store = await tenantOfOwner(env, ownerId);
+    await opts.beforeDelete?.(houseId);
+    if (opts.onlyIfDue) {
+      // The list the cron works from may be minutes old: a house restored meanwhile must survive, so look again right before deleting.
       const stillDue = await env.DB
         .prepare(`SELECT 1 FROM house_directory WHERE house_id = ? AND delete_after IS NOT NULL AND delete_after <= datetime('now')`)
         .bind(houseId)
         .first();
-      if (!stillDue) continue;
-      await store.batch([
-        // Children without a house_id first: they are reached through their invoice or room.
-        store.prepare(`DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE house_id = ?)`).bind(houseId),
-        store.prepare(`DELETE FROM room_service_optouts WHERE room_id IN (SELECT id FROM rooms WHERE house_id = ?)`).bind(houseId),
-        ...HOUSE_TABLES.map((t) => store.prepare(`DELETE FROM ${t} WHERE house_id = ?`).bind(houseId)),
-        store.prepare(`DELETE FROM houses WHERE id = ?`).bind(houseId),
-      ]);
-    } catch (err) {
-      console.warn('[cron] purge store', houseId, err);
-      await warn(env, 'house_purge_warning', houseId, `store: ${String((err as Error)?.message ?? err)}`);
-      continue;
+      if (!stillDue) return { status: 'not_due', complete: false, counts };
     }
-    purged.push(houseId);
-    try {
-      await env.DB.prepare(`DELETE FROM resident_index WHERE house_id = ?`).bind(houseId).run();
-    } catch (err) {
-      await warn(env, 'house_purge_warning', houseId, `resident_index: ${String((err as Error)?.message ?? err)}`);
-      continue;
-    }
-    try {
-      await env.DB.prepare(`DELETE FROM staff_houses WHERE house_id = ?`).bind(houseId).run();
-      await removeHouseDir(env.DB, houseId);
-    } catch (err) {
-      await warn(env, 'house_purge_warning', houseId, `directory: ${String((err as Error)?.message ?? err)}`);
-      continue;
-    }
-    await env.DB.prepare(`INSERT INTO audit_log (actor, action, house_id) VALUES ('system', 'house_purged', ?)`).bind(houseId).run().catch(() => {});
+    const n = await store
+      .prepare(
+        `SELECT (SELECT COUNT(*) FROM rooms WHERE house_id = ?1) AS rooms, (SELECT COUNT(*) FROM residents WHERE house_id = ?1) AS residents,
+                (SELECT COUNT(*) FROM invoices WHERE house_id = ?1) AS invoices, (SELECT COUNT(*) FROM payments WHERE house_id = ?1) AS payments`
+      )
+      .bind(houseId)
+      .first<PurgeOutcome['counts']>();
+    if (n) counts = n;
+    await store.batch([
+      // Children without a house_id first: they are reached through their invoice or room.
+      store.prepare(`DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE house_id = ?)`).bind(houseId),
+      store.prepare(`DELETE FROM room_service_optouts WHERE room_id IN (SELECT id FROM rooms WHERE house_id = ?)`).bind(houseId),
+      ...HOUSE_TABLES.map((t) => store.prepare(`DELETE FROM ${t} WHERE house_id = ?`).bind(houseId)),
+      store.prepare(`DELETE FROM houses WHERE id = ?`).bind(houseId),
+    ]);
+  } catch (err) {
+    if (err instanceof TenantLockedError) return { status: 'busy', complete: false, counts };
+    console.warn('[cron] purge store', houseId, err);
+    await warn(env, 'house_purge_warning', houseId, `store: ${String((err as Error)?.message ?? err)}`);
+    return { status: 'failed', complete: false, counts };
+  }
+  // The store is empty now. If a later step fails, make sure the directory row is due so the nightly purge finishes the job.
+  const markDue = () =>
+    env.DB.prepare(`UPDATE house_directory SET status = 'inactive', delete_after = datetime('now') WHERE house_id = ? AND delete_after IS NULL`).bind(houseId).run().catch(() => {});
+  try {
+    await env.DB.prepare(`DELETE FROM resident_index WHERE house_id = ?`).bind(houseId).run();
+  } catch (err) {
+    await warn(env, 'house_purge_warning', houseId, `resident_index: ${String((err as Error)?.message ?? err)}`);
+    await markDue();
+    return { status: 'purged', complete: false, counts };
+  }
+  try {
+    await env.DB.prepare(`DELETE FROM staff_houses WHERE house_id = ?`).bind(houseId).run();
+    await removeHouseDir(env.DB, houseId);
+  } catch (err) {
+    await warn(env, 'house_purge_warning', houseId, `directory: ${String((err as Error)?.message ?? err)}`);
+    await markDue();
+    return { status: 'purged', complete: false, counts };
+  }
+  await env.DB.prepare(`INSERT INTO audit_log (actor, action, house_id) VALUES ('system', 'house_purged', ?)`).bind(houseId).run().catch(() => {});
+  return { status: 'purged', complete: true, counts };
+}
+
+/** Removes the houses whose grace period is over, each through purgeHouse. */
+export async function purgeDeletedHouses(env: Env, hooks: { beforeDelete?: (houseId: string) => Promise<void> } = {}): Promise<string[]> {
+  const { results } = await env.DB
+    .prepare(`SELECT house_id FROM house_directory WHERE delete_after IS NOT NULL AND delete_after <= datetime('now')`)
+    .all<{ house_id: string }>();
+  const purged: string[] = [];
+  for (const { house_id: houseId } of results) {
+    const r = await purgeHouse(env, houseId, { onlyIfDue: true, beforeDelete: hooks.beforeDelete });
+    if (r.status === 'purged') purged.push(houseId);
   }
   return purged;
 }

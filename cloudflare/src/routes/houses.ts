@@ -12,8 +12,9 @@ import {
   actorOf, audit, developerOnly, fail, isDeveloper, isOwner, requireHouse, staffOnly, type App, type Env,
 } from '../app.ts';
 import {
-  allocateHousePayNo, houseDir, houseOwner, removeHouseDir, setHouseCounts, upsertHouseDir, type HouseDir,
+  allocateHousePayNo, getStorage, houseDir, houseOwner, removeHouseDir, setHouseCounts, upsertHouseDir, type HouseDir,
 } from '../central/directory.ts';
+import { purgeHouse } from '../cron.ts';
 import { TenantLockedError, tenantFor, tenantOfOwner } from '../tenant/route.ts';
 import type { TenantDb, TenantStatement } from '../tenant/db.ts';
 import type { SqlValue } from '../tenant/schema.ts';
@@ -25,6 +26,12 @@ const BANK_FIELDS = ['bank_name', 'bank_code', 'bank_account_no', 'bank_account_
 const RATE_FIELDS = ['electricity_per_kwh', 'water_per_m3', 'trash', 'internet', 'parking'] as const;
 const MAX_ROOMS_PER_HOUSE = 500;
 const DELETE_GRACE_DAYS = 7;
+
+/** settings.house_delete_mode; anything but 'immediate' (including a missing row) means the 7-day grace period. */
+async function houseDeleteMode(db: D1Database): Promise<'grace' | 'immediate'> {
+  const row = await db.prepare(`SELECT value FROM settings WHERE key = 'house_delete_mode'`).first<{ value: string }>();
+  return row?.value === 'immediate' ? 'immediate' : 'grace';
+}
 
 // ---------------------------------------------------------------------------
 // Tiện ích: the admin tools a house pays for, priced per room per month. Core tools are always on.
@@ -669,7 +676,21 @@ export function registerHouses(app: Hono<App>): void {
     const viewer = c.get('viewer');
     const houseId = c.req.param('houseId') ?? '';
     const db = await tenantFor(c, houseId);
+    const immediate = (await houseDeleteMode(c.env.DB)) === 'immediate';
+    const busy = () => fail(c, 409, 'HOUSE_BUSY', 'Dữ liệu của chủ trọ đang được chuyển hoặc khoá. Thử xoá lại sau ít phút.');
+    // A migrating landlord's reads may come from a stale copy, so the lock is checked before looking for the house.
+    if (immediate && (await getStorage(c.env.DB, (await houseOwner(c.env.DB, houseId)) ?? -1)).backend === 'migrating') return busy();
     if (!(await devHouse(db, houseId))) return fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy căn trọ.');
+    if (immediate) {
+      // Testing mode: remove it for good, now, through the same code as the daily purge.
+      const r = await purgeHouse(c.env, houseId);
+      if (r.status === 'busy') return busy();
+      if (r.status === 'missing') return fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy căn trọ.');
+      if (r.status !== 'purged') return fail(c, 503, 'HOUSE_DELETE_FAILED', 'Không xoá được căn trọ, dữ liệu vẫn còn nguyên. Thử lại sau.');
+      const { rooms, residents, invoices, payments } = r.counts;
+      await audit(c, actorOf(viewer), 'house_delete_now', houseId, `rooms:${rooms} residents:${residents} invoices:${invoices} payments:${payments}${r.complete ? '' : ' (còn bước dọn dẹp chờ cron)'}`);
+      return c.json({ success: true, deleted: true });
+    }
     const old = await houseDir(c.env.DB, houseId);
     const row = await c.env.DB.prepare(
       `UPDATE house_directory SET status = 'inactive', delete_after = datetime('now', '+${DELETE_GRACE_DAYS} days') WHERE house_id = ? RETURNING delete_after`
@@ -684,6 +705,24 @@ export function registerHouses(app: Hono<App>): void {
     }
     await audit(c, actorOf(viewer), 'house_delete_scheduled', houseId, row!.delete_after);
     return c.json({ success: true, deleteAfter: row!.delete_after });
+  });
+
+  /** How a Developer's house delete behaves: 'grace' (default, 7 days) or 'immediate' (testing only). */
+  app.get('/api/dev/house-delete-mode', async (c) =>
+    c.json({ success: true, mode: await houseDeleteMode(c.env.DB), graceDays: DELETE_GRACE_DAYS })
+  );
+
+  app.put('/api/dev/house-delete-mode', async (c) => {
+    const body = await c.req.json<{ mode?: unknown }>().catch(() => ({}) as { mode?: unknown });
+    const mode = body.mode;
+    if (mode !== 'grace' && mode !== 'immediate') return fail(c, 400, 'INVALID_MODE', "Chế độ phải là 'grace' hoặc 'immediate'.");
+    const old = await houseDeleteMode(c.env.DB);
+    await c.env.DB.prepare(
+      `INSERT INTO settings (key, value, updated_at) VALUES ('house_delete_mode', ?, datetime('now'))
+       ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+    ).bind(mode).run();
+    await audit(c, actorOf(c.get('viewer')), 'house_delete_mode', null, `${old}→${mode}`);
+    return c.json({ success: true, mode, graceDays: DELETE_GRACE_DAYS });
   });
 
   app.post('/api/dev/houses/:houseId/restore', async (c) => {

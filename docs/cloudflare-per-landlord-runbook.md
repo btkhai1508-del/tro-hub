@@ -183,3 +183,12 @@ Tính năng tắt mặc định và không đổi gì ở bản đang chạy: ch
 **Khôi phục tiền:** SePay không gửi lại IPN khi Worker đã trả 200. Mọi IPN hợp lệ được lưu trước khi xử lý (`unassigned_payments` cho tới khi gán được căn; mã `bh-sbx-…` là sandbox, `bh-…` là thật). IPN lỗi số tiền (không nguyên dương, quá 100 tỷ) bị bỏ qua và ghi audit `bankhub_ipn_bad_amount`. Giao dịch nghi sót: đối chiếu bằng `GET /v1/transaction` của Bank Hub. `BANKHUB_BASE` phải là https trên `*.sepay.vn`, sai thì tính năng coi như chưa cấu hình.
 
 **Tắt:** xoá `BANKHUB_IPN_KEY` (`wrangler secret delete BANKHUB_IPN_KEY`): `/api/bankhub/ipn` và `/api/bankhub/events` từ chối mọi yêu cầu ngay. Xoá thêm `BANKHUB_CLIENT_ID` / `BANKHUB_CLIENT_SECRET` để các nút Developer ngừng gọi SePay. Dữ liệu đã ghi (tiền trọ, `sepay_events` mã `bh-…`) giữ nguyên.
+
+## Chế độ xoá căn
+
+Cài đặt `settings.house_delete_mode`, chỉ Developer đổi được (tab Lưu trữ, thẻ "Chế độ xoá căn", hoặc `GET/PUT /api/dev/house-delete-mode`, mỗi lần đổi ghi audit `house_delete_mode` cũ→mới).
+
+- `grace` (mặc định, cũng là giá trị khi chưa có dòng nào): xoá căn chuyển sang chờ 7 ngày, có sao lưu và khôi phục, cron hằng ngày xoá hẳn. **Chạy thật luôn để chế độ này.**
+- `immediate`: `POST /api/dev/houses/:houseId/delete` xoá hẳn ngay (cùng hàm `purgeHouse` với cron), trả `{success, deleted: true}`, audit `house_delete_now` kèm số phòng/cư dân/hoá đơn/thu tiền đã xoá. Không sao lưu, không hoàn tác. Chỉ dùng cho tài khoản thử nghiệm. Nếu kho của chủ trọ đang chuyển/khoá thì trả 409 `HOUSE_BUSY`, không xoá gì. Các căn đang chờ xoá từ trước không bị đụng, cron vẫn xử lý.
+
+Dọn tài khoản thử: bật `immediate`, xoá từng căn, rồi bấm "Xoá chủ trọ" (chủ trọ không còn căn và chưa có hoá đơn phí). Xong việc thì chuyển lại `grace`.
