@@ -44,3 +44,9 @@ export function effectiveStatus(status: InvoiceStatus, total: number, bankReceiv
   if (status === 'paid' || status === 'cash') return status;
   return bankReceived + deferred >= total ? 'paid' : status;
 }
+
+/** Bank money already booked in the store for one invoice. */
+export async function bankReceived(tenant: TenantDb, invoiceId: number): Promise<number> {
+  const row = await tenant.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(invoiceId).first<{ paid: number }>();
+  return row?.paid ?? 0;
+}
