@@ -9,6 +9,7 @@ import { registerHouses } from './routes/houses.ts';
 import { registerPeople } from './routes/people.ts';
 import { registerRent } from './routes/rent.ts';
 import { registerIntegrations } from './routes/integrations.ts';
+import { registerAdmin } from './routes/admin.ts';
 import { registerBilling } from './routes/billing.ts';
 import { registerSepay } from './routes/sepay.ts';
 import { registerStorage } from './routes/storage.ts';
@@ -31,6 +32,7 @@ registerIntegrations(app);
 registerHouses(app);
 registerPeople(app);
 registerRent(app);
+registerAdmin(app);
 registerBilling(app);
 registerSepay(app);
 registerStorage(app); // after registerHouses: /api/dev/* is Developer-only there
