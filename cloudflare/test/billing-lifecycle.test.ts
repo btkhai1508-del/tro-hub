@@ -502,3 +502,70 @@ describe.each(BACKENDS)('vòng sửa lỗi sau review [%s]', (backend) => {
     expect((await db.prepare(`SELECT issued_at FROM invoices WHERE room_id = 3 AND month = '2026-11'`).first<{ issued_at: string }>())!.issued_at).toBe(first);
   });
 });
+
+describe.each(BACKENDS)('vòng sửa lỗi 2 [%s]', (backend) => {
+  beforeEach(async () => {
+    await seedWorld(backend);
+    await e.DB.prepare(`DELETE FROM sepay_events`).run();
+    await e.DB.prepare(`DELETE FROM settings WHERE key LIKE 'legacy_sync:%'`).run();
+    await e.DB.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('legacy_sheet_id', 'S1'), ('legacy_sheet_houses', 'LVC')`).run();
+  });
+
+  const watch = () => {
+    const calls: string[] = [];
+    const real = globalThis.fetch;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (/google\.com/.test(url)) {
+        calls.push(url);
+        if (url.includes('/export')) return new Response(['T', 'Số phòng,a,b', 'u', 'LVC-101,10,20,,1,3,,0,0,"9.000.000 đ",,,,,,"9.000.000 đ"'].join('\n'));
+        return new Response(`{name: "01/2099", pageUrl: "https://docs.google.com/x?gid=777"}`);
+      }
+      return real(input, init);
+    });
+    return calls;
+  };
+
+  it('chế độ worker: không đọc Sheet, nháp giữ nguyên (ensureMonthFresh, syncMonthFromSheet, cron)', async () => {
+    const { ensureMonthFresh, syncMonthFromSheet } = await import('../src/sheetSync.ts');
+    const { syncLegacySheets } = await import('../src/cron.ts');
+    await setSource('worker');
+    await createDrafts(e, OWNER, M);
+    const before = await invoiceOf('LVC', '101');
+    const calls = watch();
+    const db = await store();
+    expect(await ensureMonthFresh(e.DB, db, M, 0)).toBeNull();
+    expect((await syncMonthFromSheet(e.DB, db, M)).invoices).toBe(0);
+    await syncLegacySheets(e);
+    expect(calls).toEqual([]);
+    expect(await invoiceOf('LVC', '101')).toEqual(before);
+    expect(before.issued_at).toBeNull();
+  });
+
+  it('chế độ sheet: vẫn đọc Sheet như cũ', async () => {
+    const { syncMonthFromSheet } = await import('../src/sheetSync.ts');
+    await setSource('sheet');
+    const calls = watch();
+    const db = await store();
+    await db.prepare(`INSERT INTO invoices (house_id, room_id, month, total) VALUES ('LVC', 3, ?, 1)`).bind(M).run();
+    expect((await syncMonthFromSheet(e.DB, db, M)).invoices).toBe(1);
+    expect(calls.length).toBeGreaterThan(0);
+    expect(await invoiceOf('LVC', '101')).toMatchObject({ total: 9_000_000 });
+  });
+
+  it('phát hành: status_by = issue; sự kiện replaying đã ghi tiền không bị đếm hai lần', async () => {
+    await setSource('worker');
+    await createDrafts(e, OWNER, M);
+    await settleRent(e, OWNER, 'LVC', '101', M, transfer(2_000_000), 'RP1');
+    await e.DB.prepare(
+      `INSERT INTO sepay_events (sepay_id, kind, amount, content, house_id, room, month, owner_id, status) VALUES ('RP1', 'rent', 2000000, 'x', 'LVC', '101', ?, 1, 'replaying')`
+    ).bind(M).run();
+    await issueMonth(e, 'LVC', M, true);
+    expect(await invoiceOf('LVC', '101')).toMatchObject({ status: 'unpaid' }); // 2.000.000 counted once, total 3.570.000
+    // a second landlord-side payment completes it on a new draft
+    await createDrafts(e, OWNER, '2099-02');
+    await settleRent(e, OWNER, 'LVC', '101', '2099-02', transfer(3_570_000), 'RP2');
+    await issueMonth(e, 'LVC', '2099-02', true);
+    expect(await invoiceOf('LVC', '101', '2099-02')).toMatchObject({ status: 'paid', status_by: 'issue' });
+  });
+});

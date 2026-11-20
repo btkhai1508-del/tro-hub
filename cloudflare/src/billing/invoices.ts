@@ -6,7 +6,7 @@
  */
 import type { Env } from '../app.ts';
 import { houseOwner, ownerHouses } from '../central/directory.ts';
-import { bankReceived, deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
+import { bankReceived, deferredByRoom, eventReference, type InvoiceStatus } from '../central/deferred.ts';
 import { gateStatement } from '../routes/rent.ts';
 import { currentMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -184,7 +184,7 @@ async function draftFor(db: TenantDb, houseId: string, roomId: number, month: st
     // Never leave a zero-total shell behind: remove it so the next run builds the draft again.
     await db.batch([
       db.prepare(`DELETE FROM invoice_lines WHERE invoice_id = ?`).bind(row!.id),
-      db.prepare(`DELETE FROM invoices WHERE id = ? AND issued_at IS NULL`).bind(row!.id),
+      db.prepare(`DELETE FROM invoices WHERE id = ? AND issued_at IS NULL AND NOT EXISTS (SELECT 1 FROM payments WHERE invoice_id = invoices.id)`).bind(row!.id),
     ]).catch(() => {});
     throw err;
   }
@@ -241,30 +241,39 @@ export async function issueMonth(env: Env, houseId: string, month: string, force
   if (!drafts.length || (!force && missingMeters.length)) return { issued: 0, missingMeters };
 
   // 1) Recompute every draft first (a draft keeps its status; a failure here changes nothing visible).
-  const waiting = await deferredByRoom(env.DB, houseId, month, db);
   for (const d of drafts) {
     // A draft a manager already marked paid by hand is locked: it is issued as it is.
     await recompute(db, d.id, { central: env.DB, allowPast: true }).catch((err) => { if (!(err instanceof InvoiceLockedError)) throw err; });
   }
-  // 2) One atomic batch: every invoice gets issued_at together with its status (bank money booked + deferred
-  //    money covering the total -> paid, evaluated inside the statement so a payment booked meanwhile counts),
-  //    and the gate opens. There is no moment where a visible invoice has a stale status.
-  await db.batch([
-    ...drafts.map((d) =>
-      db.prepare(
-        `UPDATE invoices SET issued_at = datetime('now'),
-           status = CASE WHEN status NOT IN ('paid', 'cash')
-                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 > 0
-                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 >= total
-                     THEN 'paid' ELSE status END,
-           paid_at = CASE WHEN status NOT IN ('paid', 'cash')
-                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 > 0
-                          AND (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank') + ?1 >= total
-                     THEN COALESCE(paid_at, datetime('now')) ELSE paid_at END
-         WHERE id = ?2 AND issued_at IS NULL`
-      ).bind(waiting.get(d.name) ?? 0, d.id)
-    ),
-    gateStatement(db, houseId, month, 'START', 'issue'),
-  ]);
+  // 2) One atomic batch: every invoice gets issued_at together with its status and the gate opens, so there is no
+  //    moment where a visible invoice has a stale status. "Covered" = bank money booked (read live inside the
+  //    statement) + SePay events still waiting centrally. A tenant batch cannot read central sepay_events, so the open
+  //    events are read here, right before the batch, and each one is counted only while its payment row `sepay-<id>`
+  //    is NOT in payments (checked inside the statement, like deferredByRoom): a replay that books it meanwhile
+  //    cannot be counted twice.
+  //    Not covered: a draft created after the SELECT above stays a draft after START; ensureDraftForRoom / the cron
+  //    pick it up on their next run and the next issueMonth issues it.
+  const statements: ReturnType<TenantDb['prepare']>[] = [];
+  for (const d of drafts) {
+    const { results: events } = await env.DB.prepare(
+      `SELECT sepay_id, amount FROM sepay_events WHERE house_id = ? AND month = ? AND room = ? AND status IN ('deferred', 'replaying') AND kind = 'rent'`
+    ).bind(houseId, month, d.name).all<{ sepay_id: string; amount: number }>();
+    const params: (string | number)[] = [];
+    // The parameters are pushed in the textual order of the statement below.
+    const received = () => {
+      params.push(...events.flatMap((ev) => [eventReference(ev.sepay_id), ev.amount ?? 0]));
+      return `((SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = invoices.id AND method = 'bank')` +
+        events.map(() => ` + (CASE WHEN NOT EXISTS (SELECT 1 FROM payments WHERE reference = ?) THEN ? ELSE 0 END)`).join('') + `)`;
+    };
+    const covered = () => `status NOT IN ('paid', 'cash') AND ${received()} > 0 AND ${received()} >= total`;
+    const sql = `UPDATE invoices SET issued_at = datetime('now'),
+           status = CASE WHEN ${covered()} THEN 'paid' ELSE status END,
+           paid_at = CASE WHEN ${covered()} THEN COALESCE(paid_at, datetime('now')) ELSE paid_at END,
+           status_by = CASE WHEN ${covered()} THEN 'issue' ELSE status_by END
+         WHERE id = ? AND issued_at IS NULL`;
+    params.push(d.id);
+    statements.push(db.prepare(sql).bind(...params));
+  }
+  await db.batch([...statements, gateStatement(db, houseId, month, 'START', 'issue')]);
   return { issued: drafts.length, missingMeters };
 }

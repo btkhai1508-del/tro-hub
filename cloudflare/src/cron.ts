@@ -17,6 +17,7 @@ async function warn(env: Env, action: string, houseId: string | null, target: st
 
 /** Re-reads this and last month from the old Sheet into the store of every landlord that owns one of its houses. */
 export async function syncLegacySheets(env: Env, onlyOwner?: number): Promise<void> {
+  if (await isWorkerSource(env.DB)) return; // the Worker owns the invoices: no Sheet read
   const legacy = await legacySheet(env.DB);
   if (!legacy) return;
   const owners = new Set<number>();

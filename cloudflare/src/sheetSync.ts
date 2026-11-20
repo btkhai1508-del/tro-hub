@@ -9,6 +9,7 @@
  */
 
 import { isReadOnly, tenantLabel, type TenantDb, type TenantStatement } from './tenant/db.ts';
+import { isWorkerSource } from './billing/source.ts';
 
 export const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzQXCBcLJIE969ciS6YFlgZ37vkb-ec3w81Yr9uXXuWZAifVBa_2ewoeQUtk6rsYv62/exec';
@@ -121,6 +122,7 @@ export interface SyncResult { month: string; tab: boolean; invoices: number; ski
  */
 export async function syncMonthFromSheet(central: D1Database, tenant: TenantDb, month: string): Promise<SyncResult> {
   const result: SyncResult = { month, tab: false, invoices: 0, skippedRooms: [] };
+  if (await isWorkerSource(central)) return result; // the Worker owns the invoices: the Sheet is never read or written back
   const legacy = await legacySheet(central);
   if (!legacy) return result;
   const marks = legacy.houses.map(() => '?').join(',');
@@ -198,6 +200,7 @@ const syncing = new Map<string, Promise<SyncResult | null>>();
  */
 export async function ensureMonthFresh(central: D1Database, tenant: TenantDb, month: string, maxAgeMs = 60_000): Promise<SyncResult | null> {
   if (isReadOnly(tenant)) return null;
+  if (await isWorkerSource(central)) return null;
   const last = await central.prepare(`SELECT value FROM settings WHERE key = ?`).bind(`legacy_sync:${month}`).first<{ value: string }>();
   if (last && Date.now() - Date.parse(last.value) < maxAgeMs) return null;
   // One job per landlord's database and month: another landlord's no-op read must not stand in for this one.
