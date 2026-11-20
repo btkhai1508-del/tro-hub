@@ -319,6 +319,47 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
     });
   });
 
+  describe('chuyển công tắc sang worker', () => {
+    const put = async (body: Record<string, unknown>) => call(await login(PHONES.developer), 'PUT', '/api/dev/source', body);
+    beforeEach(async () => {
+      await setting('source_of_truth', 'sheet');
+      (e as any).ZALO_APP_SECRET = 'test-zalo-secret';
+    });
+
+    it('lần đọc Sheet cuối lỗi: 409 SYNC_FAILED, công tắc giữ sheet, có audit', async () => {
+      await setting('legacy_sheet_id', 'SHEET_BROKEN');
+      mockScript();
+      const res = await put({ source: 'worker' });
+      expect(res.status).toBe(409);
+      expect((await json(res)).errorCode).toBe('SYNC_FAILED');
+      expect((await e.DB.prepare(`SELECT value FROM settings WHERE key = 'source_of_truth'`).first<any>()).value).toBe('sheet');
+      expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'source_sync_failed'`).first<any>()).n).toBe(1);
+    });
+
+    it('lần đọc cuối chạy được (tải trang tab của Sheet): chuyển được và ghi audit', async () => {
+      await setting('legacy_sheet_id', 'SHEET_OK');
+      const seen: string[] = [];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+        seen.push(String(input instanceof Request ? input.url : input));
+        return new Response('<html></html>');
+      });
+      const res = await put({ source: 'worker' });
+      expect(res.status).toBe(200);
+      expect(seen.some((u) => u.includes('docs.google.com/spreadsheets/d/SHEET_OK'))).toBe(true);
+      expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM audit_log WHERE action = 'source_final_sync_ok'`).first<any>()).n).toBe(1);
+    });
+  });
+
+  describe('đăng ký công khai', () => {
+    it('ở sheet: POST /api/auth/register trả 404 và không ghi gì', async () => {
+      await setting('source_of_truth', 'sheet');
+      const before = (await e.DB.prepare(`SELECT COUNT(*) AS n FROM resident_index`).first<any>()).n;
+      const res = await api('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'A', phone: '0900000888', password: 'secret1', roomNumber: '101', houseId: 'LVC' }) });
+      expect(res.status).toBe(404);
+      expect((await e.DB.prepare(`SELECT COUNT(*) AS n FROM resident_index`).first<any>()).n).toBe(before);
+    });
+  });
+
   describe('chuyển công tắc về sheet', () => {
     it('từ chối khi còn dòng chờ, cho phép khi đã gửi hoặc bỏ cuộc (5 lần)', async () => {
       const dev = await login(PHONES.developer);

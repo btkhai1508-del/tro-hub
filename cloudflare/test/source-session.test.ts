@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../src/app.ts';
 import { tenantOfOwner } from '../src/tenant/route.ts';
 import { api, BACKENDS, login, PHONES, seedWorld } from './helpers.ts';
@@ -106,6 +106,7 @@ describe.each(BACKENDS)('công tắc nguồn dữ liệu [%s]', (backend) => {
 
   it('về sheet trả workerOnlyResidents: cư dân tạo sau lúc bật worker ở các nhà còn Sheet cũ', async () => {
     await e.DB.prepare(`INSERT INTO settings (key, value) VALUES ('legacy_sheet_id', 'abc'), ('legacy_sheet_houses', 'TRUNG_KIM,LVC')`).run();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('<html></html>')); // the final Sheet sync before the switch
     const db = await store();
     await db.prepare(`UPDATE residents SET created_at = '2020-01-01 00:00:00'`).run();
     const res0 = await putSource('worker', developer);
@@ -118,6 +119,7 @@ describe.each(BACKENDS)('công tắc nguồn dữ liệu [%s]', (backend) => {
     const res = await putSource('sheet', developer);
     expect(res.status).toBe(200);
     expect(((await res.json()) as any).workerOnlyResidents).toBe(1);
+    vi.restoreAllMocks();
   });
 });
 

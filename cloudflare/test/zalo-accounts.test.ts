@@ -65,6 +65,7 @@ describe.each(BACKENDS)('đăng nhập Zalo, đăng ký, duyệt, hồ sơ (%s)'
 
   beforeEach(async () => {
     await seedWorld(backend);
+    await e.DB.prepare(`UPDATE settings SET value = 'worker' WHERE key = 'source_of_truth'`).run(); // register is a worker-mode route
     (e as any).ZALO_APP_SECRET = SECRET;
     owner = await login(PHONES.owner);
     manager = await login(PHONES.manager);

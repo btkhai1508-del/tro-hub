@@ -8,7 +8,7 @@ import { isWorkerSource } from './billing/source.ts';
 import { allHouses, getStorage, houseOwner, removeHouseDir, setHouseCounts } from './central/directory.ts';
 import { replayPendingDeferred } from './payments/settle.ts';
 import { drainExportQueue } from './sheetExport.ts';
-import { currentMonth, ensureMonthFresh, legacySheet, previousMonth } from './sheetSync.ts';
+import { currentMonth, ensureMonthFresh, legacySheet, previousMonth, syncMonthFromSheet } from './sheetSync.ts';
 import { tenantOfOwner } from './tenant/route.ts';
 
 async function warn(env: Env, action: string, houseId: string | null, target: string): Promise<void> {
@@ -17,7 +17,7 @@ async function warn(env: Env, action: string, houseId: string | null, target: st
 }
 
 /** Re-reads this and last month from the old Sheet into the store of every landlord that owns one of its houses. */
-export async function syncLegacySheets(env: Env, onlyOwner?: number): Promise<void> {
+export async function syncLegacySheets(env: Env, onlyOwner?: number, strict = false): Promise<void> {
   if (await isWorkerSource(env.DB)) return; // the Worker owns the invoices: no Sheet read
   const legacy = await legacySheet(env.DB);
   if (!legacy) return;
@@ -32,8 +32,13 @@ export async function syncLegacySheets(env: Env, onlyOwner?: number): Promise<vo
     try {
       if ((await getStorage(env.DB, ownerId)).backend === 'migrating') continue;
       const tenant = await tenantOfOwner(env, ownerId);
-      for (const m of [month, previousMonth(month)]) await ensureMonthFresh(env.DB, tenant, m, 0);
+      // strict (the final sync before the switch to worker): a read failure must surface, not be swallowed.
+      for (const m of [month, previousMonth(month)]) {
+        if (strict) await syncMonthFromSheet(env.DB, tenant, m);
+        else await ensureMonthFresh(env.DB, tenant, m, 0);
+      }
     } catch (err) {
+      if (strict) throw err;
       console.warn('[cron] sheet sync', ownerId, err);
     }
   }

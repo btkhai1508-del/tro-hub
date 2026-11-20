@@ -241,13 +241,9 @@ WHERE h.id IN ('TRUNG_KIM', 'LVC');
 
 UPDATE houses SET actual_electric_price = 3300 WHERE id IN ('TRUNG_KIM', 'LVC');
 
--- Existing invoices: an earlier month is issued; the current month (Vietnam time) is issued only when
--- its payment gate is START, otherwise it stays a draft (issued_at NULL).
-UPDATE invoices SET issued_at = created_at
-WHERE issued_at IS NULL AND (
-  month < strftime('%Y-%m', 'now', '+7 hours')
-  OR (month = strftime('%Y-%m', 'now', '+7 hours')
-      AND EXISTS (SELECT 1 FROM payment_gates g WHERE g.house_id = invoices.house_id AND g.month = invoices.month AND g.value = 'START'))
-);
+-- Existing invoices: every one is already visible to residents today (the payment gate only controls paying), so all of
+-- them count as issued. The gate rule (a current-month invoice is issued only when its gate is START) applies to
+-- drafts the Worker creates after the switch, not to this backfill.
+UPDATE invoices SET issued_at = created_at WHERE issued_at IS NULL;
 `,
 ];

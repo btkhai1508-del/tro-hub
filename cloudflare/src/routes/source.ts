@@ -4,6 +4,7 @@
  * the export queue still holds work the Sheet has not received.
  */
 import type { Hono } from 'hono';
+import { syncLegacySheets } from '../cron.ts';
 import { requeueFailed } from '../sheetExport.ts';
 import { actorOf, audit, developerOnly, fail, type App } from '../app.ts';
 import { houseOwner } from '../central/directory.ts';
@@ -49,6 +50,16 @@ export function registerSource(app: Hono<App>): void {
     if (next === 'worker' && current !== 'worker' && !c.env.ZALO_APP_SECRET)
       return fail(c, 409, 'ZALO_NOT_CONFIGURED', 'Chưa thêm khoá bí mật Zalo vào Worker. Thêm ZALO_APP_SECRET rồi bật lại.');
 
+    // Last read of the Sheet: whatever the landlord typed since the previous cron tick is imported before the Sheet becomes write-only.
+    if (next === 'worker' && current !== 'worker') {
+      try {
+        await syncLegacySheets(c.env, undefined, true);
+      } catch (err) {
+        await audit(c, actorOf(c.get('viewer')), 'source_sync_failed', null, String((err as Error)?.message ?? err).slice(0, 300));
+        return fail(c, 409, 'SYNC_FAILED', 'Chưa đọc được lần cuối từ Google Sheet nên chưa chuyển sang Worker. Kiểm tra Sheet rồi thử lại.');
+      }
+    }
+
     if (next === 'sheet' && current === 'worker') {
       const pending = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sheet_export_queue WHERE done_at IS NULL AND attempts < 5`).first<{ n: number }>();
       if (pending?.n)
@@ -63,6 +74,7 @@ export function registerSource(app: Hono<App>): void {
     const workerOnly = next === 'sheet' && current === 'worker' ? await workerOnlyResidents(c.env) : 0;
     await setSource(c.env.DB, next);
     await audit(c, actorOf(c.get('viewer')), 'source_set', null, next);
+    if (next === 'worker' && current !== 'worker') await audit(c, actorOf(c.get('viewer')), 'source_final_sync_ok', null, 'sheet');
     return c.json({ success: true, source: next, workerOnlyResidents: workerOnly });
   });
 

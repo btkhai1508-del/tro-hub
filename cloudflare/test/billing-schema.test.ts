@@ -100,7 +100,7 @@ describe('dữ liệu ban đầu của 0022', () => {
     await DB.prepare(`UPDATE settings SET value = 'sheet' WHERE key = 'source_of_truth'`).run();
   });
 
-  it('hoá đơn cũ: tháng trước và tháng đang START đã phát hành, còn lại nháp', async () => {
+  it('hoá đơn cũ: tất cả đã phát hành (không có nháp từ bước điền lại)', async () => {
     const cur = (await DB.prepare(`SELECT strftime('%Y-%m', 'now', '+7 hours') AS m`).first<{ m: string }>())!.m;
     const prev = (await DB.prepare(`SELECT strftime('%Y-%m', 'now', '+7 hours', 'start of month', '-1 month') AS m`).first<{ m: string }>())!.m;
     await DB.batch([
@@ -121,8 +121,8 @@ describe('dữ liệu ban đầu của 0022', () => {
     expect(got).toEqual([
       { id: 101, issued_at: '2026-01-05 00:00:00' }, // earlier month
       { id: 102, issued_at: '2026-02-05 00:00:00' }, // current month, gate START
-      { id: 103, issued_at: null }, // current month, gate STOP
-      { id: 104, issued_at: null }, // current month, no gate row
+      { id: 103, issued_at: '2026-03-05 00:00:00' }, // current month, gate STOP: still visible, as today
+      { id: 104, issued_at: '2026-04-05 00:00:00' }, // current month, no gate row
     ]);
   });
 });

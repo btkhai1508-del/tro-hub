@@ -9,6 +9,7 @@
  */
 import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
+import { isWorkerSource } from '../billing/source.ts';
 import { ensureDraftForRoom } from '../billing/invoices.ts';
 import { encryptText, hashCccd } from '../cccd.ts';
 import { allHouses, houseDir, PhoneTakenError, releaseResident, reserveResident, residentRoute } from '../central/directory.ts';
@@ -81,6 +82,8 @@ export function registerTenantAccounts(app: Hono<App>): void {
   // Registration: public, always pending until staff approve.
   // -------------------------------------------------------------------------
   app.post('/api/auth/register', async (c) => {
+    // Public and unauthenticated: while the Sheet owns the data this route does not exist (Express registers into the Sheet).
+    if (!(await isWorkerSource(c.env.DB))) return fail(c, 404, 'NOT_FOUND', 'Không tìm thấy.');
     const body = await c.req
       .json<{ name?: string; phone?: string; email?: string; gender?: string; password?: string; roomNumber?: string; roomId?: number; houseId?: string }>()
       .catch(() => ({}) as Record<string, never>);
