@@ -61,6 +61,9 @@ async function seedExtras() {
     DB.prepare(`INSERT INTO payment_gates (house_id, month, value, updated_by) VALUES ('TRUNG_KIM', '2026-11', 'STOP', NULL), ('LVC', '2026-11', 'START', 'staff:1'), ('NTTD', '2026-11', 'START', NULL)`),
     DB.prepare(`INSERT INTO invoices (id, house_id, room_id, month, total) VALUES (801, 'NTTD', 5, '2026-10', 7)`),
     DB.prepare(`INSERT INTO house_services (id, house_id, name, price, per, max_qty, sheet_col, sort) VALUES (900, 'NTTD', 'Rác – đặc biệt', 1, 'room', NULL, NULL, 0)`),
+    DB.prepare(`INSERT INTO house_fee_months (house_id, month, electricity_per_kwh, water_per_m3) VALUES ('TRUNG_KIM', '2026-11', 3500, ?), ('NTTD', '2026-11', 1, 2)`).bind(MAX),
+    DB.prepare(`INSERT INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, sheet_col, active, sort) VALUES
+      ('TRUNG_KIM', '2026-11', 1, 'Rác – đặc biệt', ?, 'room', NULL, 'K', 1, 0), ('NTTD', '2026-11', 900, 'Internet', 1, 'person', 2, NULL, 0, 1)`).bind(MAX),
     DB.prepare(`INSERT INTO room_service_optouts (room_id, service_id) VALUES (900, 1), (5, 900)`),
     DB.prepare(`INSERT INTO invoice_lines (id, invoice_id, kind, service_id, name, qty, unit_price, amount) VALUES
       (950, 800, 'service', 1, 'Rác', 1, 30000, 30000), (951, 801, 'room', NULL, 'Tiền phòng', 1, 7, 7)`),

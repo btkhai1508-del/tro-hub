@@ -9,6 +9,8 @@ const PER_LABEL: Record<Per, string> = { room: 'Mỗi phòng', person: 'Mỗi ng
 const digits = (s: string) => s.replace(/\D/g, '');
 const show = (s: string) => (s === '' ? '' : money(Number(s)));
 const field = 'w-full bg-white dark:bg-neutral-900 px-3 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-bold text-sm text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-500';
+const vnMonth = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7); // current month, Vietnam time, YYYY-MM
+const monthLabel = (m: string) => `Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}`;
 let seq = 0;
 const nextKey = () => `n${++seq}`;
 
@@ -19,6 +21,8 @@ export default function FeeSettings() {
   const [water, setWater] = useState('');
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [month, setMonth] = useState(vnMonth); // fees are per month; a past month is read-only
+  const [editable, setEditable] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -27,9 +31,10 @@ export default function FeeSettings() {
     let live = true;
     setLoaded(false);
     setMessage(null);
-    workerCall(`/api/admin/config?houseId=${encodeURIComponent(houseId)}`).then((r) => {
+    workerCall(`/api/admin/config?houseId=${encodeURIComponent(houseId)}&month=${month}`).then((r) => {
       if (!live) return;
       if (!r.ok) return setMessage({ ok: false, text: r.error });
+      setEditable(r.data.editable !== false);
       const cfg = r.data.config;
       setElectric(String(cfg.electricPrice ?? 0));
       setWater(String(cfg.waterPrice ?? 0));
@@ -39,16 +44,17 @@ export default function FeeSettings() {
       setLoaded(true);
     });
     return () => { live = false; };
-  }, [houseId]);
+  }, [houseId, month]);
 
   const patch = (key: string, change: Partial<ServiceRow>) => setServices((list) => list.map((s) => (s.key === key ? { ...s, ...change } : s)));
 
   const save = async () => {
-    if (saving || !loaded) return;
+    if (saving || !loaded || !editable) return;
     setSaving(true);
     setMessage(null);
     const body = {
       houseId,
+      month,
       electricPrice: Number(electric || 0),
       waterPrice: Number(water || 0),
       services: services.map((s) => ({
@@ -76,7 +82,7 @@ export default function FeeSettings() {
     <div className="soft-card kit-form-surface p-4 sm:p-8 space-y-6">
       <div>
         <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Cài đặt phí</h3>
-        <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">Giá mới chỉ áp dụng cho hoá đơn nháp. Hoá đơn đã mở thu không bị tính lại.</p>
+        <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">Phí được lưu riêng cho từng tháng; sang tháng mới sẽ lấy theo tháng trước. Giá mới chỉ áp dụng cho hoá đơn nháp của tháng đang chọn.</p>
       </div>
 
       {houses.length > 1 && (
@@ -89,6 +95,15 @@ export default function FeeSettings() {
       )}
       {houseError && <p role="alert" className="text-xs font-bold text-rose-600">{houseError}</p>}
 
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase">
+          Tháng
+          <input type="month" aria-label="Chọn tháng" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} className={`${field} mt-2`} />
+        </label>
+        <p className="text-sm font-bold text-neutral-900 dark:text-white pb-3">{monthLabel(month)}</p>
+      </div>
+      {loaded && !editable && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">{monthLabel(month)} đã qua nên chỉ xem, không sửa được.</p>}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           { id: 'fee-electric', label: 'Điện (1 kW)', value: electric, set: setElectric },
@@ -97,7 +112,7 @@ export default function FeeSettings() {
           <div key={f.id} className="bg-neutral-50 dark:bg-neutral-800/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 space-y-2">
             <label htmlFor={f.id} className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">{f.label}</label>
             <div className="relative">
-              <input id={f.id} type="text" inputMode="numeric" value={show(f.value)} placeholder="0" disabled={!loaded}
+              <input id={f.id} type="text" inputMode="numeric" value={show(f.value)} placeholder="0" disabled={!loaded || !editable}
                 onChange={(e) => f.set(digits(e.target.value))} className={`${field} pr-8`} />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
             </div>
@@ -108,13 +123,14 @@ export default function FeeSettings() {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h4 className="font-bold text-sm text-neutral-900 dark:text-white">Dịch vụ</h4>
-          <button type="button" disabled={!loaded}
+          <button type="button" disabled={!loaded || !editable}
             onClick={() => setServices((l) => [...l, { key: nextKey(), name: '', price: '', per: 'room', maxQty: '', active: true }])}
             className="soft-button min-h-11 px-4 text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50">
             <Plus size={16} /><span>Thêm dịch vụ</span>
           </button>
         </div>
         {loaded && services.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-300">Chưa có dịch vụ nào.</p>}
+        <fieldset disabled={!editable} className="space-y-3 border-0 p-0 m-0 min-w-0">
         {services.map((s, i) => (
           <div key={s.key} data-testid="service-row" className={`rounded-2xl border border-neutral-100 dark:border-neutral-700/60 bg-neutral-50 dark:bg-neutral-800/60 p-4 space-y-3 ${s.active ? '' : 'opacity-70'}`}>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -151,10 +167,11 @@ export default function FeeSettings() {
             </div>
           </div>
         ))}
+        </fieldset>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-        <button type="button" onClick={save} disabled={saving || !loaded} className="primary-button min-h-11 py-3 px-8 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50">
+        <button type="button" onClick={save} disabled={saving || !loaded || !editable} className="primary-button min-h-11 py-3 px-8 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50">
           <Save size={16} /><span>{saving ? 'Đang lưu...' : 'Lưu cài đặt phí'}</span>
         </button>
         {message && <p role={message.ok ? 'status' : 'alert'} className={`text-xs font-bold ${message.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{message.text}</p>}

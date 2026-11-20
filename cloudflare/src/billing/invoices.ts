@@ -12,7 +12,8 @@ import { currentMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantOfOwner } from '../tenant/route.ts';
 import { isWorkerSource } from './source.ts';
-import { computeInvoice, type Per, type ServiceFee } from './compute.ts';
+import { feeConfigFor, mirrorTemplate } from './fees.ts';
+import { computeInvoice, type ServiceFee } from './compute.ts';
 
 // ── Edit rules ─────────────────────────────────────────────────────────────
 
@@ -73,8 +74,6 @@ export function effectiveOld(rowOld: number | null, previous: number | null): nu
   return rowOld !== null && rowOld > 0 ? rowOld : previous;
 }
 
-interface ServiceRow { id: number; name: string; price: number; per: Per; max_qty: number | null; sheet_col: 'K' | 'L' | 'M' | null }
-
 interface InvoiceHead { id: number; house_id: string; room_id: number; month: string; status: InvoiceStatus; issued_at: string | null; room: string }
 
 const LEGACY_COLUMN = { K: 'trash', L: 'internet', M: 'parking' } as const;
@@ -106,13 +105,13 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
   if (!inv) throw new Error(`Invoice ${invoiceId} not found`);
   assertCanRecompute(inv, opts.allowPast);
 
-  const [room, house, rates, meter, services, optouts, people] = await Promise.all([
+  // The fees of the invoice's OWN month (a snapshot; copied forward and stored when the month has none yet).
+  const [room, house, fee, meter, optouts, people] = await Promise.all([
     db.prepare(`SELECT price FROM rooms WHERE id = ?`).bind(inv.room_id).first<{ price: number }>(),
     db.prepare(`SELECT actual_electric_price AS p FROM houses WHERE id = ?`).bind(inv.house_id).first<{ p: number | null }>(),
-    db.prepare(`SELECT electricity_per_kwh AS e, water_per_m3 AS w FROM house_rates WHERE house_id = ?`).bind(inv.house_id).first<{ e: number; w: number }>(),
+    feeConfigFor(db, inv.house_id, inv.month),
     db.prepare(`SELECT electric_old, electric_new, water_old, water_new FROM meter_readings WHERE room_id = ? AND month = ?`)
       .bind(inv.room_id, inv.month).first<{ electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null }>(),
-    db.prepare(`SELECT id, name, price, per, max_qty, sheet_col FROM house_services WHERE house_id = ? AND active = 1 ORDER BY sort, id`).bind(inv.house_id).all<ServiceRow>(),
     db.prepare(`SELECT service_id FROM room_service_optouts WHERE room_id = ?`).bind(inv.room_id).all<{ service_id: number }>(),
     db.prepare(
       `SELECT COUNT(*) AS people, COALESCE(SUM(CASE WHEN LENGTH(TRIM(COALESCE(plate_number, ''))) > 0 THEN 1 ELSE 0 END), 0) AS vehicles
@@ -120,9 +119,9 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
     ).bind(inv.room_id).first<{ people: number; vehicles: number }>(),
   ]);
   const out = new Set(optouts.results.map((o) => o.service_id));
-  const fees: ServiceFee[] = services.results
-    .filter((s) => !out.has(s.id))
-    .map((s) => ({ id: s.id, name: s.name, price: s.price, per: s.per, maxQty: s.max_qty, sheetCol: s.sheet_col }));
+  const fees: ServiceFee[] = fee.services
+    .filter((s) => s.active && !out.has(s.id))
+    .map((s) => ({ id: s.id, name: s.name, price: s.price, per: s.per, maxQty: s.maxQty, sheetCol: s.sheetCol }));
 
   // A month with no reading row yet: nothing new to charge.
   // The old columns default to 0, so a row written with only new readings must not bill the whole reading:
@@ -136,7 +135,7 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
     rent: room?.price ?? 0,
     electricOld: before.electricOld, electricNew: meter?.electric_new ?? null,
     waterOld: before.waterOld, waterNew: meter?.water_new ?? null,
-    electricPrice: rates?.e ?? 0, waterPrice: rates?.w ?? 0, actualElectricPrice: house?.p ?? null,
+    electricPrice: fee.electricPrice, waterPrice: fee.waterPrice, actualElectricPrice: house?.p ?? null,
     services: fees, people: people?.people ?? 0, vehicles: people?.vehicles ?? 0,
   });
 
@@ -206,21 +205,40 @@ async function draftFor(db: TenantDb, houseId: string, roomId: number, month: st
   return true;
 }
 
-/** Monthly drafts for every house of the landlord; returns how many were created. */
-export async function createDrafts(env: Env, ownerId: number, month: string): Promise<number> {
+/**
+ * Monthly drafts for every house of the landlord. First each active house gets its fee snapshot for `month`
+ * (copied forward from the previous month when missing), so the new month starts from the previous month's
+ * fees. `made` = drafts created, `failed` = houses/rooms that could not be handled (retried by the next run).
+ */
+export async function createDraftsDetailed(env: Env, ownerId: number, month: string): Promise<{ made: number; failed: number }> {
   const db = await tenantOfOwner(env, ownerId);
   let made = 0;
+  let failed = 0;
   for (const h of await ownerHouses(env.DB, ownerId)) {
     if (h.status !== 'active') continue;
+    try {
+      const fee = await feeConfigFor(db, h.house_id, month);
+      if (month === currentMonth()) await db.batch(mirrorTemplate(db, h.house_id, fee)); // the template follows the current month
+    } catch (err) {
+      failed++;
+      console.warn('[invoices] fee snapshot', h.house_id, month, err);
+      continue; // without the month's fees a draft would be priced from the wrong ones
+    }
     for (const roomId of await roomsNeedingDraft(db, h.house_id, month)) {
       try {
         if (await draftFor(db, h.house_id, roomId, month, env.DB)) made++;
       } catch (err) {
+        failed++;
         console.warn('[invoices] draft', h.house_id, roomId, month, err); // one failing room does not stop the others
       }
     }
   }
-  return made;
+  return { made, failed };
+}
+
+/** Monthly drafts for every house of the landlord; returns how many were created. */
+export async function createDrafts(env: Env, ownerId: number, month: string): Promise<number> {
+  return (await createDraftsDetailed(env, ownerId, month)).made;
 }
 
 /**

@@ -8,6 +8,7 @@ import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
+import { feeConfigFor, mirrorTemplate } from '../billing/fees.ts';
 import { enqueueExport } from '../sheetExport.ts';
 import { currentMonth, legacyRoomCode, parseLegacyRoom, toSheetMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -200,18 +201,20 @@ function parseServices(list: unknown): ServiceInput[] | string {
   return out;
 }
 
-async function loadConfig(db: TenantDb, houseId: string) {
-  const [rates, services] = await Promise.all([
-    db.prepare(`SELECT electricity_per_kwh AS e, water_per_m3 AS w FROM house_rates WHERE house_id = ?`).bind(houseId).first<{ e: number; w: number }>(),
-    db.prepare(`SELECT id, name, price, per, max_qty, active FROM house_services WHERE house_id = ? ORDER BY sort, id`).bind(houseId)
-      .all<{ id: number; name: string; price: number; per: string; max_qty: number | null; active: number }>(),
-  ]);
+/** The fees of one month as the screen reads them. Reading never stores a snapshot (a month may be looked at read-only). */
+async function loadConfig(db: TenantDb, houseId: string, month: string) {
+  const fee = await feeConfigFor(db, houseId, month, { persist: false });
   return {
-    electricPrice: rates?.e ?? 0,
-    waterPrice: rates?.w ?? 0,
-    services: services.results.map((s) => ({ id: s.id, name: s.name, price: s.price, per: s.per, maxQty: s.max_qty, active: s.active === 1 })),
+    month,
+    electricPrice: fee.electricPrice,
+    waterPrice: fee.waterPrice,
+    services: fee.services.map((s) => ({ id: s.id, name: s.name, price: s.price, per: s.per, maxQty: s.maxQty, active: s.active })),
   };
 }
+
+/** Months before the current Vietnam month are read-only: their fees are what their invoices were priced with. */
+const monthEditable = (month: string) => month >= currentMonth();
+const monthLabel = (month: string) => `Tháng ${month.slice(5)}/${month.slice(0, 4)}`;
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
@@ -312,18 +315,27 @@ export function registerAdmin(app: Hono<App>): void {
   const readConfig = async (c: Context<App>) => {
     const houseId = pickHouse(c, c.req.query('houseId'));
     if (houseId instanceof Response) return houseId;
-    return c.json({ success: true, config: await loadConfig(await tenantFor(c, houseId), houseId) });
+    const month = pickMonth(c, c.req.query('month'));
+    if (month instanceof Response) return month;
+    return c.json({ success: true, month, editable: monthEditable(month), config: await loadConfig(await tenantFor(c, houseId), houseId, month) });
   };
   app.get('/api/admin/config', readConfig);
 
-  /** Saves prices and the service list; only DRAFT invoices of the house are recomputed (issued ones keep their numbers). */
+  /**
+   * Saves the prices and the service list of ONE month (default: this month). Other months' snapshots are never
+   * touched; only that month's DRAFT invoices are recomputed (issued ones keep their numbers). Months before the
+   * current one are read-only (409). The current month also updates the live template and the Sheet export.
+   */
   const saveConfig = async (c: Context<App>) => {
     const body = await readBody(c);
     const houseId = pickHouse(c, body.houseId ?? c.req.query('houseId'));
     if (houseId instanceof Response) return houseId;
+    const month = pickMonth(c, body.month ?? c.req.query('month'));
+    if (month instanceof Response) return month;
     const db = await tenantFor(c, houseId);
+    if (!monthEditable(month)) return fail(c, 409, 'MONTH_READONLY', `${monthLabel(month)} đã qua nên không sửa được cài đặt phí. Bạn chỉ xem được.`);
     const input: Record<string, any> = body.config && typeof body.config === 'object' ? body.config : body;
-    const current = await loadConfig(db, houseId);
+    const current = await loadConfig(db, houseId, month);
 
     const electric = input.electricPrice === undefined ? current.electricPrice : input.electricPrice;
     const water = input.waterPrice === undefined ? current.waterPrice : input.waterPrice;
@@ -333,29 +345,45 @@ export function registerAdmin(app: Hono<App>): void {
     const known = new Set(current.services.map((s) => s.id));
     if (services?.some((s) => s.id !== undefined && !known.has(s.id))) return fail(c, 400, 'SERVICE_INVALID', 'Có dịch vụ không thuộc nhà này.');
 
+    const isCurrent = month === currentMonth();
+    await feeConfigFor(db, houseId, month); // the month's snapshot exists from here on (copied forward when it had none)
+
+    // A new service gets its stable id in the registry (house_services) first; it is switched on there only for the current
+    // month, because the registry mirrors the current month.
+    const ids: number[] = [];
+    for (const [i, s] of (services ?? []).entries()) {
+      if (s.id !== undefined) { ids.push(s.id); continue; }
+      const made = await db.prepare(`INSERT INTO house_services (house_id, name, price, per, max_qty, sort, active) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .bind(houseId, s.name, s.price, s.per, s.maxQty, i, isCurrent && s.active ? 1 : 0).run();
+      ids.push(made.meta.last_row_id);
+    }
+
     const statements = [
-      db.prepare(
-        `INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3, updated_at) VALUES (?, ?, ?, datetime('now'))
-         ON CONFLICT (house_id) DO UPDATE SET electricity_per_kwh = excluded.electricity_per_kwh, water_per_m3 = excluded.water_per_m3, updated_at = excluded.updated_at`
-      ).bind(houseId, electric, water),
+      db.prepare(`UPDATE house_fee_months SET electricity_per_kwh = ?, water_per_m3 = ?, updated_at = datetime('now') WHERE house_id = ? AND month = ?`).bind(electric, water, houseId, month),
     ];
     if (services) {
-      const kept = services.flatMap((s) => (s.id === undefined ? [] : [s.id]));
-      // Services missing from the list are switched off, never deleted: old invoice lines still point at them.
-      statements.push(db.prepare(`UPDATE house_services SET active = 0 WHERE house_id = ?${kept.length ? ` AND id NOT IN (${kept.map(() => '?').join(',')})` : ''}`).bind(houseId, ...kept));
+      // Services missing from the list are switched off in this month, never deleted: old invoice lines still point at them.
+      statements.push(db.prepare(`UPDATE house_fee_services SET active = 0 WHERE house_id = ? AND month = ? AND ${ids.length ? `service_id NOT IN (${ids.map(() => '?').join(',')})` : '1 = 1'}`).bind(houseId, month, ...ids));
       services.forEach((s, i) => {
-        statements.push(s.id === undefined
-          ? db.prepare(`INSERT INTO house_services (house_id, name, price, per, max_qty, sort, active) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(houseId, s.name, s.price, s.per, s.maxQty, i, s.active ? 1 : 0)
-          : db.prepare(`UPDATE house_services SET name = ?, price = ?, per = ?, max_qty = ?, sort = ?, active = ? WHERE id = ? AND house_id = ?`).bind(s.name, s.price, s.per, s.maxQty, i, s.active ? 1 : 0, s.id, houseId));
+        const id = ids[i];
+        statements.push(db.prepare(
+          `INSERT INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, active, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (house_id, month, service_id) DO UPDATE SET name = excluded.name, price = excluded.price, per = excluded.per, max_qty = excluded.max_qty, active = excluded.active, sort = excluded.sort`
+        ).bind(houseId, month, id, s.name, s.price, s.per, s.maxQty, s.active ? 1 : 0, i));
       });
     }
     await db.batch(statements);
+    const saved = await loadConfig(db, houseId, month);
+    if (isCurrent) {
+      const fee = await feeConfigFor(db, houseId, month);
+      await db.batch(mirrorTemplate(db, houseId, fee));
+    }
 
     let recomputed = 0;
     const recomputeFailed: string[] = [];
     const { results: drafts } = await db.prepare(
-      `SELECT i.id, rm.name FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.house_id = ? AND i.issued_at IS NULL AND i.status NOT IN ('paid', 'cash') ORDER BY rm.name`
-    ).bind(houseId).all<{ id: number; name: string }>();
+      `SELECT i.id, rm.name FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.house_id = ? AND i.month = ? AND i.issued_at IS NULL AND i.status NOT IN ('paid', 'cash') ORDER BY rm.name`
+    ).bind(houseId, month).all<{ id: number; name: string }>();
     for (const d of drafts) {
       try {
         await recompute(db, d.id, { central: c.env.DB });
@@ -366,16 +394,18 @@ export function registerAdmin(app: Hono<App>): void {
         recomputeFailed.push(d.name); // the saved config stays saved; the screen is told which drafts to recheck
       }
     }
-    await audit(c, actorOf(c.get('viewer')), 'admin_config_save', houseId, `drafts:${recomputed}`);
-    const saved = await loadConfig(db, houseId);
-    const priceOf = async (col: 'K' | 'L' | 'M') =>
-      (await db.prepare(`SELECT price FROM house_services WHERE house_id = ? AND sheet_col = ? AND active = 1 ORDER BY sort LIMIT 1`).bind(houseId, col).first<{ price: number }>())?.price;
-    const [rac, net, xe] = await Promise.all([priceOf('K'), priceOf('L'), priceOf('M')]);
-    await enqueueExport(c.env.DB, 'config', {
-      houseId, month: toSheetMonth(currentMonth()), dien: saved.electricPrice, nuoc: saved.waterPrice,
-      ...(rac !== undefined && { rac }), ...(net !== undefined && { net }), ...(xe !== undefined && { xe }),
-    });
-    return c.json({ success: true, config: await loadConfig(db, houseId), recomputed, recomputeFailed });
+    await audit(c, actorOf(c.get('viewer')), 'admin_config_save', houseId, `${month} drafts:${recomputed}`);
+    if (isCurrent) {
+      // The Sheet has a tab for the current month only.
+      const fee = await feeConfigFor(db, houseId, month);
+      const priceOf = (col: 'K' | 'L' | 'M') => fee.services.find((s) => s.sheetCol === col && s.active)?.price;
+      const [rac, net, xe] = [priceOf('K'), priceOf('L'), priceOf('M')];
+      await enqueueExport(c.env.DB, 'config', {
+        houseId, month: toSheetMonth(month), dien: saved.electricPrice, nuoc: saved.waterPrice,
+        ...(rac !== undefined && { rac }), ...(net !== undefined && { net }), ...(xe !== undefined && { xe }),
+      });
+    }
+    return c.json({ success: true, month, editable: true, config: saved, recomputed, recomputeFailed });
   };
   app.put('/api/admin/config', saveConfig);
   app.post('/api/admin/config', saveConfig); // the screen posts today

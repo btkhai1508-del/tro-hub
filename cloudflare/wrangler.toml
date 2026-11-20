@@ -23,7 +23,7 @@ storage = "sqlite"
 
 # Mỗi ngày 2 giờ sáng (giờ Việt Nam): xoá hẳn các căn trọ đã hết 7 ngày chờ xoá.
 [triggers]
-crons = ["0 19 * * *", "*/10 * * * *"] # 19:00 UTC: xoá nhà hết hạn; mỗi 10 phút: đọc số tiền từ Sheet cũ
+crons = ["0 19 * * *", "0 17 * * *", "*/10 * * * *"] # 19:00 UTC: xoá nhà hết hạn; 17:00 UTC (00:00 giờ VN): chuyển sang tháng mới; mỗi 10 phút: đọc Sheet cũ, bắt kịp tháng mới
 
 [vars]
 # Trang được phép gọi API từ trình duyệt: app chạy trên máy, bản trên Render, Zalo Mini App.

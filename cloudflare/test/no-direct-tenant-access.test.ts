@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-const TENANT_TABLES = ['houses', 'house_rates', 'rooms', 'residents', 'invoices', 'meter_readings', 'payments', 'payment_gates', 'notifications'];
+const TENANT_TABLES = ['houses', 'house_rates', 'rooms', 'residents', 'invoices', 'meter_readings', 'payments', 'payment_gates', 'notifications', 'house_services', 'house_fee_months', 'house_fee_services'];
 
 // A table name used as a SQL object: FROM x, JOIN x, INTO x, UPDATE x, TABLE x (optionally quoted).
 const TABLE_REF = new RegExp(`\\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\\s+["'\`]?(${TENANT_TABLES.join('|')})\\b`, 'i');

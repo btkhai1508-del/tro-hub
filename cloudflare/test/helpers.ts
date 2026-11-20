@@ -53,7 +53,7 @@ const SERVICES: [string, number, string, number | null, string, number][] = [
   ['Xe máy', 50000, 'vehicle', null, 'M', 3],
 ];
 
-const BUSINESS_TABLES = ['invoice_lines', 'room_service_optouts', 'house_services', 'notifications', 'payment_gates', 'payments', 'meter_readings', 'invoices', 'residents', 'rooms', 'house_rates', 'houses'];
+const BUSINESS_TABLES = ['invoice_lines', 'room_service_optouts', 'house_fee_services', 'house_fee_months', 'house_services', 'notifications', 'payment_gates', 'payments', 'meter_readings', 'invoices', 'residents', 'rooms', 'house_rates', 'houses'];
 
 export async function seedWorld(backend: BackendName): Promise<void> {
   const DB = e.DB;
@@ -65,6 +65,7 @@ export async function seedWorld(backend: BackendName): Promise<void> {
     ...BUSINESS_TABLES.map((t) => DB.prepare(`DELETE FROM ${t}`)),
     DB.prepare(`DELETE FROM staff`),
     DB.prepare(`DELETE FROM sheet_export_queue`),
+    DB.prepare(`DELETE FROM settings WHERE key = 'month_started'`),
     DB.prepare(`DELETE FROM house_directory`),
     DB.prepare(`DELETE FROM resident_index`),
     DB.prepare(`DELETE FROM sqlite_sequence WHERE name = 'resident_index'`),

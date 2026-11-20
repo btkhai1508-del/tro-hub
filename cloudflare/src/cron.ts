@@ -3,7 +3,7 @@
  * and never blocks the rest.
  */
 import type { Env } from './app.ts';
-import { createDrafts } from './billing/invoices.ts';
+import { createDraftsDetailed } from './billing/invoices.ts';
 import { isWorkerSource } from './billing/source.ts';
 import { allHouses, getStorage, houseOwner, removeHouseDir, setHouseCounts } from './central/directory.ts';
 import { replayPendingDeferred } from './payments/settle.ts';
@@ -45,7 +45,7 @@ export async function syncLegacySheets(env: Env, onlyOwner?: number, strict = fa
 }
 
 // Children first: foreign keys are on, in D1 and in a landlord's store alike.
-const HOUSE_TABLES = ['house_services', 'payments', 'meter_readings', 'invoices', 'notifications', 'payment_gates', 'residents', 'rooms', 'house_rates'];
+const HOUSE_TABLES = ['house_fee_services', 'house_fee_months', 'house_services', 'payments', 'meter_readings', 'invoices', 'notifications', 'payment_gates', 'residents', 'rooms', 'house_rates'];
 
 /**
  * Removes the houses whose grace period is over: the landlord's store first, then the resident index,
@@ -181,36 +181,80 @@ export async function reconcile(env: Env): Promise<ReconcileResult> {
   return out;
 }
 
+const MONTH_MARK = 'month_started'; // settings key: 'YYYY-MM' when that month is fully started, 'YYYY-MM!n' after n failed tries
+const CATCHUP_TRIES = 6; // the frequent cron stops retrying a month after this many failed tries (about an hour)
+
+const vnMonthOf = (now: number) => new Date(now + 7 * 3600_000).toISOString().slice(0, 7); // Vietnam wall clock, read as UTC
+
 /**
- * On days 1-3 (Vietnam time) of a month, when the Worker owns the invoices: a draft for every room with an
- * approved resident, for every landlord. The daily cron runs at 19:00 UTC = 02:00 the next day in Vietnam.
+ * Switches every landlord to `month` (Vietnam month of `now`): the fee snapshot of each house (copy-forward from
+ * the previous month) and a draft for every room with an approved resident. Old meter readings need no copying:
+ * the old reading of a month is the previous month's new one, derived when the invoice is computed. Idempotent;
+ * records the month as started in settings only when every landlord went through, so a failure is retried.
  */
-export async function createMonthlyDrafts(env: Env, now = Date.now()): Promise<number> {
-  if (!(await isWorkerSource(env.DB))) return 0;
-  const vn = new Date(now + 7 * 3600_000).toISOString(); // Vietnam wall clock, read as UTC
-  if (Number(vn.slice(8, 10)) > 3) return 0; // days 1-3: createDrafts is idempotent, so a missed run is caught up
-  const month = vn.slice(0, 7);
+async function startMonth(env: Env, month: string, tries = 0): Promise<number> {
   const { results } = await env.DB.prepare(`SELECT DISTINCT owner_id FROM house_directory`).all<{ owner_id: number }>();
   let made = 0;
+  let failed = 0;
   for (const { owner_id } of results) {
     try {
-      made += await createDrafts(env, owner_id, month);
+      const r = await createDraftsDetailed(env, owner_id, month);
+      made += r.made;
+      failed += r.failed;
     } catch (err) {
+      failed++;
       console.warn('[cron] monthly drafts', owner_id, err);
     }
   }
+  await env.DB.prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`)
+    .bind(MONTH_MARK, failed ? `${month}!${tries + 1}` : month).run();
   return made;
+}
+
+/**
+ * Daily 02:00 run: on days 1-3 (Vietnam time) of a month, when the Worker owns the invoices, start the month
+ * (kept from before the midnight job existed; startMonth is idempotent, so it only adds a second chance).
+ */
+export async function createMonthlyDrafts(env: Env, now = Date.now()): Promise<number> {
+  if (!(await isWorkerSource(env.DB))) return 0;
+  const vn = new Date(now + 7 * 3600_000).toISOString();
+  if (Number(vn.slice(8, 10)) > 3) return 0;
+  return startMonth(env, vn.slice(0, 7));
+}
+
+/** 17:00 UTC = 00:00 Vietnam: switch to the new month right at midnight (whatever the day, only the CURRENT month). */
+export async function startCurrentMonth(env: Env, now = Date.now()): Promise<number> {
+  if (!(await isWorkerSource(env.DB))) return 0;
+  return startMonth(env, vnMonthOf(now));
+}
+
+/**
+ * Every 10 minutes: catches a missed midnight run. One settings read decides; when the current Vietnam month is
+ * already recorded as started nothing else is read or written. Not limited to days 1-3, never touches past months.
+ */
+export async function catchUpMonthStart(env: Env, now = Date.now()): Promise<number> {
+  if (!(await isWorkerSource(env.DB))) return 0;
+  const month = vnMonthOf(now);
+  const mark = (await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`).bind(MONTH_MARK).first<{ value: string }>())?.value ?? '';
+  const [done, tries] = mark.split('!');
+  if (done === month && tries === undefined) return 0;
+  const failedTries = done === month ? Number(tries) || 0 : 0;
+  if (failedTries >= CATCHUP_TRIES) return 0; // the next midnight / daily run tries again
+  return startMonth(env, month, failedTries);
 }
 
 export const FREQUENT_CRON = '*/10 * * * *';
 export const DAILY_CRON = '0 19 * * *';
+export const MONTH_CRON = '0 17 * * *'; // 00:00 Vietnam
 
 /** The jobs behind one cron expression, each failing alone. */
 export async function runCron(cron: string, env: Env, now = Date.now()): Promise<void> {
   const jobs: [string, () => Promise<unknown>][] =
     cron === DAILY_CRON
       ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)], ['monthly drafts', () => createMonthlyDrafts(env, now)]]
-      : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)], ['sheet export', () => drainExportQueue(env)]]; // drain is a no-op unless source is worker
+      : cron === MONTH_CRON
+        ? [['month start', () => startCurrentMonth(env, now)]]
+        : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)], ['sheet export', () => drainExportQueue(env)], ['month catch-up', () => catchUpMonthStart(env, now)]]; // drain and catch-up are no-ops unless source is worker
   // One after another (purge before reconcile, so reconcile sees the purged state); each fails alone.
   for (const [name, job] of jobs) await job().catch((err) => console.warn('[cron]', name, err));
 }

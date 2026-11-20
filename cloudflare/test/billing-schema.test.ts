@@ -10,6 +10,7 @@ import { seedWorld } from './helpers.ts';
 const e = env as unknown as Env & { TEST_MIGRATIONS: { name: string; queries: string[] }[]; TENANT: DurableObjectNamespace<TenantStore> };
 const DB = e.DB;
 const NEW_TABLES = ['house_services', 'room_service_optouts', 'invoice_lines'];
+const FEE_TABLES = ['house_fee_months', 'house_fee_services']; // migration 0023
 
 type Row = Record<string, unknown>;
 const norm = (rows: Row[]) => rows.map((r) => [r.name, r.type, r.notnull, r.dflt_value, r.pk]);
@@ -28,7 +29,7 @@ describe('lược đồ phí dịch vụ', () => {
     await runInDurableObject(stub, async (_i, state) => {
       const sql = state.storage.sql;
       for (const t of NEW_TABLES) expect(TENANT_TABLES.map((x) => x.name)).toContain(t);
-      for (const t of [...NEW_TABLES, 'invoices', 'houses']) {
+      for (const t of [...NEW_TABLES, ...FEE_TABLES, 'invoices', 'houses']) {
         const cols = norm(sql.exec(`PRAGMA table_info(${t})`).toArray() as Row[]);
         expect(cols, t).toEqual(norm((await DB.prepare(`PRAGMA table_info(${t})`).all()).results as Row[]));
       }
@@ -40,7 +41,7 @@ describe('lược đồ phí dịch vụ', () => {
     await runInDurableObject(stub, async (_i, state) => {
       const sql = state.storage.sql;
       // Rebuild the old (version 1) shape: drop the new tables and columns, then rewind the version.
-      for (const t of NEW_TABLES) sql.exec(`DROP TABLE ${t}`);
+      for (const t of [...FEE_TABLES, ...NEW_TABLES]) sql.exec(`DROP TABLE ${t}`);
       sql.exec(`ALTER TABLE invoices DROP COLUMN issued_at`);
       sql.exec(`ALTER TABLE houses DROP COLUMN actual_electric_price`);
       sql.exec(`UPDATE meta SET value = '1' WHERE key = 'schema_version'`);
@@ -50,12 +51,15 @@ describe('lược đồ phí dịch vụ', () => {
       const again = new (_i.constructor as new (s: DurableObjectState, e: unknown) => TenantStore)(state, env);
       await state.blockConcurrencyWhile(async () => {}); // let the constructor's migration finish
       expect((await again.info()).schemaVersion).toBe(TENANT_MIGRATIONS.length);
-      for (const t of [...NEW_TABLES, 'invoices', 'houses']) {
+      for (const t of [...NEW_TABLES, ...FEE_TABLES, 'invoices', 'houses']) {
         expect(norm(sql.exec(`PRAGMA table_info(${t})`).toArray() as Row[]), t).toEqual(
           norm((await DB.prepare(`PRAGMA table_info(${t})`).all()).results as Row[]),
         );
       }
       expect(sql.exec(`SELECT id FROM houses`).toArray()).toEqual([{ id: 'H' }]);
+      // 0023 backfill: the existing house gets a snapshot of the current Vietnam month.
+      const cur = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7);
+      expect(sql.exec(`SELECT house_id, month, electricity_per_kwh AS e FROM house_fee_months`).toArray()).toEqual([{ house_id: 'H', month: cur, e: 0 }]);
     });
   });
 });

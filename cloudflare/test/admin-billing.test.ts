@@ -232,7 +232,7 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
   });
 
   describe('config', () => {
-    const getConfig = async (houseId = 'LVC') => (await json(await call(owner, 'GET', `/api/admin/config?houseId=${houseId}`))).config;
+    const getConfig = async (houseId = 'LVC', month?: string) => (await json(await call(owner, 'GET', `/api/admin/config?houseId=${houseId}${month ? `&month=${month}` : ''}`))).config;
 
     it('GET: giá và dịch vụ theo thứ tự, không lộ giá điện thực thu', async () => {
       const res = await call(owner, 'GET', '/api/admin/config?houseId=LVC');
@@ -246,16 +246,16 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       ]);
     });
 
-    it('PUT đổi giá/dịch vụ: nháp tính lại, hoá đơn đã phát hành giữ nguyên; dịch vụ bỏ khỏi danh sách chỉ tắt', async () => {
+    it('PUT đổi giá/dịch vụ của một tháng: nháp tháng đó tính lại, tháng khác và hoá đơn đã phát hành giữ nguyên; dịch vụ bỏ khỏi danh sách chỉ tắt', async () => {
       await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
       await (await store()).prepare(`UPDATE invoices SET issued_at = datetime('now') WHERE month = ?`).bind(A).run();
       await enter(B, { dienMoi: 180, nuocMoi: 18 });
       expect((await invoiceOf('LVC', '101', B)).total).toBe(3_749_000);
 
-      const before = await getConfig();
+      const before = await getConfig('LVC', B);
       const rac = before.services[0], net = before.services[1];
       const res = await call(owner, 'PUT', '/api/admin/config', {
-        houseId: 'LVC', electricPrice: 4000, waterPrice: 20000,
+        houseId: 'LVC', month: B, electricPrice: 4000, waterPrice: 20000,
         services: [{ ...rac, price: 35000 }, net, { name: 'Bảo vệ', price: 10000, per: 'room', maxQty: null }],
       });
       expect(res.status).toBe(200);
@@ -264,11 +264,15 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       expect(body.config.services.map((s: any) => [s.name, s.active])).toEqual([['Rác', true], ['Internet', true], ['Bảo vệ', true], ['Xe máy', false]]);
 
       expect((await invoiceOf('LVC', '101', A)).total).toBe(3_815_000); // issued: untouched
-      expect((await invoiceOf('LVC', '101', B)).total).toBe(3_764_000); // draft: new prices
-      const xe = await (await store()).prepare(`SELECT active FROM house_services WHERE house_id = 'LVC' AND name = 'Xe máy'`).first<any>();
+      expect((await invoiceOf('LVC', '101', B)).total).toBe(3_764_000); // draft of the edited month: new prices
+      // Month A keeps its own fees, and the edited month B is a different snapshot.
+      expect(await getConfig('LVC', A)).toMatchObject({ electricPrice: 3500 });
+      expect((await getConfig('LVC', A)).services.map((s: any) => [s.name, s.price, s.active])).toEqual([['Rác', 30000, true], ['Internet', 40000, true], ['Xe máy', 50000, true]]);
+      const xe = await (await store()).prepare(`SELECT active FROM house_fee_services WHERE house_id = 'LVC' AND month = ? AND service_id = (SELECT id FROM house_services WHERE house_id = 'LVC' AND name = 'Xe máy')`).bind(B).first<any>();
       expect(xe).toEqual({ active: 0 });
+      // A month other than the current one does not move the live template.
       const rates = await (await store()).prepare(`SELECT electricity_per_kwh AS e FROM house_rates WHERE house_id = 'LVC'`).first<any>();
-      expect(rates.e).toBe(4000);
+      expect(rates.e).toBe(3500);
       // The hidden setting is not exposed and not changed.
       const hidden = await (await store()).prepare(`SELECT actual_electric_price AS p FROM houses WHERE id = 'LVC'`).first<any>();
       expect(hidden.p).toBe(3300);

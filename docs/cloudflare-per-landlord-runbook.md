@@ -143,3 +143,15 @@ Nút "Quay lại Sheet" (hoặc `PUT /api/dev/source {"source":"sheet"}`):
 ### Ghi chú
 - Kho riêng (Durable Object) đã có dữ liệu mà chưa nâng bảng mới: hãy chạy chạy thử (dry-run) trước; `AUTOINCREMENT` của bảng mới chưa có mốc sàn nên không dùng cho chủ trọ đã chuyển kho khi chưa kiểm tra.
 - `POST /api/auth/register` chỉ tồn tại khi công tắc là `worker` (404 ở `sheet`).
+
+## Phí theo tháng và chuyển tháng 00:00
+
+**Phí theo tháng.** Đơn giá điện, nước và danh sách dịch vụ (giá, "tính theo", tối đa) thuộc từng tháng: bảng `house_fee_months` (giá điện, nước) và `house_fee_services` (dịch vụ, khoá theo `service_id` = `house_services.id` nên "phòng từ chối dịch vụ" và dòng hoá đơn vẫn trỏ đúng). Sửa phí trong tháng M chỉ đổi tháng M; hoá đơn nháp của M được tính lại, hoá đơn đã phát hành không bị tính lại. Tháng trước tháng hiện tại (giờ Việt Nam) chỉ xem: `PUT/POST /api/admin/config` trả 409 `MONTH_READONLY`. `GET /api/admin/config?houseId=&month=` trả thêm `month` và `editable`.
+
+- Tháng chưa có ảnh chụp thì chép từ tháng gần nhất trước đó (nếu không có thì lấy `house_rates` / `house_services`) và được lưu khi tạo nháp hoặc khi sửa; xem thì không ghi gì.
+- `house_rates` / `house_services` vẫn còn: là "mẫu hiện hành" (luôn khớp ảnh chụp tháng hiện tại, được cập nhật cùng lúc) và là kho cấp `service_id`. Chỉ dùng làm gốc khi một nhà chưa có ảnh chụp nào.
+- Migration `0023_fee_months.sql` chỉ thêm 2 bảng và điền một ảnh chụp của tháng hiện tại (giờ VN) cho mỗi nhà từ `house_rates` / `house_services`, nên hành vi tính tiền không đổi. Phần dành cho kho riêng nằm trong `TENANT_MIGRATIONS` (phần tử thứ 3) và 2 bảng đã có trong `TENANT_TABLES` (chạy thử, chuyển, quay lại, xuất và băm đều gồm chúng).
+
+**Chuyển tháng lúc 00:00 giờ VN.** Khi công tắc là `worker`, cron `0 17 * * *` (17:00 UTC = 00:00 VN) tạo ảnh chụp phí của tháng mới (chép từ tháng trước) rồi hoá đơn nháp cho mọi phòng có cư dân đã duyệt. Số cũ điện/nước của tháng mới chính là số mới của tháng trước (suy ra khi tính, không chép), nên chủ trọ chỉ nhập số mới. Cron 10 phút bắt kịp nếu lần 00:00 bị lỡ: mỗi lần chỉ đọc 1 dòng `settings.month_started`; đã ghi tháng hiện tại thì không làm và không ghi gì thêm. Lỗi thì ghi `YYYY-MM!n` và thử lại ở lần sau, dừng sau 6 lần (cron 00:00 / hằng ngày làm tiếp). Không bao giờ tạo bù tháng đã qua. Xem trạng thái: `SELECT value, updated_at FROM settings WHERE key = 'month_started';`
+
+**Khi triển khai.** Danh sách `crons` trong `wrangler.toml` đổi thành `["0 19 * * *", "0 17 * * *", "*/10 * * * *"]`: phải deploy Worker mới **cùng lúc** với migration `0023` (`npx wrangler d1 migrations apply`): nếu có cron mới mà thiếu bảng, bước chuyển tháng sẽ lỗi và chỉ ghi cảnh báo; nếu có bảng mà thiếu cron thì cron 10 phút vẫn bắt kịp trong vòng 10 phút. Gói Cloudflare miễn phí giới hạn số cron trên cả tài khoản (hiện 5): kiểm tra còn chỗ cho cron thứ 3 của Worker này.
