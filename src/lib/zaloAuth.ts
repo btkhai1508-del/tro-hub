@@ -7,7 +7,7 @@
  *  4. POST /api/auth/zalo -> server verifies with Zalo Open API, maps phone -> tenant, returns our JWT
  */
 import { authorize, getAccessToken, getPhoneNumber, getSetting } from 'zmp-sdk/apis';
-import { apiFetch } from './api';
+import { apiFetch, ensureSource, setAuthToken, setWorkerToken, workerFetch } from './api';
 import { isZaloMiniApp } from './platform';
 
 export interface ZaloLoginTokens {
@@ -98,6 +98,23 @@ export async function requestZaloLogin(sheetId?: string): Promise<any> {
 
   try {
     const tokens = await getZaloLoginTokens();
+    // When the Worker owns the data it also signs the resident in; Express then trades the
+    // Worker token for its own session (same as the password flow).
+    if ((await ensureSource()) === 'worker') {
+      setAuthToken(null);
+      const wres = await workerFetch('/api/auth/zalo', {
+        method: 'POST',
+        body: JSON.stringify({ ...tokens, sheetId })
+      });
+      const wdata = await wres.json().catch(() => ({ success: false, error: `Lỗi máy chủ (${wres.status})` }));
+      if (!wdata?.success || !wdata.token) return wdata;
+      setWorkerToken(wdata.token);
+      const sres = await apiFetch('/api/auth/worker-session', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${wdata.token}` }
+      });
+      return await sres.json().catch(() => ({ success: false, error: `Lỗi máy chủ (${sres.status})` }));
+    }
     const res = await apiFetch('/api/auth/zalo', {
       method: 'POST',
       body: JSON.stringify({ ...tokens, sheetId })
