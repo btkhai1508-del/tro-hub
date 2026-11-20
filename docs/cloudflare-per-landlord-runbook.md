@@ -130,7 +130,7 @@ Trang Developer, tab Lưu trữ, thẻ "Nguồn dữ liệu", nút "Chuyển san
 Express và Mini App nhớ nguồn khoảng 30 giây (cộng thêm 30 giây cache của `GET /api/source`), nên có độ trễ tới khoảng 1 phút. Trong lúc đó, các route Express ghi Sheet trả 409 `SOURCE_CHANGED` ("Hệ thống đã chuyển nguồn dữ liệu, hãy tải lại trang"); tab cũ chỉ cần tải lại.
 
 ### Theo dõi hàng đợi
-Thẻ "Nguồn dữ liệu" (hoặc `GET /api/dev/storage`, trường `exportQueue`) cho số dòng chờ và danh sách dòng lỗi kèm lý do. Dòng lỗi thường do tab tháng chưa có trên Sheet (không có gì tự tạo tab tháng mới khi Worker là nguồn chính, hãy tạo tab trước ngày đầu tháng). Sửa Sheet rồi bấm "Thử lại" (`POST /api/dev/export-queue/requeue`) để đưa các dòng đã bỏ cuộc về 0 lần thử. Gửi lại luôn an toàn vì Apps Script ghi đè giá trị ô.
+Thẻ "Nguồn dữ liệu" (hoặc `GET /api/dev/storage`, trường `exportQueue`) cho số dòng chờ và danh sách dòng lỗi kèm lý do. Dòng lỗi thường do tab tháng chưa có trên Sheet (tab tháng mới do `createMonthlySheet` trong AutoSheet.gs của Apps Script tạo lúc 07:00 ngày 1 hàng tháng; Worker tạo nháp từ 00:00 nên nếu có nhập điện nước trước 07:00 ngày 1 thì dòng xuất có thể lỗi, bấm "Thử lại" sau khi tab đã có). Sửa Sheet rồi bấm "Thử lại" (`POST /api/dev/export-queue/requeue`) để đưa các dòng đã bỏ cuộc về 0 lần thử. Gửi lại luôn an toàn vì Apps Script ghi đè giá trị ô.
 Mật khẩu và CCCD không được chép sang Sheet: cư dân đăng ký khi ở `worker` có cột mật khẩu trống trên Sheet.
 
 ### Quay lại Sheet
