@@ -127,7 +127,7 @@ export async function seedWorld(backend: BackendName): Promise<void> {
         .filter(([, house]) => house !== 'NTTD')
         .map(([id, house, , price]) =>
           db
-            .prepare(`INSERT INTO invoices (house_id, room_id, month, room_rent, total, status) VALUES (?, ?, ?, ?, ?, 'unpaid')`)
+            .prepare(`INSERT INTO invoices (house_id, room_id, month, room_rent, total, status, issued_at) VALUES (?, ?, ?, ?, ?, 'unpaid', '2026-11-01 00:00:00')`)
             .bind(house, id, MONTH, price, price)
         ),
     ];

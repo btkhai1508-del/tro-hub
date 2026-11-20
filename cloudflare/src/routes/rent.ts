@@ -7,7 +7,7 @@
 import type { Context } from 'hono';
 import type { Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App, type Viewer } from '../app.ts';
-import { deferredByRoom, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
+import { bankReceived, deferredByRoom, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
 import { decryptText } from '../cccd.ts';
 import {
   currentMonth, ensureMonthFresh, fromSheetMonth, legacyRoomCode, legacySheet, paintSheetPayment, parseLegacyRoom,
@@ -34,10 +34,10 @@ function paymentStatusOut(status: InvoiceStatus | null, paidAt: string | null) {
   };
 }
 
-export interface InvoiceRow { id: number; house_id: string; room_id: number; total: number; status: InvoiceStatus; paid_at: string | null; sheet_row: number | null }
+export interface InvoiceRow { id: number; house_id: string; room_id: number; total: number; status: InvoiceStatus; paid_at: string | null; sheet_row: number | null; issued_at: string | null }
 
 export const invoiceFor = (db: TenantDb, roomId: number, month: string) =>
-  db.prepare(`SELECT id, house_id, room_id, total, status, paid_at, sheet_row FROM invoices WHERE room_id = ? AND month = ?`)
+  db.prepare(`SELECT id, house_id, room_id, total, status, paid_at, sheet_row, issued_at FROM invoices WHERE room_id = ? AND month = ?`)
     .bind(roomId, month).first<InvoiceRow>();
 
 /** Hoá đơn của phòng trong tháng; tháng mới chưa có trong kho thì đọc Sheet ngay một lần (bỏ qua khi kho chỉ đọc). */
@@ -58,8 +58,7 @@ async function statusView(central: D1Database, db: TenantDb, houseIds: string[],
     const open = deferred.get(inv.house_id);
     if (!open?.has(inv.room) || inv.status === 'paid' || inv.status === 'cash') return inv.status;
     const waiting = open.get(inv.room) ?? 0;
-    const sum = await db.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(inv.id).first<{ paid: number }>();
-    return effectiveStatus(inv.status, inv.total, sum?.paid ?? 0, waiting);
+    return effectiveStatus(inv.status, inv.total, await bankReceived(db, inv.id), waiting);
   };
 }
 
@@ -111,6 +110,13 @@ async function findRentRoom(c: Context<App>, houseIds: string[], code: string): 
   return found.length === 1 ? found[0] : null;
 }
 
+/** Writes (house, month) → START/STOP; the one statement behind the admin switch and issuing a month. */
+export const gateStatement = (db: TenantDb, houseId: string, month: string, value: 'START' | 'STOP', by: string) =>
+  db.prepare(
+    `INSERT INTO payment_gates (house_id, month, value, updated_by, updated_at) VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT (house_id, month) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
+  ).bind(houseId, month, value, by);
+
 /** Cổng thanh toán của nhà trong tháng; tháng chưa đặt thì giữ giá trị mới nhất của nhà. */
 async function gateFor(central: D1Database, db: TenantDb, houseId: string, month: string): Promise<'START' | 'STOP'> {
   const exact = await db.prepare(`SELECT value FROM payment_gates WHERE house_id = ? AND month = ?`).bind(houseId, month).first<{ value: 'START' | 'STOP' }>();
@@ -136,7 +142,7 @@ async function gateFor(central: D1Database, db: TenantDb, houseId: string, month
 interface BillingRow {
   id: number; house_id: string; room_id: number; room: string; month: string; room_rent: number; electricity: number; water: number;
   trash: number; internet: number; parking: number; other: number; deposit: number; total: number; status: InvoiceStatus;
-  paid_at: string | null; sheet_row: number | null; electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null;
+  paid_at: string | null; sheet_row: number | null; issued_at: string | null; electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null;
 }
 
 type Trend = { month: string; dien: number; nuoc: number; tienDien: number; tienNuoc: number; doanhThu: number };
@@ -153,7 +159,7 @@ export function registerRent(app: Hono<App>): void {
     const month =
       c.req.query('month') ||
       (
-        await db.prepare(`SELECT MAX(month) AS month FROM invoices WHERE house_id = ?${roomFilter ? ' AND room_id = ?' : ''}`)
+        await db.prepare(`SELECT MAX(month) AS month FROM invoices WHERE house_id = ?${roomFilter ? ' AND room_id = ? AND issued_at IS NOT NULL' : ''}`)
           .bind(...(roomFilter ? [houseId, roomFilter] : [houseId]))
           .first<{ month: string | null }>()
       )?.month;
@@ -164,13 +170,13 @@ export function registerRent(app: Hono<App>): void {
          FROM invoices i
          JOIN rooms rm ON rm.id = i.room_id
          LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
-        WHERE i.house_id = ? AND i.month = ?${roomFilter ? ' AND i.room_id = ?' : ''}
+        WHERE i.house_id = ? AND i.month = ?${roomFilter ? ' AND i.room_id = ? AND i.issued_at IS NOT NULL' : ''}
         ORDER BY rm.name`
     )
       .bind(...(roomFilter ? [houseId, month, roomFilter] : [houseId, month]))
-      .all<{ id: number; house_id: string; room_name: string; total: number; status: InvoiceStatus }>();
+      .all<{ id: number; house_id: string; room_name: string; total: number; status: InvoiceStatus; issued_at: string | null }>();
     const view = await statusView(c.env.DB, db, [houseId], month);
-    const invoices = await Promise.all(results.map(async (r) => ({ ...r, status: await view({ id: r.id, house_id: r.house_id, room: r.room_name, total: r.total, status: r.status }) })));
+    const invoices = await Promise.all(results.map(async (r) => ({ ...r, draft: r.issued_at === null, status: await view({ id: r.id, house_id: r.house_id, room: r.room_name, total: r.total, status: r.status }) })));
     return c.json({ success: true, month, invoices });
   });
 
@@ -200,7 +206,9 @@ export function registerRent(app: Hono<App>): void {
       : await findRentRoom(c, v.houseIds, c.req.query('room') ?? '');
     if (!room) return fail(c, 400, 'ROOM_REQUIRED', 'Thiếu mã phòng');
     c.executionCtx.waitUntil(ensureMonthFresh(c.env.DB, room.db, month, 10 * 60_000));
-    const inv = await invoiceFor(room.db, room.id, month);
+    // A resident never gets a draft: it reads as "no invoice yet".
+    const found = await invoiceFor(room.db, room.id, month);
+    const inv = v.kind === 'resident' && found?.issued_at === null ? null : found;
     const status = inv ? await (await statusView(c.env.DB, room.db, [room.house_id], month))({ ...inv, room: room.name }) : null;
     return c.json(statusResponse(room.house_id, room.name, month, inv, status));
   });
@@ -216,7 +224,8 @@ export function registerRent(app: Hono<App>): void {
     const body = await c.req.json<{ month?: string }>().catch(() => ({} as { month?: string }));
     const month = monthParam(body.month);
     const db = await tenantFor(c, v.houseId);
-    const inv = await invoiceOrSync(db, c.env.DB, v.roomId, month);
+    const found = await invoiceOrSync(db, c.env.DB, v.roomId, month);
+    const inv = found?.issued_at === null ? null : found; // a draft is invisible to the resident
     if (!inv) return fail(c, 404, 'INVOICE_NOT_FOUND', `Chưa có hoá đơn tháng ${toSheetMonth(month)}.`);
     // Money that already arrived (even if the invoice row lags or the store is read-only) reads "Đã đóng": nothing to write.
     const before = await (await statusView(c.env.DB, db, [v.houseId], month))({ ...inv, room: v.roomName });
@@ -272,7 +281,7 @@ export function registerRent(app: Hono<App>): void {
                 SUM(MAX(COALESCE(m.water_new - m.water_old, 0), 0)) AS nuoc,
                 SUM(i.electricity) AS tienDien, SUM(i.water) AS tienNuoc, SUM(i.total) AS doanhThu
            FROM invoices i LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
-          WHERE i.house_id IN (${marks}) AND i.month <= ?
+          WHERE i.house_id IN (${marks}) AND i.month <= ? AND i.issued_at IS NOT NULL
           GROUP BY i.month ORDER BY i.month DESC LIMIT 6`
       ).bind(...store.houseIds, month).all<Trend>();
       for (const t of trend) {
@@ -339,12 +348,7 @@ export function registerRent(app: Hono<App>): void {
     const value = String(body.value).toUpperCase() === 'START' ? 'START' : 'STOP';
     if (!houseIds.length) return fail(c, 403, 'HOUSE_FORBIDDEN', 'Bạn chưa được giao nhà trọ nào.');
     for (const store of await storesOf(c, houseIds)) {
-      await store.db.batch(store.houseIds.map((h) =>
-        store.db.prepare(
-          `INSERT INTO payment_gates (house_id, month, value, updated_by, updated_at) VALUES (?, ?, ?, ?, datetime('now'))
-           ON CONFLICT (house_id, month) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
-        ).bind(h, month, value, actorOf(v))
-      ));
+      await store.db.batch(store.houseIds.map((h) => gateStatement(store.db, h, month, value, actorOf(v))));
     }
     await audit(c, actorOf(v), `payment_gate_${value.toLowerCase()}`, null, `${houseIds.join(',')}:${month}`);
     const legacy = await legacySheet(c.env.DB);
@@ -359,7 +363,7 @@ async function billingOf(c: Context<App>, store: { db: TenantDb; houseIds: strin
   const marks = inList(store.houseIds);
   const { results: invoices } = await store.db.prepare(
     `SELECT i.id, i.house_id, i.room_id, rm.name AS room, i.month, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking,
-            i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, m.electric_old, m.electric_new, m.water_old, m.water_new
+            i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, i.issued_at, m.electric_old, m.electric_new, m.water_old, m.water_new
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id
        LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
       WHERE i.house_id IN (${marks}) AND i.month = ?
@@ -388,6 +392,7 @@ async function billingOf(c: Context<App>, store: { db: TenantDb; houseIds: strin
       row: i.sheet_row ?? undefined,
       houseId: i.house_id,
       invoiceId: i.id,
+      draft: i.issued_at === null,
       room: legacyRoomCode(i.house_id, i.room),
       name: p1.name || p2.name || p3.name || `Phòng ${i.room}`,
       phone: p1.phone || p2.phone || p3.phone || '',

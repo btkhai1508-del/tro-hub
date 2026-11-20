@@ -9,7 +9,7 @@
  */
 import type { Env } from '../app.ts';
 import { getStorage } from '../central/directory.ts';
-import { deferredByRoom, eventReference } from '../central/deferred.ts';
+import { bankReceived, deferredByRoom, eventReference } from '../central/deferred.ts';
 import { invoiceFor, invoiceOrSync } from '../routes/rent.ts';
 import { paintSheetPayment } from '../sheetSync.ts';
 import { TenantLockedError, tenantOfOwner } from '../tenant/route.ts';
@@ -36,6 +36,7 @@ export function vnTimeToUtc(text: string | undefined) {
 export type SettleResult =
   | { settled: false; reason: 'room' }
   | { settled: false; reason: 'invoice' }
+  | { settled: false; reason: 'draft'; invoiceId: number; received: number; total: number }
   | { settled: false; reason: 'short'; invoiceId: number; received: number; total: number }
   | { settled: true; already?: true; invoiceId: number; received: number; total: number };
 
@@ -72,8 +73,9 @@ export async function settleRent(
   ).bind(houseId, inv?.id ?? null, amount, t.gateway ?? null, t.accountNumber ?? null, eventReference(sepayId),
     String(t.content ?? '').slice(0, 300), t.transactionDate ?? new Date().toISOString()).run();
   if (!inv) return { settled: false, reason: 'invoice' };
-  const sum = await db.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(inv.id).first<{ paid: number }>();
-  const received = sum?.paid ?? 0;
+  const received = await bankReceived(db, inv.id);
+  // A draft is not yet billed to the resident: the money is kept, the status waits for issuing (issueMonth re-evaluates it).
+  if (inv.issued_at === null) return { settled: false, reason: 'draft', invoiceId: inv.id, received, total: inv.total };
   if (inv.status === 'paid' || inv.status === 'cash') return { settled: true, already: true, invoiceId: inv.id, received, total: inv.total };
   if (received < inv.total) return { settled: false, reason: 'short', invoiceId: inv.id, received, total: inv.total };
   await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(?, datetime('now')), status_by = 'sepay' WHERE id = ?`)
@@ -93,9 +95,8 @@ export async function deferRent(env: Env, ownerId: number, houseId: string, room
   const db = await tenantOfOwner(env, ownerId); // reads only
   const roomRow = await db.prepare(`SELECT id FROM rooms WHERE house_id = ? AND name = ?`).bind(houseId, room).first<{ id: number }>();
   const inv = roomRow ? await invoiceFor(db, roomRow.id, month) : null;
-  if (!inv || inv.status === 'paid' || inv.status === 'cash') return;
-  const sum = await db.prepare(`SELECT COALESCE(SUM(amount), 0) AS paid FROM payments WHERE invoice_id = ? AND method = 'bank'`).bind(inv.id).first<{ paid: number }>();
-  const total = (sum?.paid ?? 0) + ((await deferredByRoom(env.DB, houseId, month, db)).get(room) ?? 0);
+  if (!inv || inv.issued_at === null || inv.status === 'paid' || inv.status === 'cash') return; // a draft is never painted
+  const total = (await bankReceived(db, inv.id)) + ((await deferredByRoom(env.DB, houseId, month, db)).get(room) ?? 0);
   // Only the transfer that crosses the line paints, so each event paints at most once.
   if (total >= inv.total && total - (event?.amount ?? 0) < inv.total) await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
 }
