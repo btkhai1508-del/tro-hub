@@ -21,6 +21,10 @@ export interface Env {
   SHEET_WRITES?: string; // 'off': không tô cột P / không ghi cổng thanh toán sang Apps Script (chạy thử trên máy)
   ZALO_APP_SECRET?: string; // khoá bí mật ứng dụng Zalo Mini App (secret)
   EXPRESS_ORIGIN?: string; // server Express còn chạy giặt sấy, mặc định https://tro-hub.onrender.com
+  BANKHUB_BASE?: string; // SePay Bank Hub; mặc định https://bankhub-api.sepay.vn, sandbox: https://bankhub-api-sandbox.sepay.vn
+  BANKHUB_CLIENT_ID?: string; // (secret)
+  BANKHUB_CLIENT_SECRET?: string; // (secret)
+  BANKHUB_IPN_KEY?: string; // Apikey SePay gửi kèm IPN và webhook Bank Hub (secret); không đặt = từ chối hết
 }
 
 /** Who is calling, read fresh from D1 on every request. */

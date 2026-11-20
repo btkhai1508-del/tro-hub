@@ -157,3 +157,27 @@ Nút "Quay lại Sheet" (hoặc `PUT /api/dev/source {"source":"sheet"}`):
 **Khi triển khai.** Danh sách `crons` trong `wrangler.toml` đổi thành `["0 19 * * *", "0 17 * * *", "*/10 * * * *"]`: phải deploy Worker mới **cùng lúc** với migration `0023` (`npx wrangler d1 migrations apply`): nếu có cron mới mà thiếu bảng, bước chuyển tháng sẽ lỗi và chỉ ghi cảnh báo; nếu có bảng mà thiếu cron thì cron 10 phút vẫn bắt kịp trong vòng 10 phút. Gói Cloudflare miễn phí giới hạn số cron trên cả tài khoản (hiện 5): kiểm tra còn chỗ cho cron thứ 3 của Worker này.
 
 **Bổ sung sau rà soát.** (1) Tháng cũ hơn ảnh chụp đầu tiên không có phí riêng: màn hình báo "Chưa lưu phí" (`known: false`, chỉ xem) và phí hiện tại không bao giờ được lưu làm ảnh chụp của tháng đã qua. (2) `PUT /api/houses/:id/rates` ghi xuống ảnh chụp tháng hiện tại và tính lại nháp tháng đó. (3) API phí chỉ nhận tháng đến hết tháng sau tháng hiện tại (sai: 400 `MONTH_INVALID`). (4) Khi bật nguồn `worker` giữa tháng, hệ thống tạo ngay hoá đơn nháp cho tháng hiện tại các phòng có cư dân mà chưa có hoá đơn; số lượng trả về ở `draftsCreated` và hiện trên thẻ Developer. Nên tạm không sửa phí trong khoảng giữa lúc chạy migration `0023` và lúc deploy Worker mới.
+
+## SePay Bank Hub (thử nghiệm sandbox)
+
+Tính năng tắt mặc định và không đổi gì ở bản đang chạy: chưa đặt khoá thì mọi route Bank Hub trả 503 `BANKHUB_NOT_CONFIGURED` hoặc 401. Chỉ Developer thao tác; Worker nhận tin từ SePay rồi ghi tiền trọ y như webhook SePay hiện có (cùng mã `XXXPPPMMYYYY`, cùng xử lý đủ / thiếu / chờ khi kho đang chuyển / chưa gán, không bao giờ qua chủ trọ khác).
+
+**Cài đặt (chỉ tên, giá trị do SePay cấp, không ghi vào repo).** Migration `0025_bankhub.sql` phải áp trước (bảng `bankhub_companies`, `bankhub_accounts`, `bankhub_link_tokens`).
+- Biến: `BANKHUB_BASE` (bỏ trống = `https://bankhub-api.sepay.vn`; thử nghiệm đặt `https://bankhub-api-sandbox.sepay.vn`).
+- Secret: `BANKHUB_CLIENT_ID`, `BANKHUB_CLIENT_SECRET` (Basic auth lấy token ở `POST /v1/token`), `BANKHUB_IPN_KEY` (khoá SePay gửi kèm IPN và webhook sự kiện; để trống thì từ chối hết).
+
+**Địa chỉ đưa cho SePay**
+- IPN biến động số dư: `https://tro-hub-api.trohub.workers.dev/api/bankhub/ipn` (SePay gửi `Authorization: Apikey <khoá>`, Worker trả `{"success": true}`).
+- Webhook sự kiện liên kết: `https://tro-hub-api.trohub.workers.dev/api/bankhub/events`. Theo tài liệu, API cập nhật webhook gửi `secret_key` trong header `X-Secret-Key`; hãy đặt `secret_key` đúng bằng `BANKHUB_IPN_KEY`. Worker chấp nhận khoá ở `Authorization: Apikey` hoặc `X-Secret-Key`.
+
+**Cách thử (Developer):** Cổng Developer → chủ trọ → SePay → khối "Bank Hub (thử nghiệm)": Tạo công ty Bank Hub → Mở liên kết ngân hàng → liên kết tài khoản mẫu → Đồng bộ tài khoản. Tài khoản mẫu công khai trong trang Sandbox của SePay (`/vi/bankhub/thong-tin-sandbox`): MBBank cá nhân 0123456789, OTP 12345678. Số tài khoản trong giao diện che còn 4 số cuối. Trọ Hub không tự sửa số tài khoản trong cài đặt căn trọ.
+
+**Giới hạn ngân hàng (theo trang "SePay Bank Hub là gì?", mục Các ngân hàng hỗ trợ)**
+- BIDV, OCB, KienLongBank, MSB, VPBank hộ kinh doanh: "chỉ nhận tiền vào từ VA", nghĩa là tiền chuyển thẳng vào tài khoản chính không báo về.
+- VietinBank (cá nhân, hộ kinh doanh): QR do hệ thống tạo có tiền tố `SEVQR ` ở đầu nội dung; người chuyển phải giữ nguyên, nếu xoá SePay không gửi IPN. Worker đã nhận được nội dung dạng `SEVQR 001101112026`.
+- Vietcombank không có trong danh sách ngân hàng Bank Hub hỗ trợ. VietinBank, TPBank, OCB, MSB, KienLongBank khi "Hủy liên kết" chỉ vô hiệu hoá trong Bank Hub.
+- IPN chỉ gửi khi công ty ở trạng thái `Active` và còn lượt giao dịch (`transaction_amount` lớn hơn 0 hoặc `Unlimited`).
+
+**Chưa quyết (thương mại):** có bắt buộc mã số thuế / pháp nhân cho công ty Bank Hub của từng chủ trọ không (sandbox chỉ cần tên công ty); hạn mức lượt giao dịch tính cho ai (Trọ Hub hay từng chủ trọ). Cần hỏi SePay trước khi chạy thật.
+
+**Tắt:** xoá `BANKHUB_IPN_KEY` (`wrangler secret delete BANKHUB_IPN_KEY`): `/api/bankhub/ipn` và `/api/bankhub/events` từ chối mọi yêu cầu ngay. Xoá thêm `BANKHUB_CLIENT_ID` / `BANKHUB_CLIENT_SECRET` để các nút Developer ngừng gọi SePay. Dữ liệu đã ghi (tiền trọ, `sepay_events` mã `bh-…`) giữ nguyên.

@@ -12,6 +12,7 @@ import { registerIntegrations } from './routes/integrations.ts';
 import { registerAdmin } from './routes/admin.ts';
 import { registerBilling } from './routes/billing.ts';
 import { registerSepay } from './routes/sepay.ts';
+import { registerBankHub } from './routes/bankhub.ts';
 import { registerStorage } from './routes/storage.ts';
 import { registerTenantAccounts } from './routes/tenant.ts';
 import { registerSource } from './routes/source.ts';
@@ -39,6 +40,7 @@ registerTenantAccounts(app); // before registerAdmin: /api/admin/accounts is han
 registerAdmin(app);
 registerBilling(app);
 registerSepay(app);
+registerBankHub(app);
 registerStorage(app); // after registerHouses: /api/dev/* is Developer-only there
 registerSource(app);
 registerSession(app);

@@ -2342,11 +2342,95 @@ function SepayDialog({ landlord, overview, onClose }: { landlord: Landlord; over
       )}
       </>)}
 
+      <BankHubBlock landlord={landlord} />
+
       {notice && (
         <p role={notice.ok ? 'status' : 'alert'} className={cn('mt-4 apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>
           {notice.text}
         </p>
       )}
     </Dialog>
+  );
+}
+
+interface BankHubView {
+  configured: boolean;
+  base: string;
+  landlords: Record<number, { company: { xid: string; fullName: string; status: string } | null; accounts: { xid: string; bank: string | null; accountMasked: string | null; status: string }[] }>;
+}
+
+/** SePay Bank Hub (thử nghiệm sandbox): a company per landlord, a Hosted Link to link a bank account, the linked accounts. */
+function BankHubBlock({ landlord }: { landlord: Landlord }) {
+  const [view, setView] = useState<BankHubView | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<Notice>(null);
+  const [hosted, setHosted] = useState<string | null>(null);
+  const base = `/api/dev/landlords/${landlord.id}/bankhub`;
+
+  const load = useCallback(async () => {
+    const data = await send<BankHubView>('/api/dev/bankhub', 'GET');
+    if (data.success) setView(data);
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
+  const run = async (path: string, done: (d: any) => string | void) => {
+    setBusy(true);
+    setNote(null);
+    const data = await send<any>(`${base}/${path}`, 'POST');
+    setBusy(false);
+    if (!data.success) { setNote({ ok: false, text: data.error || 'Chưa làm được.' }); return; }
+    const text = done(data);
+    if (text) setNote({ ok: true, text });
+    void load();
+  };
+
+  const mine = view?.landlords[landlord.id];
+  const company = mine?.company ?? null;
+  const status = !view ? 'Đang tải…' : !view.configured ? 'Không cấu hình' : company ? 'Đã có công ty' : 'Chưa có công ty';
+
+  return (
+    <section aria-label="Bank Hub (thử nghiệm)" className="mt-5 border-t border-black/10 pt-4 dark:border-white/10">
+      <p className="apple-headline kit-text-primary">Bank Hub <span className="apple-callout font-normal kit-text-secondary">(thử nghiệm)</span></p>
+      <p className="mt-1 apple-callout kit-text-secondary">Trạng thái: <b className="kit-text-primary">{status}</b>{view?.configured ? <> · {view.base}</> : null}</p>
+      {view?.configured && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {!company && (
+            <button type="button" disabled={busy} onClick={() => run('company', () => 'Đã tạo công ty Bank Hub.')} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+              <Plus size={14} /> Tạo công ty Bank Hub
+            </button>
+          )}
+          {company && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run('link-token', (d) => { setHosted(d.hostedLinkUrl); window.open(d.hostedLinkUrl, '_blank', 'noopener,noreferrer'); return 'Đã tạo link liên kết ngân hàng (dùng một lần). Xong thì bấm Đồng bộ tài khoản.'; })}
+              className="primary-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold"
+            >
+              <Link2 size={14} /> Mở liên kết ngân hàng
+            </button>
+          )}
+          {company && (
+            <button type="button" disabled={busy} onClick={() => run('sync', (d) => `Đã đồng bộ ${d.count} tài khoản.`)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+              <RefreshCw size={14} /> Đồng bộ tài khoản
+            </button>
+          )}
+        </div>
+      )}
+      {company && (
+        mine!.accounts.length ? (
+          <ul className="mt-2 space-y-1">
+            {mine!.accounts.map((a) => (
+              <li key={a.xid} className="apple-callout kit-text-secondary font-num">
+                {a.bank ?? 'Ngân hàng'} {a.accountMasked ?? ''}{a.status === 'active' ? '' : ` (${a.status === 'unlinked' ? 'đã huỷ liên kết' : 'đang tắt'})`}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 apple-callout kit-text-secondary">Chưa liên kết tài khoản ngân hàng nào.</p>
+        )
+      )}
+      {hosted && <a href={hosted} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block apple-callout font-semibold underline">Trình duyệt chặn thẻ mới? Bấm vào đây để mở trang liên kết.</a>}
+      {note && <p role={note.ok ? 'status' : 'alert'} className={cn('mt-2 apple-callout font-semibold', note.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>{note.text}</p>}
+    </section>
   );
 }

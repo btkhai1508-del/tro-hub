@@ -52,7 +52,7 @@ export function parseRentCode(content: string): { lvc: boolean; room: string; mo
  * Which house an old-style rent code belongs to: LVC by its prefix, otherwise the one house paid into that
  * account that has the room. A transfer reported through a landlord's SePay never reaches another landlord's house.
  */
-async function houseForRent(env: Env, rent: { lvc: boolean; room: string }, accountNo: string | undefined, ownerId: number | null) {
+export async function houseForRent(env: Env, rent: { lvc: boolean; room: string }, accountNo: string | undefined, ownerId: number | null) {
   if (rent.lvc) {
     const owner = await houseOwner(env.DB, 'LVC');
     return owner !== null && (ownerId === null || owner === ownerId) ? { houseId: 'LVC', ownerId: owner } : null;
