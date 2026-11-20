@@ -4,7 +4,7 @@
  * usual session, so every Express route keeps working on the Google Sheet data until it
  * moves to the Worker too. The Worker is asked on every exchange, so no secret is shared.
  */
-import type { Express } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express';
 import { authenticateUser, normalizePhone } from './googleSheetsBackendService.js';
 import { signTenantToken } from './authToken.js';
 import { createSourceReader } from './workerSource.js';
@@ -12,6 +12,17 @@ import { createSourceReader } from './workerSource.js';
 export const WORKER_API_URL = (process.env.WORKER_API_URL || 'https://tro-hub-api.trohub.workers.dev').replace(/\/+$/, '');
 
 const readSource = createSourceReader(WORKER_API_URL);
+
+/**
+ * Express routes that write to the Google Sheet (Apps Script) must not run once the Worker owns the data:
+ * the Worker no longer reads the Sheet, so the write would be silently lost. A stale tab or an old Mini App
+ * build gets 409 SOURCE_CHANGED instead. Fails open to the Sheet only when the source was never known.
+ */
+export async function sourceChangedGuard(_req: Request, res: Response, next: NextFunction) {
+  if ((await readSource().catch(() => 'sheet')) !== 'worker') return next();
+  const message = 'Hệ thống đã chuyển nguồn dữ liệu, hãy tải lại trang';
+  res.status(409).json({ success: false, code: 'SOURCE_CHANGED', message, error: message });
+}
 
 interface WorkerViewer {
   kind: 'resident' | 'staff';

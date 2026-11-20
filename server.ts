@@ -15,7 +15,7 @@ import { normalizeRoom } from './src/server/googleSheetsBackendService';
 import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, type AuthedRequest } from './src/server/authToken.js';
 import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
 import { registerCccdHandoff } from './src/server/cccdHandoff.js';
-import { registerWorkerSession } from './src/server/workerSession.js';
+import { registerWorkerSession, sourceChangedGuard } from './src/server/workerSession.js';
 import {
   getMonthList,
   getDashboardData,
@@ -135,7 +135,7 @@ async function startServer() {
   });
 
   // Registration writes the personal tab; column O gets the day the account was created.
-  app.post('/api/auth/register', async (req, res) => {
+  app.post('/api/auth/register', sourceChangedGuard, async (req, res) => {
     try {
       const { name, phone, email, gender, password, roomNumber } = req.body || {};
       const room = normalizeRoom(roomNumber);
@@ -426,7 +426,7 @@ async function startServer() {
     res.json({ returnCode: 1, returnMessage: 'Success' });
   });
 
-  app.post('/api/payment/mark-paid', requireAuth, async (req: AuthedRequest, res) => {
+  app.post('/api/payment/mark-paid', sourceChangedGuard, requireAuth, async (req: AuthedRequest, res) => {
     try {
       const { method = 'qr', amount, month = '10/2026', transactionId } = req.body || {};
       const roomNumber = req.tenant!.room || (req.body || {}).roomNumber;
@@ -452,7 +452,7 @@ async function startServer() {
   });
 
   // Legacy fallback endpoint alias to mark-paid
-  app.post('/api/payment/mark-cash-paid', requireAdmin, async (req, res) => {
+  app.post('/api/payment/mark-cash-paid', sourceChangedGuard, requireAdmin, async (req, res) => {
     try {
       const { roomNumber, amount, month = '10/2026', transactionId } = req.body || {};
       if (!roomNumber) {
@@ -477,7 +477,7 @@ async function startServer() {
   });
 
   // Backend API: Mark unpaid -> Cột P: RED
-  app.post('/api/payment/mark-unpaid', requireAdmin, async (req, res) => {
+  app.post('/api/payment/mark-unpaid', sourceChangedGuard, requireAdmin, async (req, res) => {
     try {
       const { roomNumber, month = '10/2026' } = req.body || {};
       if (!roomNumber) {
@@ -499,7 +499,7 @@ async function startServer() {
   });
 
   // Backend API: Update resident profile -> sync directly to Google Sheet
-  app.post('/api/profile/update', requireAuth, async (req: AuthedRequest, res) => {
+  app.post('/api/profile/update', sourceChangedGuard, requireAuth, async (req: AuthedRequest, res) => {
     try {
       const roomNumber = req.tenant!.room;
       const profileData = req.body || {};
@@ -803,7 +803,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/room-detail', async (req, res) => {
+  app.post('/api/admin/room-detail', sourceChangedGuard, async (req, res) => {
     try {
       const { month = '10/2026', room, data } = req.body || {};
       if (room && data) {
@@ -838,7 +838,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/payment-status', async (req, res) => {
+  app.post('/api/admin/payment-status', sourceChangedGuard, async (req, res) => {
     try {
       const { roomNumber, status, month, row } = req.body || {};
       const rowNum = row !== undefined && !isNaN(Number(row)) ? Number(row) : undefined;
@@ -956,7 +956,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/config', async (req, res) => {
+  app.post('/api/admin/config', sourceChangedGuard, async (req, res) => {
     try {
       const { month = '10/2026', config = {} } = req.body || {};
       const result = await saveAdminConfig(month, config);
@@ -1011,7 +1011,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/accounts/status', requireAdmin, async (req, res) => {
+  app.post('/api/admin/accounts/status', sourceChangedGuard, requireAdmin, async (req, res) => {
     try {
       const { phone, name, room, status } = req.body || {};
       await callAccountScript('update_account_status', { phone, name, room, status });
@@ -1021,7 +1021,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/accounts/delete', requireAdmin, async (req, res) => {
+  app.post('/api/admin/accounts/delete', sourceChangedGuard, requireAdmin, async (req, res) => {
     try {
       const { phone, name, room, mode } = req.body || {};
       if (mode !== 'account' && mode !== 'resident') {

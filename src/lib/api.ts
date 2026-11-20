@@ -62,6 +62,11 @@ export async function workerFetch(path: string, init: RequestInit = {}): Promise
   if (res.status === 401 && token && !path.startsWith('/api/auth/login')) {
     window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
   }
+  // Express says the data moved to the Worker: forget the memoized source so the next call goes to the Worker.
+  if (res.status === 409) {
+    const code = await res.clone().json().then((b) => b?.code, () => null);
+    if (code === 'SOURCE_CHANGED') resetSource();
+  }
   return res;
 }
 
