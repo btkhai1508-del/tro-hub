@@ -3,6 +3,8 @@
  * and never blocks the rest.
  */
 import type { Env } from './app.ts';
+import { createDrafts } from './billing/invoices.ts';
+import { isWorkerSource } from './billing/source.ts';
 import { allHouses, getStorage, houseOwner, removeHouseDir, setHouseCounts } from './central/directory.ts';
 import { replayPendingDeferred } from './payments/settle.ts';
 import { currentMonth, ensureMonthFresh, legacySheet, previousMonth } from './sheetSync.ts';
@@ -172,14 +174,35 @@ export async function reconcile(env: Env): Promise<ReconcileResult> {
   return out;
 }
 
+/**
+ * On the 1st (Vietnam time) of a month, when the Worker owns the invoices: a draft for every room with an
+ * approved resident, for every landlord. The daily cron runs at 19:00 UTC = 02:00 the next day in Vietnam.
+ */
+export async function createMonthlyDrafts(env: Env, now = Date.now()): Promise<number> {
+  if (!(await isWorkerSource(env.DB))) return 0;
+  const vn = new Date(now + 7 * 3600_000).toISOString(); // Vietnam wall clock, read as UTC
+  if (vn.slice(8, 10) !== '01') return 0;
+  const month = vn.slice(0, 7);
+  const { results } = await env.DB.prepare(`SELECT DISTINCT owner_id FROM house_directory`).all<{ owner_id: number }>();
+  let made = 0;
+  for (const { owner_id } of results) {
+    try {
+      made += await createDrafts(env, owner_id, month);
+    } catch (err) {
+      console.warn('[cron] monthly drafts', owner_id, err);
+    }
+  }
+  return made;
+}
+
 export const FREQUENT_CRON = '*/10 * * * *';
 export const DAILY_CRON = '0 19 * * *';
 
 /** The jobs behind one cron expression, each failing alone. */
-export async function runCron(cron: string, env: Env): Promise<void> {
+export async function runCron(cron: string, env: Env, now = Date.now()): Promise<void> {
   const jobs: [string, () => Promise<unknown>][] =
     cron === DAILY_CRON
-      ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)]]
+      ? [['purge', () => purgeDeletedHouses(env)], ['reconcile', () => reconcile(env)], ['monthly drafts', () => createMonthlyDrafts(env, now)]]
       : [['sheet sync', () => syncLegacySheets(env)], ['replay deferred', () => replayPendingDeferred(env)]];
   // One after another (purge before reconcile, so reconcile sees the purged state); each fails alone.
   for (const [name, job] of jobs) await job().catch((err) => console.warn('[cron]', name, err));

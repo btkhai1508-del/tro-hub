@@ -6,6 +6,7 @@
  */
 import type { Hono } from 'hono';
 import { actorOf, audit, fail, isOwner, staffOnly, type App, type StaffRole, type Viewer } from '../app.ts';
+import { ensureDraftForRoom } from '../billing/invoices.ts';
 import { newOwnerBackend, ownerHouses, phoneTaken, PhoneTakenError, releaseResident, reserveResident, setStorage } from '../central/directory.ts';
 import { hashPassword, normalizePhone } from '../password.ts';
 import { tenantFor, tenantOfOwner } from '../tenant/route.ts';
@@ -158,6 +159,7 @@ export function registerPeople(app: Hono<App>): void {
       throw e;
     }
     await refreshCounts(c.env, db, houseId);
+    await ensureDraftForRoom(c.env, ownerId, houseId, room.id).catch((err) => console.warn('[people] draft for room', err));
     await audit(c, actorOf(viewer), 'resident_create', houseId, `resident:${id}`);
     return c.json({ success: true, id, room: room.name });
   });
