@@ -89,6 +89,8 @@ export function DeveloperPortal() {
   const [sepay, setSepay] = useState<SepayOverview | null>(null);
   const [sepayFor, setSepayFor] = useState<Landlord | null>(null);
   const [editLandlord, setEditLandlord] = useState<Landlord | null>(null);
+  const [deleteLandlordId, setDeleteLandlordId] = useState<number | null>(null);
+  const [deleteHouse, setDeleteHouse] = useState<House | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [tab, setTab] = useState<'landlords' | 'billing' | 'storage'>('landlords');
   const [query, setQuery] = useState('');
@@ -127,6 +129,8 @@ export function DeveloperPortal() {
     setNotice(data.success ? { ok: true, text: `Đã huỷ xoá ${h.name}. Căn hoạt động lại như cũ.` } : { ok: false, text: data.error || 'Chưa khôi phục được.' });
     load();
   };
+
+  const deleteLandlord = landlords?.find((l) => l.id === deleteLandlordId) ?? null;
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -276,6 +280,9 @@ export function DeveloperPortal() {
                           <button type="button" onClick={() => setHouseFor(l)} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
                             <Plus size={16} /> Căn trọ
                           </button>
+                          <button type="button" onClick={() => setDeleteLandlordId(l.id)} aria-label={`Xoá chủ trọ ${l.full_name}`} className={deleteBtn}>
+                            <Trash2 size={15} /> Xoá
+                          </button>
                         </div>
 
                         <SepayLine status={sepay?.connections[l.id]} manual={sepay?.manual?.[l.id]} onOpen={() => setSepayFor(l)} />
@@ -311,9 +318,14 @@ export function DeveloperPortal() {
                             </button>
                           </div>
                         ) : (
-                          <button type="button" onClick={() => setEditHouse(h.id)} className="soft-button min-h-11 shrink-0 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
-                            <Pencil size={14} /> Sửa
-                          </button>
+                          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                            <button type="button" onClick={() => setEditHouse(h.id)} aria-label={`Sửa căn ${h.name}`} className="soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold">
+                              <Pencil size={14} /> Sửa
+                            </button>
+                            <button type="button" onClick={() => setDeleteHouse(h)} aria-label={`Xoá căn ${h.name}`} className={deleteBtn}>
+                              <Trash2 size={14} /> Xoá
+                            </button>
+                          </div>
                         )}
                       </li>
                     ))}
@@ -340,6 +352,23 @@ export function DeveloperPortal() {
           landlord={editLandlord}
           onClose={() => { setEditLandlord(null); load(); }}
           onChanged={(text) => { setEditLandlord(null); setNotice({ ok: true, text }); load(); }}
+          onOpenDelete={(l) => { setEditLandlord(null); setDeleteLandlordId(l.id); load(); }}
+        />
+      )}
+      {deleteLandlord && (
+        <LandlordDeleteDialog
+          landlord={deleteLandlord}
+          onClose={() => { setDeleteLandlordId(null); load(); }}
+          onHouseDeleted={(name, when) => { setNotice({ ok: true, text: houseDeletedText(name, when) }); load(); }}
+          onDeleted={(text) => { setDeleteLandlordId(null); setNotice({ ok: true, text }); load(); }}
+          onLock={toggleLock}
+        />
+      )}
+      {deleteHouse && (
+        <HouseDeleteDialog
+          house={deleteHouse}
+          onClose={() => setDeleteHouse(null)}
+          onDone={(name, when) => { setDeleteHouse(null); setNotice({ ok: true, text: houseDeletedText(name, when) }); load(); }}
         />
       )}
       {passwordOpen && (
@@ -369,12 +398,15 @@ export function DeveloperPortal() {
         <HouseEditor
           houseId={editHouse}
           onClose={() => { setEditHouse(null); load(); }}
-          onDeleted={(name, when) => { setEditHouse(null); setNotice({ ok: true, text: when ? `${name} sẽ bị xoá hẳn lúc ${d1Time(when)}. Trước đó bạn vẫn tải sao lưu hoặc khôi phục được.` : `Đã xoá hẳn ${name}` }); load(); }}
+          onDeleted={(name, when) => { setEditHouse(null); setNotice({ ok: true, text: houseDeletedText(name, when) }); load(); }}
         />
       )}
     </div>
   );
 }
+
+const houseDeletedText = (name: string, when: string | null) =>
+  when ? `${name} sẽ bị xoá hẳn lúc ${d1Time(when)}. Trước đó bạn vẫn tải sao lưu hoặc khôi phục được.` : `Đã xoá hẳn ${name}`;
 
 /** Small status label: red for problems, green for done, grey for not yet. */
 function Pill({ tone, children }: { tone: 'red' | 'green' | 'gray' | 'amber'; children: React.ReactNode }) {
@@ -935,7 +967,7 @@ function PasswordDialog({ onClose, onDone }: { onClose: () => void; onDone: () =
 }
 
 /** Edit a landlord: details, a new password (shown once), or delete one created by mistake. */
-function LandlordEditDialog({ landlord, onClose, onChanged }: { landlord: Landlord; onClose: () => void; onChanged: (text: string) => void }) {
+function LandlordEditDialog({ landlord, onClose, onChanged, onOpenDelete }: { landlord: Landlord; onClose: () => void; onChanged: (text: string) => void; onOpenDelete: (l: Landlord) => void }) {
   const [form, setForm] = useState({ fullName: landlord.full_name, phone: landlord.phone, email: landlord.email ?? '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -1039,8 +1071,13 @@ function LandlordEditDialog({ landlord, onClose, onChanged }: { landlord: Landlo
         <p className="apple-callout kit-text-secondary">
           {canDelete
             ? 'Chỉ xoá được chủ trọ tạo nhầm: chưa có căn và chưa có hoá đơn phí. Không hoàn tác được.'
-            : `Chủ trọ đang có ${landlord.houses.length} căn nên không xoá được. Muốn ngừng dịch vụ, hãy bấm Khoá.`}
+            : `Chủ trọ đang có ${landlord.houses.length} căn nên chưa xoá được. Hãy xoá từng căn trước; khi không còn căn nào mới xoá được chủ trọ. Muốn ngừng dịch vụ, hãy bấm Khoá.`}
         </p>
+        {!canDelete && (
+          <button type="button" disabled={busy} onClick={() => onOpenDelete(landlord)} aria-label={`Mở hộp xoá chủ trọ ${landlord.full_name}`} className={deleteBtn}>
+            <Trash2 size={15} /> Mở hộp xoá
+          </button>
+        )}
         {canDelete && (
           <button type="button" disabled={busy} onClick={remove} className={cn('soft-button min-h-11 px-3 inline-flex items-center gap-1.5 text-sm font-semibold', confirm === 'delete' && 'text-rose-600')}>
             <Trash2 size={15} /> {confirm === 'delete' ? 'Bấm lần nữa để xoá hẳn' : 'Xoá chủ trọ'}
@@ -1553,9 +1590,220 @@ function nextRoomName(floor: number, onFloor: string[], all: Set<string>): strin
   return `${prefix}${pad(n, width)}`;
 }
 
+/** Delete mode for houses (Developer setting): grace = 7-day wait, immediate = purged at once (test accounts). */
+function useHouseDeleteMode() {
+  const [mode, setMode] = useState<{ immediate: boolean; days: number }>({ immediate: false, days: 7 });
+  useEffect(() => {
+    send<{ mode: string; graceDays?: number }>('/api/dev/house-delete-mode', 'GET').then((d) => {
+      if (d.success) setMode({ immediate: d.mode === 'immediate', days: d.graceDays ?? 7 });
+    });
+  }, []);
+  return mode;
+}
+
+/** The one call that deletes a house: immediate mode returns deleted:true, grace mode returns deleteAfter. */
+async function deleteHouseCall(houseId: string): Promise<{ error: string | null; deleteAfter: string | null }> {
+  const data = await send<{ deleteAfter?: string; deleted?: boolean }>(`/api/dev/houses/${encodeURIComponent(houseId)}/delete`, 'POST');
+  if (!data.success) return { error: data.error || 'Chưa xoá được căn trọ.', deleteAfter: null };
+  return { error: null, deleteAfter: data.deleted ? null : data.deleteAfter ?? null };
+}
+
+function houseDeleteLabel(mode: { immediate: boolean; days: number }, armed: boolean, idle = 'Xoá căn trọ') {
+  if (mode.immediate) return armed ? 'Bấm lần nữa: xoá ngay, không hoàn tác' : 'Xoá ngay, không hoàn tác';
+  return armed ? `Bấm lần nữa để xoá sau ${mode.days} ngày` : idle;
+}
+
+function HouseDeleteExplain({ mode }: { mode: { immediate: boolean; days: number } }) {
+  return mode.immediate ? (
+    <p className="apple-callout mt-1 font-semibold text-rose-600">
+      Đang ở chế độ xoá ngay (thử nghiệm): căn bị xoá hẳn tức thì, không có thời gian chờ, không sao lưu và không hoàn tác được.
+    </p>
+  ) : (
+    <p className="apple-callout kit-text-secondary mt-1">
+      Căn chuyển sang <b>chờ xoá</b> trong {mode.days} ngày. Trong thời gian đó bạn tải được bản sao lưu (phòng, cư dân, hoá đơn, thu tiền, thông báo) hoặc khôi phục lại. Hết {mode.days} ngày, mọi dữ liệu của căn bị xoá hẳn và không lấy lại được.
+    </p>
+  );
+}
+
+/** Delete confirmation for one house, opened from the house row, the landlord delete box, or reused by name. Always needs two clicks. */
+function HouseDeleteDialog({ house, onClose, onDone }: { house: Pick<House, 'id' | 'name' | 'abbreviation'>; onClose: () => void; onDone: (name: string, deleteAfter: string | null) => void }) {
+  const mode = useHouseDeleteMode();
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<Notice>(null);
+
+  const remove = async () => {
+    if (!armed) return setArmed(true);
+    setBusy(true);
+    const r = await deleteHouseCall(house.id);
+    setBusy(false);
+    setArmed(false);
+    if (r.error) return setNotice({ ok: false, text: r.error });
+    onDone(house.name, r.deleteAfter);
+  };
+
+  return (
+    <Dialog
+      title="Xoá căn trọ"
+      subtitle={`${house.name} · ${house.abbreviation}`}
+      onClose={onClose}
+      busy={busy}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={busy} className="soft-button min-h-11 flex-1 px-4">Huỷ</button>
+          <button
+            type="button"
+            onClick={remove}
+            disabled={busy}
+            aria-label={`Xoá căn ${house.name}`}
+            className={cn('min-h-11 flex-1 rounded-2xl px-4 text-sm font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-50', armed ? 'bg-rose-600 text-white' : 'soft-button text-rose-600')}
+          >
+            <Trash2 size={15} /> {busy ? 'Đang xoá…' : houseDeleteLabel(mode, armed)}
+          </button>
+        </>
+      }
+    >
+      <HouseDeleteExplain mode={mode} />
+      <div className="mt-3">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => { const problem = await downloadBackup(house.id); setNotice(problem ? { ok: false, text: problem } : { ok: true, text: 'Đã tải bản sao lưu.' }); }}
+          className="soft-button min-h-11 px-4 text-sm font-semibold inline-flex items-center gap-1.5"
+        >
+          <Download size={15} /> Tải sao lưu
+        </button>
+      </div>
+      {notice && <p role={notice.ok ? 'status' : 'alert'} className={cn('mt-3 apple-callout font-semibold', notice.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>{notice.text}</p>}
+    </Dialog>
+  );
+}
+
+const deleteBtn = 'min-h-11 shrink-0 rounded-2xl border border-rose-500/50 px-3 text-sm font-semibold text-rose-600 inline-flex items-center gap-1.5 transition-colors hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-400';
+
+/**
+ * "Xoá chủ trọ" box: explains what blocks the delete, lets the Developer delete the landlord's houses one by one
+ * (same call and wording as the house editor) and stays open so the landlord delete is available right after.
+ */
+function LandlordDeleteDialog({ landlord, onClose, onHouseDeleted, onDeleted, onLock }: {
+  landlord: Landlord;
+  onClose: () => void;
+  onHouseDeleted: (name: string, deleteAfter: string | null) => void;
+  onDeleted: (text: string) => void;
+  onLock: (l: Landlord) => void;
+}) {
+  const mode = useHouseDeleteMode();
+  const [houseDel, setHouseDel] = useState<House | null>(null);
+  const [armed, setArmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+  const pending = landlord.houses.filter((h) => h.delete_after);
+  const live = landlord.houses.filter((h) => !h.delete_after);
+  const latest = pending.map((h) => h.delete_after as string).sort().pop();
+
+  if (houseDel) {
+    return (
+      <HouseDeleteDialog
+        house={houseDel}
+        onClose={() => setHouseDel(null)}
+        onDone={(name, when) => {
+          setHouseDel(null);
+          setInfo(when ? `${name} đã chuyển sang chờ xoá, xoá hẳn lúc ${d1Time(when)}.` : `Đã xoá hẳn ${name}.`);
+          onHouseDeleted(name, when);
+        }}
+      />
+    );
+  }
+
+  const remove = async () => {
+    if (!armed) return setArmed(true);
+    setBusy(true);
+    setError('');
+    const data = await send(`/api/dev/landlords/${landlord.id}/delete`, 'POST');
+    setBusy(false);
+    setArmed(false);
+    if (!data.success) return setError(data.error || 'Chưa xoá được chủ trọ.');
+    onDeleted(`Đã xoá chủ trọ ${landlord.full_name}.`);
+  };
+
+  const hasHouses = landlord.houses.length > 0;
+
+  return (
+    <Dialog
+      title="Xoá chủ trọ"
+      subtitle={landlord.full_name}
+      onClose={onClose}
+      busy={busy}
+      footer={<button type="button" onClick={onClose} disabled={busy} className="soft-button min-h-11 flex-1 px-4">Đóng</button>}
+    >
+      <div className="space-y-4">
+        {hasHouses ? (
+          <>
+            <p className="apple-callout kit-text-secondary">
+              {landlord.full_name} còn <b>{landlord.houses.length} căn</b> nên chưa xoá được. Hãy xoá từng căn bên dưới; khi không còn căn nào, bạn xoá được chủ trọ.
+            </p>
+            <ul className="space-y-2">
+              {landlord.houses.map((h) => (
+                <li key={h.id} className="flex items-start gap-2.5 rounded-2xl bg-black/[0.03] p-3 dark:bg-white/[0.05]">
+                  <Building2 size={16} className="mt-0.5 shrink-0 kit-text-secondary" />
+                  <div className="min-w-0 flex-1">
+                    <p className="apple-body font-medium kit-text-primary">{h.name} <span className="kit-text-secondary font-normal">· {h.abbreviation}</span></p>
+                    <p className="text-[13px] leading-[18px] kit-text-secondary font-num">{h.room_count} phòng · {h.resident_count} người ở</p>
+                    {h.delete_after && <p className="text-[13px] leading-[18px] font-semibold text-rose-600">Chờ xoá · xoá hẳn lúc {d1Time(h.delete_after)}</p>}
+                  </div>
+                  {!h.delete_after && (
+                    <button type="button" onClick={() => setHouseDel(h)} aria-label={`Xoá căn ${h.name}`} className={deleteBtn}>
+                      <Trash2 size={14} /> Xoá căn
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="apple-callout kit-text-secondary">
+              {mode.immediate
+                ? 'Xoá căn: Xoá ngay, không hoàn tác. Căn bị xoá hẳn tức thì nên xoá xong căn cuối là xoá được chủ trọ ngay.'
+                : `Xoá căn: chuyển sang chờ xoá ${mode.days} ngày. Sau ${mode.days} ngày căn bị xoá hẳn mới xoá được chủ trọ.`}
+            </p>
+            {live.length === 0 && pending.length > 0 && (
+              <p className="apple-callout font-semibold text-amber-700 dark:text-amber-300">
+                Tất cả các căn đang chờ xoá{latest ? `; căn cuối bị xoá hẳn lúc ${d1Time(latest)}` : ''}. Sau đó mới xoá được chủ trọ.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="apple-callout kit-text-secondary">
+              {landlord.full_name} không còn căn nào. Chỉ xoá được chủ trọ chưa có hoá đơn phí. Không hoàn tác được.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={remove}
+              aria-label={`Xoá chủ trọ ${landlord.full_name}`}
+              className={cn('min-h-11 rounded-2xl px-4 text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50', armed ? 'bg-rose-600 text-white' : 'border border-rose-500/50 text-rose-600 hover:bg-rose-500/10 dark:text-rose-400')}
+            >
+              <Trash2 size={15} /> {busy ? 'Đang xoá…' : armed ? 'Bấm lần nữa để xoá hẳn' : 'Xoá chủ trọ'}
+            </button>
+          </>
+        )}
+        {info && <p role="status" className="apple-callout font-semibold text-emerald-700 dark:text-emerald-300">{info}</p>}
+        {error && <p role="alert" className="apple-callout font-semibold text-rose-600">{error}</p>}
+        {(error || hasHouses) && landlord.status === 'active' && (
+          <p className="apple-callout kit-text-secondary">
+            Chỉ muốn ngừng dịch vụ?{' '}
+            <button type="button" onClick={() => { onLock(landlord); onClose(); }} aria-label={`Khoá ${landlord.full_name}`} className="font-semibold text-sky-700 underline underline-offset-2 dark:text-sky-300">Bấm Khoá</button>
+            {' '}để chủ trọ bị đăng xuất và không dùng được nữa, dữ liệu vẫn giữ nguyên.
+          </p>
+        )}
+      </div>
+    </Dialog>
+  );
+}
+
 function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose: () => void; onDeleted: (name: string, deleteAfter: string | null) => void }) {
   const [tab, setTab] = useState<'info' | 'rooms'>('rooms');
-  const [immediateDelete, setImmediateDelete] = useState(false);
+  const deleteMode = useHouseDeleteMode();
   const [house, setHouse] = useState<EditHouse | null>(null);
   const [form, setForm] = useState<EditHouse | null>(null);
   const [rooms, setRooms] = useState<EditRoom[]>([]);
@@ -1566,9 +1814,6 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmHouseDelete, setConfirmHouseDelete] = useState(false);
   const catalog = useCatalog();
-  useEffect(() => {
-    send<{ mode: string }>('/api/dev/house-delete-mode', 'GET').then((d) => setImmediateDelete(d.success && d.mode === 'immediate'));
-  }, []);
 
   const load = useCallback(async () => {
     const data = await send<{ house: EditHouse; rooms: EditRoom[] }>(`/api/dev/houses/${encodeURIComponent(houseId)}`, 'GET');
@@ -1629,11 +1874,11 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
     if (!house) return;
     if (!confirmHouseDelete) return setConfirmHouseDelete(true);
     setBusy(true);
-    const data = await send<{ deleteAfter?: string; deleted?: boolean }>(`${base}/delete`, 'POST');
+    const r = await deleteHouseCall(houseId);
     setBusy(false);
     setConfirmHouseDelete(false);
-    if (!data.success) return setNotice({ ok: false, text: data.error || 'Chưa xoá được căn trọ.' });
-    onDeleted(house.name, data.deleted ? null : data.deleteAfter ?? null);
+    if (r.error) return setNotice({ ok: false, text: r.error });
+    onDeleted(house.name, r.deleteAfter);
   };
 
   const saveInfo = () => {
@@ -1708,15 +1953,7 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
           </div>
           <div className="border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
             <p className="apple-headline text-rose-600">Xoá căn trọ</p>
-            {immediateDelete ? (
-              <p className="apple-callout mt-1 font-semibold text-rose-600">
-                Đang ở chế độ xoá ngay (thử nghiệm): căn bị xoá hẳn tức thì, không có thời gian chờ, không sao lưu và không hoàn tác được.
-              </p>
-            ) : (
-            <p className="apple-callout kit-text-secondary mt-1">
-              Căn chuyển sang <b>chờ xoá</b> trong 7 ngày. Trong thời gian đó bạn tải được bản sao lưu (phòng, cư dân, hoá đơn, thu tiền, thông báo) hoặc khôi phục lại. Hết 7 ngày, mọi dữ liệu của căn bị xoá hẳn và không lấy lại được.
-            </p>
-            )}
+            <HouseDeleteExplain mode={deleteMode} />
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1732,7 +1969,7 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
                 disabled={busy}
                 className={cn('min-h-11 rounded-2xl px-4 text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50', confirmHouseDelete ? 'bg-rose-600 text-white' : 'soft-button text-rose-600')}
               >
-                <Trash2 size={15} /> {immediateDelete ? (confirmHouseDelete ? 'Bấm lần nữa: xoá ngay, không hoàn tác' : 'Xoá ngay, không hoàn tác') : confirmHouseDelete ? 'Bấm lần nữa để xoá sau 7 ngày' : 'Xoá căn trọ'}
+                <Trash2 size={15} /> {houseDeleteLabel(deleteMode, confirmHouseDelete)}
               </button>
             </div>
           </div>
