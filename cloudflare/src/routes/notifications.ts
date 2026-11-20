@@ -3,6 +3,7 @@
  * it is addressed to; one row is written per house reached.
  */
 import type { Hono } from 'hono';
+import { moduleAllowed, moduleOff } from '../modules.ts';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { tenantOfOwner } from '../tenant/route.ts';
 import { legacyRoomCode, parseLegacyRoom } from '../sheetSync.ts';
@@ -105,6 +106,10 @@ export function registerNotifications(app: Hono<App>): void {
       }
     } else if (v.houseIds.includes(target)) perHouse.set(target, null);
     if (!perHouse.size) return fail(c, 400, 'NOTIFICATION_TARGET', 'Chưa chọn người nhận thuộc nhà bạn quản lý.');
+    // Tạo thông báo is a tiện ích: houses that did not buy it are left out ('ALL' reaches only the houses that have it);
+    // when none of the targets has it the call is refused.
+    for (const h of [...perHouse.keys()]) if (!(await moduleAllowed(c, 'createNotification', h))) perHouse.delete(h);
+    if (!perHouse.size) return moduleOff(c);
 
     const scheduledAt = body.scheduledAt ? String(body.scheduledAt) : null;
     const first = new Map<string, NotificationRow>();

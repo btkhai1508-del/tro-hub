@@ -341,10 +341,13 @@ export function registerHouses(app: Hono<App>): void {
 
     const text = (key: string) => String(body[key] ?? '').trim();
     const rates = body.rates ?? {};
-    await createHouse(c, viewer.id, { id, name, modules: null }, (db, payNo) => [
+    // Tiện ích are bought from the Developer: a house the owner makes here starts with the core tools only.
+    // NULL (= every tool) is reserved for the legacy houses from before tiện ích existed, never written for a new house.
+    const modules = JSON.stringify(cleanModules([], await moduleCatalog(c.env.DB)));
+    await createHouse(c, viewer.id, { id, name, modules }, (db, payNo) => [
       db.prepare(
-        `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, owner_id, pay_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(id, name, abbreviation, text('address_detail'), text('ward'), text('province'), text('landlord_name'), normalizePhone(text('landlord_phone')), viewer.id, payNo),
+        `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, owner_id, pay_no, modules) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(id, name, abbreviation, text('address_detail'), text('ward'), text('province'), text('landlord_name'), normalizePhone(text('landlord_phone')), viewer.id, payNo, modules),
       db.prepare(`INSERT INTO house_rates (house_id, ${RATE_FIELDS.join(', ')}) VALUES (?, ${RATE_FIELDS.map(() => '?').join(', ')})`)
         .bind(id, ...RATE_FIELDS.map((f) => Math.max(0, Math.round(Number(rates[f]) || 0)))),
       ...rooms.map((room) => db.prepare(`INSERT INTO rooms (house_id, name, price) VALUES (?, ?, ?)`).bind(id, room, Math.max(0, Number(body.roomPrice) || 0))),
@@ -418,14 +421,17 @@ export function registerHouses(app: Hono<App>): void {
     return c.json({ success: true, rooms: results });
   });
 
-  /** The Tiện ích tools a staff member can open: every tool that at least one of their houses uses. */
-  app.use('/api/modules', requireAuth, staffOnly);
+  /**
+   * The Tiện ích tools the caller can open: staff get every tool at least one of their houses uses; a resident
+   * gets their own house's tools (the Express session carries this list so it can enforce the same rules).
+   */
+  app.use('/api/modules', requireAuth);
   app.get('/api/modules', async (c) => {
     const viewer = c.get('viewer');
     const catalog = await moduleCatalog(c.env.DB);
-    const ids = viewer.kind === 'staff' ? viewer.houseIds : [];
-    if (!ids.length || isDeveloper(viewer)) return c.json({ success: true, modules: catalog.map((m) => m.key) });
-    const keys = new Set<string>();
+    const ids = viewer.kind === 'staff' ? viewer.houseIds : [viewer.houseId];
+    if (isDeveloper(viewer)) return c.json({ success: true, modules: catalog.map((m) => m.key) });
+    const keys = new Set<string>(catalog.filter((m) => m.core).map((m) => m.key)); // no house yet: core tools only
     for (const part of chunks(ids)) {
       const { results } = await c.env.DB.prepare(`SELECT modules FROM house_directory WHERE house_id IN (${part.map(() => '?').join(',')})`)
         .bind(...part)

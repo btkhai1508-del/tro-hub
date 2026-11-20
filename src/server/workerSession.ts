@@ -95,16 +95,24 @@ export function registerWorkerSession(app: Express) {
       if (!result.success || !result.user) return res.status(401).json(result);
 
       const isAdmin = viewer.kind === 'staff';
+      // Tiện ích the person's houses use (staff: union of their houses; resident: their house; Developer: all).
+      // Without the list the token carries no claim and the modules stay open (see tokenAllowsModule).
+      const modulesRes = await fetch(`${WORKER_API_URL}/api/modules`, { headers: { Authorization: bearer } }).catch(() => null);
+      const modulesBody = modulesRes?.ok ? await modulesRes.json().catch(() => null) : null;
+      const modules: string[] | undefined = Array.isArray(modulesBody?.modules) ? modulesBody.modules.map(String) : undefined;
+      if (!modules) console.warn('[worker-session] modules list unavailable, token issued without a modules claim');
       const token = signTenantToken({
         phone: normalizePhone(result.user.phone) || viewer.phone,
         room: result.user.roomNumber,
         personType: result.user.personType,
         isAdmin,
+        ...(modules ? { modules } : {}),
       });
       res.json({
         ...result,
         isAdmin,
         token,
+        modules,
         house: viewer.kind === 'staff'
           ? { role: viewer.role, houseIds: viewer.houseIds ?? [] }
           : { role: 'resident', houseIds: viewer.houseId ? [viewer.houseId] : [] },

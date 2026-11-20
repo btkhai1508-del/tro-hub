@@ -12,6 +12,8 @@ export interface TenantTokenPayload {
   isAdmin?: boolean;
   personType?: string;
   zaloId?: string;        // present when logged in via Zalo
+  /** Tiện ích keys the person's house(s) use, copied from the Worker when the session is issued. Absent on older / sheet-mode tokens. */
+  modules?: string[];
   iat?: number;
   exp?: number;
 }
@@ -97,4 +99,29 @@ export function requireAdmin(req: AuthedRequest, res: Response, next: NextFuncti
   }
   req.tenant = payload;
   next();
+}
+
+/**
+ * Does this session may use tiện ích `key`? A token WITH a modules claim is enforced strictly; a token
+ * without one (issued before the claim existed, or by the sheet-mode / Zalo logins, which have no per-house
+ * list) is allowed: such tokens expire within TOKEN_TTL_SECONDS (30 days) and the Worker enforces its own routes.
+ */
+export function tokenAllowsModule(payload: Pick<TenantTokenPayload, 'modules'> | undefined | null, key: string): boolean {
+  if (!payload) return false;
+  if (!Array.isArray(payload.modules)) return true;
+  return payload.modules.includes(key);
+}
+
+export const MODULE_DISABLED_BODY = {
+  success: false,
+  errorCode: 'MODULE_DISABLED',
+  error: 'Nhà trọ của bạn chưa đăng ký tiện ích này. Vui lòng liên hệ Developer để bật.'
+};
+
+/** Express middleware, placed after requireAuth / requireAdmin: 403 MODULE_DISABLED when the session's houses did not buy `key`. */
+export function requireModule(key: string) {
+  return (req: AuthedRequest, res: Response, next: NextFunction) => {
+    if (!tokenAllowsModule(req.tenant, key)) return res.status(403).json(MODULE_DISABLED_BODY);
+    next();
+  };
 }

@@ -5,6 +5,7 @@
  * validates input, writes the inputs (meter readings, rates, services) and shapes the JSON the screen reads.
  */
 import type { Context, Hono } from 'hono';
+import { ensureModule } from '../modules.ts';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute, recomputeDrafts } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
@@ -267,6 +268,12 @@ export function registerAdmin(app: Hono<App>): void {
     const want = data.paymentStatus === 'paid' || data.paymentStatus === 'unpaid' ? data.paymentStatus : null;
     if (want && METER_KEYS.some((k) => given[k] !== undefined)) {
       return fail(c, 400, 'COMBINED_EDIT', 'Hãy bỏ "đã đóng" trước, rồi lưu chỉ số ở một lần lưu khác.');
+    }
+
+    // Entering meter readings is the Điện nước tool; marking an invoice paid (above) is core and stays open.
+    if (METER_KEYS.some((k) => given[k] !== undefined)) {
+      const off = await ensureModule(c, 'meter', room.house_id);
+      if (off) return off;
     }
 
     return fromHandler(c, async () => {
