@@ -1,18 +1,8 @@
 import {
-  ArrowRight as LucideArrowRight,
-  ArrowLeft as LucideArrowLeft,
-  ArrowUpRight as LucideArrowUpRight,
-  ChevronRight as LucideChevronRight,
-  ChevronLeft as LucideChevronLeft,
-  ChevronDown as LucideChevronDown,
-  ChevronUp as LucideChevronUp,
   ExternalLink as LucideExternalLink,
-  Lock as LucideLock,
-  LockKeyhole as LucideLockKeyhole,
   KeyRound as LucideKeyRound,
   AlertCircle as LucideAlertCircle,
   AlertTriangle as LucideAlertTriangle,
-  ShieldAlert as LucideShieldAlert,
   Info as LucideInfo,
   HelpCircle as LucideHelpCircle,
   Check as LucideCheck,
@@ -35,7 +25,6 @@ import {
   Pencil as LucidePencil,
   PhoneCall as LucidePhoneCall,
   Phone as LucidePhone,
-  Download as LucideDownload,
   ImageDown as LucideImageDown,
   Camera as LucideCamera,
   Landmark as LucideLandmark,
@@ -46,9 +35,11 @@ import {
   Settings2 as LucideSettings2,
   SlidersHorizontal as LucideSlidersHorizontal,
   Home as LucideHome,
-  Wallet as LucideWallet,
 } from 'lucide-react';
 import { createKitIcon } from './KitIcons';
+
+// Bộ icon line 2D mới của người dùng (src/components/LineIcons.tsx)
+export { ArrowLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, Lock, LockKeyhole, Unlock, ShieldAlert, Wallet, WalletCards, CreditCard, Tags } from './LineIcons';
 
 // Main / Hero icons keep their designated 3D Kit assets as requested
 export const Home = createKitIcon('Home');
@@ -68,9 +59,6 @@ export const ReceiptText = createKitIcon('Paper');
 export const FileText = createKitIcon('Document');
 export const BookOpen = createKitIcon('Paper');
 export const FileSpreadsheet = createKitIcon('Chart');
-export const Wallet = LucideWallet;
-export const WalletCards = LucideWallet;
-export const CreditCard = LucideWallet;
 export const Search = LucideSearch;
 export const Edit3 = LucideEdit3;
 export const Edit = LucideEdit;
@@ -91,7 +79,6 @@ export const TrendingUp = createKitIcon('Chart');
 export const Compass = createKitIcon('Discovery');
 export const Sparkles = createKitIcon('Star');
 export const Play = createKitIcon('Play');
-export const Download = LucideDownload;
 export const ImageDown = LucideImageDown;
 export const CameraLine = LucideCamera;
 export const Landmark = LucideLandmark;
@@ -105,22 +92,12 @@ export const Timer = LucideTimer;
 export const CalendarClock = LucideCalendarClock;
 
 // Small utility / indicator / action icons converted to clean, modern 2D Lucide vector icons
-export const ArrowRight = LucideArrowRight;
-export const ArrowLeft = LucideArrowLeft;
-export const ArrowUpRight = LucideArrowUpRight;
-export const ChevronRight = LucideChevronRight;
-export const ChevronLeft = LucideChevronLeft;
-export const ChevronDown = LucideChevronDown;
-export const ChevronUp = LucideChevronUp;
 export const ExternalLink = LucideExternalLink;
 export const LogIn = LucideLogIn;
 export const LogOut = LucideLogOut;
-export const Lock = LucideLock;
-export const LockKeyhole = LucideLockKeyhole;
 export const KeyRound = LucideKeyRound;
 export const AlertCircle = LucideAlertCircle;
 export const AlertTriangle = LucideAlertTriangle;
-export const ShieldAlert = LucideShieldAlert;
 export const Info = LucideInfo;
 export const HelpCircle = LucideHelpCircle;
 export const Check = LucideCheck;

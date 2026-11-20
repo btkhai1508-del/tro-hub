@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
+import { Lock } from '../LineIcons';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
 
 interface Row {

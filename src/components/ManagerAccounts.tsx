@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock } from './LineIcons';
 import { workerFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 

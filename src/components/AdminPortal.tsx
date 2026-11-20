@@ -1,4 +1,6 @@
-import * as NavIcons from 'lucide-react';
+import * as LucideNav from 'lucide-react';
+import { ChevronLeft as LineChevronLeft, ChevronRight as LineChevronRight, ChevronDown as LineChevronDown } from './LineIcons';
+const NavIcons = { ...LucideNav, ChevronLeft: LineChevronLeft, ChevronRight: LineChevronRight, ChevronDown: LineChevronDown };
 import '../styles/admin-tahoe.css';
 import '../styles/resident-tahoe.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';

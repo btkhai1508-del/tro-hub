@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Receipt, FileText, User, PhoneCall, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut, LayoutGrid, Copy, Check, ArrowUpRight } from 'lucide-react';
+import { Home, Receipt, FileText, User, PhoneCall, SlidersHorizontal, LogOut, LayoutGrid, Copy, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowUpRight } from './LineIcons';
 import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { preloadRoute } from '../lib/routePreload';

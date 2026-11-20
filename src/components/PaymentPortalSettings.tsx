@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Landmark } from 'lucide-react';
+import { CheckCircle2, Landmark } from 'lucide-react';
+import { ArrowLeft } from './LineIcons';
 import { workerFetch } from '../lib/api';
 import { fetchPaymentPortal, PaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { cn } from '../lib/utils';
