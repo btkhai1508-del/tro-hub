@@ -49,7 +49,9 @@ import { useApp, RegisteredAccount } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
 import { cn, getCurrentMonthStr, DEFAULT_ROOM_NUMBERS } from '../lib/utils';
-import { apiFetch } from '../lib/api';
+import { apiFetch, ensureSource, getSource } from '../lib/api';
+import FeeSettings from './admin/FeeSettings';
+import MonthBilling from './admin/MonthBilling';
 import { HOUSES, houseFromRoom } from '../lib/houses';
 import { buildContract, buildCt01, Person } from '../lib/documents/legalForms';
 import { buildDeclaration } from '../lib/documents/stateFormat';
@@ -179,6 +181,9 @@ export function AdminPortal() {
   const { mode, isDark, toggleTheme } = useTheme();
 
   // Active Menu
+  // Worker mode: fee settings and meter entry are served by the Worker; sheet mode keeps the old screens.
+  const [workerMode, setWorkerMode] = useState(() => getSource() === 'worker');
+  useEffect(() => { ensureSource().then((src) => setWorkerMode(src === 'worker')); }, []);
   const [activeMenu, setActiveMenu] = useState<
     'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
   >('dashboard');
@@ -2718,6 +2723,8 @@ export function AdminPortal() {
               </div>
             </div>
 
+            {workerMode && <MonthBilling month={selectedMonth} />}
+            {!workerMode && (
             <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
               <div className="admin-section-toolbar flex flex-wrap items-center justify-between gap-3">
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
@@ -2795,6 +2802,7 @@ export function AdminPortal() {
                 </table>
               </div>
             </div>
+            )}
           </div>
         )}
 
@@ -2823,6 +2831,8 @@ export function AdminPortal() {
               </div>
             </div>
 
+            {workerMode && <FeeSettings />}
+            {!workerMode && (
             <div className="soft-card kit-form-surface p-4 sm:p-8 space-y-6">
               <div>
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
@@ -2919,6 +2929,7 @@ export function AdminPortal() {
                 {configSaveMsg && <p role="status" className="text-xs font-bold text-emerald-600">{configSaveMsg}</p>}
               </div>
             </div>
+            )}
           </div>
         )}
 
