@@ -209,7 +209,10 @@ export function DeveloperPortal() {
         {tab === 'billing' ? (
           <BillingCard />
         ) : tab === 'storage' ? (
-          <StorageCard />
+          <>
+            <SourceCard />
+            <StorageCard />
+          </>
         ) : (
           <section className="liquid-panel rounded-[28px] p-3 sm:p-4">
             <label className="relative block">
@@ -427,6 +430,86 @@ function UsageBar({ label, value, text, limit }: { label: string; value: number;
         <div className={cn('h-full rounded-full', ratio >= 0.7 ? 'bg-amber-500' : 'bg-emerald-500')} style={{ width: `${Math.max(ratio * 100, value > 0 ? 1.5 : 0)}%` }} />
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Nguồn dữ liệu: which side owns invoices (Google Sheet or Worker), the export queue, and the switch
+
+interface SourceOverview { source?: 'sheet' | 'worker'; exportQueue?: { pending: number; failed: { id: number; kind: string; lastError: string }[] } }
+
+function SourceCard() {
+  const [data, setData] = useState<SourceOverview | null>(null);
+  const [notice, setNotice] = useState<Notice>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const d = await send<SourceOverview>('/api/dev/storage', 'GET');
+    if (!d.success) return setNotice({ ok: false, text: d.error || 'Chưa tải được nguồn dữ liệu.' });
+    setData(d);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const toWorker = data?.source !== 'worker';
+  const failed = data?.exportQueue?.failed ?? [];
+
+  const requeue = async () => {
+    setBusy(true);
+    const d = await send<{ requeued: number }>('/api/dev/export-queue/requeue', 'POST');
+    setBusy(false);
+    setNotice(d.success ? { ok: true, text: `Đã đưa ${d.requeued} dòng lỗi vào hàng đợi để thử lại.` } : { ok: false, text: d.error || 'Chưa thử lại được.' });
+    load();
+  };
+
+  const flip = async (acknowledgeFailed = false) => {
+    if (!acknowledgeFailed) {
+      const ok = window.confirm(toWorker
+        ? 'Chuyển sang Worker làm nguồn chính? Google Sheet sẽ chỉ còn nhận dữ liệu một chiều, và hệ thống sẽ đọc Sheet lần cuối ngay bây giờ.'
+        : 'Quay lại dùng Google Sheet làm nguồn chính? Dữ liệu trên Sheet sẽ được đọc lại và có thể ghi đè số liệu nhập ở Worker.');
+      if (!ok) return;
+    }
+    setBusy(true);
+    const d = await send<{ source: string; workerOnlyResidents?: number; errorCode?: string }>('/api/dev/source', 'PUT', { source: toWorker ? 'worker' : 'sheet', ...(acknowledgeFailed && { acknowledgeFailed: true }) });
+    setBusy(false);
+    if (d.success) {
+      const n = d.workerOnlyResidents ?? 0;
+      setNotice({ ok: true, text: `Đã chuyển nguồn dữ liệu sang ${d.source === 'worker' ? 'Worker' : 'Google Sheet'}.${n > 0 ? ` Cảnh báo: ${n} cư dân chỉ có ở Worker, chưa có trên Sheet.` : ''}` });
+    } else if (d.errorCode === 'EXPORT_FAILED') {
+      setNotice({ ok: false, text: d.error || 'Có dòng không chép được sang Google Sheet.' });
+      if (window.confirm(`${d.error ?? ''}\n\nBỏ qua các dòng lỗi và vẫn quay về Sheet? Số liệu các dòng đó sẽ không có trên Sheet.`)) return flip(true);
+    } else {
+      // EXPORT_PENDING, ZALO_NOT_CONFIGURED, SYNC_FAILED and the rest: the server's Vietnamese message says what to do.
+      setNotice({ ok: false, text: d.error || 'Chưa chuyển được nguồn dữ liệu.' });
+    }
+    load();
+  };
+
+  return (
+    <section className="liquid-panel mb-4 rounded-[28px] p-3 sm:p-4" aria-label="Nguồn dữ liệu">
+      <h2 className="apple-headline kit-text-primary px-1">Nguồn dữ liệu</h2>
+      {notice && <p role="status" className={cn('mt-2 rounded-2xl px-3 py-2 text-[13px] font-semibold', notice.ok ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/10 text-rose-700 dark:text-rose-300')}>{notice.text}</p>}
+      {data ? (
+        <div className="mt-3 space-y-3 px-1">
+          <p className="flex flex-wrap items-center gap-2 text-[13.5px] kit-text-primary">
+            Đang dùng: <Pill tone={toWorker ? 'gray' : 'green'}>{toWorker ? 'Google Sheet' : 'Worker'}</Pill>
+            <span className="kit-text-secondary">Hàng đợi chép sang Sheet: {data.exportQueue?.pending ?? 0} dòng chờ, {failed.length} dòng lỗi</span>
+          </p>
+          {failed.length > 0 && (
+            <ul className="space-y-1 rounded-2xl bg-black/[0.03] p-3 text-[12.5px] dark:bg-white/[0.05]">
+              {failed.map((f) => <li key={f.id} className="font-num kit-text-primary">#{f.id} {f.kind}: <span className="text-rose-600">{f.lastError || 'lỗi'}</span></li>)}
+            </ul>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {failed.length > 0 && <button type="button" disabled={busy} onClick={requeue} className="soft-button min-h-11 px-3 text-sm font-semibold disabled:opacity-50">Thử lại</button>}
+            <button type="button" disabled={busy} onClick={() => flip()} className="soft-button min-h-11 px-3 text-sm font-semibold disabled:opacity-50">
+              {toWorker ? 'Chuyển sang Worker' : 'Quay lại Sheet'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 px-1 text-[13px] kit-text-secondary">Đang tải…</p>
+      )}
+    </section>
   );
 }
 

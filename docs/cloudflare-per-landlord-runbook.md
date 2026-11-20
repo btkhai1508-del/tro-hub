@@ -111,3 +111,35 @@ Hình dạng kết quả mỗi bước (chỉ mang tính tham khảo, quan sát 
 - 13 khoản tiền chưa gắn nhà **có trong bản sao lưu** và cả 13 thuộc kho của chủ trọ #1 (khớp theo tài khoản ngân hàng của nhà); chủ trọ #4 nhận 0; không có khoản nào không khớp.
 - Thời gian: `dry-run` dưới 1 giây; mỗi `migrate`/`rollback` khoảng 15 đến 16 giây, trong đó khoá ghi 15,05 đến 15,22 giây (gần như toàn bộ là 15 giây drain; việc chép dữ liệu chỉ mất vài trăm mili giây trên dữ liệu cỡ này). Cả buổi diễn tập khoảng 1 phút 54 giây kể cả nạp dữ liệu và khởi động.
 - Lưu ý khi chạy lại local: `wrangler d1 execute --file` không nạp được trực tiếp bản export vì thứ tự bảng; script đã xử lý.
+
+## Bật Worker là nguồn chính
+
+Công tắc `settings.source_of_truth` có hai giá trị: `sheet` (mặc định, hành vi như trước) và `worker`. **Không bật `worker` khi chưa có người dùng đồng ý.** Deploy code luôn để công tắc ở `sheet`.
+
+### Trước khi deploy
+1. Sao lưu D1 (export hoặc bookmark Time Travel).
+2. **Áp migration 0022 lên D1 TRƯỚC khi deploy Worker.** Code mới đọc `invoices.issued_at`; code mới trên lược đồ cũ làm hỏng SePay và đồng bộ. Code cũ trên lược đồ mới thì vô hại, nên quay lại bản Worker cũ vẫn an toàn. Migration không chạy lại được (ALTER ADD COLUMN). Hoá đơn có sẵn đều được đánh dấu đã phát hành.
+3. Deploy Worker; kiểm tra `GET /api/source` trả `sheet`, đăng nhập cư dân và chủ trọ, một giao dịch SePay thử, cron vẫn đồng bộ Sheet.
+4. Đặt secret `ZALO_APP_SECRET` cho Worker (`wrangler secret put ZALO_APP_SECRET`, không in giá trị ra). Thiếu khoá này công tắc từ chối chuyển sang `worker` (409 `ZALO_NOT_CONFIGURED`).
+5. Chạy `node cloudflare/scripts/verify-billing.mts sql TRUNG_KIM LVC`, chạy câu SELECT trên D1 thật, rồi `check rows.json ...` để so các hoá đơn đã lưu với công thức (chỉ đọc). Phải không có sai lệch.
+6. Chủ trọ ngừng sửa Sheet. Khi chuyển, Worker tự đọc Sheet lần cuối (tháng này và tháng trước) trước khi đổi công tắc; nếu đọc lỗi, công tắc không đổi và trả 409 `SYNC_FAILED`.
+
+### Bật
+Trang Developer, tab Lưu trữ, thẻ "Nguồn dữ liệu", nút "Chuyển sang Worker" (hoặc `PUT /api/dev/source {"source":"worker"}`). Từ lúc này Worker không đọc Sheet nữa; điện nước, thanh toán, đơn giá, đăng ký, hồ sơ, duyệt và xoá cư dân được xếp hàng và cron 10 phút ghi sang Sheet một chiều (tối đa 20 dòng mỗi lần, mỗi dòng thử tối đa 5 lần).
+
+Express và Mini App nhớ nguồn khoảng 30 giây (cộng thêm 30 giây cache của `GET /api/source`), nên có độ trễ tới khoảng 1 phút. Trong lúc đó, các route Express ghi Sheet trả 409 `SOURCE_CHANGED` ("Hệ thống đã chuyển nguồn dữ liệu, hãy tải lại trang"); tab cũ chỉ cần tải lại.
+
+### Theo dõi hàng đợi
+Thẻ "Nguồn dữ liệu" (hoặc `GET /api/dev/storage`, trường `exportQueue`) cho số dòng chờ và danh sách dòng lỗi kèm lý do. Dòng lỗi thường do tab tháng chưa có trên Sheet (không có gì tự tạo tab tháng mới khi Worker là nguồn chính, hãy tạo tab trước ngày đầu tháng). Sửa Sheet rồi bấm "Thử lại" (`POST /api/dev/export-queue/requeue`) để đưa các dòng đã bỏ cuộc về 0 lần thử. Gửi lại luôn an toàn vì Apps Script ghi đè giá trị ô.
+Mật khẩu và CCCD không được chép sang Sheet: cư dân đăng ký khi ở `worker` có cột mật khẩu trống trên Sheet.
+
+### Quay lại Sheet
+Nút "Quay lại Sheet" (hoặc `PUT /api/dev/source {"source":"sheet"}`):
+- Còn dòng chờ: 409 `EXPORT_PENDING`, đợi hàng đợi chạy hết.
+- Còn dòng đã lỗi 5 lần: 409 `EXPORT_FAILED`. Thử lại các dòng đó, hoặc xác nhận bỏ qua (`acknowledgeFailed: true`; số liệu các dòng ấy sẽ không có trên Sheet và lần đọc Sheet tiếp theo có thể ghi đè số liệu ở Worker).
+- Khi thành công, phản hồi có `workerOnlyResidents`: số cư dân chỉ tồn tại ở Worker (đăng ký sau lúc bật), cần nhập tay vào Sheet. Trang Developer hiện cảnh báo này.
+- Cron đọc Sheet chạy lại; số liệu Sheet đã nhận từ hàng đợi.
+
+### Ghi chú
+- Kho riêng (Durable Object) đã có dữ liệu mà chưa nâng bảng mới: hãy chạy chạy thử (dry-run) trước; `AUTOINCREMENT` của bảng mới chưa có mốc sàn nên không dùng cho chủ trọ đã chuyển kho khi chưa kiểm tra.
+- `POST /api/auth/register` chỉ tồn tại khi công tắc là `worker` (404 ở `sheet`).
