@@ -7,6 +7,7 @@
 import type { Context } from 'hono';
 import type { Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App, type Viewer } from '../app.ts';
+import { isWorkerSource } from '../billing/source.ts';
 import { bankReceived, deferredByRoom, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
 import { decryptText } from '../cccd.ts';
 import {
@@ -144,6 +145,7 @@ async function gateFor(central: D1Database, db: TenantDb, houseId: string, month
   if (latest) return latest.value;
   if (isReadOnly(db)) return 'STOP'; // the first-time import below writes; a read never waits for the lock
   // Lần đầu: lấy các tháng Express đã lưu trong Apps Script cho nhà còn dùng Sheet cũ.
+  if (await isWorkerSource(central)) return 'STOP'; // no Apps Script read once the Worker owns the data
   const legacy = await legacySheet(central);
   if (!legacy?.houses.includes(houseId)) return 'STOP';
   const gates = await scriptGates();
@@ -278,7 +280,8 @@ export function registerRent(app: Hono<App>): void {
         const { results } = await store.db.prepare(`SELECT DISTINCT month FROM invoices WHERE house_id IN (${inList(store.houseIds)})`).bind(...store.houseIds).all<{ month: string }>();
         results.forEach((r) => months.add(r.month));
       }
-      const legacy = await legacySheet(c.env.DB);
+      // The Worker owns the data in worker mode: its invoices already give the months, the Sheet is not read.
+      const legacy = (await isWorkerSource(c.env.DB)) ? null : await legacySheet(c.env.DB);
       if (legacy && legacy.houses.some((h) => houseIds.includes(h))) (await sheetMonths(legacy.sheetId).catch(() => [])).forEach((m) => months.add(m));
     }
     return c.json({ success: true, months: [...months].sort().map(toSheetMonth) });

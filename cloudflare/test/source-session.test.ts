@@ -84,12 +84,23 @@ describe.each(BACKENDS)('công tắc nguồn dữ liệu [%s]', (backend) => {
     expect(res.status).toBe(409);
   });
 
-  it('về sheet: cho phép khi chỉ còn dòng đã xong hoặc đã lỗi đủ 5 lần', async () => {
+  it('về sheet: cho phép khi chỉ còn dòng đã xong', async () => {
     await putSource('worker', developer);
     await queueRow(1, true);
-    await queueRow(5, false);
     const res = await putSource('sheet', developer);
     expect(res.status).toBe(200);
+    expect(await sourceNow()).toBe('sheet');
+  });
+
+  it('về sheet: dòng đã lỗi đủ 5 lần chặn 409 EXPORT_FAILED, trừ khi xác nhận acknowledgeFailed', async () => {
+    await putSource('worker', developer);
+    await queueRow(5, false);
+    const res = await putSource('sheet', developer);
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as any).errorCode).toBe('EXPORT_FAILED');
+    expect(await sourceNow()).toBe('worker');
+    const ok = await api('/api/dev/source', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'sheet', acknowledgeFailed: true }) }, developer);
+    expect(ok.status).toBe(200);
     expect(await sourceNow()).toBe('sheet');
   });
 

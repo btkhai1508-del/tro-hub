@@ -63,6 +63,7 @@ function coalesceKey(row: QueueRow, p: Record<string, unknown>): string | null {
 }
 
 async function send(kind: ExportKind, payload: Record<string, unknown>): Promise<void> {
+  // A cleared reading ('') is skipped by the script: the old value stays on the Sheet.
   const { houseId: _h, mode, ...params } = payload;
   const action = kind === 'delete_resident' && mode === 'account' ? 'delete_account' : ACTION[kind];
   const res = await fetch(APPS_SCRIPT_URL, {
@@ -89,9 +90,8 @@ export async function drainExportQueue(env: Env): Promise<{ sent: number; failed
   const out = { sent: 0, failed: 0 };
   if (env.SHEET_WRITES === 'off' || !(await isWorkerSource(env.DB))) return out;
   const { results } = await env.DB
-    .prepare(`SELECT id, kind, payload FROM sheet_export_queue WHERE done_at IS NULL AND attempts < ? ORDER BY id`)
-    .bind(MAX_ATTEMPTS)
-    .all<QueueRow>();
+    .prepare(`SELECT id, kind, payload, attempts FROM sheet_export_queue WHERE done_at IS NULL ORDER BY id`)
+    .all<QueueRow & { attempts: number }>();
   // Older rows of the same room+month (or house+month) are superseded by the latest one.
   const latest = new Map<string, number>();
   const parsed = new Map<number, Record<string, unknown>>();
@@ -100,12 +100,18 @@ export async function drainExportQueue(env: Env): Promise<{ sent: number; failed
     const key = coalesceKey(r, parsed.get(r.id)!);
     if (key) latest.set(key, r.id);
   }
+  // `latest` also counts rows that gave up (5 attempts): an older pending row must never overtake a newer dead one.
   const todo: QueueRow[] = [];
+  const superseded: number[] = [];
   for (const r of results) {
     const key = coalesceKey(r, parsed.get(r.id)!);
-    if (key && latest.get(key) !== r.id) {
-      await env.DB.prepare(`UPDATE sheet_export_queue SET done_at = datetime('now'), last_error = 'superseded' WHERE id = ?`).bind(r.id).run();
-    } else todo.push(r);
+    if (key && latest.get(key) !== r.id) superseded.push(r.id);
+    else if (r.attempts < MAX_ATTEMPTS) todo.push(r);
+  }
+  // One UPDATE per chunk instead of one per row (keeps the subrequest budget for the sends).
+  for (let i = 0; i < superseded.length; i += 50) {
+    const ids = superseded.slice(i, i + 50);
+    await env.DB.prepare(`UPDATE sheet_export_queue SET done_at = datetime('now'), last_error = 'superseded' WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).run();
   }
   for (const row of todo.slice(0, DRAIN_LIMIT)) {
     try {
@@ -132,4 +138,10 @@ export async function exportQueueStatus(db: D1Database): Promise<{ pending: numb
     .bind(MAX_ATTEMPTS)
     .all<{ id: number; kind: string; last_error: string | null }>();
   return { pending: p?.n ?? 0, failed: results.map((r) => ({ id: r.id, kind: r.kind, lastError: r.last_error ?? '' })) };
+}
+
+/** Gives up-rows (attempts >= 5) another round, e.g. after the missing Sheet tab was created. Returns how many. */
+export async function requeueFailed(db: D1Database): Promise<number> {
+  const r = await db.prepare(`UPDATE sheet_export_queue SET attempts = 0 WHERE done_at IS NULL AND attempts >= ?`).bind(MAX_ATTEMPTS).run();
+  return r.meta?.changes ?? 0;
 }

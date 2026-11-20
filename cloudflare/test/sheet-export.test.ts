@@ -285,6 +285,21 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
       expect(calls).toEqual([]);
     });
 
+    it('GET /api/admin/months ở worker không tải gì từ docs.google.com; ở sheet vẫn đọc Sheet', async () => {
+      const { other, calls } = mockScript();
+      const res = await call(owner, 'GET', '/api/admin/months');
+      expect(res.status).toBe(200);
+      expect((await json(res)).months).toContain('11/2026');
+      await call(owner, 'GET', '/api/admin/billing?month=11/2026');
+      await call(owner, 'GET', '/api/admin/dashboard');
+      await call(await login(PHONES.residentLvc), 'GET', '/api/payment/status');
+      expect(other.filter((u) => u.includes('google'))).toEqual([]);
+      expect(calls).toEqual([]);
+      await setting('source_of_truth', 'sheet');
+      await call(owner, 'GET', '/api/admin/months');
+      expect(other.some((u) => u.includes('docs.google.com'))).toBe(true);
+    });
+
     it('ở sheet: cron vẫn đọc Sheet như cũ (có tải CSV)', async () => {
       await setting('source_of_truth', 'sheet');
       const { other } = mockScript();
@@ -317,10 +332,35 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
       mockScript();
       await drainExportQueue(e);
       expect((await put('sheet')).status).toBe(200);
-      // Given-up rows (attempts = 5) no longer block the switch.
+      // Given-up rows (attempts = 5) block with EXPORT_FAILED until acknowledged.
       await setting('source_of_truth', 'worker');
       await e.DB.prepare(`UPDATE sheet_export_queue SET done_at = NULL, attempts = 5`).run();
-      expect((await put('sheet')).status).toBe(200);
+      const dead = await put('sheet');
+      expect(dead.status).toBe(409);
+      expect((await json(dead)).errorCode).toBe('EXPORT_FAILED');
+      expect((await call(dev, 'PUT', '/api/dev/source', { source: 'sheet', acknowledgeFailed: true })).status).toBe(200);
+    });
+
+    it('requeue: chỉ Developer; đưa dòng lỗi về attempts 0, gửi lại được, ghi audit', async () => {
+      await enter('LVC', '101', { dienCu: 1, dienMoi: 5 });
+      await e.DB.prepare(`UPDATE sheet_export_queue SET attempts = 5, last_error = 'x'`).run();
+      expect((await call(owner, 'POST', '/api/dev/export-queue/requeue')).status).toBe(403);
+      const dev = await login(PHONES.developer);
+      const res = await call(dev, 'POST', '/api/dev/export-queue/requeue');
+      expect(await json(res)).toEqual({ success: true, requeued: 1 });
+      expect((await rows())[0].attempts).toBe(0);
+      expect((await e.DB.prepare(`SELECT target FROM audit_log WHERE action = 'export_requeue'`).first<any>()).target).toBe('1');
+      mockScript();
+      expect(await drainExportQueue(e)).toEqual({ sent: 1, failed: 0 });
+    });
+
+    it('gộp: dòng cũ không vượt dòng mới hơn đã bỏ cuộc', async () => {
+      await enqueueExport(e.DB, 'meters', { houseId: 'LVC', room: 'LVC-101', month: '12/2099', dienMoi: 1 });
+      await enqueueExport(e.DB, 'meters', { houseId: 'LVC', room: 'LVC-101', month: '12/2099', dienMoi: 2 });
+      await e.DB.prepare(`UPDATE sheet_export_queue SET attempts = 5 WHERE id = (SELECT MAX(id) FROM sheet_export_queue)`).run();
+      const { calls } = mockScript();
+      expect(await drainExportQueue(e)).toEqual({ sent: 0, failed: 0 });
+      expect(calls).toEqual([]);
     });
   });
 });

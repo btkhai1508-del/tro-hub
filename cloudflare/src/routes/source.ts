@@ -4,6 +4,7 @@
  * the export queue still holds work the Sheet has not received.
  */
 import type { Hono } from 'hono';
+import { requeueFailed } from '../sheetExport.ts';
 import { actorOf, audit, developerOnly, fail, type App } from '../app.ts';
 import { houseOwner } from '../central/directory.ts';
 import { getSource, setSource, type Source } from '../billing/source.ts';
@@ -40,7 +41,7 @@ export function registerSource(app: Hono<App>): void {
   });
 
   app.put('/api/dev/source', requireAuth, developerOnly, async (c) => {
-    const body = await c.req.json<{ source?: unknown }>().catch(() => ({}) as { source?: unknown });
+    const body = await c.req.json<{ source?: unknown; acknowledgeFailed?: unknown }>().catch(() => ({}) as { source?: unknown; acknowledgeFailed?: unknown });
     if (body.source !== 'sheet' && body.source !== 'worker') return fail(c, 400, 'SOURCE_INVALID', 'Nguồn dữ liệu chỉ có thể là "sheet" hoặc "worker".');
     const next: Source = body.source;
     const current = await getSource(c.env.DB);
@@ -52,6 +53,10 @@ export function registerSource(app: Hono<App>): void {
       const pending = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sheet_export_queue WHERE done_at IS NULL AND attempts < 5`).first<{ n: number }>();
       if (pending?.n)
         return fail(c, 409, 'EXPORT_PENDING', `Còn ${pending.n} thay đổi chưa chép sang Google Sheet. Đợi chép xong rồi mới chuyển về Sheet.`);
+      // Rows that gave up are changes the Sheet never received: switching back would let the Sheet read overwrite them.
+      const dead = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sheet_export_queue WHERE done_at IS NULL AND attempts >= 5`).first<{ n: number }>();
+      if (dead?.n && body.acknowledgeFailed !== true)
+        return fail(c, 409, 'EXPORT_FAILED', `Có ${dead.n} thay đổi không chép được sang Google Sheet (đã thử 5 lần). Thử lại các dòng lỗi, hoặc xác nhận bỏ qua rồi chuyển về Sheet.`);
     }
 
     // Counted while the switch is still on worker: the count tells the Developer how many residents the Sheet lacks.
@@ -59,5 +64,12 @@ export function registerSource(app: Hono<App>): void {
     await setSource(c.env.DB, next);
     await audit(c, actorOf(c.get('viewer')), 'source_set', null, next);
     return c.json({ success: true, source: next, workerOnlyResidents: workerOnly });
+  });
+
+  /** Developer: gives the failed export rows another round (attempts back to 0). */
+  app.post('/api/dev/export-queue/requeue', requireAuth, developerOnly, async (c) => {
+    const requeued = await requeueFailed(c.env.DB);
+    await audit(c, actorOf(c.get('viewer')), 'export_requeue', null, String(requeued));
+    return c.json({ success: true, requeued });
   });
 }
