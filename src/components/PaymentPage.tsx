@@ -10,6 +10,7 @@ import { soundFx } from '../lib/soundFx';
 import { getMeasurer } from '../lib/documents/engine';
 import { saveDocument } from '../lib/documents/output';
 import { residentInvoice } from '../lib/documents/fromProfile';
+import { Home as HomeLine } from 'lucide-react';
 import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Landmark, Lock, PhoneCall, ShieldAlert } from './AppIcons';
 
 import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
@@ -353,7 +354,7 @@ export function PaymentPage() {
                   onClick={() => navigate('/')}
                   className="primary-button w-full sm:flex-1 min-h-12 px-4"
                 >
-                  <Home size={18} />
+                  <HomeLine size={18} />
                   <span>Về trang chủ</span>
                 </button>
 
