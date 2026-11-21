@@ -42,6 +42,8 @@ describe('lược đồ phí dịch vụ', () => {
       const sql = state.storage.sql;
       // Rebuild the old (version 1) shape: drop the new tables and columns, then rewind the version.
       for (const t of [...FEE_TABLES, ...NEW_TABLES]) sql.exec(`DROP TABLE ${t}`);
+      for (const col of ['default_room_price', 'default_deposit']) sql.exec(`ALTER TABLE houses DROP COLUMN ${col}`); // 0026
+      for (const col of ['price_custom', 'deposit_custom']) sql.exec(`ALTER TABLE rooms DROP COLUMN ${col}`);
       sql.exec(`ALTER TABLE invoices DROP COLUMN issued_at`);
       sql.exec(`ALTER TABLE houses DROP COLUMN actual_electric_price`);
       sql.exec(`UPDATE meta SET value = '1' WHERE key = 'schema_version'`);

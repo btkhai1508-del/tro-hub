@@ -1,5 +1,5 @@
 // Schema of a per-landlord Durable Object store: the business tables copied from D1 (final shape
-// after migrations 0001-0023) plus a `meta` key/value table. The only change: `houses.owner_id` has
+// after migrations 0001-0026) plus a `meta` key/value table. The only change: `houses.owner_id` has
 // no REFERENCES staff(id) because staff lives in the central D1 only.
 
 export type SqlValue = string | number | null;
@@ -289,5 +289,18 @@ FROM houses h LEFT JOIN house_rates r ON r.house_id = h.id;
 INSERT INTO house_fee_services (house_id, month, service_id, name, price, per, max_qty, sheet_col, active, sort)
 SELECT s.house_id, strftime('%Y-%m', 'now', '+7 hours'), s.id, s.name, s.price, s.per, s.max_qty, s.sheet_col, s.active, s.sort
 FROM house_services s;
+`,
+
+  // 0026: common rent/deposit per house and per-room custom flags. Mirrors D1 migration 0026 (same statements).
+  `
+-- Room rent and deposit: a house can have a common rent and deposit; a room either follows them (custom = 0)
+-- or keeps its own price (custom = 1). Rooms that exist today keep the price they have (custom = 1).
+-- Additive only: nothing existing is changed or dropped.
+
+ALTER TABLE houses ADD COLUMN default_room_price INTEGER;   -- NULL = no common rent set
+ALTER TABLE houses ADD COLUMN default_deposit INTEGER;      -- NULL = no common deposit set
+
+ALTER TABLE rooms ADD COLUMN price_custom INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE rooms ADD COLUMN deposit_custom INTEGER NOT NULL DEFAULT 1;
 `,
 ];
