@@ -130,6 +130,29 @@ export async function findRentRoom(c: Context<App>, houseIds: string[], code: st
   return found.length === 1 ? found[0] : null;
 }
 
+/** Phòng theo tên (hoặc mã cũ) trong đúng một nhà; nhà phải thuộc người gọi (403 nếu không). */
+async function findRentRoomInHouse(c: Context<App>, houseId: string, code: string): Promise<(RentRoom & { db: TenantDb }) | null> {
+  const text = code.trim();
+  if (!text) return null;
+  const db = await tenantFor(c, houseId); // 403 HOUSE_FORBIDDEN / 404 HOUSE_NOT_FOUND
+  const place = parseLegacyRoom(text);
+  for (const name of [text, ...(place && place.houseId === houseId ? [place.room] : [])]) {
+    const row = await db.prepare(`SELECT id, house_id, name FROM rooms WHERE house_id = ? AND name = ? AND deleted_at IS NULL`).bind(houseId, name).first<RentRoom>();
+    if (row) return { ...row, db };
+  }
+  return null;
+}
+
+/** Cổng của mọi nhà người gọi phụ trách: START chỉ khi mọi nhà START. */
+async function gatesOfStaff(c: Context<App>, houseIds: string[], month: string) {
+  const houses: Record<string, 'START' | 'STOP'> = {};
+  for (const store of await storesOf(c, houseIds))
+    for (const h of store.houseIds) houses[h] = await gateFor(c.env.DB, store.db, h, month);
+  const values = Object.values(houses);
+  const value: 'START' | 'STOP' = values.length > 0 && values.every((x) => x === 'START') ? 'START' : 'STOP';
+  return { month: toSheetMonth(month), value, houses, mixed: values.includes('START') && values.includes('STOP') };
+}
+
 /** Writes (house, month) → START/STOP; the one statement behind the admin switch and issuing a month. */
 export const gateStatement = (db: TenantDb, houseId: string, month: string, value: 'START' | 'STOP', by: string) =>
   db.prepare(
@@ -338,10 +361,13 @@ export function registerRent(app: Hono<App>): void {
   /** Quản lý đổi trạng thái một phòng: 'paid' / 'cash' (đã đóng), 'pending', 'unpaid'. */
   app.post('/api/admin/payment-status', async (c) => {
     const v = c.get('viewer');
-    const body = await c.req.json<{ roomNumber?: string; status?: string; month?: string; row?: number }>().catch(() => ({} as Record<string, never>));
+    const body = await c.req.json<{ roomNumber?: string; status?: string; month?: string; row?: number; houseId?: string }>().catch(() => ({} as Record<string, never>));
     const status: InvoiceStatus = (['paid', 'cash', 'pending'] as const).find((s) => s === body.status) ?? 'unpaid';
     const month = monthParam(body.month);
-    const room = await findRentRoom(c, staffHouseIds(v), String(body.roomNumber ?? ''));
+    const houseId = typeof body.houseId === 'string' ? body.houseId.trim() : '';
+    const room = houseId
+      ? await findRentRoomInHouse(c, houseId, String(body.roomNumber ?? ''))
+      : await findRentRoom(c, staffHouseIds(v), String(body.roomNumber ?? ''));
     if (!room) return fail(c, 404, 'ROOM_NOT_FOUND', 'Không tìm thấy phòng trong nhà bạn quản lý.');
     const inv = await invoiceOrSync(room.db, c.env.DB, room.id, month);
     if (!inv) return fail(c, 404, 'INVOICE_NOT_FOUND', `Phòng ${body.roomNumber} chưa có hoá đơn tháng ${toSheetMonth(month)}.`);
@@ -352,8 +378,7 @@ export function registerRent(app: Hono<App>): void {
   app.get('/api/admin/payment-gate', async (c) => {
     const houseIds = staffHouseIds(c.get('viewer'));
     const month = monthParam(c.req.query('month'));
-    const houseId = houseIds[0];
-    return c.json({ success: true, month: toSheetMonth(month), value: houseId ? await gateFor(c.env.DB, await tenantFor(c, houseId), houseId, month) : 'STOP' });
+    return c.json({ success: true, ...(await gatesOfStaff(c, houseIds, month)) });
   });
 
   /** Mở/đóng cổng cho mọi nhà quản lý này phụ trách (trang Admin hiện có một nút chung). */
@@ -370,7 +395,7 @@ export function registerRent(app: Hono<App>): void {
     await audit(c, actorOf(v), `payment_gate_${value.toLowerCase()}`, null, `${houseIds.join(',')}:${month}`);
     const legacy = await legacySheet(c.env.DB);
     if (legacy?.houses.some((h) => houseIds.includes(h))) c.executionCtx.waitUntil(saveScriptGate(c.env, month, value));
-    return c.json({ success: true, month: toSheetMonth(month), value });
+    return c.json({ success: true, ...(await gatesOfStaff(c, houseIds, month)) });
   });
 }
 

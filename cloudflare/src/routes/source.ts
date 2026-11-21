@@ -37,7 +37,7 @@ async function workerOnlyResidents(env: App['Bindings']): Promise<number> {
 
 export function registerSource(app: Hono<App>): void {
   app.get('/api/source', async (c) => {
-    c.header('Cache-Control', 'public, max-age=30');
+    c.header('Cache-Control', 'public, max-age=5');
     return c.json({ success: true, source: await getSource(c.env.DB) });
   });
 

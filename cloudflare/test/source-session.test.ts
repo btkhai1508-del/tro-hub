@@ -32,10 +32,10 @@ describe.each(BACKENDS)('công tắc nguồn dữ liệu [%s]', (backend) => {
     (e as any).ZALO_APP_SECRET = 'test-zalo-secret';
   });
 
-  it('GET /api/source công khai, mặc định sheet, cho phép cache 30 giây', async () => {
+  it('GET /api/source công khai, mặc định sheet, cho phép cache 5 giây', async () => {
     const res = await api('/api/source');
     expect(res.status).toBe(200);
-    expect(res.headers.get('Cache-Control')).toBe('public, max-age=30');
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=5');
     expect(await res.json()).toEqual({ success: true, source: 'sheet' });
   });
 

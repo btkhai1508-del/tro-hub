@@ -7,6 +7,8 @@ import { tenantOfOwner } from '../src/tenant/route.ts';
 import { api, BACKENDS, login, PHONES, seedWorld, type BackendName } from './helpers.ts';
 
 const e = env as unknown as Env;
+const gateStatementFor = (db: Awaited<ReturnType<typeof tenantOfOwner>>, houseId: string, value: 'START' | 'STOP') =>
+  db.prepare(`INSERT INTO payment_gates (house_id, month, value, updated_by) VALUES (?, ?, ?, 'test')`).bind(houseId, MONTH, value).run();
 const MONTH = '2026-11';
 const Q = 'month=11/2026';
 
@@ -222,6 +224,52 @@ describe.each(MODES)('tiền trọ và trạng thái thanh toán (%s)', (mode) =
       const gate = await api('/api/admin/payment-gate', json({ month: '11/2026', value: 'START' }), tokens.owner);
       expect(gate.status).toBe(200);
       expect(await (await api(`/api/payment/gate?${Q}`, {}, tokens.resident)).json()).toMatchObject({ value: 'START' });
+    });
+
+    const post = (body: unknown): RequestInit => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const statusOf = async (roomId: number) => {
+      const db = backend === 'do' ? await tenantOfOwner(e, 1) : e.DB;
+      return (await db.prepare(`SELECT status FROM invoices WHERE room_id = ? AND month = ?`).bind(roomId, MONTH).first<{ status: string }>())!.status;
+    };
+
+    it('payment-status with houseId picks the room of that house when two houses share the name', async () => {
+      // Cả TRUNG_KIM (id 1) và LVC (id 3) của cùng chủ trọ có phòng "A1".
+      const db = backend === 'do' ? await tenantOfOwner(e, 1) : e.DB;
+      await db.prepare(`UPDATE rooms SET name = 'A1' WHERE id IN (1, 3)`).run();
+      // Có houseId: đúng căn đó, căn kia không đổi.
+      const res = await api('/api/admin/payment-status', post({ roomNumber: 'A1', status: 'paid', month: '11/2026', houseId: 'LVC' }), tokens.owner);
+      expect(res.status).toBe(200);
+      expect(await statusOf(3)).toBe('paid');
+      expect(await statusOf(1)).toBe('unpaid');
+      // Không có houseId: hành vi cũ (tên trần thuộc Trung Kim theo mã cũ), không nhầm sang LVC.
+      await api('/api/admin/payment-status', post({ roomNumber: 'A1', status: 'unpaid', month: '11/2026', houseId: 'LVC' }), tokens.owner);
+      const legacy = await api('/api/admin/payment-status', post({ roomNumber: 'A1', status: 'cash', month: '11/2026' }), tokens.owner);
+      expect(legacy.status).toBe(200);
+      expect(await statusOf(1)).toBe('cash');
+      expect(await statusOf(3)).toBe('unpaid');
+      // Căn không có phòng đó: 404.
+      const none = await api('/api/admin/payment-status', post({ roomNumber: 'Z9', status: 'paid', month: '11/2026', houseId: 'LVC' }), tokens.owner);
+      expect(none.status).toBe(404);
+      expect(await none.json()).toMatchObject({ success: false, errorCode: 'ROOM_NOT_FOUND' });
+    });
+
+    it('payment-status rejects a houseId the staff does not manage', async () => {
+      for (const token of [tokens.owner, tokens.manager]) {
+        const res = await api('/api/admin/payment-status', post({ roomNumber: '101', status: 'paid', month: '11/2026', houseId: 'NTTD' }), token);
+        expect(res.status).toBe(403);
+        expect(await res.json()).toMatchObject({ success: false, errorCode: 'HOUSE_FORBIDDEN' });
+      }
+      expect(await statusOf(3)).toBe('unpaid');
+    });
+
+    it('payment-gate GET aggregates all houses', async () => {
+      const db = backend === 'do' ? await tenantOfOwner(e, 1) : e.DB;
+      await gateStatementFor(db, 'LVC', 'START');
+      const get = async () => (await (await api(`/api/admin/payment-gate?${Q}`, {}, tokens.owner)).json()) as any;
+      expect(await get()).toMatchObject({ success: true, month: '11/2026', value: 'STOP', mixed: true, houses: { LVC: 'START', TRUNG_KIM: 'STOP' } });
+      const set = await api('/api/admin/payment-gate', post({ month: '11/2026', value: 'START' }), tokens.owner);
+      expect(await set.json()).toMatchObject({ success: true, value: 'START', mixed: false, houses: { LVC: 'START', TRUNG_KIM: 'START' } });
+      expect(await get()).toMatchObject({ value: 'START', mixed: false });
     });
   }
 });
