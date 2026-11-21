@@ -3,7 +3,7 @@ import { fetchMonthlyInvoicesFromSheet } from '../lib/googleSheetsService';
 import { getAccessToken } from '../lib/googleAuth';
 import { authService, PersonType, AuthErrorCode } from '../services/authService';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { apiFetch, workerFetch, setWorkerToken, ensureSource, UNAUTHORIZED_EVENT } from '../lib/api';
+import { apiFetch, workerFetch, setWorkerToken, ensureSource, getSource, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
 import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
@@ -571,7 +571,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data && data.success && data.value) {
           const val: 'START' | 'STOP' = data.value === 'START' ? 'START' : 'STOP';
           // After the first answer, require the same answer twice so one odd reply cannot flip the screen.
-          if (gateMonthRef.current !== month || val === gateCandidateRef.current) {
+          if (getSource() === 'worker' || gateMonthRef.current !== month || val === gateCandidateRef.current) {
             gateMonthRef.current = month;
             setPaymentGateStatus(val);
           }

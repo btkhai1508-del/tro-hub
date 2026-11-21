@@ -93,6 +93,7 @@ import {
   IconDryer3D
 } from './Icons3D';
 import { AppleSwitch, AppleCheckbox } from './AppleControls';
+import { createWriteGuard } from '../lib/writeGuard';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
 
@@ -319,6 +320,8 @@ export function AdminPortal() {
   // Payment Gate state
   const [paymentGate, setPaymentGate] = useState<'START' | 'STOP'>('STOP');
   const lastGateToggleTimeRef = useRef<number>(0);
+  const [gateMixed, setGateMixed] = useState(false);
+  const gateGuardRef = useRef(createWriteGuard());
 
   // Data States
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -607,7 +610,7 @@ export function AdminPortal() {
     lastLoadedMonthRef.current = selectedMonth;
     const loadTimer = window.setTimeout(() => {
       loadTabContent(activeMenu, selectedMonth);
-      loadPaymentGateStatus(selectedMonth);
+      if (!workerMode) loadPaymentGateStatus(selectedMonth);
     }, monthChanged ? 250 : 0);
 
     // Periodic auto-polling for Google Sheet updates (every 8 seconds)
@@ -618,14 +621,25 @@ export function AdminPortal() {
       } else if (activeMenu === 'rooms') {
         fetchRooms(selectedMonth, true);
       }
-      loadPaymentGateStatus(selectedMonth);
+      if (!workerMode) loadPaymentGateStatus(selectedMonth);
     }, 8000);
 
     return () => {
       clearTimeout(loadTimer);
       clearInterval(interval);
     };
-  }, [selectedMonth, activeMenu]);
+  }, [selectedMonth, activeMenu, workerMode]);
+
+  // Worker mode: the gate is read when the month changes and on its own 8-second round, not on every tab switch.
+  useEffect(() => {
+    if (!workerMode) return;
+    const timer = window.setTimeout(() => loadPaymentGateStatus(selectedMonth), 0);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      loadPaymentGateStatus(selectedMonth);
+    }, 8000);
+    return () => { clearTimeout(timer); clearInterval(interval); };
+  }, [selectedMonth, workerMode]);
 
   const loadAccounts = () => {
     apiFetch('/api/admin/accounts')
@@ -707,6 +721,21 @@ export function AdminPortal() {
   };
 
   const loadPaymentGateStatus = (m: string) => {
+    if (getSource() === 'worker') {
+      const guard = gateGuardRef.current;
+      const ticket = guard.beginRead();
+      apiFetch(`/api/admin/payment-gate?month=${m}`)
+        .then(res => res.json())
+        .then(data => {
+          if (m !== selectedMonthRef.current || !guard.acceptRead(ticket)) return;
+          if (data?.success && data.value) {
+            setPaymentGate(data.value);
+            setGateMixed(!!data.mixed);
+          }
+        })
+        .catch(() => {});
+      return;
+    }
     // If Admin clicked toggle within last 20 seconds, ignore background polling so UI doesn't flicker or flip back
     if (Date.now() - lastGateToggleTimeRef.current < 20000) return;
 
@@ -725,6 +754,34 @@ export function AdminPortal() {
 
   const togglePaymentGate = async () => {
     playSound('click');
+    if (getSource() === 'worker') {
+      const month = selectedMonth;
+      // Mixed: one tap sets every house to the same value (opening is the safer reading of "some are open").
+      const nextVal = gateMixed ? 'START' : (paymentGate === 'START' ? 'STOP' : 'START');
+      if (gateMixed && !window.confirm('Một số căn đang mở thu, một số căn đang đóng. Mở thu tiền cho tất cả các căn?')) return;
+      const guard = gateGuardRef.current;
+      guard.beginWrite();
+      try {
+        const res = await apiFetch('/api/admin/payment-gate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month, value: nextVal })
+        });
+        const data = await res.json();
+        if (!data?.success) throw new Error(data?.error);
+        if (month === selectedMonthRef.current) {
+          setPaymentGate(data.value);
+          setGateMixed(!!data.mixed);
+        }
+        playSound('success');
+      } catch (e: any) {
+        console.warn('Payment gate toggle error:', e);
+        alert(e?.message || 'Chưa lưu được cổng thanh toán. Vui lòng thử lại.');
+      } finally {
+        guard.endWrite();
+      }
+      return;
+    }
     lastGateToggleTimeRef.current = Date.now();
     const nextVal = paymentGate === 'START' ? 'STOP' : 'START';
     setPaymentGate(nextVal);
@@ -1503,8 +1560,8 @@ export function AdminPortal() {
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                   <div>
                     <p className="text-[10px] text-neutral-600 dark:text-neutral-200 font-bold uppercase tracking-wider">Cổng thanh toán</p>
-                    <p className={cn("text-xs font-black uppercase font-num mt-0.5", paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
-                      {paymentGate === 'START' ? 'Mở' : 'Tắt'}
+                    <p className={cn("text-xs font-black uppercase font-num mt-0.5", gateMixed ? "text-amber-600 dark:text-amber-400" : paymentGate === 'START' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                      {gateMixed ? 'Một số căn đang mở thu' : (paymentGate === 'START' ? 'Mở' : 'Tắt')}
                     </p>
                   </div>
                   <AppleSwitch
@@ -4395,7 +4452,7 @@ export function AdminPortal() {
           <span className="kit-admin-dock-divider" aria-hidden="true" />
           <button type="button" onClick={togglePaymentGate} aria-label={'Cổng thanh toán: ' + (paymentGate === 'START' ? 'đang mở. Nhấn để đóng cổng' : 'đang đóng. Nhấn để mở cổng')} aria-pressed={paymentGate === 'START'} className="kit-nav-item kit-admin-dock-item kit-admin-gate">
             <span className="relative"><NavIcons.Power size={21} /><span aria-hidden="true" className={cn('kit-gate-dot', paymentGate === 'START' ? 'bg-emerald-500' : 'bg-rose-500')} /></span>
-            <span>{paymentGate === 'START' ? 'Đang mở' : 'Đã đóng'}</span>
+            <span>{gateMixed ? 'Một số căn mở' : (paymentGate === 'START' ? 'Đang mở' : 'Đã đóng')}</span>
           </button>
         </nav>
       </div>
