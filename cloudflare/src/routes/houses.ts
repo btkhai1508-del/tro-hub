@@ -348,16 +348,18 @@ export function registerHouses(app: Hono<App>): void {
 
     const text = (key: string) => String(body[key] ?? '').trim();
     const rates = body.rates ?? {};
+    // The rent typed for the whole house is the house's common rent: its rooms follow it until one gets its own.
+    const startPrice = Math.max(0, Number(body.roomPrice) || 0);
     // Tiện ích are bought from the Developer: a house the owner makes here starts with the core tools only.
     // NULL (= every tool) is reserved for the legacy houses from before tiện ích existed, never written for a new house.
     const modules = JSON.stringify(cleanModules([], await moduleCatalog(c.env.DB)));
     await createHouse(c, viewer.id, { id, name, modules }, (db, payNo) => [
       db.prepare(
-        `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, owner_id, pay_no, modules) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(id, name, abbreviation, text('address_detail'), text('ward'), text('province'), text('landlord_name'), normalizePhone(text('landlord_phone')), viewer.id, payNo, modules),
+        `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, owner_id, pay_no, modules, default_room_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(id, name, abbreviation, text('address_detail'), text('ward'), text('province'), text('landlord_name'), normalizePhone(text('landlord_phone')), viewer.id, payNo, modules, startPrice > 0 ? startPrice : null),
       db.prepare(`INSERT INTO house_rates (house_id, ${RATE_FIELDS.join(', ')}) VALUES (?, ${RATE_FIELDS.map(() => '?').join(', ')})`)
         .bind(id, ...RATE_FIELDS.map((f) => Math.max(0, Math.round(Number(rates[f]) || 0)))),
-      ...rooms.map((room) => db.prepare(`INSERT INTO rooms (house_id, name, price) VALUES (?, ?, ?)`).bind(id, room, Math.max(0, Number(body.roomPrice) || 0))),
+      ...rooms.map((room) => db.prepare(`INSERT INTO rooms (house_id, name, price, price_custom) VALUES (?, ?, ?, ?)`).bind(id, room, startPrice, startPrice > 0 ? 0 : 1)),
     ], rooms.length);
     await audit(c, actorOf(viewer), 'house_create', id, `${rooms.length} phòng`);
     return c.json({ success: true, id, rooms: rooms.length });
@@ -511,13 +513,13 @@ export function registerHouses(app: Hono<App>): void {
 
     await createHouse(c, owner.id, { id, name, modules }, (db, payNo) => [
       db.prepare(
-        `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, floors, modules, owner_id, pay_no)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(id, name, abbreviation, text('address_detail'), text('ward'), text('province'), owner.full_name, owner.phone, floors, modules, owner.id, payNo),
+        `INSERT INTO houses (id, name, abbreviation, address_detail, ward, province, landlord_name, landlord_phone, floors, modules, owner_id, pay_no, default_room_price)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(id, name, abbreviation, text('address_detail'), text('ward'), text('province'), owner.full_name, owner.phone, floors, modules, owner.id, payNo, price > 0 ? price : null),
       db.prepare(`INSERT INTO house_rates (house_id, ${RATE_FIELDS.join(', ')}) VALUES (?, ${RATE_FIELDS.map(() => '?').join(', ')})`)
         .bind(id, ...RATE_FIELDS.map((f) => Math.max(0, Math.round(Number(rates[f]) || 0)))),
       ...rooms.map((r) =>
-        db.prepare(`INSERT INTO rooms (house_id, name, floor, capacity, price) VALUES (?, ?, ?, ?, ?)`).bind(id, r.name, r.floor, r.capacity, price)
+        db.prepare(`INSERT INTO rooms (house_id, name, floor, capacity, price, price_custom) VALUES (?, ?, ?, ?, ?, ?)`).bind(id, r.name, r.floor, r.capacity, price, price > 0 ? 0 : 1)
       ),
     ], rooms.length);
     await audit(c, actorOf(viewer), 'house_create', id, `owner:${owner.id}, ${rooms.length} phòng`);
@@ -611,13 +613,20 @@ export function registerHouses(app: Hono<App>): void {
       seen.add(r.name);
     }
 
-    const price = Math.max(0, Math.round(Number(body.price) || 0));
+    // A price in the request is the room's own; without one a new room takes the house's common rent and deposit (and follows them).
+    const given = body.price !== undefined && body.price !== null && Number.isFinite(Number(body.price));
+    const common = await db.prepare(`SELECT default_room_price AS price, default_deposit AS deposit FROM houses WHERE id = ?`).bind(houseId).first<{ price: number | null; deposit: number | null }>();
+    const price = given ? Math.max(0, Math.round(Number(body.price))) : (common?.price ?? 0);
+    const priceCustom = given || common?.price == null ? 1 : 0;
+    const deposit = common?.deposit ?? 0;
+    const depositCustom = common?.deposit == null ? 1 : 0;
     await db.batch(
       rooms.map((r) => {
         const old = existing.find((e) => e.deleted_at && e.name === r.name);
         return old
           ? db.prepare(`UPDATE rooms SET deleted_at = NULL, floor = ?, capacity = ? WHERE id = ?`).bind(r.floor, r.capacity, old.id)
-          : db.prepare(`INSERT INTO rooms (house_id, name, floor, capacity, price) VALUES (?, ?, ?, ?, ?)`).bind(houseId, r.name, r.floor, r.capacity, price);
+          : db.prepare(`INSERT INTO rooms (house_id, name, floor, capacity, price, price_custom, deposit, deposit_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+            .bind(houseId, r.name, r.floor, r.capacity, price, priceCustom, deposit, depositCustom);
       })
     );
     await assignRoomPayNumbers(db, houseId);

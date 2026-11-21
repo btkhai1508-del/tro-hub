@@ -9,6 +9,7 @@ import { actorOf, audit, fail, isOwner, staffOnly, type App, type StaffRole, typ
 import { ensureDraftForRoom } from '../billing/invoices.ts';
 import { newOwnerBackend, ownerHouses, phoneTaken, PhoneTakenError, releaseResident, reserveResident, setStorage } from '../central/directory.ts';
 import { hashPassword, normalizePhone } from '../password.ts';
+import { isLocalPhone } from '../residentInput.ts';
 import { tenantFor, tenantOfOwner } from '../tenant/route.ts';
 import { houseModules, moduleCatalog, monthlyPerRoom, refreshCounts } from './houses.ts';
 import { requireAuth } from './auth.ts';
@@ -68,7 +69,7 @@ export function registerPeople(app: Hono<App>): void {
     const fullName = String(body.fullName ?? '').trim();
     const phone = normalizePhone(body.phone ?? '');
     const password = String(body.password ?? '');
-    if (!fullName || !/^0\d{9}$/.test(phone)) return fail(c, 400, 'STAFF_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
+    if (!fullName || !isLocalPhone(phone)) return fail(c, 400, 'STAFF_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
     if (password.length < 6) return fail(c, 400, 'PASSWORD_TOO_SHORT', 'Mật khẩu phải có ít nhất 6 ký tự');
     if (await phoneTaken(c.env.DB, phone)) return fail(c, 400, 'PHONE_TAKEN', PHONE_TAKEN);
 
@@ -123,7 +124,7 @@ export function registerPeople(app: Hono<App>): void {
     const fullName = String(body.fullName ?? '').trim();
     const phone = normalizePhone(body.phone ?? '');
     const password = String(body.password ?? '');
-    if (!fullName || !/^0\d{9}$/.test(phone)) return fail(c, 400, 'RESIDENT_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
+    if (!fullName || !isLocalPhone(phone)) return fail(c, 400, 'RESIDENT_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
     if (password.length < 6) return fail(c, 400, 'PASSWORD_TOO_SHORT', 'Mật khẩu phải có ít nhất 6 ký tự');
 
     const db = await tenantFor(c, houseId);
@@ -232,7 +233,7 @@ export function registerPeople(app: Hono<App>): void {
     const phone = normalizePhone(body.phone ?? '');
     const password = String(body.password ?? '');
     const email = String(body.email ?? '').trim();
-    if (!fullName || !/^0\d{9}$/.test(phone)) return fail(c, 400, 'LANDLORD_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
+    if (!fullName || !isLocalPhone(phone)) return fail(c, 400, 'LANDLORD_INVALID', 'Vui lòng nhập họ tên và số điện thoại 10 số.');
     if (!password) return fail(c, 400, 'PASSWORD_REQUIRED', 'Vui lòng nhập mật khẩu ban đầu.');
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(c, 400, 'EMAIL_INVALID', 'Email không hợp lệ.');
     if (await phoneTaken(c.env.DB, phone)) return fail(c, 400, 'PHONE_TAKEN', PHONE_TAKEN);
@@ -272,7 +273,7 @@ export function registerPeople(app: Hono<App>): void {
     }
     if (body.phone !== undefined) {
       const phone = normalizePhone(String(body.phone));
-      if (!/^0\d{9}$/.test(phone)) return fail(c, 400, 'LANDLORD_INVALID', 'Số điện thoại phải có 10 số.');
+      if (!isLocalPhone(phone)) return fail(c, 400, 'LANDLORD_INVALID', 'Số điện thoại phải có 10 số.');
       if (phone !== target.phone && (await phoneTaken(c.env.DB, phone, { staffId: id }))) return fail(c, 400, 'PHONE_TAKEN', PHONE_TAKEN);
       sets.push('phone = ?'); values.push(phone);
     }

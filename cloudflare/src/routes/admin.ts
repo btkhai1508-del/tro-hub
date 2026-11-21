@@ -7,6 +7,9 @@
 import type { Context, Hono } from 'hono';
 import { ensureModule } from '../modules.ts';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
+import { phoneTaken, PhoneTakenError, updateResidentIndex } from '../central/directory.ts';
+import { normalizePhone } from '../password.ts';
+import { cccdColumns, CCCD_INVALID_MESSAGE, CCCD_TAKEN_MESSAGE, cleanCccd, isCccd, PHONE_INVALID_MESSAGE, storablePhone } from '../residentInput.ts';
 import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute, recomputeDrafts } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
 import { feeConfigFor, mirrorTemplate } from '../billing/fees.ts';
@@ -58,7 +61,7 @@ function pickFeeMonth(c: Context<App>, given: unknown): string | Response {
 // ── Reading a month of rooms ───────────────────────────────────────────────
 
 interface RoomJoin {
-  id: number; name: string; price: number; floor: number | null; capacity: number;
+  id: number; name: string; price: number; room_deposit: number; price_custom: number; deposit_custom: number; floor: number | null; capacity: number;
   invoice_id: number | null; room_rent: number | null; electricity: number | null; water: number | null; trash: number | null; internet: number | null;
   parking: number | null; other: number | null; deposit: number | null; total: number | null; status: InvoiceStatus | null; paid_at: string | null;
   sheet_row: number | null; issued_at: string | null;
@@ -78,7 +81,7 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
     `(SELECT p.${col} FROM meter_readings p WHERE p.room_id = rm.id AND p.month < ? AND p.${col} > 0 ORDER BY p.month DESC LIMIT 1)`;
   const [{ results: rooms }, { results: people }, { results: optouts }, { results: banks }, view, waiting] = await Promise.all([
     db.prepare(
-      `SELECT rm.id, rm.name, rm.price, rm.floor, rm.capacity,
+      `SELECT rm.id, rm.name, rm.price, rm.deposit AS room_deposit, rm.price_custom, rm.deposit_custom, rm.floor, rm.capacity,
               i.id AS invoice_id, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking, i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, i.issued_at,
               (m.id IS NOT NULL) AS has_meter, m.electric_old, m.electric_new, m.water_old, m.water_new,
               ${prev('electric_new')} AS prev_e, ${prev('water_new')} AS prev_w
@@ -87,8 +90,8 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
          LEFT JOIN meter_readings m ON m.room_id = rm.id AND m.month = ?
         WHERE rm.house_id = ? AND rm.deleted_at IS NULL${only === undefined ? '' : ' AND rm.id = ?'}`
     ).bind(month, month, month, month, houseId, ...(only === undefined ? [] : [only])).all<RoomJoin>(),
-    db.prepare(`SELECT room_id, full_name, phone, plate_number FROM residents WHERE house_id = ? AND room_id IS NOT NULL AND status = 'approved' AND deleted_at IS NULL ORDER BY id`)
-      .bind(houseId).all<{ room_id: number; full_name: string; phone: string | null; plate_number: string | null }>(),
+    db.prepare(`SELECT id, room_id, full_name, phone, plate_number, vehicle_type, cccd_last4 FROM residents WHERE house_id = ? AND room_id IS NOT NULL AND status = 'approved' AND deleted_at IS NULL ORDER BY id`)
+      .bind(houseId).all<{ id: number; room_id: number; full_name: string; phone: string | null; plate_number: string | null; vehicle_type: string | null; cccd_last4: string | null }>(),
     db.prepare(`SELECT o.room_id, o.service_id FROM room_service_optouts o JOIN rooms r ON r.id = o.room_id WHERE r.house_id = ?`).bind(houseId).all<{ room_id: number; service_id: number }>(),
     db.prepare(`SELECT invoice_id, COALESCE(SUM(amount), 0) AS paid FROM payments WHERE house_id = ? AND method = 'bank' AND invoice_id IS NOT NULL GROUP BY invoice_id`)
       .bind(houseId).all<{ invoice_id: number; paid: number }>(),
@@ -117,6 +120,11 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
       row: r.sheet_row ?? null,
       houseId,
       roomId: r.id,
+      roomPrice: r.price, roomDeposit: r.room_deposit, priceCustom: r.price_custom === 1, depositCustom: r.deposit_custom === 1,
+      // Up to 3 residents, in the order of nguoi1..3; residentId is what PATCH /api/admin/residents/:id takes. No CCCD, only its last 4 digits.
+      occupants: occupants.slice(0, 3).map((p) => ({
+        residentId: p.id, name: p.full_name, phone: p.phone ?? '', plate: p.plate_number ?? '', vehicleType: p.vehicle_type ?? '', cccdLast4: p.cccd_last4 ?? '',
+      })),
       invoiceId: r.invoice_id,
       room: legacyRoomCode(houseId, r.name),
       roomName: r.name,
@@ -214,8 +222,11 @@ function parseServices(list: unknown): ServiceInput[] | string {
 /** The fees of one month as the screen reads them. Reading never stores a snapshot (a month may be looked at read-only). */
 async function loadConfig(db: TenantDb, houseId: string, month: string) {
   const fee = await feeConfigFor(db, houseId, month, { persist: false });
+  const house = await db.prepare(`SELECT default_room_price AS price, default_deposit AS deposit FROM houses WHERE id = ?`).bind(houseId).first<{ price: number | null; deposit: number | null }>();
   return {
     month,
+    defaultRoomPrice: house?.price ?? null,
+    defaultDeposit: house?.deposit ?? null,
     known: fee.known,
     electricPrice: fee.electricPrice,
     waterPrice: fee.waterPrice,
@@ -227,10 +238,91 @@ async function loadConfig(db: TenantDb, houseId: string, month: string) {
 const monthEditable = (month: string) => month >= currentMonth();
 const monthLabel = (month: string) => `Tháng ${month.slice(5)}/${month.slice(0, 4)}`;
 
+// ── Room rent and deposit ──────────────────────────────────────────────────
+
+const nextMonthOf = (month: string) => {
+  const [y, m] = month.split('-').map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+};
+
+/**
+ * A room's price changed: recompute its invoices of the current month and the next one that can still change.
+ * A paid/cash invoice (locked) is never touched; 'next_month' = the current month's invoice is locked, so the
+ * new price counts from the next invoice. An issued invoice of an earlier month is frozen and never reached here.
+ */
+async function repriceOpenInvoices(c: Context<App>, db: TenantDb, roomId: number): Promise<'this_month' | 'next_month'> {
+  const now = currentMonth();
+  let locked = false;
+  for (const month of [now, nextMonthOf(now)]) {
+    const inv = await invoiceFor(db, roomId, month);
+    if (!inv) continue;
+    try {
+      await recompute(db, inv.id, { central: c.env.DB });
+    } catch (err) {
+      if (err instanceof InvoiceLockedError) {
+        if (month === now) locked = true;
+      } else if (!(err instanceof InvoiceFrozenError)) throw err;
+    }
+  }
+  return locked ? 'next_month' : 'this_month';
+}
+
+const LOCKED_PRICE_MESSAGE = 'Đã lưu giá mới, áp dụng từ hoá đơn tháng sau vì tháng này đã đóng.';
+
+interface DefaultsInput { price: number | null | undefined; deposit: number | null | undefined; applyAll: boolean }
+
+/** The house-wide rent/deposit fields of a config request; a 400 response names the first problem. */
+function parseDefaults(c: Context<App>, input: Record<string, any>): DefaultsInput | Response | null {
+  const given = (k: string) => input[k] !== undefined;
+  if (!given('defaultRoomPrice') && !given('defaultDeposit') && !given('applyToAllRooms')) return null;
+  for (const k of ['defaultRoomPrice', 'defaultDeposit']) {
+    if (given(k) && input[k] !== null && !isMoney(input[k])) return fail(c, 400, 'MONEY_INVALID', 'Tiền phòng và tiền cọc phải là số nguyên đồng từ 0 đến 100.000.000.');
+  }
+  if (given('applyToAllRooms') && typeof input.applyToAllRooms !== 'boolean') return fail(c, 400, 'MONEY_INVALID', 'applyToAllRooms phải là true hoặc false.');
+  return { price: input.defaultRoomPrice, deposit: input.defaultDeposit, applyAll: input.applyToAllRooms === true };
+}
+
+/**
+ * Saves a house's common rent/deposit and moves the rooms that follow it (price_custom/deposit_custom = 0; every room
+ * when `applyAll`, which also makes them follow). Rooms whose price changed get their open invoices recomputed.
+ * With `applyAll` and no value in the request the saved common value is used. `null` clears a common value (rooms keep theirs).
+ */
+async function applyDefaults(c: Context<App>, db: TenantDb, houseId: string, want: DefaultsInput) {
+  const house = await db.prepare(`SELECT default_room_price AS price, default_deposit AS deposit FROM houses WHERE id = ?`).bind(houseId).first<{ price: number | null; deposit: number | null }>();
+  const price = want.price === undefined ? house?.price ?? null : want.price;
+  const deposit = want.deposit === undefined ? house?.deposit ?? null : want.deposit;
+  const sets: string[] = [];
+  const args: (number | null)[] = [];
+  if (want.price !== undefined) { sets.push('default_room_price = ?'); args.push(want.price); }
+  if (want.deposit !== undefined) { sets.push('default_deposit = ?'); args.push(want.deposit); }
+  if (sets.length) await db.prepare(`UPDATE houses SET ${sets.join(', ')} WHERE id = ?`).bind(...args, houseId).run();
+
+  // Only what the request is about moves; with neither value in the request (applyAll alone) both saved values do.
+  const both = want.price === undefined && want.deposit === undefined;
+  const { results: rooms } = await db.prepare(`SELECT id, name, price, deposit, price_custom, deposit_custom FROM rooms WHERE house_id = ? AND deleted_at IS NULL ORDER BY name`)
+    .bind(houseId).all<{ id: number; name: string; price: number; room_deposit: number; price_custom: number; deposit_custom: number }>();
+  const writes: ReturnType<TenantDb['prepare']>[] = [];
+  const repriced: { id: number; name: string }[] = [];
+  for (const r of rooms) {
+    const followsPrice = price !== null && (both || want.price !== undefined) && (want.applyAll || r.price_custom === 0);
+    const followsDeposit = deposit !== null && (both || want.deposit !== undefined) && (want.applyAll || r.deposit_custom === 0);
+    if (followsPrice && (r.price !== price || r.price_custom !== 0)) {
+      writes.push(db.prepare(`UPDATE rooms SET price = ?, price_custom = 0 WHERE id = ?`).bind(price, r.id));
+      if (r.price !== price) repriced.push({ id: r.id, name: r.name });
+    }
+    if (followsDeposit && (r.room_deposit !== deposit || r.deposit_custom !== 0)) writes.push(db.prepare(`UPDATE rooms SET deposit = ?, deposit_custom = 0 WHERE id = ?`).bind(deposit, r.id));
+  }
+  if (writes.length) await db.batch(writes);
+
+  const lockedRooms: string[] = [];
+  for (const r of repriced) if ((await repriceOpenInvoices(c, db, r.id)) === 'next_month') lockedRooms.push(r.name);
+  return { defaultRoomPrice: price, defaultDeposit: deposit, roomsUpdated: writes.length, roomsRepriced: repriced.length, lockedRooms };
+}
+
 // ── Routes ─────────────────────────────────────────────────────────────────
 
 export function registerAdmin(app: Hono<App>): void {
-  for (const path of ['/api/admin/rooms', '/api/admin/rooms/*', '/api/admin/room-detail', '/api/admin/config', '/api/admin/issue-month'])
+  for (const path of ['/api/admin/rooms', '/api/admin/rooms/*', '/api/admin/residents/*', '/api/admin/room-detail', '/api/admin/config', '/api/admin/issue-month'])
     app.use(path, requireAuth, staffOnly);
 
   app.get('/api/admin/rooms', async (c) => {
@@ -329,13 +421,145 @@ export function registerAdmin(app: Hono<App>): void {
     });
   });
 
+  /**
+   * Staff edits one resident of a room: name, phone, CCCD, plate and vehicle type (only what is sent). The same rules as the
+   * resident's own profile and as creating one (residentInput.ts); the phone is also the login, so it is kept unique across
+   * staff and residents (central index first, then the store, the index put back if the store refuses).
+   */
+  app.patch('/api/admin/residents/:residentId', async (c) => {
+    const body = await readBody(c);
+    const houseId = pickHouse(c, body.houseId);
+    if (houseId instanceof Response) return houseId;
+    const db = await tenantFor(c, houseId);
+    const residentId = Number(c.req.param('residentId'));
+    const row = Number.isInteger(residentId)
+      ? await db.prepare(`SELECT id, room_id, full_name, phone, plate_number, vehicle_type FROM residents WHERE id = ? AND house_id = ? AND deleted_at IS NULL`)
+        .bind(residentId, houseId).first<{ id: number; room_id: number | null; full_name: string; phone: string | null; plate_number: string | null; vehicle_type: string | null }>()
+      : null;
+    if (!row) return fail(c, 404, 'RESIDENT_NOT_FOUND', 'Không tìm thấy cư dân trong nhà này.');
+
+    const sets: string[] = [];
+    const values: (string | null)[] = [];
+    const set = (column: string, value: string | null) => { sets.push(`${column} = ?`); values.push(value); };
+    const text = (v: unknown) => String(v ?? '').trim();
+
+    let fullName = row.full_name;
+    if (body.fullName !== undefined) {
+      fullName = text(body.fullName);
+      if (!fullName) return fail(c, 400, 'NAME_REQUIRED', 'Vui lòng nhập họ và tên.');
+      set('full_name', fullName);
+    }
+    const oldPhone = normalizePhone(row.phone ?? '');
+    let phone = oldPhone;
+    if (body.phone !== undefined) {
+      const wanted = storablePhone(body.phone);
+      if (!wanted) return fail(c, 400, 'PHONE_INVALID', PHONE_INVALID_MESSAGE);
+      phone = wanted;
+    }
+    const phoneChanged = phone !== oldPhone;
+    if (phoneChanged && (await phoneTaken(c.env.DB, phone, { residentId: row.id }))) return fail(c, 409, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
+    const cccd = cleanCccd(body.cccd); // empty = not filled in, never "erase"
+    if (cccd) {
+      if (!isCccd(cccd)) return fail(c, 400, 'CCCD_INVALID', CCCD_INVALID_MESSAGE);
+      const cols = await cccdColumns(cccd, c.env.CCCD_KEY);
+      if (await db.prepare(`SELECT id FROM residents WHERE cccd_hash = ? AND id <> ?`).bind(cols.cccd_hash, row.id).first()) return fail(c, 409, 'CCCD_TAKEN', CCCD_TAKEN_MESSAGE);
+      set('cccd_enc', cols.cccd_enc); set('cccd_last4', cols.cccd_last4); set('cccd_hash', cols.cccd_hash);
+    }
+    const plate = body.plateNumber === undefined ? (row.plate_number ?? '') : text(body.plateNumber);
+    if (body.plateNumber !== undefined) set('plate_number', plate || null);
+    const vehicleType = body.vehicleType === undefined ? (row.vehicle_type ?? '') : text(body.vehicleType);
+    if (body.vehicleType !== undefined) set('vehicle_type', vehicleType || null);
+    if (!sets.length && !phoneChanged) return fail(c, 400, 'NOTHING_TO_UPDATE', 'Không có thông tin nào để cập nhật.');
+
+    if (phoneChanged) {
+      try {
+        await updateResidentIndex(c.env.DB, row.id, { phone });
+      } catch (err) {
+        if (err instanceof PhoneTakenError) return fail(c, 409, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
+        throw err;
+      }
+      set('phone', phone);
+    }
+    try {
+      await db.prepare(`UPDATE residents SET ${sets.join(', ')} WHERE id = ?`).bind(...values, row.id).run();
+    } catch (err) {
+      if (phoneChanged) await updateResidentIndex(c.env.DB, row.id, { phone: oldPhone || null }).catch(() => {});
+      if (/UNIQUE constraint failed/i.test(String((err as Error)?.message ?? err))) return fail(c, 409, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
+      throw err;
+    }
+    // A plate counts as a vehicle (the parking fee), so the open invoices are priced again; a paid one stays as it is.
+    if (row.room_id !== null && plate !== (row.plate_number ?? '')) await repriceOpenInvoices(c, db, row.room_id);
+    await audit(c, actorOf(c.get('viewer')), 'resident_edit_by_staff', houseId, `resident:${row.id}`);
+    const place = row.room_id === null ? null : await db.prepare(`SELECT name FROM rooms WHERE id = ?`).bind(row.room_id).first<{ name: string }>();
+    // Same parameters as the resident's own profile update; the CCCD is not copied into the queue (personal data).
+    await enqueueExport(c.env.DB, 'update_profile', {
+      houseId, room: place ? legacyRoomCode(houseId, place.name) : '', currentPhone: oldPhone,
+      name: fullName, phone, plateNumber: plate, email: '', dob: '', gender: '', address: '',
+      vehicleType: vehicleType || 'Xe máy', emergencyName: '', emergencyPhone: '', emergencyRelation: '',
+    });
+    const [detail] = row.room_id === null ? [] : await loadRooms(c, db, houseId, currentMonth(), row.room_id);
+    return c.json({ success: true, message: 'Đã lưu thông tin cư dân.', data: detail ? await detailOf(db, detail) : null });
+  });
+
+  /**
+   * Staff sets a room's rent and/or deposit: its own number (`price`/`deposit`, the room then keeps it) or the house's common
+   * one (`useDefaultPrice`/`useDefaultDeposit`, the room then follows the house). It can be saved at any time: the room always
+   * gets it; the current month's invoice (and the next month's draft) are recomputed unless the current one is paid/locked, in
+   * which case it stays as it is and `appliesFrom` is 'next_month'.
+   */
+  app.patch('/api/admin/rooms/:roomId', async (c) => {
+    const body = await readBody(c);
+    const houseId = pickHouse(c, body.houseId);
+    if (houseId instanceof Response) return houseId;
+    const month = pickMonth(c, body.month);
+    if (month instanceof Response) return month;
+    const db = await tenantFor(c, houseId);
+    const roomId = Number(c.req.param('roomId'));
+    const room = Number.isInteger(roomId)
+      ? await db.prepare(`SELECT id, name, price, deposit FROM rooms WHERE id = ? AND house_id = ? AND deleted_at IS NULL`).bind(roomId, houseId).first<{ id: number; name: string; price: number; deposit: number }>()
+      : null;
+    if (!room) return fail(c, 404, 'ROOM_NOT_FOUND', 'Không tìm thấy phòng trong nhà này.');
+
+    for (const k of ['price', 'deposit'] as const) {
+      if (body[k] !== undefined && !isMoney(body[k])) return fail(c, 400, 'MONEY_INVALID', 'Tiền phòng và tiền cọc phải là số nguyên đồng từ 0 đến 100.000.000.');
+    }
+    const useDefaultPrice = body.useDefaultPrice === true, useDefaultDeposit = body.useDefaultDeposit === true;
+    if ((useDefaultPrice && body.price !== undefined) || (useDefaultDeposit && body.deposit !== undefined))
+      return fail(c, 400, 'MONEY_CONFLICT', 'Chỉ chọn một: nhập giá riêng hoặc dùng giá chung của căn.');
+    if (body.price === undefined && body.deposit === undefined && !useDefaultPrice && !useDefaultDeposit)
+      return fail(c, 400, 'NOTHING_TO_UPDATE', 'Không có thông tin nào để cập nhật.');
+
+    const house = await db.prepare(`SELECT default_room_price AS price, default_deposit AS deposit FROM houses WHERE id = ?`).bind(houseId).first<{ price: number | null; deposit: number | null }>();
+    if (useDefaultPrice && house?.price == null) return fail(c, 400, 'NO_DEFAULT_PRICE', 'Căn này chưa đặt tiền phòng chung. Hãy nhập tiền phòng chung ở phần Cài đặt trước.');
+    if (useDefaultDeposit && house?.deposit == null) return fail(c, 400, 'NO_DEFAULT_DEPOSIT', 'Căn này chưa đặt tiền cọc chung. Hãy nhập tiền cọc chung ở phần Cài đặt trước.');
+
+    const sets: string[] = [];
+    const args: number[] = [];
+    let price = room.price;
+    if (useDefaultPrice) { price = house!.price!; sets.push('price = ?', 'price_custom = 0'); args.push(price); }
+    else if (body.price !== undefined) { price = body.price; sets.push('price = ?', 'price_custom = 1'); args.push(price); }
+    if (useDefaultDeposit) { sets.push('deposit = ?', 'deposit_custom = 0'); args.push(house!.deposit!); }
+    else if (body.deposit !== undefined) { sets.push('deposit = ?', 'deposit_custom = 1'); args.push(body.deposit); }
+    await db.prepare(`UPDATE rooms SET ${sets.join(', ')} WHERE id = ?`).bind(...args, room.id).run();
+
+    const appliesFrom = price !== room.price ? await repriceOpenInvoices(c, db, room.id) : 'this_month';
+    await audit(c, actorOf(c.get('viewer')), 'room_money_edit', houseId, `${room.name}:price=${price}${body.deposit !== undefined || useDefaultDeposit ? `,deposit=${args[args.length - 1]}` : ''}`);
+    const [row] = await loadRooms(c, db, houseId, month, room.id);
+    return c.json({
+      success: true,
+      message: appliesFrom === 'next_month' ? LOCKED_PRICE_MESSAGE : price !== room.price ? 'Đã lưu giá mới và tính lại hoá đơn chưa đóng.' : 'Đã lưu.',
+      appliesFrom,
+      data: await detailOf(db, row),
+    });
+  });
+
   const readConfig = async (c: Context<App>) => {
     const houseId = pickHouse(c, c.req.query('houseId'));
     if (houseId instanceof Response) return houseId;
     const month = pickFeeMonth(c, c.req.query('month'));
     if (month instanceof Response) return month;
     const config = await loadConfig(await tenantFor(c, houseId), houseId, month);
-    return c.json({ success: true, month, editable: monthEditable(month), known: config.known, config });
+    return c.json({ success: true, month, editable: monthEditable(month), known: config.known, defaultRoomPrice: config.defaultRoomPrice, defaultDeposit: config.defaultDeposit, config });
   };
   app.get('/api/admin/config', readConfig);
 
@@ -351,8 +575,16 @@ export function registerAdmin(app: Hono<App>): void {
     const month = pickFeeMonth(c, body.month ?? c.req.query('month'));
     if (month instanceof Response) return month;
     const db = await tenantFor(c, houseId);
-    if (!monthEditable(month)) return fail(c, 409, 'MONTH_READONLY', `${monthLabel(month)} đã qua nên không sửa được cài đặt phí. Bạn chỉ xem được.`);
     const input: Record<string, any> = body.config && typeof body.config === 'object' ? body.config : body;
+    // The common rent/deposit belong to the house, not to a month: they can be saved while looking at any month.
+    const defaults = parseDefaults(c, input);
+    if (defaults instanceof Response) return defaults;
+    if (defaults && !['electricPrice', 'waterPrice', 'services'].some((k) => input[k] !== undefined)) {
+      const applied = await applyDefaults(c, db, houseId, defaults);
+      await audit(c, actorOf(c.get('viewer')), 'admin_house_defaults', houseId, `rent:${applied.defaultRoomPrice} deposit:${applied.defaultDeposit} rooms:${applied.roomsUpdated}`);
+      return c.json({ success: true, month, editable: monthEditable(month), config: await loadConfig(db, houseId, month), ...applied });
+    }
+    if (!monthEditable(month)) return fail(c, 409, 'MONTH_READONLY', `${monthLabel(month)} đã qua nên không sửa được cài đặt phí. Bạn chỉ xem được.`);
     const current = await loadConfig(db, houseId, month);
 
     const electric = input.electricPrice === undefined ? current.electricPrice : input.electricPrice;
@@ -409,7 +641,8 @@ export function registerAdmin(app: Hono<App>): void {
         ...(rac !== undefined && { rac }), ...(net !== undefined && { net }), ...(xe !== undefined && { xe }),
       });
     }
-    return c.json({ success: true, month, editable: true, config: saved, recomputed, recomputeFailed });
+    const applied = defaults ? await applyDefaults(c, db, houseId, defaults) : {};
+    return c.json({ success: true, month, editable: true, config: await loadConfig(db, houseId, month), recomputed, recomputeFailed, ...applied });
   };
   app.put('/api/admin/config', saveConfig);
   app.post('/api/admin/config', saveConfig); // the screen posts today

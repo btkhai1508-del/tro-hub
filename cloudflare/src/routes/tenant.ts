@@ -11,10 +11,10 @@ import type { Context, Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { isWorkerSource } from '../billing/source.ts';
 import { ensureDraftForRoom } from '../billing/invoices.ts';
-import { encryptText, hashCccd } from '../cccd.ts';
 import { allHouses, houseDir, PhoneTakenError, releaseResident, reserveResident, residentRoute } from '../central/directory.ts';
 import { REGISTER_LIMITS, registerHit } from '../loginLimit.ts';
 import { hashPassword, normalizePhone } from '../password.ts';
+import { cccdColumns, CCCD_INVALID_MESSAGE, CCCD_TAKEN_MESSAGE, cleanCccd, isCccd, isLocalPhone } from '../residentInput.ts';
 import { enqueueExport } from '../sheetExport.ts';
 import { legacyRoomCode } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -93,7 +93,7 @@ export function registerTenantAccounts(app: Hono<App>): void {
     const password = String(body.password ?? '');
     const roomName = String(body.roomNumber ?? '').trim();
     const roomId = Number(body.roomId);
-    if (!name || !/^0\d{9}$/.test(phone) || password.length < 6 || (!roomName && !(roomId > 0)))
+    if (!name || !isLocalPhone(phone) || password.length < 6 || (!roomName && !(roomId > 0)))
       return fail(c, 400, 'REGISTER_INVALID', 'Vui lòng điền đầy đủ họ tên, số điện thoại 10 số, phòng và mật khẩu từ 6 ký tự.');
 
     // Throttle the public route (only well-formed attempts count): 5 per IP per hour, 3 per phone per day.
@@ -302,14 +302,14 @@ export function registerTenantAccounts(app: Hono<App>): void {
     }
 
     // CCCD: encrypted like everywhere else; an empty value is "not filled in", never "erase".
-    const cccd = String(body.cccd ?? body.citizenId ?? '').replace(/\s/g, '');
+    const cccd = cleanCccd(body.cccd ?? body.citizenId);
     if (cccd) {
-      if (!/^\d{9,12}$/.test(cccd)) return fail(c, 400, 'CCCD_INVALID', 'Số CCCD phải gồm 9 đến 12 chữ số.');
-      const hash = await hashCccd(cccd, c.env.CCCD_KEY);
-      const dup = await db.prepare(`SELECT id FROM residents WHERE cccd_hash = ? AND id <> ?`).bind(hash, viewer.id).first();
-      if (dup) return fail(c, 400, 'CCCD_TAKEN', 'Số CCCD này đã được dùng cho một tài khoản khác.');
+      if (!isCccd(cccd)) return fail(c, 400, 'CCCD_INVALID', CCCD_INVALID_MESSAGE);
+      const cols = await cccdColumns(cccd, c.env.CCCD_KEY);
+      const dup = await db.prepare(`SELECT id FROM residents WHERE cccd_hash = ? AND id <> ?`).bind(cols.cccd_hash, viewer.id).first();
+      if (dup) return fail(c, 400, 'CCCD_TAKEN', CCCD_TAKEN_MESSAGE);
       sets.push('cccd_enc = ?', 'cccd_last4 = ?', 'cccd_hash = ?');
-      values.push(await encryptText(cccd, c.env.CCCD_KEY), cccd.slice(-4), hash);
+      values.push(cols.cccd_enc, cols.cccd_last4, cols.cccd_hash);
     }
 
     if (sets.length) await db.prepare(`UPDATE residents SET ${sets.join(', ')} WHERE id = ?`).bind(...values, viewer.id).run();
