@@ -6,7 +6,8 @@
  */
 import { storage, STORAGE_KEYS } from './storage';
 
-const rawApiBase = import.meta.env.VITE_API_BASE_URL;
+const env = (import.meta as { env?: Record<string, string | undefined> }).env ?? {};
+const rawApiBase = env.VITE_API_BASE_URL;
 export const API_BASE_URL: string = String(
   rawApiBase || 'https://tro-hub.onrender.com'
 ).replace(/\/+$/, '');
@@ -37,7 +38,7 @@ export function setAuthToken(token: string | null | undefined): void {
  * It has its own token, kept next to the Express one until Express is gone.
  */
 export const WORKER_API_URL: string = String(
-  import.meta.env.VITE_WORKER_API_URL || 'https://tro-hub-api.trohub.workers.dev'
+  env.VITE_WORKER_API_URL || 'https://tro-hub-api.trohub.workers.dev'
 ).replace(/\/+$/, '');
 
 export function setWorkerToken(token: string | null | undefined): void {
@@ -106,31 +107,46 @@ export function getSource(): DataSource {
   return sourceValue ?? 'sheet';
 }
 
+const SOURCE_PROBE_RETRIES = 2;
+const SOURCE_PROBE_GAP_MS = 1000;
+
+async function probeSource(): Promise<DataSource | null> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    let res: Response;
+    try {
+      res = await fetch(`${WORKER_API_URL}/api/source`, { signal: ctrl.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+    const data = await res.json().catch(() => null);
+    if (res.ok && data && (data.source === 'sheet' || data.source === 'worker')) return data.source;
+  } catch { /* caller decides whether to retry */ }
+  return null;
+}
+
 /**
  * Asks the Worker once which store owns the data. The answer is memoized; a failed
- * attempt is not (the next call retries) and counts as `sheet` for that call.
+ * attempt is not (the next call retries). Sessions with a Worker token retry the probe
+ * up to twice (1 s apart) before answering `sheet` for that call.
  */
 export function ensureSource(): Promise<DataSource> {
   if (sourceValue) return Promise.resolve(sourceValue);
   if (!sourcePromise) {
     const gen = sourceGen;
     sourcePromise = (async () => {
-      try {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 5000);
-        let res: Response;
-        try {
-          res = await fetch(`${WORKER_API_URL}/api/source`, { signal: ctrl.signal });
-        } finally {
-          clearTimeout(timer);
-        }
-        const data = await res.json().catch(() => null);
-        if (res.ok && data && (data.source === 'sheet' || data.source === 'worker')) {
+      const retries = storage.getItem(STORAGE_KEYS.WORKER_TOKEN) ? SOURCE_PROBE_RETRIES : 0;
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, SOURCE_PROBE_GAP_MS));
+        const source = await probeSource();
+        if (source) {
           // A reset during the request means this answer belongs to an older session.
-          if (gen === sourceGen) sourceValue = data.source;
-          return data.source as DataSource;
+          if (gen === sourceGen) sourceValue = source;
+          return source;
         }
-      } catch { /* fall through; the next call retries */ }
+        if (gen !== sourceGen) break;
+      }
       if (gen === sourceGen) sourcePromise = null;
       return 'sheet' as DataSource;
     })();
@@ -168,6 +184,19 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   // Session expired / missing -> let the app log out (skip for login endpoints themselves)
   if (res.status === 401 && token && !path.startsWith('/api/auth/')) {
     window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
+  }
+  // The data moved to the Worker while this page still thought Express owned it: forget the
+  // memoized source and send the same request to the Worker once.
+  if (
+    res.status === 409 &&
+    WORKER_SOURCE_ROUTES.has(bare) &&
+    (workerToken || WORKER_SOURCE_PUBLIC.has(bare))
+  ) {
+    const code = await res.clone().json().then((b) => b?.code, () => null);
+    if (code === 'SOURCE_CHANGED') {
+      resetSource();
+      return workerFetch(path, init);
+    }
   }
   return res;
 }
