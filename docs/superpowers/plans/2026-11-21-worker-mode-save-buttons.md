@@ -26,7 +26,7 @@
 
 1. Hai căn của cùng một chủ trọ có phòng trùng tên (ví dụ cả hai có "101"): mọi lần lưu từ màn admin phải gửi `houseId` và lưu đúng căn, không 404, không lưu nhầm căn kia. → test trong Task 1 và Task 2, kiểm tra tay trong Task 4.
 2. Vòng làm mới chạy đúng lúc vừa bấm Lưu: phản hồi đọc cũ không được đè giá trị vừa lưu; phản hồi đọc mới hơn (thay đổi từ máy khác) phải hiện trong ≤ 1 vòng. → test writeGuard trong Task 3, kiểm tra trong Task 5.
-3. Sửa tiền phòng / cọc khi hoá đơn tháng này đã đóng: server trả 409 tiếng Việt, không đổi gì; màn hình hiện thông báo và giữ giá trị cũ. → test trong Task 2, Task 4.
+3. Sửa tiền phòng / cọc khi hoá đơn tháng này đã đóng: giá mới vẫn được lưu nhưng hoá đơn đã đóng không đổi một đồng; màn hình nói rõ "áp dụng từ tháng sau". → test trong Task 2, Task 4.
 4. Kiểm tra nguồn (`/api/source`) bị timeout: thao tác ghi không được âm thầm rơi về Express; nếu Express trả `SOURCE_CHANGED` thì tự gửi lại sang Worker một lần. → test trong Task 3.
 5. Số điện thoại nhập có khoảng trắng, `+84`, 9 chữ số, 11 chữ số: frontend hiển thị đúng số sẽ lưu theo cùng quy tắc với `cloudflare/src/password.ts normalizePhone`, chặn số không hợp lệ trước khi gửi. → test trong Task 3, dùng trong Task 8.
 
@@ -76,16 +76,20 @@
 
 ---
 
-### Task 2: Backend — sửa cư dân và tiền phòng/cọc từ màn chi tiết phòng
+### Task 2: Backend — sửa cư dân, tiền phòng/cọc theo phòng và giá chung của căn
 
 **Files:**
-- Modify: `cloudflare/src/routes/admin.ts` (`loadRooms` ~100-145, `detailOf` ~151, thêm 2 route)
+- Create: `cloudflare/migrations/0026_room_money_defaults.sql`
+- Modify: `cloudflare/src/routes/admin.ts` (`loadRooms` ~100-145, `detailOf` ~151, `readConfig`/`saveConfig` ~340-415, thêm 2 route), `cloudflare/src/tenant/schema.ts`, `cloudflare/src/routes/houses.ts` (tạo phòng)
 - Test: `cloudflare/test/admin-edit.test.ts` (mới)
 
 **Interfaces:**
 - Produces: `GET/POST /api/admin/room-detail` và `GET /api/admin/rooms` mỗi dòng thêm `occupants: { residentId: number; name: string; phone: string; plate: string; vehicleType: string; cccdLast4: string }[]` (tối đa 3, cùng thứ tự với `nguoi1..3`), `roomPrice: number`, `roomDeposit: number` (lấy từ `rooms.price`, `rooms.deposit`). Các trường cũ giữ nguyên.
 - Produces: `PATCH /api/admin/residents/:residentId` body `{ houseId: string, fullName?, phone?, cccd?, plateNumber?, vehicleType? }` → `{ success, message, data: <detailOf row của phòng cư dân đó cho tháng hiện tại> }`. Quy tắc kiểm tra giống `/api/profile/update` (tenant.ts:262) và tạo cư dân (people.ts:118): chuẩn hoá SĐT bằng `normalizePhone`, 10 số bắt đầu 0, không trùng trong `resident_index` (409 `PHONE_TAKEN`), CCCD 12 số mã hoá bằng `CCCD_KEY` + `cccd_hash` không trùng (409 `CCCD_TAKEN`); cập nhật `resident_index` khi đổi SĐT; ghi `audit` `resident_edit_by_staff`; `enqueueExport(db,'update_profile',…)` như profile update khi ở chế độ worker.
-- Produces: `PATCH /api/admin/rooms/:roomId` body `{ houseId: string, price?: number, deposit?: number }` → `{ success, message, data: <detailOf row> }`. Kiểm tra số nguyên 0..100.000.000 (400 `MONEY_INVALID`). Sau khi lưu `rooms.price`/`rooms.deposit`: nếu phòng có hoá đơn tháng hiện tại chưa khoá thì `recompute` theo quy tắc hiện có; hoá đơn đã đóng → trả 409 `INVOICE_LOCKED` tiếng Việt và **không** đổi gì (kiểm tra trước khi ghi). Ghi `audit` `room_money_edit`.
+- Produces: migration `cloudflare/migrations/0026_room_money_defaults.sql` + phần tử migration tương ứng trong `cloudflare/src/tenant/schema.ts` (hai nơi phải giống nhau; công cụ xuất/nhập/băm kho phải biết cột mới): `houses.default_room_price INTEGER` (NULL = chưa đặt), `houses.default_deposit INTEGER` (NULL), `rooms.price_custom INTEGER NOT NULL DEFAULT 1`, `rooms.deposit_custom INTEGER NOT NULL DEFAULT 1` (phòng hiện có giữ giá riêng đang có).
+- Produces: `PATCH /api/admin/rooms/:roomId` body `{ houseId: string, price?: number, deposit?: number, useDefaultPrice?: boolean, useDefaultDeposit?: boolean }` → `{ success, message, appliesFrom: 'this_month' | 'next_month', data: <detailOf row> }`. Số nguyên 0..100.000.000 (400 `MONEY_INVALID`). Gửi `price` → lưu `rooms.price`, `price_custom = 1`; `useDefaultPrice` → `price = houses.default_room_price`, `price_custom = 0` (400 `NO_DEFAULT_PRICE` khi căn chưa có giá chung); tương tự cho cọc. **Đổi giá lúc nào cũng được**: luôn lưu vào phòng; nếu hoá đơn tháng hiện tại (và nháp tháng sau, nếu có) chưa khoá thì `recompute` → `appliesFrom: 'this_month'`; nếu hoá đơn tháng này đã đóng/khoá thì không đụng hoá đơn đó, trả `appliesFrom: 'next_month'` và câu "Đã lưu giá mới, áp dụng từ hoá đơn tháng sau vì tháng này đã đóng." Ghi `audit` `room_money_edit`.
+- Produces: `GET /api/admin/config?houseId&month` trả thêm `defaultRoomPrice: number|null`, `defaultDeposit: number|null`; `PUT/POST /api/admin/config` nhận thêm `defaultRoomPrice?`, `defaultDeposit?`, `applyToAllRooms?: boolean` (mức căn, không theo tháng): lưu giá chung, rồi cập nhật mọi phòng `price_custom = 0` (và mọi phòng nếu `applyToAllRooms`, đặt `price_custom = 0`) cùng quy tắc recompute như trên. Phòng tạo mới (`POST /api/dev/houses/:id/rooms`, tạo căn) khi không truyền giá → lấy giá chung, `*_custom = 0`.
+- Dòng phòng (`/api/admin/rooms`, room-detail) thêm `priceCustom: boolean`, `depositCustom: boolean`.
 - Cả hai route: chỉ staff của đúng căn (`houseId` phải nằm trong `staffHouseIds`, phòng/cư dân phải thuộc căn đó), 403 cho cư dân, 401 ẩn danh.
 
 - [ ] **Step 1: Write failing tests** (`describe.each(BACKENDS)`):
@@ -94,7 +98,9 @@
   - `phone already used by another resident → 409 PHONE_TAKEN`, `cccd taken → 409 CCCD_TAKEN`, `9-digit phone is stored with a leading 0`.
   - `manager of another house → 403; resident → 403; anonymous → 401`.
   - `editing rent recomputes the open current-month invoice total` (tổng mới = tổng cũ − giá cũ + giá mới).
-  - `editing rent when this month's invoice is paid → 409 INVOICE_LOCKED and rooms.price unchanged`.
+  - `editing rent when this month's invoice is paid saves the room price, leaves the paid invoice untouched, returns appliesFrom next_month`.
+  - `house default rent applies to rooms without a custom price and recomputes their open invoices; custom rooms keep their price; applyToAllRooms resets every room`.
+  - `useDefaultPrice without a house default → 400 NO_DEFAULT_PRICE`; `migration 0026 keeps existing room prices (custom = 1)` on both backends.
   - `same room name in two houses: houseId decides which room changes`.
 - [ ] **Step 2: Run** `cd cloudflare && npx vitest run test/admin-edit.test.ts` — FAIL.
 - [ ] **Step 3: Implement** trong admin.ts; dùng lại helper sẵn có (`normalizePhone`, mã hoá CCCD ở chỗ profile update đang dùng, `recompute`/`assertEditable`/`InvoiceLockedError` từ `billing/invoices.ts`, `enqueueExport` từ `sheetExport.ts`, `refreshCounts` nếu cần). Không sao chép logic kiểm tra: nếu profile update có hàm kiểm tra cục bộ, tách ra hàm dùng chung trong cùng file nguồn rồi gọi từ cả hai chỗ.
@@ -138,14 +144,14 @@
 - [ ] **Step 1: Repro trước khi sửa** — chạy script có sẵn `scratchpad/audit/*.cjs` (room-detail) trên `npm run dev:local` chế độ worker: ghi lại `POST /api/admin/room-detail → 400 COMBINED_EDIT` và không có toast.
 - [ ] **Step 2: Implement (chỉ nhánh `workerMode`)**:
   - Mở chi tiết phòng gửi `houseId` (dòng danh sách đã có).
-  - "Lưu" gửi tuần tự, chỉ phần đã đổi: (1) chỉ số → `POST /api/admin/room-detail {month, houseId, room, data:{dienCu?,dienMoi?,nuocCu?,nuocMoi?}}` (không gửi `paymentStatus`, không gửi `row`); (2) mỗi cư dân đã đổi → `PATCH /api/admin/residents/:residentId`; (3) tiền phòng/cọc đã đổi → `PATCH /api/admin/rooms/:roomId`. Mỗi bước chờ kết quả; lỗi dừng lại, hiện `error` của server bằng toast, khôi phục giá trị của phần lỗi, giữ phần đã lưu. Thành công: `applyRoomUpdate(data)` + toast "Đã lưu".
+  - "Lưu" gửi tuần tự, chỉ phần đã đổi: (1) chỉ số → `POST /api/admin/room-detail {month, houseId, room, data:{dienCu?,dienMoi?,nuocCu?,nuocMoi?}}` (không gửi `paymentStatus`, không gửi `row`); (2) mỗi cư dân đã đổi → `PATCH /api/admin/residents/:residentId`; (3) tiền phòng/cọc đã đổi → `PATCH /api/admin/rooms/:roomId` (cạnh ô có nhãn "Giá riêng"/"Giá chung" và nút "Dùng giá chung"; hiện câu `message` server trả khi `appliesFrom = 'next_month'`). Mỗi bước chờ kết quả; lỗi dừng lại, hiện `error` của server bằng toast, khôi phục giá trị của phần lỗi, giữ phần đã lưu. Thành công: `applyRoomUpdate(data)` + toast "Đã lưu".
   - Rác / net / xe trên màn chi tiết: chỉ đọc ở chế độ worker, kèm dòng "Đổi giá ở Cài đặt phí; bỏ dịch vụ cho phòng ở mục Dịch vụ của phòng" (không có ghi đè từng hoá đơn — xem Quyết định ở cuối plan).
   - Công tắc "Trạng thái thu tiền" (chi tiết phòng + Thu tiền tháng): `await` `POST /api/admin/payment-status {roomNumber, status, month, houseId}`; lỗi → khôi phục + toast lỗi server; thành công → cập nhật dòng; dùng writeGuard cho rooms/billing để vòng 8 giây không đè.
   - Bỏ `pushUpdateToGoogleSheet` khi `getSource() === 'worker'` (Worker đã tự ghi Sheet).
   - Ước tính tiền khi đang gõ dùng đơn giá thật của tháng từ `GET /api/admin/config?houseId&month` (không dùng mặc định 3500/20000 của `unitConfig`, ~353-359).
   - `workerMode` ban đầu: hiện trạng thái "Đang tải…" cho tới khi `ensureSource()` trả lời, không vẽ tạm các form kiểu cũ (Express) trong lúc chờ (~187).
   - `saveConfig` / `saveBatchMeters` kiểu cũ (~1030-1098, chỉ dùng ở chế độ sheet): hiện lỗi thật thay vì báo "đã lưu" khi request thất bại.
-- [ ] **Step 3: Verify (Playwright, local, worker mode)**: sửa chỉ số + tên cư dân + tiền phòng → một lần bấm Lưu, toast "Đã lưu", danh sách Phòng & Khách và Thu tiền đổi ngay không reload; hoá đơn đã đóng + đổi tiền phòng → toast 409, giá trị cũ giữ nguyên; bật/tắt "đã đóng" → đổi ngay, không bị lật lại sau 10 giây. Ảnh `fix4-*.png` vào scratchpad.
+- [ ] **Step 3: Verify (Playwright, local, worker mode)**: sửa chỉ số + tên cư dân + tiền phòng → một lần bấm Lưu, toast "Đã lưu", danh sách Phòng & Khách và Thu tiền đổi ngay không reload; hoá đơn đã đóng + đổi tiền phòng → lưu được, toast "áp dụng từ tháng sau", tổng hoá đơn đã đóng không đổi; nút "Dùng giá chung" trả phòng về giá chung; bật/tắt "đã đóng" → đổi ngay, không bị lật lại sau 10 giây. Ảnh `fix4-*.png` vào scratchpad.
 - [ ] **Step 4: Run** `npm run lint`, `npm run test:lib`.
 - [ ] **Step 5: Commit** `fix(admin): room detail save and payment switch work on the Worker`
 
@@ -174,7 +180,7 @@
 **Interfaces:**
 - Produces: `MonthBilling` prop `onChanged?: () => void`; `FeeSettings` prop `onSaved?: () => void`. AdminPortal truyền hàm tải lại `roomsList`/`billingList`/dashboard của tháng đang xem.
 
-- [ ] **Step 1: Implement**: mỗi dòng có thay đổi chưa lưu hiện nút **"Lưu"** (và Enter) — vẫn lưu khi rời ô như trước; sau khi lưu hiện dấu "Đã lưu ✓" 2 giây; không gửi trùng khi một lần lưu cùng dữ liệu đang chạy; lỗi hiện `error` của server ngay dưới dòng và giữ giá trị người dùng nhập. Gọi `onChanged`/`onSaved` sau mỗi lần lưu thành công. Bỏ câu "chạm ra ngoài ô để lưu".
+- [ ] **Step 1: Implement**: mỗi dòng có thay đổi chưa lưu hiện nút **"Lưu"** (và Enter) — vẫn lưu khi rời ô như trước; sau khi lưu hiện dấu "Đã lưu ✓" 2 giây; không gửi trùng khi một lần lưu cùng dữ liệu đang chạy; lỗi hiện `error` của server ngay dưới dòng và giữ giá trị người dùng nhập. Gọi `onChanged`/`onSaved` sau mỗi lần lưu thành công. Bỏ câu "chạm ra ngoài ô để lưu". FeeSettings thêm hai ô **Tiền phòng chung** và **Tiền cọc chung** (mức căn, dùng Task 2) cùng ô chọn "Áp dụng cho tất cả phòng (kể cả phòng đang có giá riêng)"; Rác/Net/Xe vẫn sửa ở đây (giá chung theo tháng) — màn chi tiết phòng chỉ hiển thị.
 - [ ] **Step 2: Verify (Playwright 390px & 1280px)**: nhập số mới → nút Lưu hiện → bấm → "Đã lưu ✓", tab Thu tiền đổi tổng ngay. Ảnh `fix6-*.png`.
 - [ ] **Step 3: Run** `npm run lint`.
 - [ ] **Step 4: Commit** `fix(admin): visible Save for meter rows, refresh lists after fee and meter saves`
@@ -212,16 +218,54 @@
 
 ---
 
-### Task 9: Kiểm tra toàn nhánh, chạy thử đầu-cuối, đưa lên
+### Task 9: Backend — 5 ngày cuối tháng mở sẵn tháng sau cho chủ trọ chuẩn bị
 
-- [ ] **Step 1:** Review toàn nhánh (một reviewer), sửa phát hiện quan trọng; `cd cloudflare && npm test`, tsc ×2, `npm run lint`, `npm run test:lib` sạch.
-- [ ] **Step 2:** Playwright đầu-cuối trên `npm run dev:local` chế độ worker, mỗi thao tác phản ánh ≤ 2 giây không reload: tạo/khoá/xoá tài khoản; sửa chi tiết phòng (chỉ số + cư dân + tiền phòng); nhập điện nước; lưu cài đặt phí; bật/tắt cổng thanh toán; đánh dấu đã đóng/chưa đóng; tạo thông báo; sửa hồ sơ cư dân. Khôi phục công tắc local về `sheet` sau khi thử.
-- [ ] **Step 3 (chờ người dùng đồng ý "deploy"):** sao lưu D1 (`wrangler d1 export --remote`), deploy Worker (không có migration mới), push `main` để Render build; kiểm tra `GET /api/source` = `worker`, các route mới trả 401 khi không đăng nhập.
+**Files:**
+- Modify: `cloudflare/src/cron.ts` (`createMonthlyDrafts`, catch-up 10 phút), `cloudflare/src/billing/invoices.ts` (`issueMonth`), `cloudflare/src/routes/admin.ts` (`/api/admin/months`, `issue-month`, `config` editable), `cloudflare/src/sheetExport.ts` (`drainExportQueue`)
+- Create: helper `cloudflare/src/billing/period.ts`
+- Test: `cloudflare/test/month-prep.test.ts` (mới)
+
+**Interfaces:**
+- Produces: `prepMonth(nowMs: number): string | null` trong `billing/period.ts` — giờ Việt Nam (UTC+7); trả tháng kế tiếp `'YYYY-MM'` khi ngày hiện tại nằm trong **5 ngày cuối tháng** (ngày ≥ số ngày của tháng − 4, ví dụ 27–31/12, 26–30/11, 24–28/02 năm thường, 25–29/02 năm nhuận), ngược lại `null`. `adminDefaultMonth(nowMs): string` = `prepMonth ?? tháng hiện tại`.
+- Cron (17:00 UTC = 00:00 VN và catch-up 10 phút): ngoài tháng hiện tại, khi `prepMonth` khác null thì tạo bản phí sao chép (`feeConfigFor`) và hoá đơn **nháp** cho tháng kế tiếp (idempotent, đánh dấu riêng `settings.month_prepared = 'YYYY-MM'`, cùng quy tắc chỉ chạy khi nguồn là `worker`). Chỉ số cũ tháng sau vẫn suy ra từ chỉ số mới tháng này (nhập muộn vẫn đúng).
+- `GET /api/admin/months` trả thêm `defaultMonth` (= `adminDefaultMonth`) và luôn có tháng chuẩn bị trong danh sách.
+- `POST /api/admin/issue-month` cho tháng chưa tới (tháng > tháng hiện tại theo lịch VN) → 409 `MONTH_NOT_STARTED` "Tháng 12/2026 mở thu được từ 01/12/2026." Cư dân không thấy hoá đơn tháng sau (nháp vốn ẩn với cư dân — giữ nguyên).
+- `drainExportQueue`: dòng của tháng chưa tới **không** bị thử và không tăng `attempts` cho tới ngày 1 của tháng đó (tab Sheet tháng mới do AutoSheet.gs tạo lúc 00:00 ngày 1).
+
+- [ ] **Step 1: Write failing tests**: `prepMonth` các mốc (26/11 00:00 VN → '2026-12'; 25/11 23:59 VN → null; 27/12 → '2027-01'; 24/02/2027 → '2027-03'; 25/02/2028 → '2028-03'; 24/02/2028 → null); cron ngày 26/11 tạo nháp 12/2026 cho mọi phòng có cư dân, chạy lại không ghi thêm; nháp tháng 12 không hiện với cư dân (`/api/tenant/session`, `/api/payment/status`); `issue-month` tháng 12 vào ngày 28/11 → 409, vào 01/12 → 200; nhập chỉ số mới tháng 11 sau khi đã có nháp tháng 12 → chỉ số cũ tháng 12 đổi theo; dòng xuất Sheet tháng 12 ngày 28/11 giữ `attempts = 0`, ngày 01/12 được gửi; chế độ `sheet` không tạo gì. `describe.each(BACKENDS)`.
+- [ ] **Step 2: Run** `cd cloudflare && npx vitest run test/month-prep.test.ts` — FAIL.
+- [ ] **Step 3: Implement**; dùng lại `createDrafts`, `feeConfigFor`, cờ `month_started` hiện có làm mẫu.
+- [ ] **Step 4: Run** test mới + toàn bộ `npm test`, tsc ×2 — PASS.
+- [ ] **Step 5: Commit** `feat(worker): last 5 days of a month prepare next month's drafts for the landlord`
 
 ---
 
-## Quyết định cần người dùng xác nhận khi duyệt plan
+### Task 10: Frontend — admin tự chuyển sang tháng chuẩn bị
 
-1. **Rác / net / xe trên màn chi tiết phòng**: không cho sửa số tiền riêng từng hoá đơn (giá lấy từ Cài đặt phí theo tháng; muốn bỏ dịch vụ cho một phòng thì dùng mục Dịch vụ của phòng). Nếu cần ghi đè số tiền cho từng hoá đơn, phải thêm cột và quy tắc mới — để một plan khác.
-2. **Sửa tiền phòng / cọc**: cả Admin Tổng và Admin căn của căn đó đều sửa được (giống Sheet trước đây). Nếu chỉ muốn Admin Tổng, đổi một dòng quyền ở Task 2.
-3. **Đổi giá phòng khi hoá đơn tháng này đã đóng**: bị chặn (409), áp dụng từ hoá đơn tháng sau.
+**Files:**
+- Modify: `src/components/AdminPortal.tsx` (chọn tháng mặc định, `loadTabContent` months), `src/components/admin/MonthBilling.tsx` (nút "Mở thu tiền tháng N")
+
+**Interfaces:**
+- Consumes: Task 9 (`defaultMonth`, 409 `MONTH_NOT_STARTED`).
+
+- [ ] **Step 1: Implement (chỉ chế độ worker)**: khi mở trang admin, tháng chọn mặc định = `defaultMonth` server trả (5 ngày cuối tháng → tháng sau); có dải thông báo "Đang chuẩn bị hoá đơn tháng 12/2026 — cư dân chưa thấy cho tới khi mở thu"; vẫn chọn lại được tháng hiện tại. Nút "Mở thu tiền tháng N" cho tháng chưa tới bị khoá, ghi "Mở được từ 01/MM/YYYY" (vẫn xử lý 409 nếu đồng hồ máy lệch).
+- [ ] **Step 2: Verify (Playwright, giả lập ngày bằng cách đặt đồng hồ trình duyệt và cron local)**: ngày 27 → mặc định tháng sau, nhập điện nước được, nút mở thu khoá; tài khoản cư dân không thấy hoá đơn tháng sau. Ảnh `fix10-*.png`.
+- [ ] **Step 3: Run** `npm run lint`.
+- [ ] **Step 4: Commit** `feat(admin): open next month for preparation in the last 5 days`
+
+---
+
+### Task 11: Kiểm tra toàn nhánh, chạy thử đầu-cuối, đưa lên
+
+- [ ] **Step 1:** Review toàn nhánh (một reviewer), sửa phát hiện quan trọng; `cd cloudflare && npm test`, tsc ×2, `npm run lint`, `npm run test:lib` sạch.
+- [ ] **Step 2:** Playwright đầu-cuối trên `npm run dev:local` chế độ worker, mỗi thao tác phản ánh ≤ 2 giây không reload: tạo/khoá/xoá tài khoản; giá chung + giá riêng phòng; tháng chuẩn bị; sửa chi tiết phòng (chỉ số + cư dân + tiền phòng); nhập điện nước; lưu cài đặt phí; bật/tắt cổng thanh toán; đánh dấu đã đóng/chưa đóng; tạo thông báo; sửa hồ sơ cư dân. Khôi phục công tắc local về `sheet` sau khi thử.
+- [ ] **Step 3 (chờ người dùng đồng ý "deploy"):** sao lưu D1 (`wrangler d1 export --remote`), áp migration 0026 rồi deploy Worker ngay sau đó, push `main` để Render build; kiểm tra `GET /api/source` = `worker`, các route mới trả 401 khi không đăng nhập.
+
+---
+
+## Quyết định đã chốt (người dùng, 21/11/2026)
+
+1. Rác / net / xe: sửa ở phần chung (Cài đặt phí theo tháng); màn chi tiết phòng chỉ hiển thị.
+2. Tiền phòng và cọc sửa được theo từng phòng, mặc định lấy **tiền phòng chung / tiền cọc chung** của căn.
+3. Giá phòng đổi lúc nào cũng được; hoá đơn đã đóng không bị đổi, giá mới áp dụng từ hoá đơn kế tiếp.
+4. 5 ngày cuối tháng: trang admin chuyển sang tháng kế tiếp để chủ trọ chuẩn bị (nháp, nhập chỉ số); cư dân chưa có hoá đơn tháng đó cho tới khi tháng bắt đầu và chủ trọ mở thu.
