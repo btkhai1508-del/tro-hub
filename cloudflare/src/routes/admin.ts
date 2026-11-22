@@ -115,6 +115,7 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
     const status = hasInvoice ? await view({ id: r.invoice_id!, house_id: houseId, room: r.name, total: r.total!, status: r.status!, issued_at: r.issued_at }) : 'unpaid';
     const st = paymentStatusOut(status, hasInvoice ? r.paid_at : null);
     const received = hasInvoice ? (bank.get(r.invoice_id!) ?? 0) + (waiting.get(r.name) ?? 0) : 0;
+    // tienCoc is the room's deposit: invoices.deposit is only written by the old Sheet import, so it would go stale.
     const money = (n: number | null) => (hasInvoice ? n : null);
     return {
       row: r.sheet_row ?? null,
@@ -140,7 +141,7 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
       dienCu: eOld ?? 0, dienMoi: eNew ?? 0, dienUsed: used(eOld, eNew),
       nuocCu: wOld ?? 0, nuocMoi: wNew ?? 0, nuocUsed: used(wOld, wNew),
       tienPhong: money(r.room_rent), tienDien: money(r.electricity), tienNuoc: money(r.water), tienRac: money(r.trash), tienNet: money(r.internet),
-      tienXe: money(r.parking), tienKhac: money(r.other), tienCoc: money(r.deposit), tongTien: money(r.total),
+      tienXe: money(r.parking), tienKhac: money(r.other), tienCoc: r.room_deposit, tongTien: money(r.total),
       nguoi1: p1.name, cccd1: '', sdt1: p1.phone, xe1: p1.plate,
       nguoi2: p2.name, cccd2: '', sdt2: p2.phone, xe2: p2.plate,
       nguoi3: p3.name, cccd3: '', sdt3: p3.phone, xe3: p3.plate,
@@ -299,7 +300,7 @@ async function applyDefaults(c: Context<App>, db: TenantDb, houseId: string, wan
 
   // Only what the request is about moves; with neither value in the request (applyAll alone) both saved values do.
   const both = want.price === undefined && want.deposit === undefined;
-  const { results: rooms } = await db.prepare(`SELECT id, name, price, deposit, price_custom, deposit_custom FROM rooms WHERE house_id = ? AND deleted_at IS NULL ORDER BY name`)
+  const { results: rooms } = await db.prepare(`SELECT id, name, price, deposit AS room_deposit, price_custom, deposit_custom FROM rooms WHERE house_id = ? AND deleted_at IS NULL ORDER BY name`)
     .bind(houseId).all<{ id: number; name: string; price: number; room_deposit: number; price_custom: number; deposit_custom: number }>();
   const writes: ReturnType<TenantDb['prepare']>[] = [];
   const repriced: { id: number; name: string }[] = [];
@@ -308,8 +309,9 @@ async function applyDefaults(c: Context<App>, db: TenantDb, houseId: string, wan
     const followsDeposit = deposit !== null && (both || want.deposit !== undefined) && (want.applyAll || r.deposit_custom === 0);
     if (followsPrice && (r.price !== price || r.price_custom !== 0)) {
       writes.push(db.prepare(`UPDATE rooms SET price = ?, price_custom = 0 WHERE id = ?`).bind(price, r.id));
-      if (r.price !== price) repriced.push({ id: r.id, name: r.name });
     }
+    // Idempotent: every room that follows the price is recomputed, so a retry after a failure repairs the invoices.
+    if (followsPrice) repriced.push({ id: r.id, name: r.name });
     if (followsDeposit && (r.room_deposit !== deposit || r.deposit_custom !== 0)) writes.push(db.prepare(`UPDATE rooms SET deposit = ?, deposit_custom = 0 WHERE id = ?`).bind(deposit, r.id));
   }
   if (writes.length) await db.batch(writes);
@@ -483,19 +485,21 @@ export function registerAdmin(app: Hono<App>): void {
     try {
       await db.prepare(`UPDATE residents SET ${sets.join(', ')} WHERE id = ?`).bind(...values, row.id).run();
     } catch (err) {
-      if (phoneChanged) await updateResidentIndex(c.env.DB, row.id, { phone: oldPhone || null }).catch(() => {});
-      if (/UNIQUE constraint failed/i.test(String((err as Error)?.message ?? err))) return fail(c, 409, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
+      if (phoneChanged) await updateResidentIndex(c.env.DB, row.id, { phone: oldPhone || null }).catch((e) => console.warn('[admin] phone index revert failed', row.id, e));
+      const reason = String((err as Error)?.message ?? err);
+      if (/UNIQUE constraint failed.*cccd_hash/i.test(reason)) return fail(c, 409, 'CCCD_TAKEN', CCCD_TAKEN_MESSAGE);
+      if (/UNIQUE constraint failed/i.test(reason)) return fail(c, 409, 'PHONE_TAKEN', 'Số điện thoại này đã có tài khoản.');
       throw err;
     }
     // A plate counts as a vehicle (the parking fee), so the open invoices are priced again; a paid one stays as it is.
-    if (row.room_id !== null && plate !== (row.plate_number ?? '')) await repriceOpenInvoices(c, db, row.room_id);
+    if (row.room_id !== null && body.plateNumber !== undefined) await repriceOpenInvoices(c, db, row.room_id);
     await audit(c, actorOf(c.get('viewer')), 'resident_edit_by_staff', houseId, `resident:${row.id}`);
     const place = row.room_id === null ? null : await db.prepare(`SELECT name FROM rooms WHERE id = ?`).bind(row.room_id).first<{ name: string }>();
     // Same parameters as the resident's own profile update; the CCCD is not copied into the queue (personal data).
     await enqueueExport(c.env.DB, 'update_profile', {
       houseId, room: place ? legacyRoomCode(houseId, place.name) : '', currentPhone: oldPhone,
       name: fullName, phone, plateNumber: plate, email: '', dob: '', gender: '', address: '',
-      vehicleType: vehicleType || 'Xe máy', emergencyName: '', emergencyPhone: '', emergencyRelation: '',
+      vehicleType, emergencyName: '', emergencyPhone: '', emergencyRelation: '',
     });
     const [detail] = row.room_id === null ? [] : await loadRooms(c, db, houseId, currentMonth(), row.room_id);
     return c.json({ success: true, message: 'Đã lưu thông tin cư dân.', data: detail ? await detailOf(db, detail) : null });
@@ -542,7 +546,8 @@ export function registerAdmin(app: Hono<App>): void {
     else if (body.deposit !== undefined) { sets.push('deposit = ?', 'deposit_custom = 1'); args.push(body.deposit); }
     await db.prepare(`UPDATE rooms SET ${sets.join(', ')} WHERE id = ?`).bind(...args, room.id).run();
 
-    const appliesFrom = price !== room.price ? await repriceOpenInvoices(c, db, room.id) : 'this_month';
+    // Always (recompute is idempotent): a retry after a failed recompute repairs the invoice even though the stored price is the same.
+    const appliesFrom = body.price !== undefined || useDefaultPrice ? await repriceOpenInvoices(c, db, room.id) : 'this_month';
     await audit(c, actorOf(c.get('viewer')), 'room_money_edit', houseId, `${room.name}:price=${price}${body.deposit !== undefined || useDefaultDeposit ? `,deposit=${args[args.length - 1]}` : ''}`);
     const [row] = await loadRooms(c, db, houseId, month, room.id);
     return c.json({

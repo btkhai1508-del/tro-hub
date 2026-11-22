@@ -402,10 +402,12 @@ export function registerRent(app: Hono<App>): void {
 /** The billing sheet rows of one landlord's houses, with the status as the landlord should see it. */
 async function billingOf(c: Context<App>, store: { db: TenantDb; houseIds: string[] }, month: string) {
   await ensureMonthFresh(c.env.DB, store.db, month);
+  // In worker mode the deposit is the room's (rooms.deposit, edited by staff); invoices.deposit is only written by the old Sheet import.
+  const worker = await isWorkerSource(c.env.DB);
   const marks = inList(store.houseIds);
   const { results: invoices } = await store.db.prepare(
     `SELECT i.id, i.house_id, i.room_id, rm.name AS room, i.month, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking,
-            i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, i.issued_at, m.electric_old, m.electric_new, m.water_old, m.water_new
+            i.other, ${worker ? 'rm.deposit' : 'i.deposit'} AS deposit, i.total, i.status, i.paid_at, i.sheet_row, i.issued_at, m.electric_old, m.electric_new, m.water_old, m.water_new
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id
        LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
       WHERE i.house_id IN (${marks}) AND i.month = ?

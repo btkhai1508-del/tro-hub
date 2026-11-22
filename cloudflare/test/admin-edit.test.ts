@@ -327,6 +327,69 @@ describe.each(BACKENDS)('admin sửa cư dân và tiền phòng [%s]', (backend)
     });
   });
 
+  describe('sửa lại sau lỗi và tiền cọc', () => {
+    // A store failure while the invoice lines are rewritten (recompute inserts them), then the failure goes away.
+    const breakRecompute = async () => { await (await store()).prepare(`CREATE TRIGGER boom BEFORE INSERT ON invoice_lines BEGIN SELECT RAISE(ABORT, 'boom'); END`).run(); };
+    const fixRecompute = async () => { await (await store()).prepare(`DROP TRIGGER boom`).run(); };
+    it('a failed recompute is repaired by repeating the same PATCH (price already stored)', async () => {
+      await breakRecompute();
+      const first = await patchRoom(1, { houseId: 'TRUNG_KIM', price: 4_000_000 });
+      expect(first.status).toBe(500);
+      expect((await room(1)).price).toBe(4_000_000);
+      expect((await invoice(1, MONTH)).room_rent).toBe(3_000_000); // stale until the retry
+      await fixRecompute();
+      const again = await patchRoom(1, { houseId: 'TRUNG_KIM', price: 4_000_000 });
+      expect(again.status).toBe(200);
+      expect((await invoice(1, MONTH)).room_rent).toBe(4_000_000);
+    });
+
+    it('a failed recompute after setting the house default is repaired by saving it again', async () => {
+      await patchRoom(1, { houseId: 'TRUNG_KIM', useDefaultPrice: true }); // no default yet: 400, nothing stored
+      const cfg = (b: Record<string, unknown>) => call(owner, 'POST', '/api/admin/config', { houseId: 'TRUNG_KIM', month: MONTH, ...b });
+      await breakRecompute();
+      expect((await cfg({ defaultRoomPrice: 3_400_000, applyToAllRooms: true })).status).toBe(500);
+      expect((await room(1)).price).toBe(3_400_000);
+      expect((await invoice(1, MONTH)).room_rent).toBe(3_000_000);
+      await fixRecompute();
+      expect((await cfg({ defaultRoomPrice: 3_400_000, applyToAllRooms: true })).status).toBe(200);
+      expect((await invoice(1, MONTH)).room_rent).toBe(3_400_000);
+    });
+
+    it('editing the deposit shows as tienCoc in the room list, the room detail and the billing list', async () => {
+      await e.DB.prepare(`INSERT INTO settings (key, value) VALUES ('source_of_truth', 'worker') ON CONFLICT (key) DO UPDATE SET value = 'worker'`).run();
+      await patchRoom(1, { houseId: 'TRUNG_KIM', deposit: 1_500_000 });
+      const list = await json(await call(owner, 'GET', `/api/admin/rooms?houseId=TRUNG_KIM&month=${MONTH}`));
+      expect(list.rooms[0]).toMatchObject({ tienCoc: 1_500_000, roomDeposit: 1_500_000 });
+      const detail = await json(await call(owner, 'GET', `/api/admin/room-detail?houseId=TRUNG_KIM&room=101&month=${MONTH}`));
+      expect(detail.data.tienCoc).toBe(1_500_000);
+      const billing = await json(await call(owner, 'GET', `/api/admin/billing?month=${MONTH}`));
+      expect(billing.billing.find((b: any) => b.houseId === 'TRUNG_KIM' && b.room.endsWith('101')).tienCoc).toBe(1_500_000);
+      expect((await invoice(1, MONTH)).deposit).toBe(0); // the invoice column itself is untouched
+    });
+
+    it('an unchanged deposit default does not rewrite rooms (roomsUpdated counts real changes)', async () => {
+      const cfg = async (b: Record<string, unknown>) => json(await call(owner, 'POST', '/api/admin/config', { houseId: 'TRUNG_KIM', month: MONTH, ...b }));
+      expect((await cfg({ defaultDeposit: 900_000, applyToAllRooms: true })).roomsUpdated).toBe(1);
+      expect((await cfg({ defaultDeposit: 900_000, applyToAllRooms: true })).roomsUpdated).toBe(0);
+    });
+
+    it('a soft-deleted room or resident is not found (404)', async () => {
+      const db = await store();
+      await db.prepare(`UPDATE rooms SET deleted_at = datetime('now') WHERE id = 1`).run();
+      expect((await patchRoom(1, { houseId: 'TRUNG_KIM', price: 1 })).status).toBe(404);
+      await db.prepare(`UPDATE residents SET deleted_at = datetime('now') WHERE id = ?`).bind(tkResident).run();
+      expect((await patchResident(tkResident, { houseId: 'TRUNG_KIM', fullName: 'X' })).status).toBe(404);
+    });
+
+    it('the export does not invent a vehicle type', async () => {
+      await e.DB.prepare(`INSERT INTO settings (key, value) VALUES ('source_of_truth', 'worker') ON CONFLICT (key) DO UPDATE SET value = 'worker'`).run();
+      await e.DB.prepare(`INSERT INTO settings (key, value) VALUES ('legacy_sheet', ?)`).bind(JSON.stringify({ houses: ['TRUNG_KIM'] })).run().catch(() => {});
+      expect((await patchResident(tkResident, { houseId: 'TRUNG_KIM', fullName: 'Tên khác' })).status).toBe(200);
+      const q = await e.DB.prepare(`SELECT payload FROM sheet_export_queue WHERE kind = 'update_profile'`).first<{ payload: string }>();
+      if (q) expect(JSON.parse(q.payload).vehicleType).toBe('');
+    });
+  });
+
   describe('nhà mới', () => {
     it('the rent typed when creating a house becomes its common rent; its rooms follow it', async () => {
       const res = await call(owner, 'POST', '/api/houses', { name: 'Nhà mới', abbreviation: 'NM', rooms: '101-102', roomPrice: 2_800_000 });
