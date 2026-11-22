@@ -22,7 +22,7 @@ let seq = 0;
 const nextKey = () => `n${++seq}`;
 
 /** Fee settings of one house, stored on the Worker. The actual (cost) electricity price is never shown or sent. */
-export default function FeeSettings() {
+export default function FeeSettings({ initialMonth }: { initialMonth?: string } = {}) {
   const { houses, houseId, setHouseId, error: houseError } = useAdminHouses();
   const [electric, setElectric] = useState('');
   const [water, setWater] = useState('');
@@ -32,7 +32,7 @@ export default function FeeSettings() {
   const [applyAll, setApplyAll] = useState(false);
   const [orig, setOrig] = useState<Snapshot | null>(null); // the values last loaded or saved, to tell what changed
   const [loaded, setLoaded] = useState(false);
-  const [month, setMonth] = useState(vnMonth); // fees are per month; a past month is read-only
+  const [month, setMonth] = useState(() => { const m = initialMonth && /^\d{2}\/\d{4}$/.test(initialMonth) ? `${initialMonth.slice(3)}-${initialMonth.slice(0, 2)}` : vnMonth(); return m > nextMonth() ? vnMonth() : m; }); // fees are per month; a past month is read-only
   const [editable, setEditable] = useState(true);
   const [known, setKnown] = useState(true); // false: the month predates stored fees, the numbers shown are today's
   const view = useRef({ houseId: '', month: '' }); // what the screen shows now, to drop a slow answer for an old choice
@@ -147,6 +147,7 @@ export default function FeeSettings() {
         <p className="text-sm font-bold text-neutral-900 dark:text-white pb-3">{monthLabel(month)}</p>
       </div>
       {loaded && !known && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">Chưa lưu phí của {monthLabel(month)}: đang hiện phí hiện tại để tham khảo.</p>}
+      {loaded && month > vnMonth() && <p role="status" data-testid="fee-prep-note" className="text-xs font-bold text-amber-700 dark:text-amber-400">Phí tháng này được sao chép từ tháng trước lúc bắt đầu chuẩn bị; nếu bạn vừa đổi phí tháng trước, hãy kiểm tra lại ở đây.</p>}
       {loaded && !editable && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">{monthLabel(month)} đã qua nên chỉ xem, không sửa được.</p>}
 
       <div className="space-y-3 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 p-4">

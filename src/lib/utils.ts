@@ -16,6 +16,18 @@ export function getCurrentMonthStr(): string {
   return `${m}/${y}`;
 }
 
+/** Current month in Vietnam time, 'MM/YYYY' (the clock of the browser may be in another zone). */
+export function getVnMonthStr(nowMs: number = Date.now()): string {
+  const d = new Date(nowMs + 7 * 3600_000);
+  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+}
+
+/** True when 'MM/YYYY' month `m` is after the current Vietnam month. */
+export function isFutureMonth(m: string, nowMs: number = Date.now()): boolean {
+  const key = (x: string) => x.slice(3, 7) + x.slice(0, 2);
+  return key(m) > key(getVnMonthStr(nowMs));
+}
+
 /**
  * Standard list of room numbers across Trung Kim & Le Van Chi
  */

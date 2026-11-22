@@ -50,7 +50,7 @@ import {
 import { useApp, RegisteredAccount } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../lib/storage';
-import { cn, getCurrentMonthStr, DEFAULT_ROOM_NUMBERS } from '../lib/utils';
+import { cn, getCurrentMonthStr, isFutureMonth, DEFAULT_ROOM_NUMBERS } from '../lib/utils';
 import { apiFetch, ensureSource, getSource, workerFetch } from '../lib/api';
 import FeeSettings from './admin/FeeSettings';
 import MonthBilling from './admin/MonthBilling';
@@ -455,6 +455,7 @@ export function AdminPortal() {
   // Months
   const [months, setMonths] = useState<string[]>(DEFAULT_MONTH_TABS);
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthStr());
+  const monthPickedByHand = useRef(false); // the server default month applies once, never over a hand pick
   const selectedMonthRef = useRef(selectedMonth);
   selectedMonthRef.current = selectedMonth;
   const lastLoadedMonthRef = useRef(selectedMonth);
@@ -738,6 +739,11 @@ export function AdminPortal() {
           const combined = Array.from(new Set([...DEFAULT_MONTH_TABS, ...data.months]));
           setMonths(combined);
         }
+        if (getSource() === 'worker' && typeof data.defaultMonth === 'string' && /^\d{4}-\d{2}$/.test(data.defaultMonth) && !monthPickedByHand.current) {
+          const dm = `${data.defaultMonth.slice(5, 7)}/${data.defaultMonth.slice(0, 4)}`;
+          setMonths(prev => prev.includes(dm) ? prev : [...prev, dm].sort((a, b) => (a.slice(3) + a.slice(0, 2)).localeCompare(b.slice(3) + b.slice(0, 2))));
+          setSelectedMonth(dm);
+        }
       })
       .catch(() => {
         // Fallback: Preserves all 8 default monthly tabs from Google Sheet
@@ -751,7 +757,8 @@ export function AdminPortal() {
     if (e) e.stopPropagation();
     const currentIndex = months.indexOf(selectedMonth);
     if (currentIndex > 0) {
-      setSelectedMonth(months[currentIndex - 1]);
+      monthPickedByHand.current = true;
+        setSelectedMonth(months[currentIndex - 1]);
       playSound('click');
     }
   };
@@ -760,6 +767,7 @@ export function AdminPortal() {
     if (e) e.stopPropagation();
     const currentIndex = months.indexOf(selectedMonth);
     if (currentIndex < months.length - 1) {
+      monthPickedByHand.current = true;
       setSelectedMonth(months[currentIndex + 1]);
       playSound('click');
     }
@@ -1979,7 +1987,8 @@ export function AdminPortal() {
                         value={selectedMonth}
                         onChange={e => {
                           playSound('click');
-                          setSelectedMonth(e.target.value);
+                          monthPickedByHand.current = true;
+                    setSelectedMonth(e.target.value);
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         title={`Kỳ tháng: Tháng ${selectedMonth}`}
@@ -2230,6 +2239,7 @@ export function AdminPortal() {
                   value={selectedMonth}
                   onChange={e => {
                     playSound('click');
+                    monthPickedByHand.current = true;
                     setSelectedMonth(e.target.value);
                   }}
                   aria-label="Chọn kỳ tháng quản lý"
@@ -2361,6 +2371,12 @@ export function AdminPortal() {
               </div>
               <span>Đăng xuất</span>
             </button>
+          </div>
+        )}
+
+        {workerMode && isFutureMonth(selectedMonth) && (
+          <div role="status" data-testid="prep-banner" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-100">
+            Đang chuẩn bị hoá đơn tháng {selectedMonth} — cư dân chưa thấy cho tới khi tháng bắt đầu và bạn mở thu.
           </div>
         )}
 
@@ -3480,7 +3496,7 @@ export function AdminPortal() {
               </div>
             </div>
 
-            {workerMode && <FeeSettings />}
+            {workerMode && <FeeSettings initialMonth={selectedMonth} />}
             {sourceReady && !workerMode && (
             <div className="soft-card kit-form-surface p-4 sm:p-8 space-y-6">
               <div>

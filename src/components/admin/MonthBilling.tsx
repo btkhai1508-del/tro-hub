@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Send } from 'lucide-react';
 import { Lock } from '../LineIcons';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
+import { isFutureMonth } from '../../lib/utils';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
 
 interface Row {
@@ -105,8 +106,9 @@ export default function MonthBilling({ month }: { month: string }) {
     queue.current[room.roomId] = (queue.current[room.roomId] ?? Promise.resolve()).then(run, run);
   };
 
+  const notStarted = isFutureMonth(month);
   const issue = async (force: boolean) => {
-    if (issuing || !houseId) return;
+    if (issuing || !houseId || notStarted) return;
     setIssuing(true);
     setIssueMsg(null);
     setConfirmMissing(null);
@@ -126,9 +128,9 @@ export default function MonthBilling({ month }: { month: string }) {
     <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {month}</h3>
-        <button type="button" onClick={() => issue(false)} disabled={issuing || !loaded}
+        <button type="button" onClick={() => issue(false)} disabled={issuing || !loaded || notStarted}
           className="primary-button min-h-11 py-2 px-5 text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <Send size={15} /><span>{issuing ? 'Đang mở thu...' : `Mở thu tiền tháng ${monthNumber(month)}`}</span>
+          <Send size={15} /><span>{issuing ? 'Đang mở thu...' : notStarted ? `Mở được từ 01/${month}` : `Mở thu tiền tháng ${monthNumber(month)}`}</span>
         </button>
       </div>
 
