@@ -215,7 +215,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   /* Subtle lift on hover without expensive box-shadow interpolation */
-  :where(.liquid-panel, .soft-card, .soft-surface, .kit-data-surface):not(:has(.contract-document-a4)):hover {
+  :where(.liquid-panel, .soft-card, .soft-surface, .kit-data-surface):not(:has(.contract-document-a4)):not(aside .liquid-panel):hover {
     transform: translate3d(0, -2px, 0);
   }
 
@@ -321,6 +321,134 @@
   transform-origin: top right;
 }
 
+/* 8b. Desktop (wide screen + mouse): longer, softer glides and a fuller cascade.
+   Same rules as above: transform + opacity only, no box-shadow or scale on blurred glass. */
+@keyframes desk-section-enter {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes desk-card-enter {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes desk-row-enter {
+  from { opacity: 0; transform: translate3d(-8px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes desk-popover-enter {
+  from { opacity: 0; transform: translate3d(0, -8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  :root {
+    --ease-glide: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-desk-section: 260ms;
+    --dur-desk-card: 320ms;
+  }
+
+  .tab-panel-enter,
+  .page-transition {
+    animation: desk-section-enter var(--dur-desk-section) var(--ease-glide) backwards;
+  }
+
+  .kit-page > :not(:has(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface)),
+  .kit-page :is(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface):not(:is(.liquid-panel, .soft-card, .soft-surface, .glass-card-3d, .apple-grouped-list, .kit-data-surface, .kit-reading-surface, .kit-form-surface) *),
+  .kit-page .grid > :where(.liquid-panel, .soft-card, .soft-surface, .kit-inset, .kit-data-surface),
+  .admin-dashboard .grid > :where(.soft-surface, .soft-card, .liquid-panel, .admin-disclosure),
+  .admin-dashboard-metrics > div,
+  .kit-laundry-stats > div,
+  .admin-utility-card,
+  .admin-room-card,
+  #laundry-machine-results > * {
+    animation: desk-card-enter var(--dur-desk-card) var(--ease-glide) backwards;
+  }
+
+  /* Cascade: page blocks, then the cards inside a grid, a step apart (capped so long lists stay quick). */
+  .kit-page > :nth-child(2) { animation-delay: 50ms; }
+  .kit-page > :nth-child(3) { animation-delay: 100ms; }
+  .kit-page > :nth-child(n+4) { animation-delay: 140ms; }
+
+  :where(.kit-page .grid, .admin-dashboard .grid, .admin-dashboard-metrics, .kit-laundry-stats, .admin-workspace > .grid, #laundry-machine-results, #admin-room-results) > :nth-child(1) { animation-delay: 30ms; }
+  :where(.kit-page .grid, .admin-dashboard .grid, .admin-dashboard-metrics, .kit-laundry-stats, .admin-workspace > .grid, #laundry-machine-results, #admin-room-results) > :nth-child(2) { animation-delay: 70ms; }
+  :where(.kit-page .grid, .admin-dashboard .grid, .admin-dashboard-metrics, .kit-laundry-stats, .admin-workspace > .grid, #laundry-machine-results, #admin-room-results) > :nth-child(3) { animation-delay: 110ms; }
+  :where(.kit-page .grid, .admin-dashboard .grid, .admin-dashboard-metrics, .kit-laundry-stats, .admin-workspace > .grid, #laundry-machine-results, #admin-room-results) > :nth-child(4) { animation-delay: 150ms; }
+  :where(.kit-page .grid, .admin-dashboard .grid, .admin-dashboard-metrics, .kit-laundry-stats, .admin-workspace > .grid, #laundry-machine-results, #admin-room-results) > :nth-child(5) { animation-delay: 190ms; }
+  :where(.kit-page .grid, .admin-dashboard .grid, .admin-dashboard-metrics, .kit-laundry-stats, .admin-workspace > .grid, #laundry-machine-results, #admin-room-results) > :nth-child(n+6) { animation-delay: 220ms; }
+
+  .kit-list-row { animation: desk-row-enter 240ms var(--ease-glide) backwards; }
+  .kit-list-row:nth-of-type(1) { animation-delay: 20ms; }
+  .kit-list-row:nth-of-type(2) { animation-delay: 45ms; }
+  .kit-list-row:nth-of-type(3) { animation-delay: 70ms; }
+  .kit-list-row:nth-of-type(4) { animation-delay: 95ms; }
+  .kit-list-row:nth-of-type(5) { animation-delay: 120ms; }
+  .kit-list-row:nth-of-type(n+6) { animation-delay: 140ms; }
+
+  /* Hover: a softer, slightly higher lift and a brighter rim. */
+  :where(.liquid-panel, .soft-card, .soft-surface, .kit-data-surface, .liquid-panel-subtle, .kit-inset, .admin-utility-card, .admin-room-card) {
+    transition:
+      transform 260ms var(--ease-glide),
+      background-color 200ms ease,
+      border-color 200ms ease;
+  }
+  :where(.liquid-panel, .soft-card, .soft-surface, .kit-data-surface):not(:has(.contract-document-a4)):not(aside .liquid-panel):hover {
+    transform: translate3d(0, -3px, 0);
+    border-color: var(--liquid-accent-rim, rgba(255, 255, 255, 0.75));
+  }
+  .dark :where(.liquid-panel, .soft-card, .soft-surface, .kit-data-surface):not(:has(.contract-document-a4)):not(aside .liquid-panel):hover {
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+  :where(button.liquid-panel, a.liquid-panel, .admin-utility-card, .admin-room-card, .liquid-panel-subtle):hover {
+    transform: translate3d(0, -4px, 0);
+  }
+  :where(button.liquid-panel, a.liquid-panel, .admin-utility-card, .admin-room-card, .liquid-panel-subtle, .kit-list-row):hover :where(.icon-plate, .glass-icon, .kit-asset-icon) {
+    transform: translate3d(0, -2px, 0);
+    transition: transform 240ms var(--ease-glide);
+  }
+
+  /* Buttons and navigation: a small lift with a gentle glow on the main button. */
+  .primary-button,
+  .soft-button,
+  .kit-nav-item,
+  .kit-admin-dock-item,
+  .kit-segment,
+  .kit-toolbar-control {
+    transition:
+      transform 200ms var(--ease-glide),
+      background-color 180ms ease,
+      color 160ms ease,
+      filter 180ms ease;
+  }
+  .primary-button:not(:disabled):hover { transform: translate3d(0, -1.5px, 0); filter: brightness(1.06); }
+  .soft-button:not(:disabled):hover { transform: translate3d(0, -1px, 0); }
+  .kit-nav-item:not(.kit-nav-active):hover svg,
+  .kit-admin-dock-item:hover svg { transform: translate3d(0, -1.5px, 0); transition: transform 200ms var(--ease-glide); }
+
+  /* Dialogs and popovers glide in a little further and settle softly. */
+  .tahoe-dialog { animation: desk-section-enter 260ms var(--ease-glide) backwards; }
+  .tahoe-dialog-overlay { animation-duration: 200ms; }
+  #header-notification-panel,
+  .notification-popover-frosted { animation: desk-popover-enter 220ms var(--ease-glide) backwards; }
+
+  .resident-disclosure[open] > .resident-detail-body,
+  .admin-disclosure-content.is-expanded,
+  .admin-billing-breakdown[open] > :not(summary) {
+    animation: disclosure-reveal 220ms var(--ease-glide) both;
+  }
+
+  /* Expanding / collapsing cards (<details>): the height glides open and closed where the browser
+     supports animating to auto (Chromium); elsewhere the content fade above still applies. */
+  :root { interpolate-size: allow-keywords; }
+  details::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition: block-size 320ms var(--ease-glide), content-visibility 320ms allow-discrete;
+  }
+  details[open]::details-content { block-size: auto; }
+  details > summary svg:last-child { transition: transform 260ms var(--ease-glide); }
+  .admin-disclosure-content.is-expanded { animation: disclosure-reveal 260ms var(--ease-glide) both; }
+}
+
 @media (max-width: 639px) {
   .tahoe-dialog {
     animation: dialog-sheet-enter 170ms var(--ease-snappy) backwards;
@@ -358,7 +486,13 @@
   #header-notification-panel,
   .notification-popover-frosted,
   .resident-disclosure[open] > .resident-detail-body,
-  .admin-disclosure-content.is-expanded {
+  .admin-disclosure-content.is-expanded,
+  .admin-billing-breakdown[open] > :not(summary),
+  details::details-content,
+  .primary-button,
+  .soft-button,
+  .kit-nav-item svg,
+  .kit-admin-dock-item svg {
     animation: none !important;
     transition: none !important;
     transform: none !important;

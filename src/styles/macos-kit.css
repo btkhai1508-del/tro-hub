@@ -260,12 +260,30 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-/* Sidebar text fades on collapse and expand; icons and controls stay put. */
-[data-sidebar-labels="closing"] :is(span, p):not(:has(svg, img)) { opacity: 0; transition: opacity 130ms ease; }
-[data-sidebar-labels="opening"] :is(span, p):not(:has(svg, img)) { animation: sidebar-label-in 220ms ease 120ms backwards; }
-@keyframes sidebar-label-in { from { opacity: 0; } }
+/* Sidebar collapse/expand: width and the page margin move together on one curve; the content
+   crossfades (out before the layout swaps, in once the new layout is in place) instead of reflowing. */
+@media (min-width: 1024px) {
+  aside[data-sidebar-labels] { transition: width 360ms cubic-bezier(0.16, 1, 0.3, 1) !important; }
+  .admin-workspace, .kit-main { transition: margin-left 360ms cubic-bezier(0.16, 1, 0.3, 1); }
+}
+aside[data-sidebar-labels="closing"] :is(.liquid-panel, #resident-sidebar-content) > * {
+  opacity: 0;
+  transform: translate3d(-6px, 0, 0);
+  transition: opacity 130ms ease, transform 130ms ease;
+}
+aside[data-sidebar-labels="settling"] :is(.liquid-panel, #resident-sidebar-content) > *,
+aside[data-sidebar-labels="opening"] :is(.liquid-panel, #resident-sidebar-content) > * {
+  animation: sidebar-content-in 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+aside[data-sidebar-labels="opening"] :is(.liquid-panel, #resident-sidebar-content) > * { animation-delay: 140ms; }
+aside[data-sidebar-labels] :is(.liquid-panel, #resident-sidebar-content) > :nth-child(2) { animation-delay: 30ms; }
+aside[data-sidebar-labels="opening"] :is(.liquid-panel, #resident-sidebar-content) > :nth-child(2) { animation-delay: 170ms; }
+aside[data-sidebar-labels] :is(.liquid-panel, #resident-sidebar-content) > :nth-child(n+3) { animation-delay: 60ms; }
+aside[data-sidebar-labels="opening"] :is(.liquid-panel, #resident-sidebar-content) > :nth-child(n+3) { animation-delay: 200ms; }
+@keyframes sidebar-content-in { from { opacity: 0; transform: translate3d(-6px, 0, 0); } }
 @media (prefers-reduced-motion: reduce) {
-  [data-sidebar-labels] :is(span, p) { animation: none !important; transition: none !important; }
+  [data-sidebar-labels] :is(span, p), aside[data-sidebar-labels] :is(.liquid-panel, #resident-sidebar-content) > * { animation: none !important; transition: none !important; transform: none !important; }
+  aside[data-sidebar-labels], .admin-workspace, .kit-main { transition: none !important; }
 }
 .kit-disclosure-summary {
   display: flex;
