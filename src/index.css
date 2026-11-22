@@ -263,9 +263,10 @@
 .wallpaper-overlay:not(.wallpaper-overlay-login),
 .dark .wallpaper-overlay:not(.wallpaper-overlay-login) { background: transparent; }
 @media (prefers-reduced-transparency: reduce) {
-  .wallpaper-overlay, .wallpaper-overlay-login { background: rgba(255, 255, 255, 0.85); }
-  .dark .wallpaper-overlay, .dark .wallpaper-overlay-login { background: rgba(9, 9, 11, 0.85); }
+  .wallpaper-overlay, .wallpaper-overlay-login, .wallpaper-overlay:not(.wallpaper-overlay-login) { background: rgba(255, 255, 255, 0.85); }
+  .dark .wallpaper-overlay, .dark .wallpaper-overlay-login, .dark .wallpaper-overlay:not(.wallpaper-overlay-login) { background: rgba(9, 9, 11, 0.85); }
 }
+
 
 
 /* Frosted Translucent Notification Popover (Square/crisp 12px corners) */
