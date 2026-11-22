@@ -23,6 +23,8 @@ const notificationOut = (n: NotificationRow) => ({
   type: n.type,
   target: n.room_names ? 'CUSTOM' : n.house_id,
   customRooms: n.room_names ? (JSON.parse(n.room_names) as string[]).map((r) => legacyRoomCode(n.house_id, r)) : [],
+  houseId: n.house_id,
+  rooms: n.room_names ? (JSON.parse(n.room_names) as string[]) : [],
   scheduledAt: n.scheduled_at,
   sender: n.sender ?? undefined,
   unread: true,
@@ -83,8 +85,8 @@ export function registerNotifications(app: Hono<App>): void {
   });
 
   /**
-   * target: 'ALL' (every house this admin manages), a house id ('TRUNG_KIM', 'LVC', …) or 'CUSTOM'
-   * with customRooms in the old room-code form. One row is stored per house reached.
+   * target: 'ALL' (every house this admin manages), any house id this admin manages or 'CUSTOM' with
+   * customRooms as old room codes or { houseId, room } objects (a house outside the admin's houses: 403). One row is stored per house reached.
    */
   app.post('/api/admin/notifications', async (c) => {
     const v = c.get('viewer');
@@ -97,14 +99,26 @@ export function registerNotifications(app: Hono<App>): void {
     const target = String(body.target ?? 'ALL');
 
     const perHouse = new Map<string, string[] | null>();
+    const forbidden = () => fail(c, 403, 'NOTIFICATION_FORBIDDEN', 'Bạn không quản lý căn này.');
     if (target === 'ALL') v.houseIds.forEach((h) => perHouse.set(h, null));
     else if (target === 'CUSTOM') {
-      for (const code of Array.isArray(body.customRooms) ? body.customRooms : []) {
-        const place = parseLegacyRoom(code);
-        if (!place || !v.houseIds.includes(place.houseId)) continue;
-        perHouse.set(place.houseId, [...(perHouse.get(place.houseId) ?? []), place.room]);
+      for (const entry of Array.isArray(body.customRooms) ? body.customRooms : []) {
+        if (entry && typeof entry === 'object') {
+          // { houseId, room }: any house this admin manages; a house outside the permission is refused.
+          const houseId = String(entry.houseId ?? '').trim();
+          const room = String(entry.room ?? '').trim();
+          if (!houseId || !room) continue;
+          if (!v.houseIds.includes(houseId)) return forbidden();
+          perHouse.set(houseId, [...new Set([...(perHouse.get(houseId) ?? []), room])]);
+        } else {
+          // Old room code ('LVC-101', '101'): unchanged, codes outside the permission are skipped.
+          const place = parseLegacyRoom(entry);
+          if (!place || !v.houseIds.includes(place.houseId)) continue;
+          perHouse.set(place.houseId, [...(perHouse.get(place.houseId) ?? []), place.room]);
+        }
       }
     } else if (v.houseIds.includes(target)) perHouse.set(target, null);
+    else return forbidden();
     if (!perHouse.size) return fail(c, 400, 'NOTIFICATION_TARGET', 'Chưa chọn người nhận thuộc nhà bạn quản lý.');
     // Tạo thông báo is a tiện ích: houses that did not buy it are left out ('ALL' reaches only the houses that have it);
     // when none of the targets has it the call is refused.
