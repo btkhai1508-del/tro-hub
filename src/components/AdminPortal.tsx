@@ -184,6 +184,44 @@ function AdminEmptyState({ filtered, title }: { filtered: boolean; title: string
   </div>;
 }
 
+// Sheet junk in resident cells (a bare number as a name, a header cell, a single digit) shows as empty; the Save baseline is cleaned the same way.
+const sanitizeName = (val: any) => {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) return '';
+  if (/^họ\s*(?:và\s*)?tên/i.test(s)) return '';
+  return s;
+};
+const sanitizeCCCD = (val: any) => {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[0-9](\.0+)?$/.test(s)) return '';
+  return s;
+};
+const sanitizePhone = (val: any) => {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[0-9](\.0+)?$/.test(s)) return '';
+  return s;
+};
+const sanitizePlate = (val: any) => {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) return '';
+  return s;
+};
+const sanitizeRoomRow = (r: any) => {
+  if (!r) return r;
+  const out: any = { ...r };
+  for (const slot of [1, 2, 3]) {
+    out[`nguoi${slot}`] = sanitizeName(r[`nguoi${slot}`]);
+    out[`cccd${slot}`] = sanitizeCCCD(r[`cccd${slot}`]);
+    out[`sdt${slot}`] = sanitizePhone(r[`sdt${slot}`]);
+    out[`xe${slot}`] = sanitizePlate(r[`xe${slot}`]);
+  }
+  return out;
+};
+
 export function AdminPortal() {
   const navigate = useNavigate();
   const { logoutUser, addNotification, registerResident, registeredAccounts, updateAccountStatus, forgetRegisteredAccount } = useApp();
@@ -345,6 +383,9 @@ export function AdminPortal() {
   // returned it (to send only what changed), the month's real prices for the live estimate, and the Save state.
   const [selectedHouseId, setSelectedHouseId] = useState<string>('');
   const roomBaselineRef = useRef<any>(null);
+  const detailRequestRef = useRef(0);
+  const savingRoomRef = useRef(false);
+  const payingRef = useRef<Set<string>>(new Set());
   const [roomConfig, setRoomConfig] = useState<{ electricPrice: number; waterPrice: number; personUnit: number; vehicleUnit: number; defaultRoomPrice: number | null; defaultDeposit: number | null } | null>(null);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [roomMoneyNote, setRoomMoneyNote] = useState('');
@@ -1029,61 +1070,22 @@ export function AdminPortal() {
     setSelectedRoomId(cleanId);
     setSelectedHouseId(byHouse ? houseId! : '');
     roomBaselineRef.current = null;
+    const token = ++detailRequestRef.current;
     setRoomMoneyNote('');
     setRoomFieldErrors({});
     setActiveMenu('roomDetail');
     setCurrentRoomData(null);
     setIsLoading(true);
 
-    const sanitizeName = (val: any) => {
-      if (!val) return '';
-      const s = String(val).trim();
-      if (/^\d+(\.\d+)?$/.test(s)) return '';
-      if (/^họ\s*(?:và\s*)?tên/i.test(s)) return '';
-      return s;
-    };
-
-    const sanitizeCCCD = (val: any) => {
-      if (!val) return '';
-      const s = String(val).trim();
-      if (/^[0-9](\.0+)?$/.test(s)) return '';
-      return s;
-    };
-
-    const sanitizePhone = (val: any) => {
-      if (!val) return '';
-      const s = String(val).trim();
-      if (/^[0-9](\.0+)?$/.test(s)) return '';
-      return s;
-    };
-
-    const sanitizePlate = (val: any) => {
-      if (!val) return '';
-      const s = String(val).trim();
-      if (/^\d+(\.\d+)?$/.test(s)) return '';
-      return s;
-    };
-
     // 1. Immediately find from local roomsList
     const localFound = byHouse
       ? roomsList.find(r => r.houseId === houseId && String(r.room) === cleanId)
       : roomsList.find(r => canonicalRoomId(r.room) === cleanId) || roomsList.find(r => r.room === room);
     if (localFound) {
-      if (byHouse) roomBaselineRef.current = localFound;
+      const cleaned = sanitizeRoomRow(localFound);
+      if (byHouse) roomBaselineRef.current = cleaned;
       setCurrentRoomData({
-        ...localFound,
-        nguoi1: sanitizeName(localFound.nguoi1),
-        cccd1: sanitizeCCCD(localFound.cccd1),
-        sdt1: sanitizePhone(localFound.sdt1),
-        xe1: sanitizePlate(localFound.xe1),
-        nguoi2: sanitizeName(localFound.nguoi2),
-        cccd2: sanitizeCCCD(localFound.cccd2),
-        sdt2: sanitizePhone(localFound.sdt2),
-        xe2: sanitizePlate(localFound.xe2),
-        nguoi3: sanitizeName(localFound.nguoi3),
-        cccd3: sanitizeCCCD(localFound.cccd3),
-        sdt3: sanitizePhone(localFound.sdt3),
-        xe3: sanitizePlate(localFound.xe3),
+        ...cleaned,
         statusHTML: localFound.paymentStatus === 'paid'
           ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
           : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>'
@@ -1099,29 +1101,16 @@ export function AdminPortal() {
         return res.json();
       })
       .then(d => {
+        // A slower answer for a room the admin already left must not replace the room on screen (or its Save baseline).
+        if (token !== detailRequestRef.current) return;
         setIsLoading(false);
         if (d.success && d.data) {
-          const fresh = d.data;
+          const fresh = sanitizeRoomRow(d.data);
           if (byHouse) roomBaselineRef.current = fresh;
-          setCurrentRoomData((prev: any) => ({
-            ...prev,
-            ...fresh,
-            nguoi1: sanitizeName(fresh.nguoi1),
-            cccd1: sanitizeCCCD(fresh.cccd1),
-            sdt1: sanitizePhone(fresh.sdt1),
-            xe1: sanitizePlate(fresh.xe1),
-            nguoi2: sanitizeName(fresh.nguoi2),
-            cccd2: sanitizeCCCD(fresh.cccd2),
-            sdt2: sanitizePhone(fresh.sdt2),
-            xe2: sanitizePlate(fresh.xe2),
-            nguoi3: sanitizeName(fresh.nguoi3),
-            cccd3: sanitizeCCCD(fresh.cccd3),
-            sdt3: sanitizePhone(fresh.sdt3),
-            xe3: sanitizePlate(fresh.xe3)
-          }));
+          setCurrentRoomData((prev: any) => ({ ...prev, ...fresh }));
         }
       })
-      .catch(() => setIsLoading(false));
+      .catch(() => { if (token === detailRequestRef.current) setIsLoading(false); });
   };
 
   const isValidLicensePlate = (val: any): boolean => {
@@ -1307,8 +1296,9 @@ export function AdminPortal() {
    * A server row of one room replaces what the screen shows for it: the open room (all of it, or only `fields`),
    * its line in the room list (Phòng & Khách) and in the billing list (Thu tiền). Rooms match by house + room code.
    */
-  const applyRoomUpdate = (row: any, fields?: string[]) => {
-    if (!row) return;
+  const applyRoomUpdate = (rawRow: any, fields?: string[]) => {
+    if (!rawRow) return;
+    const row = sanitizeRoomRow(rawRow); // the form and the Save baseline are cleaned the same way
     const subset = fields ? Object.fromEntries(fields.filter(k => k in row).map(k => [k, row[k]])) : row;
     setRoomsList(prev => {
       const next = prev.map(r => (sameRoomRow(r, row) ? { ...r, ...row } : r));
@@ -1330,10 +1320,16 @@ export function AdminPortal() {
   const saveRoomWorker = async () => {
     const draft = currentRoomData;
     const base = roomBaselineRef.current;
-    if (!draft || !base || isSavingRoom) return;
+    if (savingRoomRef.current || isSavingRoom) return;
+    if (!draft || !base || !sameRoomRow(draft, base)) {
+      showPortalToast('Chưa tải xong dữ liệu phòng. Vui lòng đợi một chút rồi lưu lại.', 'error');
+      return;
+    }
     const month = selectedMonth;
-    const houseId = selectedHouseId;
-    const room = selectedRoomId;
+    // Every write names the room of the baseline (the one on screen), never a separate "selected" state.
+    const houseId: string = base.houseId;
+    const room: string = base.room;
+    const roomId = base.roomId;
 
     // What changed, compared with the row the server last returned.
     const meters: Record<string, number> = {};
@@ -1346,11 +1342,15 @@ export function AdminPortal() {
       if (!occupant) continue;
       const body: Record<string, string> = {};
       const name = String(draft[`nguoi${slot}`] || '').trim();
-      if (name !== String(base[`nguoi${slot}`] || '').trim()) body.fullName = name;
+      const baseName = String(base[`nguoi${slot}`] || '').trim();
+      if (name !== baseName) {
+        if (!name) problems[`slot${slot}`] = 'Họ tên không được để trống.';
+        else body.fullName = name;
+      }
       const phone = String(draft[`sdt${slot}`] || '').trim();
       if (normalizeVnPhone(phone) !== normalizeVnPhone(String(base[`sdt${slot}`] || ''))) {
         const problem = phoneProblem(phone);
-        if (problem) problems[`slot${slot}`] = problem;
+        if (problem) problems[`slot${slot}`] = problems[`slot${slot}`] || problem;
         else body.phone = phone;
       }
       const plate = String(draft[`xe${slot}`] || '').trim();
@@ -1388,10 +1388,11 @@ export function AdminPortal() {
       steps.push({ key: `slot${r.slot}`, kind: 'resident', run: () => callWorker(`/api/admin/residents/${encodeURIComponent(String(r.residentId))}`, { method: 'PATCH', body: JSON.stringify({ houseId, ...r.body }) }) });
     }
     if (Object.keys(money).length > 0) {
-      steps.push({ key: 'money', kind: 'money', run: () => callWorker(`/api/admin/rooms/${encodeURIComponent(String(draft.roomId))}`, { method: 'PATCH', body: JSON.stringify({ houseId, month, ...money }) }) });
+      steps.push({ key: 'money', kind: 'money', run: () => callWorker(`/api/admin/rooms/${encodeURIComponent(String(roomId))}`, { method: 'PATCH', body: JSON.stringify({ houseId, month, ...money }) }) });
     }
 
     playSound('click');
+    savingRoomRef.current = true;
     setIsSavingRoom(true);
     setRoomFieldErrors({});
     setRoomMoneyNote('');
@@ -1421,9 +1422,16 @@ export function AdminPortal() {
       if (fresh.ok && fresh.data?.data) latest = fresh.data.data;
     }
     endWrite();
+    savingRoomRef.current = false;
     setIsSavingRoom(false);
+    if (month !== selectedMonthRef.current) { // the admin moved to another month meanwhile: nothing of this one belongs on screen
+      if (failure) showPortalToast(failure.error, 'error');
+      else if (anySaved) showPortalToast('Đã lưu', 'success');
+      return;
+    }
 
     // The screen: the server's row, so a failed part goes back to the saved value; parts not tried yet keep what was typed.
+    if (latest) latest = sanitizeRoomRow(latest);
     if (latest) applyRoomUpdate(latest);
     const server = latest || base;
     const untried = failure ? steps.slice(failure.index + 1) : [];
@@ -1455,20 +1463,28 @@ export function AdminPortal() {
 
   /** "Dùng giá chung": the room's rent (or deposit) follows the house's common one again. Saved at once. */
   const useDefaultMoney = async (kind: 'price' | 'deposit') => {
-    if (isSavingRoom || !currentRoomData?.roomId) return;
+    const base = roomBaselineRef.current;
+    if (savingRoomRef.current || isSavingRoom) return;
+    if (!base?.roomId || !sameRoomRow(currentRoomData, base)) {
+      showPortalToast('Chưa tải xong dữ liệu phòng. Vui lòng đợi một chút rồi thử lại.', 'error');
+      return;
+    }
     const month = selectedMonth;
+    savingRoomRef.current = true;
     setIsSavingRoom(true);
     const endWrite = beginListsWrite();
-    const result = await callWorker(`/api/admin/rooms/${encodeURIComponent(String(currentRoomData.roomId))}`, {
+    const result = await callWorker(`/api/admin/rooms/${encodeURIComponent(String(base.roomId))}`, {
       method: 'PATCH',
-      body: JSON.stringify({ houseId: selectedHouseId, month, [kind === 'price' ? 'useDefaultPrice' : 'useDefaultDeposit']: true })
+      body: JSON.stringify({ houseId: base.houseId, month, [kind === 'price' ? 'useDefaultPrice' : 'useDefaultDeposit']: true })
     });
     endWrite();
+    savingRoomRef.current = false;
     setIsSavingRoom(false);
     if (!result.ok) {
       showPortalToast(result.error, 'error');
       return;
     }
+    if (month !== selectedMonthRef.current) return;
     const mine = kind === 'price' ? ['roomPrice', 'priceCustom', 'tienPhong', 'tongTien'] : ['roomDeposit', 'depositCustom', 'tienCoc'];
     applyRoomUpdate(result.data.data, mine);
     const note = result.data.appliesFrom === 'next_month' ? String(result.data.message || '') : '';
@@ -1488,6 +1504,8 @@ export function AdminPortal() {
       || roomsList.find(r => canonicalRoomId(r.room) === canonicalRoomId(roomNumber));
     const houseId = houseIdGiven || known?.houseId || '';
     const code = known?.room ?? roomNumber;
+    const lockKey = `${houseId}|${code}`;
+    if (payingRef.current.has(lockKey)) return; // this room's switch is still waiting for the server
     const hit = (r: any) => (houseId ? sameRoomRow(r, { houseId, room: code }) : canonicalRoomId(r?.room) === canonicalRoomId(code));
     const patchStatus = (fields: Record<string, any>) => {
       setRoomsList(prev => {
@@ -1507,12 +1525,14 @@ export function AdminPortal() {
         ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
         : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>'
     });
+    payingRef.current.add(lockKey);
     const endWrite = beginListsWrite();
     const result = await callWorker('/api/admin/payment-status', {
       method: 'POST',
       body: JSON.stringify({ roomNumber: code, status, month, houseId })
     });
     endWrite();
+    payingRef.current.delete(lockKey);
     if (!result.ok) {
       patchStatus(before);
       showPortalToast(result.error, 'error');
@@ -2906,7 +2926,7 @@ export function AdminPortal() {
 
             {/* Card Tổng cộng */}
             <div className="soft-card p-5 sm:p-6 flex items-center justify-between">
-              <span className="text-base sm:text-lg font-bold text-neutral-700 dark:text-neutral-200">Tổng cộng:</span>
+              <span className="text-base sm:text-lg font-bold text-neutral-700 dark:text-neutral-200">Tổng cộng{workerMode && roomBaselineRef.current && currentRoomData.tongTien !== roomBaselineRef.current.tongTien ? ' (ước tính, chính xác sau khi lưu)' : ''}:</span>
               <span className="text-2xl sm:text-3xl font-black font-num text-neutral-600 dark:text-neutral-200">
                 {fmt(currentRoomData.tongTien)} đ
               </span>
