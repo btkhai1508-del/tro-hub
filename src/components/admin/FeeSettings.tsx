@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
+import { refreshBilling, refreshDashboard, refreshGate, refreshRooms } from '../../lib/adminRefresh';
 
 type Per = 'room' | 'person' | 'vehicle';
 interface ServiceRow { key: string; id?: number; name: string; price: string; per: Per; maxQty: string; active: boolean }
@@ -12,6 +13,11 @@ const field = 'w-full bg-white dark:bg-neutral-900 px-3 py-3 rounded-xl border b
 const vnMonth = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7); // current month, Vietnam time, YYYY-MM
 const nextMonth = () => { const [y, m] = vnMonth().split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; }; // latest month the server accepts
 const monthLabel = (m: string) => `Tháng ${m.slice(5, 7)}/${m.slice(0, 4)}`;
+/** "2026-11" -> "11/2026", the month format the admin screen keeps. */
+const screenMonth = (m: string) => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
+const num = (v: unknown): number | null => { if (v === null || v === undefined || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+const servicesSig = (list: ServiceRow[]) => JSON.stringify(list.map((s) => [s.id ?? null, s.name.trim(), num(s.price) ?? 0, s.per, s.per === 'person' ? num(s.maxQty) : null, !!s.active]));
+interface Snapshot { electric: number; water: number; services: string; rent: number | null; deposit: number | null }
 let seq = 0;
 const nextKey = () => `n${++seq}`;
 
@@ -21,6 +27,10 @@ export default function FeeSettings() {
   const [electric, setElectric] = useState('');
   const [water, setWater] = useState('');
   const [services, setServices] = useState<ServiceRow[]>([]);
+  const [rent, setRent] = useState('');
+  const [deposit, setDeposit] = useState('');
+  const [applyAll, setApplyAll] = useState(false);
+  const [orig, setOrig] = useState<Snapshot | null>(null); // the values last loaded or saved, to tell what changed
   const [loaded, setLoaded] = useState(false);
   const [month, setMonth] = useState(vnMonth); // fees are per month; a past month is read-only
   const [editable, setEditable] = useState(true);
@@ -29,6 +39,22 @@ export default function FeeSettings() {
   view.current = { houseId, month };
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const applyLoaded = (data: any) => {
+    const cfg = data.config;
+    const list: ServiceRow[] = (cfg.services ?? []).map((s: any) => ({
+      key: `s${s.id}`, id: s.id, name: s.name, price: String(s.price), per: s.per, maxQty: s.maxQty == null ? '' : String(s.maxQty), active: s.active,
+    }));
+    const rentNow = num(data.defaultRoomPrice ?? cfg.defaultRoomPrice);
+    const depositNow = num(data.defaultDeposit ?? cfg.defaultDeposit);
+    setElectric(String(cfg.electricPrice ?? 0));
+    setWater(String(cfg.waterPrice ?? 0));
+    setServices(list);
+    setRent(rentNow === null ? '' : String(rentNow));
+    setDeposit(depositNow === null ? '' : String(depositNow));
+    setApplyAll(false);
+    setOrig({ electric: num(cfg.electricPrice) ?? 0, water: num(cfg.waterPrice) ?? 0, services: servicesSig(list), rent: rentNow, deposit: depositNow });
+  };
 
   useEffect(() => {
     if (!houseId) return;
@@ -43,9 +69,7 @@ export default function FeeSettings() {
       const cfg = r.data.config;
       setElectric(String(cfg.electricPrice ?? 0));
       setWater(String(cfg.waterPrice ?? 0));
-      setServices((cfg.services ?? []).map((s: any) => ({
-        key: `s${s.id}`, id: s.id, name: s.name, price: String(s.price), per: s.per, maxQty: s.maxQty == null ? '' : String(s.maxQty), active: s.active,
-      })));
+      applyLoaded(r.data);
       setLoaded(true);
     });
     return () => { live = false; };
@@ -53,35 +77,49 @@ export default function FeeSettings() {
 
   const patch = (key: string, change: Partial<ServiceRow>) => setServices((list) => list.map((s) => (s.key === key ? { ...s, ...change } : s)));
 
+  const feeDirty = !!orig && (( num(electric) ?? 0) !== orig.electric || (num(water) ?? 0) !== orig.water || servicesSig(services) !== orig.services);
+  const houseDirty = !!orig && (num(rent) !== orig.rent || num(deposit) !== orig.deposit || applyAll);
+  const dirty = (editable && feeDirty) || houseDirty;
+  const reason = saving ? 'Đang lưu...' : !loaded ? 'Đang tải...' : !dirty ? 'Chưa có thay đổi nào để lưu.' : '';
+
   const save = async () => {
-    if (saving || !loaded || !editable) return;
+    if (saving || !loaded || !dirty || !orig) return;
     setSaving(true);
     setMessage(null);
-    const body = {
-      houseId,
-      month,
-      electricPrice: Number(electric || 0),
-      waterPrice: Number(water || 0),
-      services: services.map((s) => ({
+    const body: Record<string, unknown> = { houseId };
+    if (editable) {
+      body.month = month;
+      body.electricPrice = Number(electric || 0);
+      body.waterPrice = Number(water || 0);
+      body.services = services.map((s) => ({
         ...(s.id === undefined ? {} : { id: s.id }),
         name: s.name.trim(), price: Number(s.price || 0), per: s.per,
         maxQty: s.per === 'person' && s.maxQty !== '' ? Number(s.maxQty) : null, active: s.active,
-      })),
-    };
+      }));
+    }
+    // House-level rent and deposit: sent when changed, or when "apply to all" is on (then the shown values are the ones applied).
+    if (num(rent) !== orig.rent || (applyAll && num(rent) !== null)) body.defaultRoomPrice = num(rent);
+    if (num(deposit) !== orig.deposit || (applyAll && num(deposit) !== null)) body.defaultDeposit = num(deposit);
+    if (applyAll) body.applyToAllRooms = true;
     const r = await workerCall('/api/admin/config', { method: 'PUT', body: JSON.stringify(body) });
     setSaving(false);
-    if (view.current.houseId !== body.houseId || view.current.month !== body.month) return; // the admin moved on: do not paint this answer over the other month
+    if (view.current.houseId !== houseId || view.current.month !== month) return; // the admin moved on: do not paint this answer over the other month
     if (!r.ok) return setMessage({ ok: false, text: r.error });
-    const cfg = r.data.config;
-    if (cfg) {
-      setElectric(String(cfg.electricPrice ?? 0));
-      setWater(String(cfg.waterPrice ?? 0));
-      setServices((cfg.services ?? []).map((s: any) => ({
-        key: `s${s.id}`, id: s.id, name: s.name, price: String(s.price), per: s.per, maxQty: s.maxQty == null ? '' : String(s.maxQty), active: s.active,
-      })));
-    }
+    if (r.data.config) applyLoaded(r.data);
     const failed: string[] = r.data.recomputeFailed ?? [];
-    setMessage({ ok: !failed.length, text: failed.length ? `Đã lưu, nhưng chưa tính lại được hoá đơn nháp phòng ${failed.join(', ')}.` : 'Đã lưu. Hoá đơn nháp đã được tính lại theo giá mới.' });
+    const locked: string[] = r.data.lockedRooms ?? [];
+    const repriced = Number(r.data.roomsRepriced ?? 0);
+    const parts: string[] = [];
+    if (failed.length) parts.push(`Đã lưu, nhưng chưa tính lại được hoá đơn nháp phòng ${failed.join(', ')}.`);
+    else parts.push(editable && feeDirty ? 'Đã lưu. Hoá đơn nháp đã được tính lại theo giá mới.' : 'Đã lưu.');
+    if (body.defaultRoomPrice !== undefined || body.defaultDeposit !== undefined) {
+      if (repriced > 0) parts.push(`Đã đổi giá cho ${repriced} phòng.`);
+      else if (body.applyToAllRooms) parts.push('Không có phòng nào cần đổi giá.');
+    }
+    if (locked.length) parts.push(`Phòng ${locked.join(', ')} đã đóng nên áp dụng từ tháng sau.`);
+    setMessage({ ok: !failed.length, text: parts.join(' ') });
+    const m = screenMonth(month);
+    refreshRooms(m); refreshBilling(m); refreshDashboard(m); refreshGate(m);
   };
 
   return (
@@ -110,6 +148,32 @@ export default function FeeSettings() {
       </div>
       {loaded && !known && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">Chưa lưu phí của {monthLabel(month)}: đang hiện phí hiện tại để tham khảo.</p>}
       {loaded && !editable && <p role="status" className="text-xs font-bold text-amber-700 dark:text-amber-400">{monthLabel(month)} đã qua nên chỉ xem, không sửa được.</p>}
+
+      <div className="space-y-3 rounded-2xl border border-neutral-100 dark:border-neutral-700/60 p-4">
+        <div>
+          <h4 className="font-bold text-sm text-neutral-900 dark:text-white">Giá phòng chung (áp dụng cho cả nhà, không theo tháng)</h4>
+          <p className="text-xs text-neutral-700 dark:text-neutral-200 mt-1">Phòng nào chưa có giá riêng sẽ lấy theo giá này. Hoá đơn đã đóng không bị đổi, giá mới áp dụng từ hoá đơn kế tiếp.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { id: 'fee-rent', label: 'Tiền phòng chung', value: rent, set: setRent },
+            { id: 'fee-deposit', label: 'Tiền cọc chung', value: deposit, set: setDeposit },
+          ].map((f) => (
+            <div key={f.id} className="space-y-2">
+              <label htmlFor={f.id} className="text-xs font-bold text-neutral-600 uppercase dark:text-neutral-300">{f.label}</label>
+              <div className="relative">
+                <input id={f.id} type="text" inputMode="numeric" value={show(f.value)} placeholder="Chưa đặt" disabled={!loaded}
+                  onChange={(e) => f.set(digits(e.target.value))} className={`${field} pr-8`} />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <label className="flex items-start gap-2 text-xs font-bold text-neutral-700 dark:text-neutral-200 min-h-11 cursor-pointer">
+          <input type="checkbox" checked={applyAll} disabled={!loaded} onChange={(e) => setApplyAll(e.target.checked)} className="w-5 h-5 shrink-0" />
+          <span>Áp dụng cho tất cả phòng (kể cả phòng đang có giá riêng)</span>
+        </label>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
@@ -178,9 +242,10 @@ export default function FeeSettings() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-        <button type="button" onClick={save} disabled={saving || !loaded || !editable} className="primary-button min-h-11 py-3 px-8 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50">
+        <button type="button" onClick={save} disabled={!!reason} title={reason || undefined} className="primary-button min-h-11 py-3 px-8 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50">
           <Save size={16} /><span>{saving ? 'Đang lưu...' : 'Lưu cài đặt phí'}</span>
         </button>
+        {reason && !saving && loaded && !message && <p className="text-xs text-neutral-600 dark:text-neutral-300">{reason}</p>}
         {message && <p role={message.ok ? 'status' : 'alert'} className={`text-xs font-bold ${message.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{message.text}</p>}
       </div>
     </div>

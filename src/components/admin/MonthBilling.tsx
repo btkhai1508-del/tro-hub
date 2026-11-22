@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Send } from 'lucide-react';
 import { Lock } from '../LineIcons';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
+import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
 
 interface Row {
   houseId?: string; roomId: number; roomName: string; invoiceId: number | null; draft: boolean; paymentStatus: string; surplus: number;
@@ -21,7 +22,7 @@ function badgeOf(r: Row): { text: string; cls: string } {
 /** "11/2026" -> 11 */
 const monthNumber = (m: string) => String(Number(m.split(/[/-]/).find((p) => p.length <= 2) ?? m));
 
-/** Meter entry and month issuing on the Worker, one row per room. Meters save on blur, one request per change. */
+/** Meter entry and month issuing on the Worker, one row per room. Meters save with the Lưu button, Enter or on blur. */
 export default function MonthBilling({ month }: { month: string }) {
   const { houses, houseId, setHouseId, error: houseError } = useAdminHouses();
   const [rooms, setRooms] = useState<Row[]>([]);
@@ -30,6 +31,8 @@ export default function MonthBilling({ month }: { month: string }) {
   const [edits, setEdits] = useState<Edits>({});
   const [rowError, setRowError] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState<Record<number, boolean>>({});
+  const [saved, setSaved] = useState<Record<number, boolean>>({});
+  const inflight = useRef<Record<number, string>>({});
   const [issuing, setIssuing] = useState(false);
   const [issueMsg, setIssueMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
@@ -57,23 +60,47 @@ export default function MonthBilling({ month }: { month: string }) {
   const setEdit = (roomId: number, key: 'e' | 'w', value: string) =>
     setEdits((cur) => ({ ...cur, [roomId]: { ...cur[roomId], [key]: value.replace(/\D/g, '') } }));
 
-  const saveField = (room: Row, key: 'e' | 'w') => {
-    const text = edits[room.roomId]?.[key];
-    if (text === undefined) return;
-    const current = key === 'e' ? room.dienMoi : room.nuocMoi;
-    const clear = () => setEdits((cur) => { const { [key]: _gone, ...rest } = cur[room.roomId] ?? {}; return { ...cur, [room.roomId]: rest }; });
-    // Empty or unchanged: nothing to save, no write.
-    if (text === '' || Number(text) === current) { clear(); return; }
-    const body = { month, houseId: (room as Row & { houseId?: string }).houseId || houseId, room: room.roomName, data: key === 'e' ? { dienMoi: Number(text) } : { nuocMoi: Number(text) } };
+  const dirtyOf = (room: Row) => {
+    const ed = edits[room.roomId] ?? {};
+    const data: { dienMoi?: number; nuocMoi?: number } = {};
+    if (ed.e !== undefined && ed.e !== '' && Number(ed.e) !== room.dienMoi) data.dienMoi = Number(ed.e);
+    if (ed.w !== undefined && ed.w !== '' && Number(ed.w) !== room.nuocMoi) data.nuocMoi = Number(ed.w);
+    return data;
+  };
+
+  // One save per room with what changed (blur, Enter or the Lưu button). An identical save already running is not sent twice.
+  const saveRoom = (room: Row) => {
+    const data = dirtyOf(room);
+    if (Object.keys(data).length === 0) {
+      // Empty or unchanged text: nothing to save, drop it.
+      setEdits((cur) => { const { [room.roomId]: _gone, ...rest } = cur; return rest; });
+      return;
+    }
+    const sig = JSON.stringify(data);
+    if (inflight.current[room.roomId] === sig) return;
+    inflight.current[room.roomId] = sig;
+    const body = { month, houseId: room.houseId || houseId, room: room.roomName, data };
     const run = async () => {
       setSaving((cur) => ({ ...cur, [room.roomId]: true }));
       const r = await workerCall('/api/admin/room-detail', { method: 'POST', body: JSON.stringify(body) });
       setSaving((cur) => ({ ...cur, [room.roomId]: false }));
+      if (inflight.current[room.roomId] === sig) delete inflight.current[room.roomId];
       if (!r.ok) { setRowError((cur) => ({ ...cur, [room.roomId]: r.error })); return; }
       setRowError((cur) => { const { [room.roomId]: _gone, ...rest } = cur; return rest; });
-      clear();
+      // Drop only the fields that were saved and still hold the saved text (the admin may have typed on).
+      setEdits((cur) => {
+        const ed = { ...(cur[room.roomId] ?? {}) };
+        if (data.dienMoi !== undefined && Number(ed.e) === data.dienMoi) delete ed.e;
+        if (data.nuocMoi !== undefined && Number(ed.w) === data.nuocMoi) delete ed.w;
+        return { ...cur, [room.roomId]: ed };
+      });
       const fresh: Row | undefined = r.data.data;
       if (fresh) setRooms((list) => list.map((x) => (x.roomId === fresh.roomId ? { ...x, ...fresh } : x)));
+      setSaved((cur) => ({ ...cur, [room.roomId]: true }));
+      window.setTimeout(() => setSaved((cur) => ({ ...cur, [room.roomId]: false })), 2000);
+      refreshBilling(month);
+      refreshRooms(month);
+      refreshDashboard(month);
     };
     queue.current[room.roomId] = (queue.current[room.roomId] ?? Promise.resolve()).then(run, run);
   };
@@ -115,7 +142,7 @@ export default function MonthBilling({ month }: { month: string }) {
       )}
       {(houseError || loadError) && <p role="alert" className="text-xs font-bold text-rose-600">{houseError || loadError}</p>}
       {issueMsg && <p role={issueMsg.ok ? 'status' : 'alert'} className={`text-xs font-bold ${issueMsg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{issueMsg.text}</p>}
-      <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhập số mới rồi chạm ra ngoài ô để lưu. Hoá đơn ở trạng thái Nháp, cư dân chỉ thấy sau khi mở thu.</p>
+      <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhập số mới rồi bấm Lưu. Hoá đơn ở trạng thái Nháp, cư dân chỉ thấy sau khi mở thu.</p>
 
       {!loaded && !loadError && !houseError && <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Đang tải danh sách phòng...</p>}
 
@@ -142,17 +169,23 @@ export default function MonthBilling({ month }: { month: string }) {
                 <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
                   Điện mới (cũ {r.dienCu})
                   <input type="text" inputMode="numeric" value={e} disabled={paid || !loaded} aria-label={`Điện mới phòng ${r.roomName}`} placeholder="0"
-                    onChange={(ev) => setEdit(r.roomId, 'e', ev.target.value)} onBlur={() => saveField(r, 'e')}
-                    onKeyDown={(ev) => { if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur(); }} className={`${inputCls} mt-1`} />
+                    onChange={(ev) => setEdit(r.roomId, 'e', ev.target.value)} onBlur={() => saveRoom(r)}
+                    onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveRoom(r); } }} className={`${inputCls} mt-1`} />
                 </label>
                 <label className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
                   Nước mới (cũ {r.nuocCu})
                   <input type="text" inputMode="numeric" value={w} disabled={paid || !loaded} aria-label={`Nước mới phòng ${r.roomName}`} placeholder="0"
-                    onChange={(ev) => setEdit(r.roomId, 'w', ev.target.value)} onBlur={() => saveField(r, 'w')}
-                    onKeyDown={(ev) => { if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur(); }} className={`${inputCls} mt-1`} />
+                    onChange={(ev) => setEdit(r.roomId, 'w', ev.target.value)} onBlur={() => saveRoom(r)}
+                    onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveRoom(r); } }} className={`${inputCls} mt-1`} />
                 </label>
               </div>
-              {saving[r.roomId] && <p className="text-[11px] text-neutral-600 dark:text-neutral-300">Đang lưu...</p>}
+              <div className="flex items-center gap-3 min-h-0">
+                {Object.keys(dirtyOf(r)).length > 0 && (
+                  <button type="button" onClick={() => saveRoom(r)} disabled={saving[r.roomId]} aria-label={`Lưu chỉ số phòng ${r.roomName}`}
+                    className="primary-button min-h-11 px-5 text-xs font-bold cursor-pointer disabled:opacity-50">{saving[r.roomId] ? 'Đang lưu...' : 'Lưu'}</button>
+                )}
+                {!saving[r.roomId] && saved[r.roomId] && Object.keys(dirtyOf(r)).length === 0 && <span role="status" className="text-xs font-bold text-emerald-600">Đã lưu ✓</span>}
+              </div>
               {rowError[r.roomId] && <p role="alert" className="text-xs font-bold text-rose-600">{rowError[r.roomId]}</p>}
             </li>
           );
