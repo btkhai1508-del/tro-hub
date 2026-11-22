@@ -59,7 +59,9 @@ describe.each(BACKENDS)('phí theo tháng và chuyển tháng 00:00 [%s]', (back
       setNow(MIDNIGHT - 1000);
       await runCron(MONTH_CRON, e, MIDNIGHT - 1000);
       expect(await marker()).toBe(NOV); // December is only prepared (month_prepared), not started
-      expect((await invoiceOf('LVC', '101', DEC))?.issued_at ?? null).toBeNull(); // at most a draft
+      expect((await e.DB.prepare(`SELECT value FROM settings WHERE key = 'month_prepared'`).first<{ value: string }>())?.value).toBe(DEC);
+      expect(await invoiceOf('LVC', '101', DEC)).toMatchObject({ issued_at: null }); // prepared as a draft
+      expect(await snapshotCount(DEC)).toBe(2);
 
       setNow(MIDNIGHT);
       await runCron(MONTH_CRON, e, MIDNIGHT);

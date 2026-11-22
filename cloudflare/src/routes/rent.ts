@@ -165,6 +165,7 @@ export const gateStatement = (db: TenantDb, houseId: string, month: string, valu
 async function gateFor(central: D1Database, db: TenantDb, houseId: string, month: string): Promise<'START' | 'STOP'> {
   const exact = await db.prepare(`SELECT value FROM payment_gates WHERE house_id = ? AND month = ?`).bind(houseId, month).first<{ value: 'START' | 'STOP' }>();
   if (exact) return exact.value;
+  if (month > currentMonth()) return 'STOP'; // a month that has not started never inherits START from an earlier one
   const latest = await db.prepare(`SELECT value FROM payment_gates WHERE house_id = ? ORDER BY updated_at DESC, month DESC LIMIT 1`).bind(houseId).first<{ value: 'START' | 'STOP' }>();
   if (latest) return latest.value;
   if (isReadOnly(db)) return 'STOP'; // the first-time import below writes; a read never waits for the lock

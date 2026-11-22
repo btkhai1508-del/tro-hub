@@ -227,6 +227,16 @@ describe.each(BACKENDS)('chuẩn bị tháng sau 5 ngày cuối tháng [%s]', (b
     expect(res.defaultMonth).toBe(NOV);
   });
 
+  it('cổng thu tiền của tháng chưa bắt đầu luôn là STOP, không thừa hưởng START của tháng này', async () => {
+    const db = await store();
+    await db.prepare(`INSERT INTO payment_gates (house_id, month, value, updated_by) VALUES ('LVC', ?, 'START', 'test')`).bind(NOV).run();
+    vi.setSystemTime(vn(2026, 11, 28, 10));
+    const g = await json(await call(PHONES.owner, 'GET', '/api/admin/payment-gate?houseId=LVC&month=12/2026'));
+    expect(g.houses.LVC).toBe('STOP');
+    const cur = await json(await call(PHONES.owner, 'GET', '/api/admin/payment-gate?houseId=LVC&month=11/2026'));
+    expect(cur.houses.LVC).toBe('START');
+  });
+
   it('cấu hình phí tháng sau sửa được trong 5 ngày cuối và nháp tháng sau tính lại', async () => {
     const t = vn(2026, 11, 28, 10);
     vi.setSystemTime(t);

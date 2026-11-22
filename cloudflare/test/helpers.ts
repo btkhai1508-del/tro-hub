@@ -66,7 +66,7 @@ export async function seedWorld(backend: BackendName): Promise<void> {
     DB.prepare(`DELETE FROM staff`),
     DB.prepare(`DELETE FROM sheet_export_queue`),
     DB.prepare(`DELETE FROM login_attempts`),
-    DB.prepare(`DELETE FROM settings WHERE key = 'month_started'`),
+    DB.prepare(`DELETE FROM settings WHERE key IN ('month_started', 'month_prepared')`),
     DB.prepare(`DELETE FROM house_directory`),
     DB.prepare(`DELETE FROM resident_index`),
     DB.prepare(`DELETE FROM sqlite_sequence WHERE name = 'resident_index'`),
