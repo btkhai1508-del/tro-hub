@@ -6,8 +6,9 @@
  * exceptions (register_account, delete_*) treat the "already done" answer as success.
  */
 import type { Env } from './app.ts';
+import { vnMonthAt } from './billing/period.ts';
 import { isWorkerSource } from './billing/source.ts';
-import { APPS_SCRIPT_URL, legacySheet } from './sheetSync.ts';
+import { APPS_SCRIPT_URL, fromSheetMonth, legacySheet } from './sheetSync.ts';
 
 export type ExportKind = 'meters' | 'payment' | 'config' | 'register_account' | 'update_profile' | 'update_account_status' | 'delete_resident';
 
@@ -85,8 +86,14 @@ async function send(kind: ExportKind, payload: Record<string, unknown>): Promise
   if (NAMED.has(action) && data.action !== action) throw new Error('Apps Script has no newer deployment');
 }
 
+/** The row's own month ('MM/YYYY' in its payload) is after the current Vietnam month. */
+const notStarted = (p: Record<string, unknown>, thisMonth: string): boolean => {
+  const month = typeof p.month === 'string' ? fromSheetMonth(p.month) : null;
+  return month !== null && month > thisMonth;
+};
+
 /** Sends the oldest pending rows (at most DRAIN_LIMIT), each on its own. Only runs in worker mode. */
-export async function drainExportQueue(env: Env): Promise<{ sent: number; failed: number }> {
+export async function drainExportQueue(env: Env, now = Date.now()): Promise<{ sent: number; failed: number }> {
   const out = { sent: 0, failed: 0 };
   if (env.SHEET_WRITES === 'off' || !(await isWorkerSource(env.DB))) return out;
   const { results } = await env.DB
@@ -100,13 +107,16 @@ export async function drainExportQueue(env: Env): Promise<{ sent: number; failed
     const key = coalesceKey(r, parsed.get(r.id)!);
     if (key) latest.set(key, r.id);
   }
+  // A row of a month that has not started (prepared in the last 5 days) waits: the Sheet tab is created at 00:00 on day 1,
+  // so a try before then would only fail and use up attempts. It stays untouched until its month begins.
+  const thisMonth = vnMonthAt(now);
   // `latest` also counts rows that gave up (5 attempts): an older pending row must never overtake a newer dead one.
   const todo: QueueRow[] = [];
   const superseded: number[] = [];
   for (const r of results) {
     const key = coalesceKey(r, parsed.get(r.id)!);
     if (key && latest.get(key) !== r.id) superseded.push(r.id);
-    else if (r.attempts < MAX_ATTEMPTS) todo.push(r);
+    else if (r.attempts < MAX_ATTEMPTS && !notStarted(parsed.get(r.id)!, thisMonth)) todo.push(r);
   }
   // One UPDATE per chunk instead of one per row (keeps the subrequest budget for the sends).
   for (let i = 0; i < superseded.length; i += 50) {

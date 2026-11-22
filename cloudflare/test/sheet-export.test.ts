@@ -3,11 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../src/app.ts';
 import { runCron, syncLegacySheets, FREQUENT_CRON } from '../src/cron.ts';
 import { drainExportQueue, enqueueExport, DRAIN_LIMIT } from '../src/sheetExport.ts';
-import { ensureMonthFresh } from '../src/sheetSync.ts';
+import { currentMonth, ensureMonthFresh, toSheetMonth } from '../src/sheetSync.ts';
 import { tenantOfOwner } from '../src/tenant/route.ts';
 import { api, BACKENDS, login, PHONES, seedWorld } from './helpers.ts';
 
 const e = env as unknown as Env;
+// A month that has started (rows of a month still to come are held back by the drain): always the current one.
+const CUR_MONTH = currentMonth();
+const SHEET_MONTH = toSheetMonth(CUR_MONTH);
 const call = (token: string, method: string, path: string, body?: unknown) =>
   api(path, { method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }, token);
 const json = async (res: Response) => (await res.json()) as any;
@@ -59,7 +62,7 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
     owner = await login(PHONES.owner);
   });
 
-  const enter = (house: string, room: string, data: Record<string, unknown>, month = '12/2099') =>
+  const enter = (house: string, room: string, data: Record<string, unknown>, month = SHEET_MONTH) =>
     call(owner, 'POST', '/api/admin/room-detail', { month, room, houseId: house, data });
 
   describe('enqueue', () => {
@@ -70,7 +73,7 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
       expect(q).toHaveLength(1);
       expect(q[0]).toMatchObject({ kind: 'meters', attempts: 0, done_at: null });
       expect(JSON.parse(q[0].payload)).toEqual({
-        houseId: 'LVC', room: 'LVC-101', month: '12/2099', dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14, status: '',
+        houseId: 'LVC', room: 'LVC-101', month: SHEET_MONTH, dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14, status: '',
       });
     });
 
@@ -132,7 +135,7 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
         const res = await enter('LVC', '101', { dienCu: 100, dienMoi: 150 });
         expect(res.status).toBe(200);
         const db = await tenantOfOwner(e, 1);
-        expect((await db.prepare(`SELECT electric_new AS n FROM meter_readings WHERE month = '2099-12'`).first<any>()).n).toBe(150);
+        expect((await db.prepare(`SELECT electric_new AS n FROM meter_readings WHERE month = '${CUR_MONTH}'`).first<any>()).n).toBe(150);
         const a = await e.DB.prepare(`SELECT target FROM audit_log WHERE action = 'sheet_export_enqueue_failed'`).first<any>();
         expect(a.target).toContain('meters');
       } finally {
@@ -153,7 +156,7 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
       const { calls } = mockScript();
       expect(await drainExportQueue(e)).toEqual({ sent: 1, failed: 0 });
       expect(calls).toHaveLength(1);
-      expect(calls[0].body).toEqual({ action: 'update_meters', room: 'LVC-101', month: '12/2099', dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14, status: '' });
+      expect(calls[0].body).toEqual({ action: 'update_meters', room: 'LVC-101', month: SHEET_MONTH, dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14, status: '' });
       const [r] = await rows();
       expect(r.done_at).not.toBeNull();
       expect(r.attempts).toBe(0);
@@ -202,7 +205,7 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
       const again = await enter('LVC', '101', { dienMoi: 160 });
       expect(again.status).toBe(200);
       const db = await tenantOfOwner(e, 1);
-      expect((await db.prepare(`SELECT electric_new AS n FROM meter_readings WHERE month = '2099-12'`).first<any>()).n).toBe(160);
+      expect((await db.prepare(`SELECT electric_new AS n FROM meter_readings WHERE month = '${CUR_MONTH}'`).first<any>()).n).toBe(160);
     });
 
     it('một dòng lỗi không chặn dòng khác; Apps Script success:false tính là lỗi', async () => {
@@ -396,8 +399,8 @@ describe.each(BACKENDS)('xuất Sheet một chiều [%s]', (backend) => {
     });
 
     it('gộp: dòng cũ không vượt dòng mới hơn đã bỏ cuộc', async () => {
-      await enqueueExport(e.DB, 'meters', { houseId: 'LVC', room: 'LVC-101', month: '12/2099', dienMoi: 1 });
-      await enqueueExport(e.DB, 'meters', { houseId: 'LVC', room: 'LVC-101', month: '12/2099', dienMoi: 2 });
+      await enqueueExport(e.DB, 'meters', { houseId: 'LVC', room: 'LVC-101', month: SHEET_MONTH, dienMoi: 1 });
+      await enqueueExport(e.DB, 'meters', { houseId: 'LVC', room: 'LVC-101', month: SHEET_MONTH, dienMoi: 2 });
       await e.DB.prepare(`UPDATE sheet_export_queue SET attempts = 5 WHERE id = (SELECT MAX(id) FROM sheet_export_queue)`).run();
       const { calls } = mockScript();
       expect(await drainExportQueue(e)).toEqual({ sent: 0, failed: 0 });

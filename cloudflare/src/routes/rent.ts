@@ -7,6 +7,7 @@
 import type { Context } from 'hono';
 import type { Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App, type Viewer } from '../app.ts';
+import { prepMonth } from '../billing/period.ts';
 import { isWorkerSource } from '../billing/source.ts';
 import { bankReceived, deferredByRoom, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
 import { decryptText } from '../cccd.ts';
@@ -298,16 +299,21 @@ export function registerRent(app: Hono<App>): void {
   app.get('/api/admin/months', async (c) => {
     const houseIds = staffHouseIds(c.get('viewer'));
     const months = new Set<string>([currentMonth()]);
+    // Worker mode: during the last 5 days of a month the next month is open for preparation and the screen opens on it.
+    const worker = await isWorkerSource(c.env.DB);
+    const prep = worker ? prepMonth(Date.now()) : null;
+    if (prep) months.add(prep);
     if (houseIds.length) {
       for (const store of await storesOf(c, houseIds)) {
         const { results } = await store.db.prepare(`SELECT DISTINCT month FROM invoices WHERE house_id IN (${inList(store.houseIds)})`).bind(...store.houseIds).all<{ month: string }>();
         results.forEach((r) => months.add(r.month));
       }
       // The Worker owns the data in worker mode: its invoices already give the months, the Sheet is not read.
-      const legacy = (await isWorkerSource(c.env.DB)) ? null : await legacySheet(c.env.DB);
+      const legacy = worker ? null : await legacySheet(c.env.DB);
       if (legacy && legacy.houses.some((h) => houseIds.includes(h))) (await sheetMonths(legacy.sheetId).catch(() => [])).forEach((m) => months.add(m));
     }
-    return c.json({ success: true, months: [...months].sort().map(toSheetMonth) });
+    // defaultMonth is 'YYYY-MM' (the month being prepared, else the current one); `months` stays in the Sheet's 'MM/YYYY' form.
+    return c.json({ success: true, months: [...months].sort().map(toSheetMonth), defaultMonth: prep ?? currentMonth() });
   });
 
   app.get('/api/admin/dashboard', async (c) => {

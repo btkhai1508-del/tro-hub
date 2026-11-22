@@ -4,6 +4,7 @@
  */
 import type { Env } from './app.ts';
 import { createDraftsDetailed } from './billing/invoices.ts';
+import { prepMonth, vnMonthAt } from './billing/period.ts';
 import { isWorkerSource } from './billing/source.ts';
 import { allHouses, getStorage, houseOwner, removeHouseDir, setHouseCounts } from './central/directory.ts';
 import { purgeStaleAttempts } from './loginLimit.ts';
@@ -223,9 +224,10 @@ export async function reconcile(env: Env): Promise<ReconcileResult> {
 }
 
 const MONTH_MARK = 'month_started'; // settings key: 'YYYY-MM' when that month is fully started, 'YYYY-MM!n' after n failed tries
+const PREP_MARK = 'month_prepared'; // same shape: the NEXT month whose drafts were made during the last 5 days of a month
 const CATCHUP_TRIES = 6; // the frequent cron stops retrying a month after this many failed tries (about an hour)
 
-const vnMonthOf = (now: number) => new Date(now + 7 * 3600_000).toISOString().slice(0, 7); // Vietnam wall clock, read as UTC
+const vnMonthOf = vnMonthAt; // Vietnam wall clock
 
 /**
  * Switches every landlord to `month` (Vietnam month of `now`): the fee snapshot of each house (copy-forward from
@@ -233,7 +235,7 @@ const vnMonthOf = (now: number) => new Date(now + 7 * 3600_000).toISOString().sl
  * the old reading of a month is the previous month's new one, derived when the invoice is computed. Idempotent;
  * records the month as started in settings only when every landlord went through, so a failure is retried.
  */
-async function startMonth(env: Env, month: string, tries = 0): Promise<number> {
+async function startMonth(env: Env, month: string, tries = 0, markKey = MONTH_MARK): Promise<number> {
   const { results } = await env.DB.prepare(`SELECT DISTINCT owner_id FROM house_directory`).all<{ owner_id: number }>();
   let made = 0;
   let failed = 0;
@@ -248,40 +250,65 @@ async function startMonth(env: Env, month: string, tries = 0): Promise<number> {
     }
   }
   await env.DB.prepare(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`)
-    .bind(MONTH_MARK, failed ? `${month}!${tries + 1}` : month).run();
+    .bind(markKey, failed ? `${month}!${tries + 1}` : month).run();
   return made;
+}
+
+/**
+ * During the last 5 days of a month (Vietnam time) the landlord prepares the NEXT month: its fee snapshot and a DRAFT
+ * for every room with an approved resident (drafts are invisible to residents; the month cannot be issued before day 1).
+ * Same idempotent path as startMonth, with its own marker; the template is not mirrored (the current month still owns it).
+ * `cheap`: read the marker first and do nothing when the month is already prepared (the 10-minute catch-up).
+ */
+async function prepareNextMonth(env: Env, now: number, cheap: boolean): Promise<number> {
+  const month = prepMonth(now);
+  if (month === null) return 0;
+  let tries = 0;
+  const mark = (await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`).bind(PREP_MARK).first<{ value: string }>())?.value ?? '';
+  const [done, failedTries] = mark.split('!');
+  if (done === month) {
+    if (failedTries === undefined) return 0;
+    tries = Number(failedTries) || 0;
+    if (cheap && tries >= CATCHUP_TRIES) return 0;
+  }
+  return startMonth(env, month, tries, PREP_MARK);
 }
 
 /**
  * Daily 02:00 run: on days 1-3 (Vietnam time) of a month, when the Worker owns the invoices, start the month
  * (kept from before the midnight job existed; startMonth is idempotent, so it only adds a second chance).
+ * In the last 5 days it also prepares the next month.
  */
 export async function createMonthlyDrafts(env: Env, now = Date.now()): Promise<number> {
   if (!(await isWorkerSource(env.DB))) return 0;
   const vn = new Date(now + 7 * 3600_000).toISOString();
-  if (Number(vn.slice(8, 10)) > 3) return 0;
-  return startMonth(env, vn.slice(0, 7));
+  const started = Number(vn.slice(8, 10)) > 3 ? 0 : await startMonth(env, vn.slice(0, 7));
+  return started + (await prepareNextMonth(env, now, false));
 }
 
-/** 17:00 UTC = 00:00 Vietnam: switch to the new month right at midnight (whatever the day, only the CURRENT month). */
+/** 17:00 UTC = 00:00 Vietnam: switch to the new month right at midnight (whatever the day, only the CURRENT month), then prepare the next one in the last 5 days. */
 export async function startCurrentMonth(env: Env, now = Date.now()): Promise<number> {
   if (!(await isWorkerSource(env.DB))) return 0;
-  return startMonth(env, vnMonthOf(now));
+  const made = await startMonth(env, vnMonthOf(now));
+  return made + (await prepareNextMonth(env, now, false));
 }
 
 /**
  * Every 10 minutes: catches a missed midnight run. One settings read decides; when the current Vietnam month is
- * already recorded as started nothing else is read or written. Not limited to days 1-3, never touches past months.
+ * already recorded as started (and, in the last 5 days, the next one as prepared) nothing else is read or written.
+ * Not limited to days 1-3, never touches past months.
  */
 export async function catchUpMonthStart(env: Env, now = Date.now()): Promise<number> {
   if (!(await isWorkerSource(env.DB))) return 0;
   const month = vnMonthOf(now);
   const mark = (await env.DB.prepare(`SELECT value FROM settings WHERE key = ?`).bind(MONTH_MARK).first<{ value: string }>())?.value ?? '';
   const [done, tries] = mark.split('!');
-  if (done === month && tries === undefined) return 0;
-  const failedTries = done === month ? Number(tries) || 0 : 0;
-  if (failedTries >= CATCHUP_TRIES) return 0; // the next midnight / daily run tries again
-  return startMonth(env, month, failedTries);
+  let made = 0;
+  if (!(done === month && tries === undefined)) {
+    const failedTries = done === month ? Number(tries) || 0 : 0;
+    if (failedTries < CATCHUP_TRIES) made = await startMonth(env, month, failedTries); // else: the next midnight / daily run tries again
+  }
+  return made + (await prepareNextMonth(env, now, true));
 }
 
 /** Daily: forgets login/register counters whose windows are long over (keeps the table tiny). */

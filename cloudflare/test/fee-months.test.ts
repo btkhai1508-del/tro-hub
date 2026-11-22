@@ -55,11 +55,11 @@ describe.each(BACKENDS)('phí theo tháng và chuyển tháng 00:00 [%s]', (back
   });
 
   describe('chuyển tháng đúng 00:00 giờ Việt Nam', () => {
-    it('trước 00:00: chưa có gì của tháng 12; đúng 00:00: nháp tháng 12, số cũ = số mới tháng 11', async () => {
+    it('trước 00:00 (5 ngày cuối): tháng 12 mới chỉ là bản chuẩn bị, chưa "bắt đầu"; đúng 00:00: tháng 12 bắt đầu, số cũ = số mới tháng 11', async () => {
       setNow(MIDNIGHT - 1000);
       await runCron(MONTH_CRON, e, MIDNIGHT - 1000);
-      expect(await invoiceOf('LVC', '101', DEC)).toBeNull();
-      expect(await snapshotCount(DEC)).toBe(0);
+      expect(await marker()).toBe(NOV); // December is only prepared (month_prepared), not started
+      expect((await invoiceOf('LVC', '101', DEC))?.issued_at ?? null).toBeNull(); // at most a draft
 
       setNow(MIDNIGHT);
       await runCron(MONTH_CRON, e, MIDNIGHT);

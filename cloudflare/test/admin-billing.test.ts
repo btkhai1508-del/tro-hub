@@ -55,6 +55,13 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
     [owner, manager, otherOwner, resident] = await Promise.all([login(PHONES.owner), login(PHONES.manager), login(PHONES.otherOwner), login(PHONES.residentLvc)]);
   });
 
+  /** Issuing a month needs it to have started: pin the Vietnam clock inside A (a month cannot be issued before its day 1). */
+  const startMonthA = async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.UTC(2099, 0, 15, 5, 0, 0));
+    owner = await login(PHONES.owner);
+  };
+
   const enter = (month: string, data: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
     call(owner, 'POST', '/api/admin/room-detail', { month, room: '101', houseId: 'LVC', data, ...extra });
 
@@ -347,6 +354,7 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
 
   describe('POST /api/admin/issue-month', () => {
     it('chưa đủ số điện nước và không ép: issued 0 kèm tên phòng (200), không đổi gì; ép thì phát hành', async () => {
+      await startMonthA();
       await createDrafts(e, OWNER, A);
       const res = await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: '01/2099', force: false });
       expect(res.status).toBe(200);
@@ -360,6 +368,7 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
     });
 
     it('đủ số: phát hành không cần ép và mở cổng thu tiền', async () => {
+      await startMonthA();
       await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
       const res = await json(await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A }));
       expect(res).toEqual({ success: true, issued: 1, missingMeters: [] });
@@ -402,6 +411,7 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
     });
 
     it('ghi nhật ký cho sửa số, đổi phí, mở thu tiền', async () => {
+      await startMonthA();
       await enter(A, { dienCu: 1, dienMoi: 5 });
       await call(owner, 'PUT', '/api/admin/config', { houseId: 'LVC', electricPrice: 3500, waterPrice: 20000, services: [] });
       await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true });

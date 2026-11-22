@@ -410,6 +410,11 @@ export function registerAdmin(app: Hono<App>): void {
         ).bind(room.house_id, room.id, month, next.eo, next.en, next.wo, next.wn).run();
         if (inv) await recompute(db, inv.id, { central: c.env.DB });
         else await ensureDraft(db, room.house_id, room.id, month, c.env.DB); // makes the draft (and prices it) when the room has residents
+        // The next month's DRAFT (prepared in the last 5 days) starts from this month's new readings: price it again.
+        const following = await invoiceFor(db, room.id, nextMonthOf(month));
+        if (following && following.issued_at === null) {
+          await recompute(db, following.id, { central: c.env.DB }).catch((err) => { if (!(err instanceof InvoiceLockedError)) console.warn('[admin] next draft recompute', room.id, err); });
+        }
         await audit(c, actorOf(viewer), 'admin_meter_save', room.house_id, `${room.name}:${month}`);
         // Full state of the room's month (overwrite-style on the Sheet); an entered 0 means "not entered" and is sent empty.
         await enqueueExport(c.env.DB, 'meters', {
@@ -689,6 +694,8 @@ export function registerAdmin(app: Hono<App>): void {
     const month = pickMonth(c, body.month);
     if (month instanceof Response) return month;
     await tenantFor(c, houseId); // the access check (403 / 404) before anything is read or written
+    // A prepared month (last 5 days of the previous one) can hold drafts but cannot be opened for payment before its day 1.
+    if (month > currentMonth()) return fail(c, 409, 'MONTH_NOT_STARTED', `${monthLabel(month)} mở thu được từ 01/${month.slice(5)}/${month.slice(0, 4)}.`);
     const { issued, missingMeters } = await issueMonth(c.env, houseId, month, body.force === true);
     if (issued > 0) await audit(c, actorOf(c.get('viewer')), 'admin_issue_month', houseId, `${month}:${issued}`);
     return c.json({ success: true, issued, missingMeters });
