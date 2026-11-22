@@ -94,7 +94,8 @@ import {
 } from './Icons3D';
 import { AppleSwitch, AppleCheckbox } from './AppleControls';
 import { createWriteGuard } from '../lib/writeGuard';
-import { createHouseIdCache, registerAdminRefresh } from '../lib/adminRefresh';
+import { createHouseIdCache, registerAdminRefresh, refreshRooms, refreshBilling, refreshDashboard } from '../lib/adminRefresh';
+import { normalizeVnPhone, phoneProblem } from '../lib/phone';
 import { STORAGE_KEYS } from '../lib/storage';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
@@ -191,7 +192,13 @@ export function AdminPortal() {
   // Active Menu
   // Worker mode: fee settings and meter entry are served by the Worker; sheet mode keeps the old screens.
   const [workerMode, setWorkerMode] = useState(() => getSource() === 'worker');
-  useEffect(() => { ensureSource().then((src) => setWorkerMode(src === 'worker')); }, []);
+  // Staff with a Worker token: until /api/source answers we do not know which screens apply, so nothing old is drawn meanwhile.
+  const [sourceReady, setSourceReady] = useState(() => getSource() === 'worker' || !storage.getItem(STORAGE_KEYS.WORKER_TOKEN));
+  useEffect(() => {
+    let live = true;
+    ensureSource().then((src) => { if (!live) return; setWorkerMode(src === 'worker'); setSourceReady(true); });
+    return () => { live = false; };
+  }, []);
   const [activeMenu, setActiveMenu] = useState<
     'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
   >('dashboard');
@@ -334,6 +341,17 @@ export function AdminPortal() {
   const [roomsList, setRoomsList] = useState<any[]>([]);
   const [currentRoomData, setCurrentRoomData] = useState<any>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
+  // Worker mode: the house of the open room (the same room name can exist in two houses), the row as the server last
+  // returned it (to send only what changed), the month's real prices for the live estimate, and the Save state.
+  const [selectedHouseId, setSelectedHouseId] = useState<string>('');
+  const roomBaselineRef = useRef<any>(null);
+  const [roomConfig, setRoomConfig] = useState<{ electricPrice: number; waterPrice: number; personUnit: number; vehicleUnit: number; defaultRoomPrice: number | null; defaultDeposit: number | null } | null>(null);
+  const [isSavingRoom, setIsSavingRoom] = useState(false);
+  const [roomMoneyNote, setRoomMoneyNote] = useState('');
+  const [roomFieldErrors, setRoomFieldErrors] = useState<Record<string, string>>({});
+  // Reads of the room and billing lists lose against a save that started or finished after they began.
+  const roomsGuardRef = useRef(createWriteGuard());
+  const billingGuardRef = useRef(createWriteGuard());
   // Empty resident slots the admin opened in this room, kept open while their fields are edited.
   const [openedSlots, setOpenedSlots] = useState<number[]>([]);
   useEffect(() => setOpenedSlots([]), [selectedRoomId]);
@@ -482,6 +500,32 @@ export function AdminPortal() {
   // Format currency
   const fmt = (n: number) => Number(n || 0).toLocaleString('vi-VN');
   const parseCurrency = (s: any) => parseInt(String(s || '').replace(/[^\d]/g, ''), 10) || 0;
+  // Prices behind the live estimate on the room screen. Worker mode: the month's real prices (loaded below), not the old defaults.
+  const units = workerMode && roomConfig
+    ? { dien: roomConfig.electricPrice, nuoc: roomConfig.waterPrice, net: roomConfig.personUnit, xe: roomConfig.vehicleUnit }
+    : { dien: unitConfig.dien || 3500, nuoc: unitConfig.nuoc || 20000, net: unitConfig.net || 40000, xe: unitConfig.xe || 50000 };
+  useEffect(() => {
+    if (activeMenu !== 'roomDetail' || !workerMode || !selectedHouseId) return;
+    let live = true;
+    setRoomConfig(null);
+    workerFetch(`/api/admin/config?houseId=${encodeURIComponent(selectedHouseId)}&month=${encodeURIComponent(selectedMonth)}`)
+      .then(res => res.json())
+      .then(d => {
+        if (!live || !d?.success) return;
+        const services: any[] = (d.config?.services || []).filter((svc: any) => svc.active);
+        const sum = (per: string) => services.filter(svc => svc.per === per).reduce((total, svc) => total + Number(svc.price || 0), 0);
+        setRoomConfig({
+          electricPrice: Number(d.config?.electricPrice || 0),
+          waterPrice: Number(d.config?.waterPrice || 0),
+          personUnit: sum('person'),
+          vehicleUnit: sum('vehicle'),
+          defaultRoomPrice: d.defaultRoomPrice ?? null,
+          defaultDeposit: d.defaultDeposit ?? null,
+        });
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [activeMenu, workerMode, selectedHouseId, selectedMonth]);
 
   // Format room number cleanly (bỏ số 0 đằng trước cho phòng 3 chữ số: 0101 -> 101, 0201 -> 201)
   const formatRoomNumber = (r: string) => {
@@ -611,6 +655,8 @@ export function AdminPortal() {
 
   // Realtime Google Sheet sync for all rooms and payment gate status
   useEffect(() => {
+    // Staff with a Worker token: nothing is read until /api/source says which store answers (no read goes to the wrong one).
+    if (!sourceReady) return;
     // Skimming through months loads only the one the admin stops on.
     const monthChanged = lastLoadedMonthRef.current !== selectedMonth;
     lastLoadedMonthRef.current = selectedMonth;
@@ -636,7 +682,7 @@ export function AdminPortal() {
       clearTimeout(loadTimer);
       clearInterval(interval);
     };
-  }, [selectedMonth, activeMenu, workerMode]);
+  }, [selectedMonth, activeMenu, workerMode, sourceReady]);
 
   // Worker mode: the gate is read when the month changes and on its own 8-second round, not on every tab switch.
   useEffect(() => {
@@ -844,6 +890,8 @@ export function AdminPortal() {
   };
 
   const fetchBilling = (month: string, background = false) => {
+    const worker = getSource() === 'worker';
+    const ticket = worker ? billingGuardRef.current.beginRead() : 0;
     apiFetch(`/api/admin/billing?month=${month}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
@@ -853,6 +901,7 @@ export function AdminPortal() {
       .then(d => {
         // A slower answer for a month the admin already left must not repaint the screen.
         if (month !== selectedMonthRef.current) return;
+        if (worker && !billingGuardRef.current.acceptRead(ticket)) return; // a save began or ended after this read started
         if (d.success && Array.isArray(d.billing)) setBillingList(d.billing);
         else if (d.success === false && !background) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
       })
@@ -940,6 +989,9 @@ export function AdminPortal() {
 
   const fetchRooms = (month: string, background = false) => {
     if (!background) setIsLoading(true);
+    const worker = getSource() === 'worker';
+    const roomsTicket = worker ? roomsGuardRef.current.beginRead() : 0;
+    const billingTicket = worker ? billingGuardRef.current.beginRead() : 0;
     (getSource() === 'worker' ? fetchWorkerRooms(month) : apiFetch(`/api/admin/rooms?month=${month}`)
       .then((res: any) => {
         if (!(res instanceof Response)) return res;
@@ -951,11 +1003,16 @@ export function AdminPortal() {
         if (month !== selectedMonthRef.current) return;
         setIsLoading(false);
         if (d.success && Array.isArray(d.rooms)) {
-          setRoomsLoadedMonth(month);
-          roomsFetchedRef.current = { month, at: Date.now() };
-          setRoomsList(d.rooms);
-          setBillingList(d.rooms);
-          updateDashboardStats(d.rooms, month);
+          // Worker mode: each list takes the answer only if no save began or ended since the read started.
+          const takeRooms = !worker || roomsGuardRef.current.acceptRead(roomsTicket);
+          const takeBilling = !worker || billingGuardRef.current.acceptRead(billingTicket);
+          if (takeRooms) {
+            setRoomsLoadedMonth(month);
+            roomsFetchedRef.current = { month, at: Date.now() };
+            setRoomsList(d.rooms);
+            updateDashboardStats(d.rooms, month);
+          }
+          if (takeBilling) setBillingList(d.rooms);
         } else if (d.success === false) setAdminLoadError('Chưa tải được danh sách phòng. Vui lòng thử lại.');
       })
       .catch(() => {
@@ -964,10 +1021,16 @@ export function AdminPortal() {
       });
   };
 
-  const openRoomDetail = (room: string) => {
+  const openRoomDetail = (room: string, houseId?: string) => {
     playSound('click');
-    const cleanId = canonicalRoomId(room);
+    // Worker mode: the room is told apart by its house (the same name can exist in two houses), so the row's own code is kept.
+    const byHouse = getSource() === 'worker' && !!houseId;
+    const cleanId = byHouse ? String(room) : canonicalRoomId(room);
     setSelectedRoomId(cleanId);
+    setSelectedHouseId(byHouse ? houseId! : '');
+    roomBaselineRef.current = null;
+    setRoomMoneyNote('');
+    setRoomFieldErrors({});
     setActiveMenu('roomDetail');
     setCurrentRoomData(null);
     setIsLoading(true);
@@ -1002,9 +1065,11 @@ export function AdminPortal() {
     };
 
     // 1. Immediately find from local roomsList
-    const localFound = roomsList.find(r => canonicalRoomId(r.room) === cleanId) ||
-                       roomsList.find(r => r.room === room);
+    const localFound = byHouse
+      ? roomsList.find(r => r.houseId === houseId && String(r.room) === cleanId)
+      : roomsList.find(r => canonicalRoomId(r.room) === cleanId) || roomsList.find(r => r.room === room);
     if (localFound) {
+      if (byHouse) roomBaselineRef.current = localFound;
       setCurrentRoomData({
         ...localFound,
         nguoi1: sanitizeName(localFound.nguoi1),
@@ -1027,7 +1092,7 @@ export function AdminPortal() {
     }
 
     // 2. Fetch fresh document from backend
-    apiFetch(`/api/admin/room-detail?month=${selectedMonth}&room=${cleanId}`)
+    apiFetch(`/api/admin/room-detail?month=${selectedMonth}&room=${encodeURIComponent(cleanId)}${byHouse ? `&houseId=${encodeURIComponent(houseId!)}` : ''}`)
       .then(res => {
         const ct = res.headers.get('content-type') || '';
         if (!ct.includes('application/json')) throw new Error('Not JSON');
@@ -1037,6 +1102,7 @@ export function AdminPortal() {
         setIsLoading(false);
         if (d.success && d.data) {
           const fresh = d.data;
+          if (byHouse) roomBaselineRef.current = fresh;
           setCurrentRoomData((prev: any) => ({
             ...prev,
             ...fresh,
@@ -1141,16 +1207,18 @@ export function AdminPortal() {
           config: unitConfig
         })
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
         playSound('success');
         setConfigSaveMsg('✅ Đã lưu cấu hình đơn giá thành công!');
         setTimeout(() => setConfigSaveMsg(''), 3000);
+      } else {
+        setConfigSaveMsg(`Chưa lưu được đơn giá: ${data?.error || 'máy chủ không nhận thay đổi. Vui lòng thử lại.'}`);
+        setTimeout(() => setConfigSaveMsg(''), 6000);
       }
     } catch (e) {
-      playSound('success');
-      setConfigSaveMsg('✅ Đã lưu cấu hình đơn giá vào hệ thống!');
-      setTimeout(() => setConfigSaveMsg(''), 3000);
+      setConfigSaveMsg('Chưa lưu được đơn giá. Kiểm tra mạng rồi thử lại.');
+      setTimeout(() => setConfigSaveMsg(''), 6000);
     }
   };
 
@@ -1172,9 +1240,10 @@ export function AdminPortal() {
       return;
     }
     setIsSavingBatchMeters(true);
+    const saved: string[] = [];
     try {
       for (const [room, meters] of entries) {
-        await apiFetch('/api/admin/room-detail', {
+        const res = await apiFetch('/api/admin/room-detail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1188,6 +1257,9 @@ export function AdminPortal() {
             }
           })
         });
+        const reply = await res.json().catch(() => null);
+        if (!res.ok || reply?.success === false) throw new Error(reply?.error || `Chưa lưu được chỉ số phòng ${room}.`);
+        saved.push(room);
       }
       playSound('success');
       showPortalToast('Đã lưu và đồng bộ chỉ số điện nước lên Google Sheets thành công!', 'success');
@@ -1195,13 +1267,269 @@ export function AdminPortal() {
       setBatchMeters({});
     } catch (err: any) {
       showPortalToast('Lỗi lưu chỉ số: ' + (err.message || 'Vui lòng thử lại'), 'error');
+      if (saved.length > 0) {
+        // Rooms saved before the failure are kept; only the rest stay to be saved again.
+        setBatchMeters(prev => Object.fromEntries(Object.entries(prev).filter(([room]) => !saved.includes(room))));
+        fetchRooms(selectedMonth);
+      }
     } finally {
       setIsSavingBatchMeters(false);
     }
   };
 
-  const updateRoomPaymentStatus = async (roomNumber: string, status: 'paid' | 'unpaid', row?: number) => {
+  // ── Worker mode: one room's Save and the paid / unpaid switch ───────────────
+
+  const sameRoomRow = (a: any, b: any) => !!a && !!b && a.houseId === b.houseId && String(a.room) === String(b.room);
+
+  /** The room and billing lists are being written: a read that started earlier cannot overwrite the result. Returns the function that ends it. */
+  const beginListsWrite = () => {
+    roomsGuardRef.current.beginWrite();
+    billingGuardRef.current.beginWrite();
+    return () => {
+      roomsGuardRef.current.endWrite();
+      billingGuardRef.current.endWrite();
+    };
+  };
+
+  /** One Worker call: ok only for a 2xx answer with success !== false; otherwise `error` is the server's own sentence. */
+  const callWorker = async (path: string, init: RequestInit = {}): Promise<{ ok: boolean; data: any; error: string }> => {
+    try {
+      const res = await workerFetch(path, init);
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.success !== false) return { ok: true, data, error: '' };
+      return { ok: false, data, error: data?.error || 'Chưa lưu được. Vui lòng thử lại.' };
+    } catch {
+      return { ok: false, data: null, error: 'Chưa kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' };
+    }
+  };
+
+  /**
+   * A server row of one room replaces what the screen shows for it: the open room (all of it, or only `fields`),
+   * its line in the room list (Phòng & Khách) and in the billing list (Thu tiền). Rooms match by house + room code.
+   */
+  const applyRoomUpdate = (row: any, fields?: string[]) => {
+    if (!row) return;
+    const subset = fields ? Object.fromEntries(fields.filter(k => k in row).map(k => [k, row[k]])) : row;
+    setRoomsList(prev => {
+      const next = prev.map(r => (sameRoomRow(r, row) ? { ...r, ...row } : r));
+      updateDashboardStats(next, selectedMonth);
+      return next;
+    });
+    // The billing list shows the full CCCD, which the room row never carries: keep it.
+    const { cccd1: _c1, cccd2: _c2, cccd3: _c3, ...forBilling } = row;
+    setBillingList(prev => prev.map(r => (sameRoomRow(r, row) ? { ...r, ...forBilling } : r)));
+    setCurrentRoomData((prev: any) => (sameRoomRow(prev, row) ? { ...prev, ...subset } : prev));
+    if (sameRoomRow(roomBaselineRef.current, row)) roomBaselineRef.current = { ...roomBaselineRef.current, ...subset };
+  };
+
+  const METER_FIELDS = ['dienCu', 'dienMoi', 'nuocCu', 'nuocMoi'] as const;
+  const MONEY_MAX = 100_000_000;
+  const ESTIMATE_FIELDS = ['tienDien', 'tienNuoc', 'tienNet', 'tienXe', 'tongTien', 'dienUsed', 'nuocUsed', 'soNguoi', 'soXe'];
+
+  /** Save in worker mode: meters, then each changed resident, then rent / deposit; each step waits for the server. */
+  const saveRoomWorker = async () => {
+    const draft = currentRoomData;
+    const base = roomBaselineRef.current;
+    if (!draft || !base || isSavingRoom) return;
+    const month = selectedMonth;
+    const houseId = selectedHouseId;
+    const room = selectedRoomId;
+
+    // What changed, compared with the row the server last returned.
+    const meters: Record<string, number> = {};
+    for (const k of METER_FIELDS) if (Number(draft[k] || 0) !== Number(base[k] || 0)) meters[k] = Number(draft[k] || 0);
+
+    const residents: { slot: number; residentId: number; body: Record<string, string> }[] = [];
+    const problems: Record<string, string> = {};
+    for (const slot of ROOM_SLOTS) {
+      const occupant = base.occupants?.[slot - 1];
+      if (!occupant) continue;
+      const body: Record<string, string> = {};
+      const name = String(draft[`nguoi${slot}`] || '').trim();
+      if (name !== String(base[`nguoi${slot}`] || '').trim()) body.fullName = name;
+      const phone = String(draft[`sdt${slot}`] || '').trim();
+      if (normalizeVnPhone(phone) !== normalizeVnPhone(String(base[`sdt${slot}`] || ''))) {
+        const problem = phoneProblem(phone);
+        if (problem) problems[`slot${slot}`] = problem;
+        else body.phone = phone;
+      }
+      const plate = String(draft[`xe${slot}`] || '').trim();
+      if (plate !== String(base[`xe${slot}`] || '').trim()) body.plateNumber = plate;
+      const cccd = String(draft[`cccd${slot}`] || '').trim();
+      if (cccd) body.cccd = cccd;
+      if (Object.keys(body).length > 0) residents.push({ slot, residentId: occupant.residentId, body });
+    }
+
+    const money: Record<string, number> = {};
+    for (const [field, key] of [['roomPrice', 'price'], ['roomDeposit', 'deposit']] as const) {
+      const value = Number(draft[field] || 0);
+      if (value === Number(base[field] || 0)) continue;
+      if (!Number.isInteger(value) || value < 0 || value > MONEY_MAX) {
+        problems.money = `${key === 'price' ? 'Tiền phòng' : 'Tiền cọc'} phải từ 0 đến ${fmt(MONEY_MAX)} đ.`;
+      } else money[key] = value;
+    }
+
+    if (Object.keys(problems).length > 0) {
+      setRoomFieldErrors(problems);
+      showPortalToast(Object.values(problems)[0], 'error');
+      return;
+    }
+    if (Object.keys(meters).length === 0 && residents.length === 0 && Object.keys(money).length === 0) {
+      showPortalToast('Chưa có thay đổi nào để lưu.', 'info');
+      return;
+    }
+
+    type Step = { key: string; kind: 'meters' | 'resident' | 'money'; run: () => Promise<{ ok: boolean; data: any; error: string }> };
+    const steps: Step[] = [];
+    if (Object.keys(meters).length > 0) {
+      steps.push({ key: 'meters', kind: 'meters', run: () => callWorker('/api/admin/room-detail', { method: 'POST', body: JSON.stringify({ month, houseId, room, data: meters }) }) });
+    }
+    for (const r of residents) {
+      steps.push({ key: `slot${r.slot}`, kind: 'resident', run: () => callWorker(`/api/admin/residents/${encodeURIComponent(String(r.residentId))}`, { method: 'PATCH', body: JSON.stringify({ houseId, ...r.body }) }) });
+    }
+    if (Object.keys(money).length > 0) {
+      steps.push({ key: 'money', kind: 'money', run: () => callWorker(`/api/admin/rooms/${encodeURIComponent(String(draft.roomId))}`, { method: 'PATCH', body: JSON.stringify({ houseId, month, ...money }) }) });
+    }
+
     playSound('click');
+    setIsSavingRoom(true);
+    setRoomFieldErrors({});
+    setRoomMoneyNote('');
+    const endWrite = beginListsWrite();
+    let latest: any = null; // the newest row of the selected month the server returned
+    let latestIsCurrent = true; // false once a resident step succeeded after it (that answer is for the current month)
+    let anySaved = false;
+    let note = '';
+    let failure: { index: number; step: Step; error: string } | null = null;
+    for (let i = 0; i < steps.length; i++) {
+      const result = await steps[i].run();
+      if (!result.ok) {
+        failure = { index: i, step: steps[i], error: result.error };
+        break;
+      }
+      anySaved = true;
+      if (steps[i].kind === 'resident') latestIsCurrent = false;
+      else if (result.data?.data) {
+        latest = result.data.data;
+        latestIsCurrent = true;
+      }
+      if (steps[i].kind === 'money' && result.data?.appliesFrom === 'next_month') note = String(result.data.message || '');
+    }
+    // A resident answer describes the current month: read the selected month's row again.
+    if (anySaved && !latestIsCurrent) {
+      const fresh = await callWorker(`/api/admin/room-detail?month=${encodeURIComponent(month)}&room=${encodeURIComponent(room)}&houseId=${encodeURIComponent(houseId)}`);
+      if (fresh.ok && fresh.data?.data) latest = fresh.data.data;
+    }
+    endWrite();
+    setIsSavingRoom(false);
+
+    // The screen: the server's row, so a failed part goes back to the saved value; parts not tried yet keep what was typed.
+    if (latest) applyRoomUpdate(latest);
+    const server = latest || base;
+    const untried = failure ? steps.slice(failure.index + 1) : [];
+    const kept: Record<string, any> = {};
+    for (const step of untried) {
+      if (step.kind === 'meters') METER_FIELDS.forEach(k => { kept[k] = draft[k]; });
+      else if (step.kind === 'resident') {
+        const slot = Number(step.key.slice(4));
+        ['nguoi', 'cccd', 'sdt', 'xe'].forEach(f => { kept[`${f}${slot}`] = draft[`${f}${slot}`]; });
+      } else ['roomPrice', 'roomDeposit', 'tienCoc'].forEach(k => { kept[k] = draft[k]; });
+    }
+    if (Object.keys(kept).length > 0) ESTIMATE_FIELDS.forEach(k => { kept[k] = draft[k]; });
+    setCurrentRoomData((prev: any) => (prev && sameRoomRow(prev, server) ? { ...prev, ...server, ...kept } : prev));
+
+    if (anySaved) {
+      refreshRooms(month);
+      refreshBilling(month);
+      refreshDashboard(month);
+    }
+    if (failure) {
+      setRoomFieldErrors({ [failure.step.key]: failure.error });
+      showPortalToast(anySaved ? `${failure.error} (Phần đã lưu trước đó được giữ lại.)` : failure.error, 'error');
+      return;
+    }
+    playSound('success');
+    setRoomMoneyNote(note);
+    showPortalToast(note ? `Đã lưu. ${note}` : 'Đã lưu', 'success');
+  };
+
+  /** "Dùng giá chung": the room's rent (or deposit) follows the house's common one again. Saved at once. */
+  const useDefaultMoney = async (kind: 'price' | 'deposit') => {
+    if (isSavingRoom || !currentRoomData?.roomId) return;
+    const month = selectedMonth;
+    setIsSavingRoom(true);
+    const endWrite = beginListsWrite();
+    const result = await callWorker(`/api/admin/rooms/${encodeURIComponent(String(currentRoomData.roomId))}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ houseId: selectedHouseId, month, [kind === 'price' ? 'useDefaultPrice' : 'useDefaultDeposit']: true })
+    });
+    endWrite();
+    setIsSavingRoom(false);
+    if (!result.ok) {
+      showPortalToast(result.error, 'error');
+      return;
+    }
+    const mine = kind === 'price' ? ['roomPrice', 'priceCustom', 'tienPhong', 'tongTien'] : ['roomDeposit', 'depositCustom', 'tienCoc'];
+    applyRoomUpdate(result.data.data, mine);
+    const note = result.data.appliesFrom === 'next_month' ? String(result.data.message || '') : '';
+    setRoomMoneyNote(note);
+    refreshRooms(month);
+    refreshBilling(month);
+    refreshDashboard(month);
+    playSound('success');
+    showPortalToast(note ? `Đã dùng giá chung. ${note}` : 'Đã dùng giá chung', 'success');
+  };
+
+  /** Paid / unpaid in worker mode: the switch flips at once, the server answers, a refusal puts it back with the server's reason. */
+  const setPaymentStatusWorker = async (roomNumber: string, status: 'paid' | 'unpaid', houseIdGiven?: string) => {
+    const month = selectedMonth;
+    const known = roomsList.find(r => sameRoomRow(r, { houseId: houseIdGiven, room: roomNumber }))
+      || billingList.find(r => sameRoomRow(r, { houseId: houseIdGiven, room: roomNumber }))
+      || roomsList.find(r => canonicalRoomId(r.room) === canonicalRoomId(roomNumber));
+    const houseId = houseIdGiven || known?.houseId || '';
+    const code = known?.room ?? roomNumber;
+    const hit = (r: any) => (houseId ? sameRoomRow(r, { houseId, room: code }) : canonicalRoomId(r?.room) === canonicalRoomId(code));
+    const patchStatus = (fields: Record<string, any>) => {
+      setRoomsList(prev => {
+        const next = prev.map(r => (hit(r) ? { ...r, ...fields } : r));
+        updateDashboardStats(next, month);
+        return next;
+      });
+      setBillingList(prev => prev.map(r => (hit(r) ? { ...r, ...fields } : r)));
+      setCurrentRoomData((prev: any) => (prev && hit(prev) ? { ...prev, ...fields } : prev));
+    };
+    const before = { status: known?.status, paymentStatus: known?.paymentStatus, statusText: known?.statusText, statusHTML: known?.statusHTML };
+    patchStatus({
+      status,
+      paymentStatus: status,
+      statusText: status === 'paid' ? 'Đã đóng' : 'Chưa đóng',
+      statusHTML: status === 'paid'
+        ? '<span style="color:#16a34a; font-weight:bold;">Đã thanh toán</span>'
+        : '<span style="color:#dc2626; font-weight:bold;">Chưa thanh toán</span>'
+    });
+    const endWrite = beginListsWrite();
+    const result = await callWorker('/api/admin/payment-status', {
+      method: 'POST',
+      body: JSON.stringify({ roomNumber: code, status, month, houseId })
+    });
+    endWrite();
+    if (!result.ok) {
+      patchStatus(before);
+      showPortalToast(result.error, 'error');
+      return;
+    }
+    playSound('success');
+    refreshRooms(month);
+    refreshBilling(month);
+    refreshDashboard(month);
+  };
+
+  const updateRoomPaymentStatus = async (roomNumber: string, status: 'paid' | 'unpaid', row?: number, houseId?: string) => {
+    playSound('click');
+    if (getSource() === 'worker') {
+      await setPaymentStatusWorker(roomNumber, status, houseId);
+      return;
+    }
     const cleanId = canonicalRoomId(roomNumber);
 
     const statusText = status === 'paid' ? 'Đã đóng' : 'Chưa đóng';
@@ -2069,7 +2397,7 @@ export function AdminPortal() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => openRoomDetail(r.room)}
+                        onClick={() => openRoomDetail(r.room, r.houseId)}
                         className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                         aria-label={'Mở chi tiết phòng ' + r.room}
                       >
@@ -2081,7 +2409,7 @@ export function AdminPortal() {
                       >
                         <AppleSwitch
                           checked={isPaid}
-                          onChange={() => updateRoomPaymentStatus(r.room, isPaid ? 'unpaid' : 'paid', r.row)}
+                          onChange={() => updateRoomPaymentStatus(r.room, isPaid ? 'unpaid' : 'paid', r.row, r.houseId)}
                           color="emerald"
                           size="sm"
                           ariaLabel={`Trạng thái thu tiền phòng ${r.room}`}
@@ -2112,8 +2440,12 @@ export function AdminPortal() {
           </div>
         )}
 
+        {!sourceReady && ['roomDetail', 'meter', 'config'].includes(activeMenu) && (
+          <p role="status" className="soft-card p-5 apple-body kit-text-secondary">Đang tải…</p>
+        )}
+
         {/* Room Detail Editor */}
-        {activeMenu === 'roomDetail' && currentRoomData && (
+        {sourceReady && activeMenu === 'roomDetail' && currentRoomData && (
           <div className="space-y-6 pb-36 sm:pb-32">
             <div className="admin-section-toolbar soft-card p-4 flex flex-wrap items-center justify-between gap-3">
               <button
@@ -2132,7 +2464,7 @@ export function AdminPortal() {
                 <div className="flex items-center gap-2">
                   <AppleSwitch
                     checked={currentRoomData.paymentStatus === 'paid'}
-                    onChange={() => updateRoomPaymentStatus(selectedRoomId, currentRoomData.paymentStatus === 'paid' ? 'unpaid' : 'paid', currentRoomData.row)}
+                    onChange={() => updateRoomPaymentStatus(selectedRoomId, currentRoomData.paymentStatus === 'paid' ? 'unpaid' : 'paid', currentRoomData.row, selectedHouseId || undefined)}
                     color="emerald"
                     size="md"
                     ariaLabel="Trạng thái thu tiền phòng"
@@ -2180,7 +2512,7 @@ export function AdminPortal() {
                         ].filter(n => n && !/^\d+(\.\d+)?$/.test(String(n).trim())).length;
                         const soNguoi = validOccupants > 0 ? validOccupants : 1;
                         nextRoom.soNguoi = soNguoi;
-                        const netUnitPrice = unitConfig.net || 40000;
+                        const netUnitPrice = units.net;
                         const tienNet = soNguoi * netUnitPrice;
                         nextRoom.tienNet = tienNet;
                         nextRoom.tongTien = (nextRoom.tienPhong || 0) + (nextRoom.tienDien || 0) + (nextRoom.tienNuoc || 0) + (nextRoom.tienRac || 0) + tienNet + (nextRoom.tienXe || 0) + (nextRoom.tienKhac || 0);
@@ -2196,7 +2528,7 @@ export function AdminPortal() {
                       type="text"
                       value={currentRoomData[`cccd${slot}`] || ''}
                       onChange={e => setCurrentRoomData({ ...currentRoomData, [`cccd${slot}`]: e.target.value })}
-                      placeholder="12 số CCCD"
+                      placeholder={workerMode && currentRoomData.occupants?.[slot - 1]?.cccdLast4 ? `Đã có (…${currentRoomData.occupants[slot - 1].cccdLast4}), nhập để đổi` : '12 số CCCD'}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
                   </div>
@@ -2209,6 +2541,15 @@ export function AdminPortal() {
                       placeholder="SĐT liên lạc"
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none font-mono focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
+                    {workerMode && (() => {
+                      // The number as it will be stored (same rule as the server); a number that cannot be stored is refused before sending.
+                      const typed = String(currentRoomData[`sdt${slot}`] || '').trim();
+                      if (!typed) return null;
+                      const problem = phoneProblem(typed);
+                      if (problem) return <p role="alert" className="mt-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">{problem}</p>;
+                      const stored = normalizeVnPhone(typed);
+                      return stored !== typed ? <p className="mt-1 text-[11px] font-semibold text-neutral-600 dark:text-neutral-300">Số sẽ lưu: <span className="font-mono">{stored}</span></p> : null;
+                    })()}
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-neutral-600 uppercase block mb-1 dark:text-neutral-300">Biển số xe</label>
@@ -2224,7 +2565,7 @@ export function AdminPortal() {
                           slot === 3 ? val : nextRoom.xe3
                         ].filter(isValidLicensePlate).length;
                         nextRoom.soXe = validPlates;
-                        const xeUnitPrice = unitConfig.xe || 50000;
+                        const xeUnitPrice = units.xe;
                         const tienXe = validPlates * xeUnitPrice;
                         nextRoom.tienXe = tienXe;
                         nextRoom.tongTien = (nextRoom.tienPhong || 0) + (nextRoom.tienDien || 0) + (nextRoom.tienNuoc || 0) + (nextRoom.tienRac || 0) + (nextRoom.tienNet || 0) + tienXe + (nextRoom.tienKhac || 0);
@@ -2234,9 +2575,12 @@ export function AdminPortal() {
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl px-3 py-2 text-xs font-bold outline-none uppercase font-mono focus:ring-2 focus:ring-neutral-500 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
                     />
                   </div>
+                  {roomFieldErrors[`slot${slot}`] && <p role="alert" className="sm:col-span-4 text-xs font-bold text-rose-600 dark:text-rose-400">{roomFieldErrors[`slot${slot}`]}</p>}
                 </div>
                     ))}
-                    {freeSlot !== undefined ? (
+                    {workerMode ? (
+                      <p className="text-xs text-neutral-600 dark:text-neutral-300">Thêm hoặc bớt người ở trong mục Quản lý tài khoản. Ở đây chỉ sửa thông tin người đang ở.</p>
+                    ) : freeSlot !== undefined ? (
                       <button type="button" onClick={() => setOpenedSlots(prev => [...prev, freeSlot])} className="soft-button min-h-11 w-full px-4 text-sm font-bold">
                         + Thêm người ở ({shownSlots.length}/{MAX_ROOM_OCCUPANTS})
                       </button>
@@ -2254,7 +2598,7 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconElectricity3D size={40} className="shrink-0" />
                   <div>
-                    <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Điện ({fmt(unitConfig.dien || 3500)} đ/kW)</h4>
+                    <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Điện ({fmt(units.dien)} đ/kW)</h4>
                     <p className="text-[11px] text-neutral-600 dark:text-neutral-300">Tiêu thụ: {Math.max(0, (currentRoomData.dienMoi || 0) - (currentRoomData.dienCu || 0))} kW</p>
                   </div>
                 </div>
@@ -2268,7 +2612,7 @@ export function AdminPortal() {
                         const dienCu = Number(e.target.value) || 0;
                         const dienMoi = Number(currentRoomData.dienMoi) || 0;
                         const used = Math.max(0, dienMoi - dienCu);
-                        const tienDien = used * (unitConfig.dien || 3500);
+                        const tienDien = used * units.dien;
                         setCurrentRoomData({
                           ...currentRoomData,
                           dienCu,
@@ -2289,7 +2633,7 @@ export function AdminPortal() {
                         const dienMoi = Number(e.target.value) || 0;
                         const dienCu = Number(currentRoomData.dienCu) || 0;
                         const used = Math.max(0, dienMoi - dienCu);
-                        const tienDien = used * (unitConfig.dien || 3500);
+                        const tienDien = used * units.dien;
                         setCurrentRoomData({
                           ...currentRoomData,
                           dienMoi,
@@ -2312,7 +2656,7 @@ export function AdminPortal() {
                 <div className="flex items-center gap-3">
                   <IconWater3D size={40} className="shrink-0" />
                   <div>
-                    <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Nước ({fmt(unitConfig.nuoc || 20000)} đ/m³)</h4>
+                    <h4 className="font-bold text-neutral-900 dark:text-white text-sm">Chỉ số Nước ({fmt(units.nuoc)} đ/m³)</h4>
                     <p className="text-[11px] text-neutral-600 dark:text-neutral-300">Tiêu thụ: {Math.max(0, (currentRoomData.nuocMoi || 0) - (currentRoomData.nuocCu || 0))} m³</p>
                   </div>
                 </div>
@@ -2326,7 +2670,7 @@ export function AdminPortal() {
                         const nuocCu = Number(e.target.value) || 0;
                         const nuocMoi = Number(currentRoomData.nuocMoi) || 0;
                         const used = Math.max(0, nuocMoi - nuocCu);
-                        const tienNuoc = used * (unitConfig.nuoc || 20000);
+                        const tienNuoc = used * units.nuoc;
                         setCurrentRoomData({
                           ...currentRoomData,
                           nuocCu,
@@ -2347,7 +2691,7 @@ export function AdminPortal() {
                         const nuocMoi = Number(e.target.value) || 0;
                         const nuocCu = Number(currentRoomData.nuocCu) || 0;
                         const used = Math.max(0, nuocMoi - nuocCu);
-                        const tienNuoc = used * (unitConfig.nuoc || 20000);
+                        const tienNuoc = used * units.nuoc;
                         setCurrentRoomData({
                           ...currentRoomData,
                           nuocMoi,
@@ -2388,14 +2732,40 @@ export function AdminPortal() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền phòng (Cột J)</label>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase">{workerMode ? 'Tiền phòng' : 'Tiền phòng (Cột J)'}</label>
+                    {workerMode && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-neutral-600 dark:text-neutral-300 uppercase tracking-tight">{currentRoomData.priceCustom === false ? 'Giá chung' : 'Giá riêng'}</span>
+                        {currentRoomData.priceCustom !== false && (
+                          <button
+                            type="button"
+                            onClick={() => useDefaultMoney('price')}
+                            disabled={isSavingRoom || roomConfig === null || roomConfig.defaultRoomPrice === null}
+                            title={roomConfig && roomConfig.defaultRoomPrice === null ? 'Nhà này chưa đặt tiền phòng chung' : 'Đưa phòng về tiền phòng chung của nhà'}
+                            className="rounded-lg border border-neutral-300 bg-white/80 px-2 py-0.5 text-[10px] font-bold text-neutral-800 hover:bg-neutral-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+                          >Dùng giá chung</button>
+                        )}
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       type="text"
-                      value={currentRoomData.tienPhong ? fmt(currentRoomData.tienPhong) : ''}
+                      value={workerMode ? (currentRoomData.roomPrice ? fmt(currentRoomData.roomPrice) : '') : (currentRoomData.tienPhong ? fmt(currentRoomData.tienPhong) : '')}
                       placeholder="0"
                       onChange={e => {
                         const tienPhong = parseCurrency(e.target.value);
+                        if (workerMode) {
+                          // A paid invoice keeps its amount: the new rent counts from the next invoice.
+                          const locked = currentRoomData.paymentStatus === 'paid';
+                          setCurrentRoomData({
+                            ...currentRoomData,
+                            roomPrice: tienPhong,
+                            ...(locked ? {} : { tienPhong, tongTien: tienPhong + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0) })
+                          });
+                          return;
+                        }
                         setCurrentRoomData({
                           ...currentRoomData,
                           tienPhong,
@@ -2414,6 +2784,8 @@ export function AdminPortal() {
                     <input
                       type="text"
                       value={currentRoomData.tienRac ? fmt(currentRoomData.tienRac) : ''}
+                      readOnly={workerMode}
+                      disabled={workerMode}
                       placeholder="0"
                       onChange={e => {
                         const tienRac = parseCurrency(e.target.value);
@@ -2423,7 +2795,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + tienRac + (currentRoomData.tienNet || 0) + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500 disabled:cursor-not-allowed disabled:bg-neutral-100/70 dark:disabled:bg-neutral-800/50"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
@@ -2435,6 +2807,8 @@ export function AdminPortal() {
                     <input
                       type="text"
                       value={currentRoomData.tienNet ? fmt(currentRoomData.tienNet) : ''}
+                      readOnly={workerMode}
+                      disabled={workerMode}
                       placeholder="0"
                       onChange={e => {
                         const tienNet = parseCurrency(e.target.value);
@@ -2444,7 +2818,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + tienNet + (currentRoomData.tienXe || 0) + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500 disabled:cursor-not-allowed disabled:bg-neutral-100/70 dark:disabled:bg-neutral-800/50"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
@@ -2456,6 +2830,8 @@ export function AdminPortal() {
                     <input
                       type="text"
                       value={currentRoomData.tienXe ? fmt(currentRoomData.tienXe) : ''}
+                      readOnly={workerMode}
+                      disabled={workerMode}
                       placeholder="0"
                       onChange={e => {
                         const tienXe = parseCurrency(e.target.value);
@@ -2465,7 +2841,7 @@ export function AdminPortal() {
                           tongTien: (currentRoomData.tienPhong || 0) + (currentRoomData.tienDien || 0) + (currentRoomData.tienNuoc || 0) + (currentRoomData.tienRac || 0) + (currentRoomData.tienNet || 0) + tienXe + (currentRoomData.tienKhac || 0)
                         });
                       }}
-                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500 disabled:cursor-not-allowed disabled:bg-neutral-100/70 dark:disabled:bg-neutral-800/50"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
@@ -2489,19 +2865,43 @@ export function AdminPortal() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase block mb-1">Tiền đặt cọc (Cột O)</label>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <label className="text-[10px] font-bold text-neutral-700 dark:text-neutral-200 uppercase">{workerMode ? 'Tiền đặt cọc' : 'Tiền đặt cọc (Cột O)'}</label>
+                    {workerMode && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-neutral-600 dark:text-neutral-300 uppercase tracking-tight">{currentRoomData.depositCustom === false ? 'Giá chung' : 'Giá riêng'}</span>
+                        {currentRoomData.depositCustom !== false && (
+                          <button
+                            type="button"
+                            onClick={() => useDefaultMoney('deposit')}
+                            disabled={isSavingRoom || roomConfig === null || roomConfig.defaultDeposit === null}
+                            title={roomConfig && roomConfig.defaultDeposit === null ? 'Nhà này chưa đặt tiền cọc chung' : 'Đưa phòng về tiền cọc chung của nhà'}
+                            className="rounded-lg border border-neutral-300 bg-white/80 px-2 py-0.5 text-[10px] font-bold text-neutral-800 hover:bg-neutral-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+                          >Dùng giá chung</button>
+                        )}
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       type="text"
-                      value={currentRoomData.tienCoc ? fmt(currentRoomData.tienCoc) : ''}
+                      value={workerMode ? (currentRoomData.roomDeposit ? fmt(currentRoomData.roomDeposit) : '') : (currentRoomData.tienCoc ? fmt(currentRoomData.tienCoc) : '')}
                       placeholder="0"
-                      onChange={e => setCurrentRoomData({ ...currentRoomData, tienCoc: parseCurrency(e.target.value) })}
+                      onChange={e => setCurrentRoomData(workerMode ? { ...currentRoomData, roomDeposit: parseCurrency(e.target.value), tienCoc: parseCurrency(e.target.value) } : { ...currentRoomData, tienCoc: parseCurrency(e.target.value) })}
                       className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold font-mono outline-none focus:ring-2 focus:ring-neutral-500"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-600 dark:text-neutral-300 pointer-events-none">đ</span>
                   </div>
                 </div>
               </div>
+              {workerMode && (
+                <div className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-300">
+                  <p>Rác, internet và xe tính theo giá chung của tháng: đổi giá ở Cài đặt phí; bỏ dịch vụ cho phòng ở mục Dịch vụ của phòng.</p>
+                  <p>Đổi tiền phòng hoặc tiền cọc chỉ áp dụng cho phòng này. Hoá đơn đã đóng không bị đổi: giá mới tính từ hoá đơn tháng sau.</p>
+                  {roomMoneyNote && <p role="status" className="font-bold text-emerald-700 dark:text-emerald-400">{roomMoneyNote}</p>}
+                  {roomFieldErrors.money && <p role="alert" className="font-bold text-rose-600 dark:text-rose-400">{roomFieldErrors.money}</p>}
+                </div>
+              )}
             </div>
 
             {/* Card Tổng cộng */}
@@ -2516,7 +2916,12 @@ export function AdminPortal() {
             <div className="flex justify-end">
               <button
                 type="button"
+                disabled={workerMode && isSavingRoom}
                 onClick={async () => {
+                  if (workerMode) {
+                    await saveRoomWorker();
+                    return;
+                  }
                   playSound('click');
                   try {
                     setIsLoading(true);
@@ -2552,10 +2957,10 @@ export function AdminPortal() {
                     setIsLoading(false);
                   }
                 }}
-                className="primary-button py-3 px-8 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md w-full sm:w-auto"
+                className="primary-button py-3 px-8 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save size={18} />
-                <span>Lưu cập nhật phòng & chỉ số</span>
+                <span>{workerMode && isSavingRoom ? 'Đang lưu…' : 'Lưu cập nhật phòng & chỉ số'}</span>
               </button>
             </div>
           </div>
@@ -2586,7 +2991,7 @@ export function AdminPortal() {
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         <AppleSwitch
                           checked={isPaid}
-                          onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
+                          onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           color="emerald"
                           size="sm"
                           ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
@@ -2678,7 +3083,7 @@ export function AdminPortal() {
                             <div className="flex items-center justify-center gap-2.5 font-apple">
                               <AppleSwitch
                                 checked={isPaid}
-                                onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row)}
+                                onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                                 color="emerald"
                                 size="sm"
                                 ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
@@ -2846,7 +3251,7 @@ export function AdminPortal() {
             </div>
 
             {workerMode && <MonthBilling month={selectedMonth} />}
-            {!workerMode && (
+            {sourceReady && !workerMode && (
             <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
               <div className="admin-section-toolbar flex flex-wrap items-center justify-between gap-3">
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {selectedMonth}</h3>
@@ -2954,7 +3359,7 @@ export function AdminPortal() {
             </div>
 
             {workerMode && <FeeSettings />}
-            {!workerMode && (
+            {sourceReady && !workerMode && (
             <div className="soft-card kit-form-surface p-4 sm:p-8 space-y-6">
               <div>
                 <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Cài đặt đơn giá dịch vụ tháng {selectedMonth}</h3>
