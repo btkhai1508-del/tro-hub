@@ -95,7 +95,8 @@ import {
 import { AppleSwitch, AppleCheckbox } from './AppleControls';
 import { createWriteGuard } from '../lib/writeGuard';
 import { createHouseIdCache, registerAdminRefresh, refreshRooms, refreshBilling, refreshDashboard } from '../lib/adminRefresh';
-import { normalizeVnPhone, phoneProblem } from '../lib/phone';
+import { normalizeVnPhone, phoneProblem, PHONE_PROBLEM_MESSAGE } from '../lib/phone';
+import { PhoneHint } from './PhoneHint';
 import { STORAGE_KEYS } from '../lib/storage';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
@@ -222,6 +223,103 @@ const sanitizeRoomRow = (r: any) => {
   return out;
 };
 
+interface NotifRoom { houseId: string; room: string }
+
+/** Worker mode: notice recipients come from /api/houses; custom rooms are picked per house and sent as { houseId, room }. */
+function WorkerNotifTargets({ houses, target, onTarget, picked, onPicked }: {
+  houses: { id: string; name: string }[];
+  target: string;
+  onTarget: (t: string) => void;
+  picked: NotifRoom[];
+  onPicked: (next: NotifRoom[]) => void;
+}) {
+  const [roomsByHouse, setRoomsByHouse] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    if (target !== 'CUSTOM') return;
+    let live = true;
+    houses.forEach((h) => {
+      workerFetch(`/api/houses/${encodeURIComponent(h.id)}/rooms`)
+        .then((res) => res.json())
+        .then((data) => { if (live && Array.isArray(data?.rooms)) setRoomsByHouse((prev) => ({ ...prev, [h.id]: data.rooms.map((r: { name: string }) => String(r.name)) })); })
+        .catch(() => {});
+    });
+    return () => { live = false; };
+  }, [target, houses]);
+  const option = (id: string, label: string, hint: string) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => { playSound('click'); onTarget(id); }}
+      className={cn(
+        "p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2",
+        target === id
+          ? "bg-neutral-100 dark:bg-neutral-800/90 border-neutral-900 dark:border-white text-neutral-950 dark:text-white font-bold shadow-xs"
+          : "bg-white dark:bg-neutral-900/60 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 text-neutral-700 dark:text-neutral-300"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold">{label}</span>
+        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", target === id ? "border-neutral-900 bg-neutral-900 dark:border-white dark:bg-white" : "border-neutral-300 dark:border-neutral-600")}>
+          {target === id && <div className="w-1.5 h-1.5 bg-white dark:bg-neutral-900 rounded-full" />}
+        </div>
+      </div>
+      <span className="text-[11px] text-neutral-700 dark:text-neutral-200 leading-tight">{hint}</span>
+    </button>
+  );
+  const has = (houseId: string, room: string) => picked.some((p) => p.houseId === houseId && p.room === room);
+  const toggle = (houseId: string, room: string) =>
+    onPicked(has(houseId, room) ? picked.filter((p) => !(p.houseId === houseId && p.room === room)) : [...picked, { houseId, room }]);
+  return (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {option('ALL', 'Tất cả', houses.length > 1 ? `Toàn bộ cư dân ${houses.length} căn` : 'Toàn bộ cư dân')}
+        {houses.map((h, i) => option(h.id, `${i + 2}. ${h.name}`, 'Toàn bộ cư dân căn này'))}
+        {option('CUSTOM', `${houses.length + 2}. Phòng tùy chọn`, picked.length > 0 ? `Đã chọn ${picked.length} phòng` : 'Chọn danh sách có sẵn')}
+      </div>
+      {target === 'CUSTOM' && (
+        <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 space-y-4 duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200">Bấm chọn các phòng cần gửi thông báo:</span>
+            <button type="button" onClick={() => onPicked([])} className="text-[11px] font-bold text-neutral-600 hover:text-neutral-600 cursor-pointer dark:text-neutral-300">Bỏ chọn</button>
+          </div>
+          {houses.map((h) => (
+            <div key={h.id} className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">{h.name}</span>
+                <button
+                  type="button"
+                  onClick={() => onPicked([...picked.filter((p) => p.houseId !== h.id), ...(roomsByHouse[h.id] ?? []).map((room) => ({ houseId: h.id, room }))])}
+                  className="text-[11px] font-bold text-neutral-900 dark:text-white hover:underline cursor-pointer"
+                >
+                  Chọn cả căn
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(roomsByHouse[h.id] ?? []).map((room) => (
+                  <button
+                    key={room}
+                    type="button"
+                    onClick={() => { playSound('click'); toggle(h.id, room); }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 font-num",
+                      has(h.id, room)
+                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
+                        : "bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400"
+                    )}
+                  >
+                    {has(h.id, room) && <Check size={12} className="stroke-[3]" />}
+                    <span>{room}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function AdminPortal() {
   const navigate = useNavigate();
   const { logoutUser, addNotification, registerResident, registeredAccounts, updateAccountStatus, forgetRegisteredAccount } = useApp();
@@ -273,8 +371,10 @@ export function AdminPortal() {
   };
 
   // Notification Creation state
-  const [notifTarget, setNotifTarget] = useState<'ALL' | 'LVC' | 'TRUNG_KIM' | 'CUSTOM'>('ALL');
+  const [notifTarget, setNotifTarget] = useState<string>('ALL');
   const [selectedCustomRooms, setSelectedCustomRooms] = useState<string[]>([]);
+  // Worker mode: custom rooms are { houseId, room } so equal room names in two houses stay apart.
+  const [pickedRooms, setPickedRooms] = useState<NotifRoom[]>([]);
   const [notifType, setNotifType] = useState<'thong_bao' | 'nhac_nho' | 'thanh_toan'>('thong_bao');
   const [notifTitle, setNotifTitle] = useState('Thông báo chung từ Ban Quản Lý');
   const [notifContent, setNotifContent] = useState('');
@@ -307,7 +407,8 @@ export function AdminPortal() {
       showPortalToast('Vui lòng nhập nội dung thông báo', 'error');
       return;
     }
-    if (notifTarget === 'CUSTOM' && selectedCustomRooms.length === 0) {
+    const workerNotif = workerMode && isWorkerStaff && accountTargets.houses.length > 0;
+    if (notifTarget === 'CUSTOM' && (workerNotif ? pickedRooms.length : selectedCustomRooms.length) === 0) {
       showPortalToast('Vui lòng chọn ít nhất một phòng cần gửi thông báo', 'error');
       return;
     }
@@ -317,7 +418,8 @@ export function AdminPortal() {
     let targetDesc = 'Tất cả các phòng';
     if (notifTarget === 'LVC') targetDesc = 'Các phòng bên Lê Văn Chí';
     else if (notifTarget === 'TRUNG_KIM') targetDesc = 'Các phòng bên Trung Kim';
-    else if (notifTarget === 'CUSTOM') targetDesc = `Phòng: ${selectedCustomRooms.join(', ')}`;
+    else if (notifTarget === 'CUSTOM') targetDesc = `Phòng: ${(workerNotif ? pickedRooms.map((p) => (accountTargets.houses.length > 1 ? `${p.room} (${accountTargets.houses.find((h) => h.id === p.houseId)?.name ?? p.houseId})` : p.room)) : selectedCustomRooms).join(', ')}`;
+    else if (workerNotif && notifTarget !== 'ALL') targetDesc = `Căn ${accountTargets.houses.find((h) => h.id === notifTarget)?.name ?? notifTarget}`;
 
     const newNotifItem = {
       id: `notif-${Date.now()}`,
@@ -336,7 +438,7 @@ export function AdminPortal() {
       body: JSON.stringify({
         ...newNotifItem,
         target: notifTarget,
-        customRooms: selectedCustomRooms,
+        customRooms: workerNotif ? pickedRooms : selectedCustomRooms,
         scheduledAt: notifScheduleMode === 'scheduled' ? notifScheduledDate : null
       })
     })
@@ -3726,6 +3828,10 @@ export function AdminPortal() {
                     1. Phòng nhận thông báo <span className="text-rose-500">*</span>
                   </label>
 
+                  {workerMode && isWorkerStaff && accountTargets.houses.length > 0 ? (
+                    <WorkerNotifTargets houses={accountTargets.houses} target={notifTarget} onTarget={setNotifTarget} picked={pickedRooms} onPicked={setPickedRooms} />
+                  ) : (
+                  <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {/* Option 1: Tất cả */}
                     <button
@@ -3875,6 +3981,8 @@ export function AdminPortal() {
                         })}
                       </div>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
 
@@ -4602,6 +4710,10 @@ export function AdminPortal() {
                         setAdminRegError('Vui lòng chọn số phòng thuê');
                         return;
                       }
+                      if (isWorkerStaff && phoneProblem(adminRegPhone)) {
+                        setAdminRegError(PHONE_PROBLEM_MESSAGE);
+                        return;
+                      }
                       if (adminRegPassword !== adminRegConfirmPass) {
                         setAdminRegError('Mật khẩu xác nhận không khớp');
                         return;
@@ -4706,6 +4818,7 @@ export function AdminPortal() {
                           onChange={(e) => setAdminRegPhone(e.target.value)}
                           className="kit-field min-h-12 w-full px-3.5 font-num"
                         />
+                        {isWorkerStaff && <PhoneHint value={adminRegPhone} />}
                       </div>
                       <div className="min-w-0">
                         <label htmlFor="admin-register-room" className="mb-2 block apple-headline kit-text-primary">Số phòng thuê</label>

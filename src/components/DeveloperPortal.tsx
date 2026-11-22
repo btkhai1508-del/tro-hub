@@ -9,6 +9,8 @@ import { useDialogFocus } from '../lib/useDialogFocus';
 import { loadProvinces, type VnProvince } from '../lib/vnAddress';
 import { cn } from '../lib/utils';
 import { Background } from './Background';
+import { normalizeVnPhone, phoneProblem } from '../lib/phone';
+import { PhoneHint } from './PhoneHint';
 
 interface House {
   id: string;
@@ -871,9 +873,11 @@ function LandlordDialog({ onClose, onCreated }: { onClose: () => void; onCreated
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    const problem = phoneProblem(form.phone);
+    if (problem) return setError(problem);
     setBusy(true);
     setError('');
-    const data = await send('/api/dev/landlords', 'POST', form);
+    const data = await send('/api/dev/landlords', 'POST', { ...form, phone: normalizeVnPhone(form.phone) });
     setBusy(false);
     if (!data.success) return setError(data.error || 'Chưa tạo được chủ trọ.');
     onCreated(form.fullName.trim());
@@ -900,6 +904,7 @@ function LandlordDialog({ onClose, onCreated }: { onClose: () => void; onCreated
         </Field>
         <Field label="Số điện thoại">
           <input className={cn(inputClass, 'font-num')} value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="off" placeholder="09xxxxxxxx" />
+          <PhoneHint value={form.phone} />
         </Field>
         <Field label="Mật khẩu ban đầu">
           <input className={inputClass} value={form.password} onChange={set('password')} autoComplete="new-password" />
@@ -980,9 +985,11 @@ function LandlordEditDialog({ landlord, onClose, onChanged, onOpenDelete }: { la
 
   const save = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    const problem = phoneProblem(form.phone);
+    if (problem) return setError(problem);
     setBusy(true);
     setError('');
-    const data = await send(base, 'PATCH', form);
+    const data = await send(base, 'PATCH', { ...form, phone: normalizeVnPhone(form.phone) });
     setBusy(false);
     if (!data.success) return setError(data.error || 'Chưa lưu được.');
     onChanged(`Đã cập nhật ${form.fullName.trim()}.`);
@@ -1031,6 +1038,7 @@ function LandlordEditDialog({ landlord, onClose, onChanged, onOpenDelete }: { la
         </Field>
         <Field label="Số điện thoại" hint="Dùng để đăng nhập">
           <input className={cn(inputClass, 'font-num')} value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="off" />
+          <PhoneHint value={form.phone} />
         </Field>
         <Field label="Email (tuỳ chọn)">
           <input className={inputClass} value={form.email} onChange={set('email')} type="email" inputMode="email" autoComplete="off" />

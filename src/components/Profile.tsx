@@ -6,7 +6,9 @@ import { useApp } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
 import { PasswordUpdateModal } from './PasswordUpdateModal';
 import { cn, formatDobInput } from '../lib/utils';
-import { apiFetch } from '../lib/api';
+import { apiFetch, getSource } from '../lib/api';
+import { phoneProblem, normalizeVnPhone, PHONE_PROBLEM_MESSAGE } from '../lib/phone';
+import { PhoneHint } from './PhoneHint';
 import { fileToAvatarDataUrl, pickImageInZalo, usesZaloImagePicker } from '../lib/imagePicker';
 import type { CccdQrData } from '../lib/cccdQr';
 import { AvatarCropper } from './AvatarCropper';
@@ -14,7 +16,7 @@ import { toCurrentAddress } from '../lib/vnAddress';
 import { AddressFields } from './AddressFields';
 import { CccdQrScanner } from './CccdQrScanner';
 
-function ProfileField({ label, value, onChange, type = 'text', placeholder, inputMode, maxLength }: { label: string; value?: string; onChange?: (value: string) => void; type?: string; placeholder?: string; inputMode?: 'numeric'; maxLength?: number }) {
+function ProfileField({ label, value, onChange, type = 'text', placeholder, inputMode, maxLength, hint }: { hint?: React.ReactNode; label: string; value?: string; onChange?: (value: string) => void; type?: string; placeholder?: string; inputMode?: 'numeric'; maxLength?: number }) {
   return (
     <div className="kit-profile-field min-w-0 border-b border-black/[0.06] py-3.5 dark:border-white/[0.08]">
       <dt className="apple-callout font-medium kit-text-secondary">{onChange ? <label>{label}</label> : label}</dt>
@@ -22,6 +24,7 @@ function ProfileField({ label, value, onChange, type = 'text', placeholder, inpu
         {onChange
           ? <input type={type} value={value || ''} aria-label={label} placeholder={placeholder} inputMode={inputMode} maxLength={maxLength} onChange={event => onChange(event.target.value)} className="kit-field px-3" />
           : value?.trim() || 'Chưa cập nhật'}
+        {onChange && hint}
       </dd>
     </div>
   );
@@ -114,6 +117,12 @@ export function Profile() {
       setStatus({ ok: false, text: 'Vui lòng nhập họ và tên.' });
       return;
     }
+    const workerSource = getSource() === 'worker';
+    if (workerSource && clean.phone && phoneProblem(clean.phone)) {
+      setStatus({ ok: false, text: PHONE_PROBLEM_MESSAGE });
+      return;
+    }
+    if (workerSource && clean.phone) clean.phone = normalizeVnPhone(clean.phone);
     setIsSaving(true);
     setStatus(null);
     try {
@@ -122,7 +131,12 @@ export function Profile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...clean, avatar: undefined, roomNumber: profile.room.roomNumber }),
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        // Worker mode: say what the server said (PHONE_LOCKED, CCCD_TAKEN, ...), not a generic line.
+        const failure = workerSource ? await res.json().catch(() => null) : null;
+        if (failure?.error) { setStatus({ ok: false, text: String(failure.error) }); return; }
+        throw new Error(String(res.status));
+      }
       const saved = await res.json().catch(() => null);
       updateProfile({
         name: clean.name, phone: clean.phone, email: clean.email, cccd: clean.cccd, dob: clean.dob, gender: clean.gender, address: clean.address, avatar: clean.avatar,
@@ -197,7 +211,7 @@ export function Profile() {
         <div className="order-2 space-y-3 lg:order-1 lg:space-y-5">
           <ProfileSection icon={IconProfile3D} editing={isEditing} title="Thông tin cá nhân" summary={profile.phone || 'Họ tên, liên hệ và giấy tờ'}>
             <ProfileField label="Họ và tên" value={profile.name} {...editable('name')} />
-            <ProfileField label="Số điện thoại" value={profile.phone} {...editable('phone')} />
+            <ProfileField label="Số điện thoại" value={profile.phone} {...editable('phone')} hint={getSource() === 'worker' ? <PhoneHint value={draft.phone} /> : undefined} />
             <ProfileField label="Email" value={profile.email} {...editable('email')} />
             <ProfileField label="CCCD / Hộ chiếu" value={profile.cccd} {...editable('cccd')} />
             <ProfileField label="Ngày sinh" value={profile.dob} {...editable('dob')} {...(isEditing ? { onChange: (value: string) => setDraft(prev => ({ ...prev, dob: formatDobInput(value, prev.dob) })) } : {})} placeholder="dd/mm/yyyy" inputMode="numeric" maxLength={10} />

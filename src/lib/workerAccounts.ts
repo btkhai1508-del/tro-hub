@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { workerFetch } from './api';
+import { normalizeVnPhone, phoneProblem, PHONE_PROBLEM_MESSAGE } from './phone';
 
 export const ADMIN_ROOM = 'admin';
 
@@ -48,13 +49,15 @@ export async function createAccountOnWorker(input: {
   password: string;
   email?: string;
 }): Promise<{ success: boolean; message?: string; error?: string }> {
+  if (phoneProblem(input.phone)) return { success: false, error: PHONE_PROBLEM_MESSAGE };
+  const phone = normalizeVnPhone(input.phone);
   const isAdmin = input.room === ADMIN_ROOM;
   const res = await workerFetch(isAdmin ? '/api/staff' : `/api/houses/${encodeURIComponent(input.houseId)}/residents`, {
     method: 'POST',
     body: JSON.stringify(
       isAdmin
-        ? { fullName: input.fullName, phone: input.phone, password: input.password, role: 'manager', houseIds: [input.houseId] }
-        : { fullName: input.fullName, phone: input.phone, password: input.password, email: input.email, roomId: Number(input.room) }
+        ? { fullName: input.fullName, phone, password: input.password, role: 'manager', houseIds: [input.houseId] }
+        : { fullName: input.fullName, phone, password: input.password, email: input.email, roomId: Number(input.room) }
     ),
   }).catch(() => null);
   const data = await res?.json().catch(() => null);
@@ -62,8 +65,8 @@ export async function createAccountOnWorker(input: {
   return {
     success: true,
     message: isAdmin
-      ? `Đã tạo Admin căn ${input.fullName.trim()}. Người này đăng nhập bằng số ${input.phone.trim()}.`
-      : `Đã tạo tài khoản cư dân phòng ${data.room}.`,
+      ? `Đã tạo Admin căn ${input.fullName.trim()}. Người này đăng nhập bằng số ${phone}.`
+      : `Đã tạo tài khoản cư dân phòng ${data.room}. Đăng nhập bằng số ${phone}.`,
   };
 }
 

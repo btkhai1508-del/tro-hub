@@ -18,6 +18,9 @@ import { IconHome3D } from './Icons3D';
 import { useApp } from '../context/AppContext';
 import { DEFAULT_ROOM_NUMBERS } from '../lib/utils';
 import { Background } from './Background';
+import { getSource } from '../lib/api';
+import { phoneProblem, normalizeVnPhone, PHONE_PROBLEM_MESSAGE } from '../lib/phone';
+import { PhoneHint } from './PhoneHint';
 import { AppleCheckbox } from './AppleControls';
 
 export function LoginPage() {
@@ -121,6 +124,12 @@ export function LoginPage() {
       return;
     }
 
+    const workerSource = getSource() === 'worker';
+    if (workerSource && phoneProblem(regPhone)) {
+      setErrorMsg(PHONE_PROBLEM_MESSAGE);
+      return;
+    }
+
     setIsLoading(true);
     setTimeout(async () => {
       const res = await registerResident({
@@ -136,7 +145,7 @@ export function LoginPage() {
       if (res.success && res.pendingApproval) {
         setRegisteredData({
           name: regName,
-          phone: regPhone,
+          phone: workerSource ? normalizeVnPhone(regPhone) : regPhone,
           roomNumber: regRoom
         });
         setMode('pending_approval');
@@ -338,6 +347,7 @@ export function LoginPage() {
                 <div className="min-w-0">
                   <label htmlFor="register-phone" className="mb-2 block apple-headline kit-text-primary">Số điện thoại</label>
                   <input id="register-phone" type="tel" autoComplete="tel" required value={regPhone} onChange={(e) => setRegPhone(e.target.value)} className="kit-field min-h-12 w-full px-3.5 font-num" />
+                  {getSource() === 'worker' && <PhoneHint value={regPhone} />}
                 </div>
                 <div className="min-w-0">
                   <label htmlFor="register-room" className="mb-2 block apple-headline kit-text-primary">Số phòng thuê</label>
