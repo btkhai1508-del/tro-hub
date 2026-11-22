@@ -8,7 +8,7 @@ import { normalizeVnPhone, phoneProblem, PHONE_PROBLEM_MESSAGE } from './phone';
 
 export const ADMIN_ROOM = 'admin';
 
-export interface WorkerHouse { id: string; name: string }
+export interface WorkerHouse { id: string; name: string; abbreviation?: string | null }
 export interface WorkerRoom { id: number; name: string; capacity: number; occupants: number }
 
 export function useAccountTargets(enabled: boolean) {
