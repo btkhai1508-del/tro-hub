@@ -52,7 +52,7 @@ export function registerAdminRefresh(next: AdminRefreshHandlers): () => void {
 export function refreshRooms(month: string): void {
   handlers?.rooms(month);
 }
-/** Reload the billing list (Thu tiền tháng) for `month`. */
+/** Reload the billing list (Hoá đơn) for `month`. */
 export function refreshBilling(month: string): void {
   handlers?.billing(month);
 }

@@ -163,8 +163,8 @@ export default function MonthBilling({ month }: { month: string }) {
                   {paid && <Lock size={14} aria-label="Đã khoá" className="text-neutral-500" />}
                 </div>
                 <div className="text-right">
-                  <span data-testid="room-total" className="font-bold font-num text-neutral-900 dark:text-white">{r.tongTien === null ? '—' : `${money(r.tongTien)} đ`}</span>
-                  {r.surplus > 0 && <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">dư {money(r.surplus)} đ</p>}
+                  <span data-testid="room-total" className="whitespace-nowrap tabular-nums font-bold font-num text-neutral-900 dark:text-white">{r.tongTien === null ? '—' : `${money(r.tongTien)} đ`}</span>
+                  {r.surplus > 0 && <p className="whitespace-nowrap tabular-nums text-[11px] font-bold text-emerald-700 dark:text-emerald-300">dư {money(r.surplus)} đ</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">

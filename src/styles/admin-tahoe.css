@@ -12,7 +12,10 @@
 .admin-disclosure-arrow.is-expanded { transform: rotate(180deg); }
 .admin-disclosure-content { display: none; padding-top: 12px; }
 .admin-disclosure-content.is-expanded { display: block; }
-.admin-list-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; }
+.admin-list-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 12px; align-items: center; }
+.admin-list-filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.admin-list-filters > .admin-status-filter { flex: 0 1 220px; min-width: 0; }
+.admin-list-filters select { width: 100%; }
 .admin-search-field { display: flex; min-width: 0; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--separator); border-radius: 14px; background: var(--control-fill); }
 .admin-search-field input { min-width: 0; width: 100%; min-height: 44px; font-size: 16px; background: transparent; color: var(--text-primary); outline-offset: 3px; }
 .admin-status-filter select { min-height: 44px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--separator); border-radius: 14px; background: var(--control-fill); color: var(--text-primary); font-size: 13px; }
@@ -46,7 +49,7 @@
   .admin-revenue-card .type-display { font-size: clamp(30px, 8vw, 42px); line-height: 1.1; }
   .admin-dashboard-metrics { gap: 10px; }
   .admin-dashboard-metrics > div { padding: 14px 16px; }
-  .admin-list-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .admin-list-filters > .admin-status-filter { flex: 1 1 0; }
   .admin-status-filter select { width: 100%; }
   .admin-result-count { grid-column: 1; }
   .admin-utility-card { min-height: 100px; padding: 12px; gap: 8px; }
