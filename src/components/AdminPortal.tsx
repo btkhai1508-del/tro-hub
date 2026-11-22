@@ -94,6 +94,8 @@ import {
 } from './Icons3D';
 import { AppleSwitch, AppleCheckbox } from './AppleControls';
 import { createWriteGuard } from '../lib/writeGuard';
+import { createHouseIdCache, registerAdminRefresh } from '../lib/adminRefresh';
+import { STORAGE_KEYS } from '../lib/storage';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
 
@@ -111,6 +113,9 @@ const playSound = (type: 'click' | 'hover' | 'success' | 'tab' | 'alert') => {
  */
 
 const currentMonth = getCurrentMonthStr();
+// Houses of the signed-in admin do not change inside a session: read once per Worker session token.
+const workerHouseIds = createHouseIdCache();
+const ROOMS_FRESH_MS = 30000;
 export const DEFAULT_MONTH_TABS = Array.from(new Set([
   '03/2026',
   '04/2026',
@@ -307,6 +312,7 @@ export function AdminPortal() {
   selectedMonthRef.current = selectedMonth;
   const lastLoadedMonthRef = useRef(selectedMonth);
   const [roomsLoadedMonth, setRoomsLoadedMonth] = useState('');
+  const roomsFetchedRef = useRef({ month: '', at: 0 });
 
   // Sidebar Collapse
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -611,10 +617,12 @@ export function AdminPortal() {
     const loadTimer = window.setTimeout(() => {
       loadTabContent(activeMenu, selectedMonth);
       if (!workerMode) loadPaymentGateStatus(selectedMonth);
-    }, monthChanged ? 250 : 0);
+    }, monthChanged ? 120 : 0);
 
     // Periodic auto-polling for Google Sheet updates (every 8 seconds)
     const interval = setInterval(() => {
+      // Worker mode: nothing to refresh while the tab is in the background.
+      if (workerMode && document.visibilityState === 'hidden') return;
       if (activeMenu === 'dashboard' || activeMenu === 'billing') {
         // Money that arrives while the page is open shows as "Đã đóng" without a reload.
         loadTabContent(activeMenu, selectedMonth, true);
@@ -640,6 +648,15 @@ export function AdminPortal() {
     }, 8000);
     return () => { clearTimeout(timer); clearInterval(interval); };
   }, [selectedMonth, workerMode]);
+
+  // Save buttons call refreshRooms / refreshBilling / refreshDashboard / refreshGate (src/lib/adminRefresh.ts).
+  // Each reloads one resource, silently, and only for the month on screen.
+  useEffect(() => registerAdminRefresh({
+    rooms: (m) => { if (m === selectedMonthRef.current) fetchRooms(m, true); },
+    billing: (m) => { if (m === selectedMonthRef.current) fetchBilling(m, true); },
+    dashboard: (m) => { if (m === selectedMonthRef.current) fetchDashboard(m, true); },
+    gate: (m) => { if (m === selectedMonthRef.current) loadPaymentGateStatus(m); },
+  }), []);
 
   const loadAccounts = () => {
     apiFetch('/api/admin/accounts')
@@ -804,46 +821,57 @@ export function AdminPortal() {
     }
   };
 
+  const fetchDashboard = (month: string, background = false) => {
+    if (!background) setIsLoading(true);
+    apiFetch(`/api/admin/dashboard?month=${month}`)
+      .then(res => {
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) throw new Error('Not JSON');
+        return res.json();
+      })
+      .then(d => {
+        // A slower answer for a month the admin already left must not repaint the screen.
+        if (month !== selectedMonthRef.current) return;
+        if (!background) setIsLoading(false);
+        if (d.success && d.data) {
+          setDashboardData((prev: any) => ({
+            ...prev,
+            ...d.data
+          }));
+        }
+      })
+      .catch(() => { if (background) return; setIsLoading(false); setAdminLoadError('Chưa tải được tổng quan. Vui lòng thử lại.'); });
+  };
+
+  const fetchBilling = (month: string, background = false) => {
+    apiFetch(`/api/admin/billing?month=${month}`)
+      .then(res => {
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) throw new Error('Not JSON');
+        return res.json();
+      })
+      .then(d => {
+        // A slower answer for a month the admin already left must not repaint the screen.
+        if (month !== selectedMonthRef.current) return;
+        if (d.success && Array.isArray(d.billing)) setBillingList(d.billing);
+        else if (d.success === false && !background) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
+      })
+      .catch(() => { if (!background) setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'); });
+  };
+
   // background: the 8-second refresh. No spinner, error banners stay as they are, and a failed refresh is silent.
   const loadTabContent = async (menuKey: string, month: string, background = false) => {
     if (!background) setAdminLoadError('');
     if (menuKey === 'dashboard') {
-      if (!background) setIsLoading(true);
-      apiFetch(`/api/admin/dashboard?month=${month}`)
-        .then(res => {
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.includes('application/json')) throw new Error('Not JSON');
-          return res.json();
-        })
-        .then(d => {
-          // A slower answer for a month the admin already left must not repaint the screen.
-          if (month !== selectedMonthRef.current) return;
-          if (!background) setIsLoading(false);
-          if (d.success && d.data) {
-            setDashboardData((prev: any) => ({
-              ...prev,
-              ...d.data
-            }));
-          }
-        })
-        .catch(() => { if (background) return; setIsLoading(false); setAdminLoadError('Chưa tải được tổng quan. Vui lòng thử lại.'); });
-      fetchRooms(month, background);
+      fetchDashboard(month, background);
+      // The dashboard numbers come from /api/admin/dashboard; the room list only fills in gaps, so in
+      // worker mode it is not read again when it was loaded a moment ago (and never on the 8 s round).
+      const fresh = roomsFetchedRef.current.month === month && Date.now() - roomsFetchedRef.current.at < ROOMS_FRESH_MS;
+      if (!(getSource() === 'worker' && (background || fresh))) fetchRooms(month, background);
     } else if (menuKey === 'rooms') {
       fetchRooms(month);
     } else if (menuKey === 'billing') {
-      apiFetch(`/api/admin/billing?month=${month}`)
-        .then(res => {
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.includes('application/json')) throw new Error('Not JSON');
-          return res.json();
-        })
-        .then(d => {
-          // A slower answer for a month the admin already left must not repaint the screen.
-          if (month !== selectedMonthRef.current) return;
-          if (d.success && Array.isArray(d.billing)) setBillingList(d.billing);
-          else if (d.success === false && !background) setAdminLoadError('Chưa tải được danh sách thu tiền. Vui lòng thử lại.');
-        })
-        .catch(() => { if (!background) setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'); });
+      fetchBilling(month, background);
     } else if (menuKey === 'declaration') {
       loadDeclaration(month, declarationHouse);
     } else if (menuKey === 'config') {
@@ -881,14 +909,31 @@ export function AdminPortal() {
 
   // Worker mode: the room list is per house, so ask for each house the admin manages and merge the answers.
   const fetchWorkerRooms = async (month: string): Promise<any> => {
-    const hr = await workerFetch('/api/houses');
-    const hd = await hr.json();
-    if (!hr.ok || !hd?.success) return { success: false };
-    const ids: string[] = (hd.houses || []).map((h: any) => h.id).filter(Boolean);
-    const parts = await Promise.all(ids.map(async (id) => {
+    const token = storage.getItem(STORAGE_KEYS.WORKER_TOKEN);
+    const readHouses = async (): Promise<string[] | null> => {
+      const hr = await workerFetch('/api/houses');
+      const hd = await hr.json().catch(() => null);
+      if (!hr.ok || !hd?.success) return null;
+      const list: string[] = (hd.houses || []).map((h: any) => h.id).filter(Boolean);
+      workerHouseIds.set(token, list);
+      return list;
+    };
+    // Every house at once: one round trip however many houses there are.
+    const readRooms = (ids: string[]) => Promise.all(ids.map(async (id) => {
       const r = await workerFetch(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(id)}`);
       return r.json().catch(() => ({ success: false }));
     }));
+    const cached = workerHouseIds.get(token);
+    let ids = cached || await readHouses();
+    if (!ids) return { success: false };
+    let parts = await readRooms(ids);
+    if (cached && parts.some((d) => !d?.success)) {
+      // A remembered house may be gone: read the list again once before giving up.
+      workerHouseIds.clear();
+      ids = await readHouses();
+      if (!ids) return { success: false };
+      parts = await readRooms(ids);
+    }
     if (parts.some((d) => !d?.success)) return { success: false };
     return { success: true, rooms: parts.flatMap((d) => d.rooms || []) };
   };
@@ -907,6 +952,7 @@ export function AdminPortal() {
         setIsLoading(false);
         if (d.success && Array.isArray(d.rooms)) {
           setRoomsLoadedMonth(month);
+          roomsFetchedRef.current = { month, at: Date.now() };
           setRoomsList(d.rooms);
           setBillingList(d.rooms);
           updateDashboardStats(d.rooms, month);

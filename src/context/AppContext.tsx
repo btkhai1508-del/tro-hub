@@ -587,11 +587,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [sheetConfig.monthlyTab]);
 
   // Real-time Background Auto-Sync Loop (Every 5 seconds & on tab visibility)
+  const isStaffRef = useRef(false);
+  isStaffRef.current = Boolean(profile.isAdmin);
   useEffect(() => {
+    // Staff in worker mode never read the resident's own bill: the admin screen has its own refresh.
+    const skipResidentPolls = () => isStaffRef.current && getSource() === 'worker';
+    const pollResident = () => {
+      if (skipResidentPolls()) return;
+      refreshTenantDataFromSheet(true);
+      fetchPaymentStatus();
+      fetchPaymentGateStatus();
+    };
     // Initial fetch on mount: fetch tenant data & live payment status & payment gate
-    refreshTenantDataFromSheet(true);
-    fetchPaymentStatus();
-    fetchPaymentGateStatus();
+    pollResident();
 
     // Continuous polling every 5 seconds for real-time sheet reflection
     const interval = setInterval(() => {
@@ -599,25 +607,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // The app can stay open across midnight on the 1st: move on to the new month by itself.
       const month = getCurrentMonthStr();
       if (sheetConfigRef.current.monthlyTab !== month) updateSheetConfig({ monthlyTab: month });
-      refreshTenantDataFromSheet(true);
-      fetchPaymentStatus();
-      fetchPaymentGateStatus();
+      pollResident();
     }, 5000);
 
     // Window focus / visibility change listeners
     const handleFocus = () => {
       if (document.visibilityState === 'hidden') return;
-      refreshTenantDataFromSheet(true);
-      fetchPaymentStatus();
-      fetchPaymentGateStatus();
+      pollResident();
     };
     window.addEventListener('focus', handleFocus);
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        refreshTenantDataFromSheet(true);
-        fetchPaymentStatus();
-        fetchPaymentGateStatus();
-      }
+      if (document.visibilityState === 'visible') pollResident();
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
