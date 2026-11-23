@@ -2,10 +2,13 @@ import { createPortal } from 'react-dom';
 import { useDialogFocus } from '../../lib/useDialogFocus';
 
 /** The one confirmation before a save: a summary of what will be saved, then Xác nhận / Huỷ. */
-export default function ConfirmSaveDialog({ open, title, lines, onConfirm, onCancel }: {
+export default function ConfirmSaveDialog({ open, title, lines, onConfirm, onCancel, message, confirmLabel = 'Xác nhận' }: {
   open: boolean;
   title: string;
   lines: string[];
+  /** Optional sentence under the list. */
+  message?: string;
+  confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -22,9 +25,10 @@ export default function ConfirmSaveDialog({ open, title, lines, onConfirm, onCan
             {lines.map((l) => <li key={l}>{l}</li>)}
           </ul>
         )}
+        {message && <p className="text-sm text-neutral-700 dark:text-neutral-200">{message}</p>}
         <div className="kit-dialog-footer flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
           <button type="button" onClick={onCancel} className="soft-button min-h-11 px-5 text-sm font-bold cursor-pointer">Huỷ</button>
-          <button type="button" onClick={onConfirm} className="primary-button min-h-11 px-5 text-sm font-bold cursor-pointer">Xác nhận</button>
+          <button type="button" onClick={onConfirm} className="primary-button min-h-11 px-5 text-sm font-bold cursor-pointer">{confirmLabel}</button>
         </div>
       </div>
     </div>,

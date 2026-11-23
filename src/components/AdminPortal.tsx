@@ -55,6 +55,7 @@ import { apiFetch, ensureSource, getSource, workerFetch } from '../lib/api';
 import FeeSettings from './admin/FeeSettings';
 import MonthBilling from './admin/MonthBilling';
 import ConfirmSaveDialog from './admin/ConfirmSaveDialog';
+import IssueInvoicesBar from './admin/IssueInvoicesBar';
 import { HOUSES, houseFromRoom } from '../lib/houses';
 import { buildContract, buildCt01, Person } from '../lib/documents/legalForms';
 import { buildDeclaration } from '../lib/documents/stateFormat';
@@ -168,6 +169,11 @@ function RoomOccupancy({ count, capacity }: { count: number; capacity: number })
       <span aria-hidden="true" className="font-num text-xs font-semibold text-neutral-600 dark:text-neutral-300 whitespace-nowrap">{count}/{capacity}</span>
     </div>
   );
+}
+
+/** A draft invoice (worker mode): not issued yet, residents do not see it until "Tạo hoá đơn". */
+function DraftBadge({ className = '' }: { className?: string }) {
+  return <span data-testid="draft-badge" title="Hoá đơn nháp: cư dân chưa thấy" className={cn('inline-block shrink-0 rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-bold text-neutral-800 dark:bg-neutral-700 dark:text-neutral-100', className)}>Nháp</span>;
 }
 
 function AdminEmptyState({ filtered, title }: { filtered: boolean; title: string }) {
@@ -2084,7 +2090,7 @@ export function AdminPortal() {
                   </button>
                 </div>
 
-                {/* 3. Cổng thanh toán (Sheet mode only: on the Worker, "Mở thu tiền" of a month opens payments) */}
+                {/* 3. Cổng thanh toán (Sheet mode only: on the Worker, "Tạo hoá đơn" on the Hoá đơn tab opens payments) */}
                 {!workerMode && <div className="soft-surface p-3 rounded-2xl relative overflow-hidden flex items-center justify-between">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                   <div>
@@ -2934,19 +2940,21 @@ export function AdminPortal() {
            ========================================================================= */}
         {activeMenu === 'billing' && (
           <div className="font-apple space-y-4 sm:space-y-6">
+            {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
               {visibleBilling.map(item => {
                 const isPaid = item.paymentStatus === 'paid';
                 return (
-                  <div key={item.room} className="soft-card p-4 space-y-3.5 font-apple">
+                  <div key={`${item.houseId || ''}|${item.room}`} className="soft-card p-4 space-y-3.5 font-apple">
                     {/* Header: Room, Tenant, AppleSwitch */}
                     <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2.5 font-apple">
                       <button type="button" onClick={() => openBillingInvoice(item)} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="flex items-center gap-2.5 min-w-0 min-h-11 text-left cursor-pointer font-apple">
                         <span className="px-2.5 py-1 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-semibold text-xs shrink-0 font-apple">
                           {item.room}
                         </span>
+                        {workerMode && item.draft && <DraftBadge />}
                         <span className="min-w-0 font-apple">
                           <span className="block font-semibold text-neutral-900 dark:text-white text-xs truncate font-apple">{item.name}</span>
                         </span>
@@ -3032,7 +3040,7 @@ export function AdminPortal() {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
-                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button></td>
+                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
                           <td className="p-4 font-semibold text-neutral-700 dark:text-neutral-200 font-apple">{item.name}</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>

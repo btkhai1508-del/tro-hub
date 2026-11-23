@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Send } from 'lucide-react';
 import { Lock } from '../LineIcons';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
-import { isFutureMonth } from '../../lib/utils';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
 
 interface Row {
@@ -20,10 +17,7 @@ function badgeOf(r: Row): { text: string; cls: string } {
   return { text: 'Chưa đóng', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200' };
 }
 
-/** "11/2026" -> 11 */
-const monthNumber = (m: string) => String(Number(m.split(/[/-]/).find((p) => p.length <= 2) ?? m));
-
-/** Meter entry and month issuing on the Worker, one row per room. Meters save with the Lưu button, Enter or on blur. */
+/** Meter entry on the Worker, one row per room (issuing is the Tạo hoá đơn button of the Hoá đơn tab). Meters save with the Lưu button, Enter or on blur. */
 export default function MonthBilling({ month }: { month: string }) {
   const { houses, houseId, setHouseId, error: houseError } = useAdminHouses();
   const [rooms, setRooms] = useState<Row[]>([]);
@@ -34,9 +28,6 @@ export default function MonthBilling({ month }: { month: string }) {
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
   const inflight = useRef<Record<number, string>>({});
-  const [issuing, setIssuing] = useState(false);
-  const [issueMsg, setIssueMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [confirmMissing, setConfirmMissing] = useState<string[] | null>(null);
   // Saves of one room run one after another, so two quick blurs cannot overtake each other.
   const queue = useRef<Record<number, Promise<unknown>>>({});
 
@@ -106,32 +97,10 @@ export default function MonthBilling({ month }: { month: string }) {
     queue.current[room.roomId] = (queue.current[room.roomId] ?? Promise.resolve()).then(run, run);
   };
 
-  const notStarted = isFutureMonth(month);
-  const issue = async (force: boolean) => {
-    if (issuing || !houseId || notStarted) return;
-    setIssuing(true);
-    setIssueMsg(null);
-    setConfirmMissing(null);
-    // Pending meter saves must land before the server counts missing meters.
-    await Promise.all(Object.values(queue.current));
-    const r = await workerCall('/api/admin/issue-month', { method: 'POST', body: JSON.stringify({ houseId, month, force }) });
-    setIssuing(false);
-    if (!r.ok) { setIssueMsg({ ok: false, text: r.error }); return; }
-    const { issued, missingMeters } = r.data as { issued: number; missingMeters: string[] };
-    if (!force && issued === 0 && missingMeters.length) { setConfirmMissing(missingMeters); return; }
-    if (issued === 0) setIssueMsg({ ok: true, text: 'Không có hoá đơn nháp nào để mở thu.' });
-    else setIssueMsg({ ok: true, text: `Đã mở thu tiền tháng ${monthNumber(month)} cho ${issued} phòng.` });
-    load();
-  };
-
   return (
     <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {month}</h3>
-        <button type="button" onClick={() => issue(false)} disabled={issuing || !loaded || notStarted}
-          className="primary-button min-h-11 py-2 px-5 text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <Send size={15} /><span>{issuing ? 'Đang mở thu...' : notStarted ? `Mở được từ 01/${month}` : `Mở thu tiền tháng ${monthNumber(month)}`}</span>
-        </button>
       </div>
 
       {houses.length > 1 && (
@@ -143,8 +112,7 @@ export default function MonthBilling({ month }: { month: string }) {
         </label>
       )}
       {(houseError || loadError) && <p role="alert" className="text-xs font-bold text-rose-600">{houseError || loadError}</p>}
-      {issueMsg && <p role={issueMsg.ok ? 'status' : 'alert'} className={`text-xs font-bold ${issueMsg.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{issueMsg.text}</p>}
-      <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhập số mới rồi bấm Lưu. Hoá đơn ở trạng thái Nháp, cư dân chỉ thấy sau khi mở thu.</p>
+      <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhập số mới rồi bấm Lưu. Hoá đơn ở trạng thái Nháp, cư dân chỉ thấy sau khi bấm Tạo hoá đơn ở tab Hoá đơn.</p>
 
       {!loaded && !loadError && !houseError && <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Đang tải danh sách phòng...</p>}
 
@@ -195,20 +163,6 @@ export default function MonthBilling({ month }: { month: string }) {
       </ul>
       {loaded && rooms.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhà này chưa có phòng.</p>}
 
-      {confirmMissing && createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="missing-title">
-          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-neutral-900 p-5 space-y-4 shadow-xl">
-            <h4 id="missing-title" className="font-bold text-neutral-900 dark:text-white">Còn phòng chưa nhập chỉ số</h4>
-            <p className="text-sm text-neutral-700 dark:text-neutral-200">Các phòng sau chưa có số điện nước tháng {month}, hoá đơn sẽ tính 0 số:</p>
-            <p data-testid="missing-list" className="text-sm font-bold text-neutral-900 dark:text-white">{confirmMissing.join(', ')}</p>
-            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-              <button type="button" onClick={() => setConfirmMissing(null)} className="soft-button min-h-11 px-5 text-sm font-bold cursor-pointer">Quay lại nhập</button>
-              <button type="button" onClick={() => issue(true)} className="primary-button min-h-11 px-5 text-sm font-bold cursor-pointer">Vẫn mở</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }
