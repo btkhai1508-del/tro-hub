@@ -3,7 +3,7 @@ import { houseFromRoom } from '../houses';
 import { meterDetail } from '../meterDetail';
 import type { Measurer } from './engine';
 import { buildContract, buildCt01, Person } from './legalForms';
-import { buildInvoiceNotice, buildPaymentHistory } from './stateFormat';
+import { buildInvoiceNotice, buildPaymentHistory, type InvoicePayment } from './stateFormat';
 
 const personFromProfile = (profile: UserProfile): Person => ({
   name: profile.name,
@@ -35,7 +35,7 @@ const monthValue = (month: string) => {
   return (y || 0) * 12 + (m || 0);
 };
 
-export function residentInvoice(m: Measurer, profile: UserProfile, invoice: Invoice, invoices: Invoice[]) {
+export function residentInvoice(m: Measurer, profile: UserProfile, invoice: Invoice, invoices: Invoice[], payment?: InvoicePayment | null) {
   const room = profile.room?.roomNumber;
   const previousDebt = invoices
     .filter(item => item.status !== 'paid' && monthValue(item.month) < monthValue(invoice.month))
@@ -47,13 +47,14 @@ export function residentInvoice(m: Measurer, profile: UserProfile, invoice: Invo
     tenantName: profile.name,
     tenantCccd: profile.cccd,
     previousDebt,
+    payment: payment ?? undefined,
   });
 }
 
 const roomIsPaid = (status: string) => (status === 'paid' ? 'paid' : status === 'pending' ? 'pending' : 'unpaid');
 
 /** The same notice a resident downloads, rebuilt from the admin's row for that room and month. */
-export function roomInvoice(m: Measurer, room: any, month: string) {
+export function roomInvoice(m: Measurer, room: any, month: string, payment?: InvoicePayment | null) {
   const details: InvoiceDetailItem[] = [
     { name: 'Tiền thuê phòng', amount: room.tienPhong || 0, type: 'room' },
     { name: 'Tiền điện', amount: room.tienDien || 0, type: 'electricity', metric: meterDetail(room.dienCu || 0, room.dienMoi || 0, room.dienUsed || 0, room.tienDien || 0) },
@@ -78,6 +79,7 @@ export function roomInvoice(m: Measurer, room: any, month: string) {
     room: room.room,
     tenantName: room.nguoi1 || room.name,
     tenantCccd: room.cccd1,
+    payment: payment ?? undefined,
   });
 }
 

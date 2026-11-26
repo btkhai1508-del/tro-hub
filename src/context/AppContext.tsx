@@ -6,7 +6,7 @@ import { storage, STORAGE_KEYS } from '../lib/storage';
 import { apiFetch, workerFetch, setWorkerToken, ensureSource, getSource, UNAUTHORIZED_EVENT } from '../lib/api';
 import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
-import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
+import { getCurrentMonthStr, isSameMonth, paidDay } from '../lib/utils';
 
 export interface InvoiceDetailItem {
   name: string;
@@ -543,7 +543,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             if (index === -1) return prev;
             const inv = prev[index];
             const paymentMethod = data.paymentMethod === 'cash' ? ('cash' as const) : (data.paymentStatus === 'paid' ? ('qr' as const) : inv.paymentMethod);
-            const paidAt = data.paymentStatus === 'paid' ? (inv.paidAt || data.label) : undefined;
+            const paidAt = data.paymentStatus === 'paid' ? (inv.paidAt || paidDay(data.label) || undefined) : undefined;
             if (inv.status === data.paymentStatus && inv.paymentMethod === paymentMethod && inv.paidAt === paidAt) return prev;
             return prev.map((item, i) => (i === index ? { ...inv, status: data.paymentStatus, paymentMethod, paidAt } : item));
           });

@@ -223,7 +223,7 @@ describe.each(BACKENDS)('phiên cư dân từ Worker [%s]', (backend) => {
     expect(novInv).toMatchObject({ status: 'paid', paymentMethod: 'qr' });
     expect(novInv.paidAt).toBeUndefined(); // paid by money still waiting centrally: no day yet
     expect(oct).toMatchObject({ status: 'paid', paymentMethod: 'cash' });
-    expect(oct.paidAt).toBe('03/10/2026'); // the day only: the app writes "Đã thanh toán ngày …" itself
+    expect(oct.paidAt).toBe('03/10/2026 12:00'); // Vietnam time, no label: the app writes "Đã thanh toán ngày …" itself
   });
 
   it('tiền chờ của phòng khác không đổi trạng thái phòng 101', async () => {

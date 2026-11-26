@@ -11,10 +11,11 @@ import { soundFx } from '../lib/soundFx';
 import { getMeasurer } from '../lib/documents/engine';
 import { saveDocument } from '../lib/documents/output';
 import { residentInvoice } from '../lib/documents/fromProfile';
+import { useResidentInvoicePayment } from './useResidentInvoicePayment';
 import { Home as HomeLine } from 'lucide-react';
 import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Landmark, Lock, PhoneCall, ShieldAlert } from './AppIcons';
 
-import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
+import { getCurrentMonthStr, isSameMonth, paidDay } from '../lib/utils';
 
 export function PaymentPage() {
   const contactPhone = useContactPhone();
@@ -44,6 +45,7 @@ export function PaymentPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copyError, setCopyError] = useState('');
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const invoicePayment = useResidentInvoicePayment(hasInvoice ? targetInvoice : null);
   const [pdfError, setPdfError] = useState('');
 
   // Single-execution flag to prevent repeated looping
@@ -116,7 +118,7 @@ export function PaymentPage() {
                     ...inv,
                     status: 'paid' as const,
                     paymentMethod: 'qr' as const,
-                    paidAt: data.label || 'Đã thanh toán'
+                    paidAt: inv.paidAt || paidDay(data.label) || undefined
                   }
                 : inv
             ));
@@ -157,12 +159,12 @@ export function PaymentPage() {
   }, [hasInvoice, profile.room?.roomNumber, targetInvoice.id, targetInvoice.month, setInvoices]);
 
   const handleDownloadInvoicePDF = async () => {
-    if (isExportingPDF) return;
+    if (isExportingPDF || invoicePayment === undefined) return;
     setIsExportingPDF(true);
     setPdfError('');
     try {
       const measurer = await getMeasurer();
-      const result = await saveDocument(residentInvoice(measurer, profile, targetInvoice, invoices));
+      const result = await saveDocument(residentInvoice(measurer, profile, targetInvoice, invoices, invoicePayment));
       if (!result.ok && result.message) setPdfError(result.message);
     } catch {
       setPdfError('Chưa tạo được PDF. Vui lòng thử lại.');
@@ -177,23 +179,25 @@ export function PaymentPage() {
   const bankName = portal.bankName;
   const accountNumber = portal.accountNo;
 
-  // Format transfer syntax: Room with LVC -> LVC{room}-T{m}-{y}, Room without LVC -> {room}-T{m}-{y}
-  const transferContent = getTransferContent(profile.room?.roomNumber || '', targetInvoice.month, portal.payPrefix);
+  // Transfer content: the numeric pay code (XXXPPPMMYYYY) once the portal answered. Nothing is drawn before
+  // that, so the old room-name format never flashes first.
+  const portalLoaded = portal.loaded !== false;
+  const transferContent = portalLoaded ? getTransferContent(profile.room?.roomNumber || '', targetInvoice.month, portal.payPrefix) : '…';
 
   // Pure QR code matrix without borders or background
-  const qrUrl = vietQrUrl(portal, targetInvoice.total, transferContent);
+  const qrUrl = portalLoaded ? vietQrUrl(portal, targetInvoice.total, transferContent) : '';
 
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [isOpeningTransfer, setIsOpeningTransfer] = useState(false);
   const [qrSaveResult, setQrSaveResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
-    if (hasInvoice && paymentGateStatus !== 'STOP') prepareQrImage(qrUrl).catch(() => {});
+    if (qrUrl && hasInvoice && paymentGateStatus !== 'STOP') prepareQrImage(qrUrl).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qrUrl, hasInvoice, paymentGateStatus]);
 
   const handleSaveQR = async () => {
-    if (isSavingQR) return;
+    if (isSavingQR || !qrUrl) return;
     setIsSavingQR(true);
     try {
       const result = await saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`);

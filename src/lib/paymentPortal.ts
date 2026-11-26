@@ -27,6 +27,8 @@ export interface PaymentPortal {
   zaloCheckout: boolean;
   /** Số căn + số phòng của cư dân (6 số). Nội dung chuyển khoản = payPrefix + MMYYYY. Null khi chưa biết. */
   payPrefix?: string | null;
+  /** false until the Worker answered (or there is nothing to ask): draw no QR before, so the old transfer format never flashes. */
+  loaded?: boolean;
 }
 
 export const DEFAULT_PORTAL: PaymentPortal = {
@@ -89,17 +91,28 @@ export async function fetchPaymentPortal(houseId: string): Promise<{ portal: Pay
   return data?.success ? { portal: data.portal, canEdit: Boolean(data.canEdit) } : null;
 }
 
-/** The portal of the signed-in resident's house, or the old default until (or unless) it loads. */
+/** The portal of the signed-in resident's house, or the old default when there is none. Kept for the page's lifetime. */
+let portalCache: PaymentPortal | null = null;
+onWorkerSessionChange(() => {
+  portalCache = null;
+});
+
 export function usePaymentPortal(): PaymentPortal {
-  const [portal, setPortal] = useState<PaymentPortal>(DEFAULT_PORTAL);
+  const [portal, setPortal] = useState<PaymentPortal>(() => portalCache ?? { ...DEFAULT_PORTAL, loaded: false });
   useEffect(() => {
+    if (portalCache) return;
     let alive = true;
     loadWorkerViewer()
       .then((viewer) => (viewer?.kind === 'resident' && viewer.houseId ? fetchPaymentPortal(viewer.houseId) : null))
+      .catch(() => null)
       .then((result) => {
-        if (!alive || !result) return;
+        if (!alive) return;
         // A house without its own account still pays into the old one, but with its own transfer code.
-        setPortal(result.portal.ready ? result.portal : { ...DEFAULT_PORTAL, payPrefix: result.portal.payPrefix ?? null });
+        const next: PaymentPortal = !result
+          ? { ...DEFAULT_PORTAL, loaded: true }
+          : { ...(result.portal.ready ? result.portal : { ...DEFAULT_PORTAL, payPrefix: result.portal.payPrefix ?? null }), loaded: true };
+        if (result) portalCache = next; // a failed or missing answer is asked again next time
+        setPortal(next);
       });
     return () => { alive = false; };
   }, []);

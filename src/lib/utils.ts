@@ -56,3 +56,7 @@ export function formatDobInput(next: string, previous = ''): string {
   const growing = next.length > previous.length;
   return growing && (digits.length === 2 || digits.length === 4) ? `${text}/` : text;
 }
+
+/** "dd/mm/yyyy HH:mm" (when SePay received the money) or just the day; '' when none. */
+export const paidMoment = (paidAt?: string) => (paidAt || '').match(/\d{1,2}\/\d{1,2}\/\d{4}(?:\s+\d{1,2}:\d{2})?/)?.[0] ?? '';
+export const paidDay = (paidAt?: string) => (paidAt || '').match(/\d{1,2}\/\d{1,2}\/\d{4}/)?.[0] ?? '';

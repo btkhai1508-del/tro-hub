@@ -88,7 +88,7 @@ export function InvoicesAndPayment() {
                   <span data-stage="item" className="apple-title3 font-semibold tracking-tight kit-text-primary">Tháng {invoice.month}</span>
                   {statusBadge(invoice.status)}
                 </span>
-                <span className="mt-1.5 block apple-callout leading-relaxed kit-text-secondary">Hạn nộp {invoice.dueDate} · {invoice.details.length} khoản phí</span>
+                <span className="mt-1.5 block apple-callout leading-relaxed kit-text-secondary">Hạn nộp {invoice.dueDate}</span>
               </span>
             </button>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200/50 pt-4 dark:border-white/10 md:border-0 md:pt-0">

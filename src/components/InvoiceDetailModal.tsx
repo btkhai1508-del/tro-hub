@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Invoice, useApp } from '../context/AppContext';
 import { residentDocKey, residentInvoice } from '../lib/documents/fromProfile';
 import { DocumentActions, DocumentSheet, useBuiltDocument } from './DocumentSheet';
+import { useResidentInvoicePayment } from './useResidentInvoicePayment';
 
 export function InvoiceDetailModal() {
   const { viewingInvoice } = useApp();
@@ -16,9 +17,11 @@ function InvoiceDocumentDialog({ invoice }: { invoice: Invoice }) {
   const navigate = useNavigate();
   const { closeInvoiceDetailModal, profile, invoices, paymentGateStatus } = useApp();
   const dialogRef = useDialogFocus(true, closeInvoiceDetailModal);
+  const payment = useResidentInvoicePayment(invoice);
   const { doc, error } = useBuiltDocument(
-    m => residentInvoice(m, profile, invoice, invoices),
-    [residentDocKey(profile), JSON.stringify(invoice), invoices.map(item => `${item.id}:${item.status}:${item.total}`).join(',')].join('|')
+    m => residentInvoice(m, profile, invoice, invoices, payment),
+    [residentDocKey(profile), JSON.stringify(invoice), invoices.map(item => `${item.id}:${item.status}:${item.total}`).join(','), payment ? payment.qrPng.length + (payment.payCode || '') : String(payment)].join('|'),
+    payment !== undefined
   );
 
   const handlePayNow = () => {

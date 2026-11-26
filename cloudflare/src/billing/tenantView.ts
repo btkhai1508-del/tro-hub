@@ -5,7 +5,7 @@
  */
 import type { Context } from 'hono';
 import { bankReceived, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
-import { paymentStatusOut, statusView, vnDate } from '../routes/rent.ts';
+import { paymentStatusOut, statusView, vnDate, vnDateTime } from '../routes/rent.ts';
 import { legacyRoomCode, toSheetMonth } from '../sheetSync.ts';
 import { dueDateOf, sheetLines, type SheetLine } from './invoiceSheet.ts';
 import { tenantFor } from '../tenant/route.ts';
@@ -54,8 +54,8 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
       dueDate: dueDateOf(r.issued_at),
       total: r.total,
       status: shown.paymentStatus as InvoiceOut['status'],
-      // paidAt is the day only ("dd/mm/yyyy"): the app writes "Đã thanh toán ngày …" around it itself.
-      ...(shown.paymentMethod ? { paidAt: vnDate(r.paid_at) || undefined, paymentMethod: shown.paymentMethod as 'qr' | 'cash' } : {}),
+      // paidAt = when the money arrived, "dd/mm/yyyy HH:mm" (no label: the app writes "Đã thanh toán ngày …" itself).
+      ...(shown.paymentMethod ? { paidAt: vnDateTime(r.paid_at) || undefined, paymentMethod: shown.paymentMethod as 'qr' | 'cash' } : {}),
       details: (lines.get(r.id) ?? []).map(detailOf),
     });
   }

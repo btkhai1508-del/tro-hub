@@ -30,6 +30,15 @@ export function parseMonth(value: unknown): string | null {
 const monthParam = (value: unknown) => parseMonth(value) ?? currentMonth();
 export const vnDate = (iso: string | null) => (iso ? new Date(Date.parse(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`) + 7 * 3600_000).toISOString().slice(0, 10).split('-').reverse().join('/') : '');
 
+/** 'dd/mm/yyyy HH:mm' in Vietnam time; a stored day without a time gives the day only. */
+export const vnDateTime = (iso: string | null) => {
+  if (!iso) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso.split('-').reverse().join('/');
+  const at = Date.parse(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`);
+  if (!Number.isFinite(at)) return '';
+  const [day, time] = new Date(at + 7 * 3600_000).toISOString().slice(0, 16).split('T');
+  return `${day.split('-').reverse().join('/')} ${time}`;
+};
 export function paymentStatusOut(status: InvoiceStatus | null, paidAt: string | null) {
   const s = status ?? 'unpaid';
   const paid = s === 'paid' || s === 'cash';

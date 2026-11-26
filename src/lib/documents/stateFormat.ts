@@ -6,6 +6,8 @@
 import type { Invoice } from '../../context/AppContext';
 import type { HouseInfo } from '../houses';
 import { A4, BuiltDocument, citizenId, Measurer, PageWriter, t, f } from './engine';
+import { paidDay, paidMoment } from '../utils';
+export { paidDay, paidMoment };
 
 const MM = 72 / 25.4;
 const LEFT = 30 * MM;
@@ -27,7 +29,7 @@ function monthParts(month: string) {
 }
 
 /** Elements 1–4: issuing body with number on the left, national header with place and date on the right. */
-function writeHeader(w: PageWriter, m: Measurer, house: HouseInfo, numberText: string, dateText: string, right = RIGHT) {
+function writeHeader(w: PageWriter, m: Measurer, house: HouseInfo, numberText: string, dateText: string, right = RIGHT, address?: string) {
   const leftCx = LEFT + LEFT_COL_WIDTH / 2;
   const rightCx = (LEFT + LEFT_COL_WIDTH + right) / 2;
   let y = TOP + 12;
@@ -43,12 +45,21 @@ function writeHeader(w: PageWriter, m: Measurer, house: HouseInfo, numberText: s
 
   const nameWidth = m.width(house.name, 'bold', 13);
   const rule = nameWidth * 0.45;
-  w.line(leftCx - rule / 2, y - 10, leftCx + rule / 2, y - 10, 0.5);
-  w.center(leftCx, y + 8, numberText, 13);
+  let leftEnd = y + 8;
+  if (address) {
+    // The house address under its name (invoice notice), then the rule and the number.
+    const afterAddress = w.flow([t(address, 'normal', 11)], { x: LEFT, right: LEFT + LEFT_COL_WIDTH, y: y - 2, lineHeight: 13, size: 11, align: 'center' });
+    w.line(leftCx - rule / 2, afterAddress - 9, leftCx + rule / 2, afterAddress - 9, 0.5);
+    leftEnd = afterAddress + 6;
+    w.center(leftCx, leftEnd, numberText, 13);
+  } else {
+    w.line(leftCx - rule / 2, y - 10, leftCx + rule / 2, y - 10, 0.5);
+    w.center(leftCx, y + 8, numberText, 13);
+  }
 
   y += 24;
   w.center(rightCx, y, dateText, 14, 'italic');
-  return y + 30;
+  return Math.max(y + 30, leftEnd + 22);
 }
 
 function writeTitle(w: PageWriter, m: Measurer, y: number, title: string, subtitle: string, right = RIGHT) {
@@ -82,7 +93,13 @@ export interface InvoiceDocData {
   tenantName?: string;
   tenantCccd?: string;
   previousDebt?: number;
+  /** Unpaid invoice with a public payment page: a QR (PNG data URL) linking to it, the landlord's account and the pay code. */
+  payment?: InvoicePayment;
 }
+
+export interface InvoicePayment { qrPng: string; bankName?: string | null; accountNo: string; accountName?: string | null; payCode?: string | null }
+
+/** "dd/mm/yyyy" out of a paid label ("Đã thanh toán ngày 03/10/2026", "03/10/2026 10:00", …); '' when none. */
 
 export const isDeposit = (item: { name: string }) => /đặt cọc/i.test(item.name);
 
@@ -95,7 +112,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     ? `TP. Hồ Chí Minh, ngày ${pad2(d)} tháng ${pad2(mo)} năm ${yr}`
     : `TP. Hồ Chí Minh, ngày ..... tháng ${mm} năm ${yyyy}`;
 
-  let y = writeHeader(w, m, house, `Số: ${mm}/TB-${house.abbreviation}`, dateText);
+  let y = writeHeader(w, m, house, `Số: ${mm}/TB-${house.abbreviation}`, dateText, RIGHT, house.address);
   y = writeTitle(w, m, y, 'THÔNG BÁO TIỀN PHÒNG TRỌ', `Tháng ${mm} năm ${yyyy}`);
 
   const room = (data.room || '').replace(/^P\.\s*/i, '');
@@ -125,13 +142,24 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     rowTop += rowH;
     rowLine(rowTop);
   });
-  w.center((cols[2] + cols[3]) / 2, rowTop + 14, 'Tổng cộng:', T, 'bold');
-  w.rightText(cols[4] - 4, rowTop + 14, fmt(invoice.total), T, 'bold');
+  // Total row: light gray, "Khoản" and "Chi tiết" merged into one cell.
+  const totalTop = rowTop;
+  w.fill(LEFT, totalTop, RIGHT - LEFT, rowH, 236);
+  rowLine(totalTop);
+  w.center((cols[1] + cols[3]) / 2, totalTop + 14, 'Tổng cộng', T, 'bold');
+  w.rightText(cols[4] - 4, totalTop + 14, fmt(invoice.total), T, 'bold');
   rowTop += rowH;
   rowLine(rowTop);
-  cols.forEach(x => w.line(x, tableTop, x, rowTop, 0.5));
+  cols.forEach(x => w.line(x, tableTop, x, x === cols[2] ? totalTop : rowTop, 0.5));
 
   y = rowTop + 20;
+  const payment = invoice.status === 'paid' ? undefined : data.payment; // a paid invoice never carries a QR
+  if (payment) {
+    const size = 78;
+    const qx = RIGHT - size;
+    w.image(qx, y - 12, size, size, payment.qrPng);
+    w.center(qx + size / 2, y - 12 + size + 10, 'Quét để thanh toán', 9, 'italic');
+  }
   const debt = data.previousDebt;
   const label = (text: string, value: string, bold = false) => {
     w.text(LEFT + (bold ? INDENT : 0), y, text, BODY, bold ? 'bold' : 'normal');
@@ -150,14 +178,18 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   const lines: string[] = [];
   if (invoice.status === 'paid') {
     const via = invoice.paymentMethod === 'cash' ? 'tiền mặt' : 'chuyển khoản';
-    lines.push(`Đã thanh toán${invoice.paidAt ? ` ngày ${invoice.paidAt}` : ''} bằng ${via}${invoice.transactionId ? `, mã giao dịch ${invoice.transactionId}` : ''}.`);
-  } else if (invoice.status === 'pending') {
-    lines.push('Đã ghi nhận giao dịch, đang chờ đối soát.');
-  } else if (invoice.dueDate) {
-    lines.push(`Hạn thanh toán: ${invoice.dueDate}.`);
+    const day = paidDay(invoice.paidAt);
+    lines.push(`Đã thanh toán${day ? ` ngày ${day}` : ''} bằng ${via}${invoice.transactionId ? `, mã giao dịch ${invoice.transactionId}` : ''}.`);
+  } else {
+    if (invoice.status === 'pending') lines.push('Đã ghi nhận giao dịch, đang chờ đối soát.');
+    if (payment) {
+      lines.push(`Chuyển khoản: ${[payment.accountNo, payment.bankName, payment.accountName].filter(Boolean).join(' - ')}.`);
+      if (payment.payCode) lines.push(`Mã đơn (ghi ở nội dung chuyển khoản): ${payment.payCode}.`);
+    }
+    if (invoice.status !== 'pending' && invoice.dueDate) lines.push(`Hạn thanh toán: ${invoice.dueDate}.`);
   }
   if (deposit) lines.push(`Tiền đặt cọc đã giữ: ${fmt(deposit.amount)} đồng (không tính vào tổng).`);
-  const dotted = Math.max(2, Math.min(3, Math.floor((BOTTOM - y - 118) / 17)));
+  const dotted = Math.max(lines.length, Math.max(2, Math.min(3, Math.floor((BOTTOM - y - 118) / 17))));
   for (let i = 0; i < dotted; i += 1) {
     if (lines[i]) w.text(LEFT, y, lines[i], T);
     else w.line(LEFT, y, RIGHT, y, 0.5, [0.6, 1.6]);
@@ -196,8 +228,8 @@ export function buildPaymentHistory(m: Measurer, data: HistoryDocData): BuiltDoc
   const room = (data.room || '').replace(/^P\.\s*/i, '');
   y = w.flow([t('Người thuê: '), filled(data.tenantName, '...............................'), t('     Phòng: '), filled(room, '..........')], { x: LEFT, right: RIGHT, y, lineHeight: LH, size: BODY }) + PARA;
 
-  const cols = [LEFT, LEFT + 34, LEFT + 120, LEFT + 270, LEFT + 370, RIGHT];
-  const heads = ['STT', 'Kỳ', 'Tổng tiền', 'Trạng thái', 'Ngày nộp'];
+  const cols = [LEFT, LEFT + 34, LEFT + 115, LEFT + 255, LEFT + 340, RIGHT];
+  const heads = ['STT', 'Kỳ', 'Tổng tiền', 'Trạng thái', 'Thời gian nộp'];
   const T = 13;
   const rowH = 20;
   let top = y - 8;
@@ -227,7 +259,7 @@ export function buildPaymentHistory(m: Measurer, data: HistoryDocData): BuiltDoc
     w.center((cols[1] + cols[2]) / 2, base, invoice.month, T);
     w.rightText(cols[3] - 4, base, fmt(invoice.total), T);
     w.center((cols[3] + cols[4]) / 2, base, statusLabel(invoice.status), T);
-    w.center((cols[4] + cols[5]) / 2, base, invoice.status === 'paid' ? (invoice.paidAt || '').split(' ')[0] : '', T);
+    w.center((cols[4] + cols[5]) / 2, base, invoice.status === 'paid' ? paidMoment(invoice.paidAt) : '', T);
     top += rowH;
     w.line(LEFT, top, RIGHT, top, 0.5);
   });

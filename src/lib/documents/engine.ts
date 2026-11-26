@@ -14,7 +14,9 @@ export type FontStyle = 'normal' | 'bold' | 'italic' | 'bolditalic';
 export type DrawOp =
   | { t: 'text'; x: number; y: number; s: string; style: FontStyle; size: number; cs?: number }
   | { t: 'line'; x1: number; y1: number; x2: number; y2: number; w: number; dash?: number[] }
-  | { t: 'rect'; x: number; y: number; w: number; h: number; lw: number };
+  | { t: 'rect'; x: number; y: number; w: number; h: number; lw: number; fill?: number }
+  /** A PNG (data URL), e.g. a QR code with a transparent background. */
+  | { t: 'image'; x: number; y: number; w: number; h: number; src: string };
 
 export interface BuiltDocument {
   title: string;
@@ -146,6 +148,12 @@ export async function renderPdfBlob(doc: BuiltDocument): Promise<Blob> {
         pdf.setLineDashPattern(op.dash || [], 0);
         pdf.line(op.x1, op.y1, op.x2, op.y2);
         pdf.setLineDashPattern([], 0);
+      } else if (op.t === 'image') {
+        pdf.addImage(op.src, 'PNG', op.x, op.y, op.w, op.h);
+      } else if (op.fill !== undefined) {
+        pdf.setFillColor(op.fill, op.fill, op.fill);
+        pdf.rect(op.x, op.y, op.w, op.h, op.lw > 0 ? 'FD' : 'F');
+        pdf.setFillColor(255, 255, 255);
       } else {
         pdf.setLineWidth(op.lw);
         pdf.rect(op.x, op.y, op.w, op.h);
@@ -201,6 +209,13 @@ export class PageWriter {
   }
   rect(x: number, y: number, w: number, h: number, lw = 0.5) {
     this.ops.push({ t: 'rect', x, y: y + this.dy, w, h, lw });
+  }
+  /** A filled box without border (gray 0–255), drawn under what comes after it. */
+  fill(x: number, y: number, w: number, h: number, gray: number) {
+    this.ops.push({ t: 'rect', x, y: y + this.dy, w, h, lw: 0, fill: gray });
+  }
+  image(x: number, y: number, w: number, h: number, src: string) {
+    this.ops.push({ t: 'image', x, y: y + this.dy, w, h, src });
   }
 
   private fieldPieces(run: FieldRun, base: { size: number; style: FontStyle }): Piece[] {

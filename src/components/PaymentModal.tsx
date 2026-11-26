@@ -42,11 +42,14 @@ export function PaymentModal() {
     return val.toLocaleString('vi-VN');
   };
 
-  const transferContent = getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || getCurrentMonthStr(), portal.payPrefix);
+  // Nothing is drawn before the portal answered, so the old transfer format never flashes first.
+  const portalLoaded = portal.loaded !== false;
+  const transferContent = portalLoaded ? getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || getCurrentMonthStr(), portal.payPrefix) : '…';
   const bankAccount = portal.accountNo;
   const bankName = portal.bankName;
   const accountHolder = portal.accountName;
-  const qrUrl = vietQrUrl(portal, activeInvoice.total, transferContent);
+  // A paid invoice shows no QR (a bank QR cannot be taken back once printed or saved).
+  const qrUrl = portalLoaded && activeInvoice.status !== 'paid' ? vietQrUrl(portal, activeInvoice.total, transferContent) : '';
 
   return (
     <div
@@ -246,7 +249,8 @@ export function PaymentModal() {
                       <div className="mt-2 flex flex-col gap-1 w-full">
                         <button
                           type="button"
-                          onClick={() => saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`)}
+                          onClick={() => qrUrl && saveQrToDevice(qrUrl, `VietQR_PhongLan_${transferContent}.png`)}
+                          disabled={!qrUrl}
                           className="py-1.5 px-2 rounded-lg bg-black hover:bg-neutral-900 text-white text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
                         >
                           <ImageDown size={12} />

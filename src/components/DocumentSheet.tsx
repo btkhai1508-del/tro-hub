@@ -4,13 +4,18 @@ import { canPrintDocuments, printDocument, saveDocument } from '../lib/documents
 import { Download, Printer } from './AppIcons';
 
 /** Builds a document once the fonts are ready; `key` rebuilds it when its data changes. */
-export function useBuiltDocument(build: (m: Measurer) => BuiltDocument, key: string) {
+/** `ready` false: wait (spinner) instead of drawing a document that would change a moment later. */
+export function useBuiltDocument(build: (m: Measurer) => BuiltDocument, key: string, ready = true) {
   const [doc, setDoc] = useState<BuiltDocument | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
     setError('');
+    if (!ready) {
+      setDoc(null);
+      return () => { active = false; };
+    }
     getMeasurer()
       .then(m => {
         if (active) setDoc(build(m));
@@ -23,7 +28,7 @@ export function useBuiltDocument(build: (m: Measurer) => BuiltDocument, key: str
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, ready]);
 
   return { doc, error };
 }
@@ -47,7 +52,9 @@ export function DocumentSheet({ doc, className }: { doc: BuiltDocument | null; c
             if (op.t === 'line') {
               return <line key={i} x1={op.x1} y1={op.y1} x2={op.x2} y2={op.y2} stroke="#000" strokeWidth={op.w} strokeDasharray={op.dash?.join(' ')} />;
             }
-            return <rect key={i} x={op.x} y={op.y} width={op.w} height={op.h} fill="none" stroke="#000" strokeWidth={op.lw} />;
+            if (op.t === 'image') return <image key={i} href={op.src} x={op.x} y={op.y} width={op.w} height={op.h} />;
+            const fill = op.fill === undefined ? 'none' : `rgb(${op.fill},${op.fill},${op.fill})`;
+            return <rect key={i} x={op.x} y={op.y} width={op.w} height={op.h} fill={fill} stroke={op.lw > 0 ? '#000' : 'none'} strokeWidth={op.lw} />;
           })}
         </svg>
       ))}
