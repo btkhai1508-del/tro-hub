@@ -2348,7 +2348,7 @@ export function AdminPortal() {
               { key: 'createNotification', label: 'Tạo thông báo', icon: IconNotification3D },
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
               { key: 'contract', label: 'Hợp đồng & CT01', icon: IconContract3D },
-              { key: 'declaration', label: 'Kỳ kê khai', icon: NavIcons.Calendar },
+              { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
               { key: 'config', label: 'Đơn giá dịch vụ', icon: IconSettings3D },
               { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D }
             ].filter(item => !enabledModules || enabledModules.has(item.key)).map(item => {
