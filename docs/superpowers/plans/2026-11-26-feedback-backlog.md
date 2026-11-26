@@ -11,7 +11,7 @@ Chia 8 đợt, làm lần lượt, deploy sau mỗi đợt khi người dùng n�
 - Mất mạng: app mất mạng từ lúc mở thì đăng nhập/đăng ký báo "Mất kết nối internet, vui lòng chờ chút!", có mạng lại tự tải lại.
   Đã vào app thì hiện dữ liệu cũ kèm "đang ngoại tuyến"; thao tác ghi bị chặn và báo mất kết nối (không lưu tạm để gửi sau).
 - QR sau khi đã thanh toán: QR ngân hàng không thu hồi được. Làm 3 việc: (1) hoá đơn đã trả thì app và PDF in lại không có QR, ghi "Đã thanh toán ngày …";
-  (2) bản in dùng QR dạng link tới trang thanh toán công khai (đã trả thì trang không còn QR) — **CHƯA CHỐT**: người dùng chưa chọn giữa QR link và QR ngân hàng trong PDF, hãy hỏi lại trước khi làm đợt 2;
+  (2) **ĐÃ CHỐT**: QR ở trang thanh toán trong app giữ nguyên là QR ngân hàng; QR trong PDF hoá đơn là QR link tới trang thanh toán công khai của phòng đó (không cần đăng nhập; đã trả thì trang không còn QR);
   (3) báo chủ trọ khi có tiền vào hoá đơn đã trả (code hiện chỉ tính thành "surplus", chưa chắc có thông báo).
 - Mật khẩu (quên mật khẩu bằng CCCD, 123456, chủ trọ xem mật khẩu cư dân): **hoãn**, người dùng tính sâu rồi báo. Không làm.
 
@@ -36,7 +36,7 @@ Chia 8 đợt, làm lần lượt, deploy sau mỗi đợt khi người dùng n�
 - QR thanh toán: bỏ format nội dung cũ (LVC/TK), giữ format mới, hết nháy 0,1 giây.
 - PDF hoá đơn: có QR (bỏ nền) cạnh Tổng cộng, kèm tài khoản ngân hàng chủ trọ và Mã đơn (phải đúng); ghi rõ Tổng cộng; hạn thanh toán 1 tuần sau khi tạo hoá đơn; địa chỉ dưới tên căn nhà trọ góc trái.
 - Trang thanh toán công khai (xem quyết định trên) + QR cạnh Tổng cộng, bấm để copy link.
-- Gửi hoá đơn qua email cho cư dân có email.
+- (HOÃN, làm cuối cùng sau khi mọi đợt xong, không cấp bách) Gửi hoá đơn qua email cho cư dân có email: cần chọn dịch vụ gửi mail và người dùng tự nhập khoá API.
 - Lịch sử thanh toán ghi thời gian SePay nhận tiền.
 
 ## Đợt 3: điện nước dạng bảng
