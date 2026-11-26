@@ -7,6 +7,7 @@ import type { Context } from 'hono';
 import { bankReceived, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
 import { paymentStatusOut, statusView, vnDate } from '../routes/rent.ts';
 import { legacyRoomCode, toSheetMonth } from '../sheetSync.ts';
+import { dueDateOf, sheetLines, type SheetLine } from './invoiceSheet.ts';
 import { tenantFor } from '../tenant/route.ts';
 import type { App, Viewer } from '../app.ts';
 
@@ -18,14 +19,12 @@ export interface InvoiceOut {
   paidAt?: string; paymentMethod?: 'qr' | 'cash'; details: InvoiceDetailOut[];
 }
 
-interface LineRow { invoice_id: number; kind: string; name: string; qty: number; amount: number; sheet_col: string | null }
-
-function detailOf(l: LineRow): InvoiceDetailOut {
-  const base = { name: l.name, amount: l.amount };
+function detailOf(l: SheetLine): InvoiceDetailOut {
+  const base = { name: l.name, amount: l.amount, ...(l.formula ? { metric: l.formula } : {}) };
   if (l.kind === 'room') return { ...base, type: 'room' };
-  if (l.kind === 'electricity') return { ...base, type: 'electricity', metric: `${l.qty} số` };
-  if (l.kind === 'water') return { ...base, type: 'water', metric: `${l.qty} khối` };
-  if (l.kind === 'service') return { ...base, type: l.sheet_col === 'L' ? 'internet' : l.sheet_col === 'M' ? 'parking' : 'service' };
+  if (l.kind === 'electricity') return { ...base, type: 'electricity' };
+  if (l.kind === 'water') return { ...base, type: 'water' };
+  if (l.kind === 'service') return { ...base, type: l.sheetCol === 'L' ? 'internet' : l.sheetCol === 'M' ? 'parking' : 'service' };
   return { ...base, type: 'service' };
 }
 
@@ -40,14 +39,7 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
     .bind(viewer.roomId)
     .all<{ id: number; house_id: string; month: string; total: number; status: InvoiceStatus; paid_at: string | null; issued_at: string }>();
   if (!rows.length) return [];
-  const { results: lines } = await db
-    .prepare(
-      `SELECT l.invoice_id, l.kind, l.name, l.qty, l.amount, s.sheet_col
-         FROM invoice_lines l LEFT JOIN house_services s ON s.id = l.service_id
-        WHERE l.invoice_id IN (${rows.map(() => '?').join(',')}) ORDER BY l.id`
-    )
-    .bind(...rows.map((r) => r.id))
-    .all<LineRow>();
+  const lines = await sheetLines(db, rows.map((r) => r.id));
 
   const views = new Map<string, Awaited<ReturnType<typeof statusView>>>();
   const out: InvoiceOut[] = [];
@@ -55,16 +47,16 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
     if (!views.has(r.month)) views.set(r.month, await statusView(c.env.DB, db, [viewer.houseId], r.month));
     const status = await views.get(r.month)!({ id: r.id, house_id: r.house_id, room: viewer.roomName, total: r.total, status: r.status, issued_at: r.issued_at });
     const shown = paymentStatusOut(status, r.paid_at);
-    const [year, month] = r.month.split('-');
     out.push({
       id: `INV-${r.id}`,
       month: toSheetMonth(r.month),
       issueDate: vnDate(r.issued_at),
-      dueDate: `05/${month}/${year}`,
+      dueDate: dueDateOf(r.issued_at),
       total: r.total,
       status: shown.paymentStatus as InvoiceOut['status'],
-      ...(shown.paymentMethod ? { paidAt: shown.label, paymentMethod: shown.paymentMethod as 'qr' | 'cash' } : {}),
-      details: lines.filter((l) => l.invoice_id === r.id).map(detailOf),
+      // paidAt is the day only ("dd/mm/yyyy"): the app writes "Đã thanh toán ngày …" around it itself.
+      ...(shown.paymentMethod ? { paidAt: vnDate(r.paid_at) || undefined, paymentMethod: shown.paymentMethod as 'qr' | 'cash' } : {}),
+      details: (lines.get(r.id) ?? []).map(detailOf),
     });
   }
   return out;

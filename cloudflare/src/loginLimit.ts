@@ -12,7 +12,7 @@ export const LOGIN_LIMITS = { maxFails: 6, phoneMaxFails: 50, ipMaxFails: 100, w
 export const REGISTER_LIMITS = { ip: { max: 30, windowSec: 3600 }, phone: { max: 5, windowSec: 86400 } } as const;
 
 /** phone_ip: key `phone|ip-key`; phone_all: key phone (all IPs); ip: ip-key; reg_*: register throttles. */
-export type LimitScope = 'phone_ip' | 'phone_all' | 'ip' | 'reg_ip' | 'reg_phone';
+export type LimitScope = 'phone_ip' | 'phone_all' | 'ip' | 'reg_ip' | 'reg_phone' | 'pay_miss';
 
 /** Counter key of an address: IPv4 as is, IPv6 (and v4-mapped) reduced to its /64 so one host cannot hop addresses. */
 export function ipKey(ip: string | null | undefined): string | null {
@@ -105,7 +105,7 @@ export async function unlockPhone(db: D1Database, phone: string): Promise<number
  * Counts one public register attempt; false once `max` attempts were made inside the window. A refused
  * attempt writes nothing (the DO UPDATE is skipped), so a flood cannot burn the write budget.
  */
-export async function registerHit(db: D1Database, scope: 'reg_ip' | 'reg_phone', key: string, max: number, windowSec: number, now = nowSec()): Promise<boolean> {
+export async function registerHit(db: D1Database, scope: 'reg_ip' | 'reg_phone' | 'pay_miss', key: string, max: number, windowSec: number, now = nowSec()): Promise<boolean> {
   const row = await db
     .prepare(
       `INSERT INTO login_attempts (scope, key, count, window_start, locked_until) VALUES (?1, ?2, 1, ?3, NULL)

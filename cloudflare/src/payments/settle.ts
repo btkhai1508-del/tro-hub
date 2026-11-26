@@ -33,6 +33,14 @@ export function vnTimeToUtc(text: string | undefined) {
   return Number.isFinite(at) ? new Date(at).toISOString().replace('T', ' ').slice(0, 19) : null;
 }
 
+/** When SePay received the money, stored as UTC "YYYY-MM-DD HH:MM:SS"; an ISO time is converted, anything else is now. */
+export function receivedAtUtc(text: string | undefined): string {
+  const vn = vnTimeToUtc(text);
+  if (vn) return vn;
+  const at = Date.parse(String(text ?? ''));
+  return new Date(Number.isFinite(at) && /[zZ]|[+-]\d{2}:?\d{2}$/.test(String(text)) ? at : Date.now()).toISOString().replace('T', ' ').slice(0, 19);
+}
+
 export type SettleResult =
   | { settled: false; reason: 'room' }
   | { settled: false; reason: 'invoice' }
@@ -71,7 +79,7 @@ export async function settleRent(
     `INSERT OR IGNORE INTO payments (house_id, invoice_id, amount, method, bank_name, account_no, reference, content, paid_at, confirmed_by)
      VALUES (?, ?, ?, 'bank', ?, ?, ?, ?, ?, 'sepay')`
   ).bind(houseId, inv?.id ?? null, amount, t.gateway ?? null, t.accountNumber ?? null, eventReference(sepayId),
-    String(t.content ?? '').slice(0, 300), t.transactionDate ?? new Date().toISOString()).run();
+    String(t.content ?? '').slice(0, 300), receivedAtUtc(t.transactionDate)).run();
   if (!inv) return { settled: false, reason: 'invoice' };
   const received = await bankReceived(db, inv.id);
   // A draft is not yet billed to the resident: the money is kept, the status waits for issuing (issueMonth re-evaluates it).
@@ -83,8 +91,8 @@ export async function settleRent(
   if (cur) inv.status = cur.status;
   if (inv.status === 'paid' || inv.status === 'cash') return { settled: true, already: true, invoiceId: inv.id, received, total: inv.total };
   if (received < inv.total) return { settled: false, reason: 'short', invoiceId: inv.id, received, total: inv.total };
-  await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(?, datetime('now')), status_by = 'sepay' WHERE id = ?`)
-    .bind(vnTimeToUtc(t.transactionDate), inv.id).run();
+  await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = ?, status_by = 'sepay' WHERE id = ?`)
+    .bind(receivedAtUtc(t.transactionDate), inv.id).run();
   await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
   return { settled: true, invoiceId: inv.id, received, total: inv.total };
 }

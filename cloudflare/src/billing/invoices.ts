@@ -164,7 +164,12 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
   if (inv.issued_at !== null) {
     // Guarded writes: a paid/cash set by someone else after our read is never overwritten.
     if (received > 0 && received >= calc.total) {
-      await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = COALESCE(paid_at, datetime('now')), status_by = 'recompute' WHERE id = ? AND status NOT IN ('paid', 'cash')`).bind(inv.id).run();
+      // paid_at = when SePay received the last bank transfer (the one that covered the total), not when we noticed.
+      await db.prepare(
+        `UPDATE invoices SET status = 'paid', status_by = 'recompute',
+                paid_at = COALESCE(paid_at, (SELECT MAX(paid_at) FROM payments WHERE invoice_id = ?1 AND method = 'bank'), datetime('now'))
+          WHERE id = ?1 AND status NOT IN ('paid', 'cash')`
+      ).bind(inv.id).run();
     } else if (inv.status !== 'pending' && inv.status !== 'unpaid') {
       await db.prepare(`UPDATE invoices SET status = 'unpaid', paid_at = NULL WHERE id = ? AND status NOT IN ('paid', 'cash')`).bind(inv.id).run();
     }

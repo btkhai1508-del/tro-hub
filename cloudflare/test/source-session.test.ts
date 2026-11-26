@@ -188,17 +188,17 @@ describe.each(BACKENDS)('phiên cư dân từ Worker [%s]', (backend) => {
     expect(JSON.stringify(invoices)).not.toContain('2000000');
   });
 
-  it('hình dạng Invoice: ngày phát hành, hạn 05, details từ invoice_lines theo kiểu dòng', async () => {
+  it('hình dạng Invoice: ngày phát hành, hạn = phát hành + 7 ngày, details từ invoice_lines theo kiểu dòng', async () => {
     const { invoices } = await session();
     const oct = invoices.find((i: any) => i.id === 'INV-101');
-    expect(oct).toMatchObject({ month: '10/2026', issueDate: '01/10/2026', dueDate: '05/10/2026', total: 3395000, status: 'unpaid' });
+    expect(oct).toMatchObject({ month: '10/2026', issueDate: '01/10/2026', dueDate: '08/10/2026', total: 3395000, status: 'unpaid' });
     expect(oct.details).toEqual([
-      { name: 'Tiền phòng', amount: 3000000, type: 'room' },
-      { name: 'Tiền điện', amount: 227500, type: 'electricity', metric: '65 số' },
-      { name: 'Tiền nước', amount: 60000, type: 'water', metric: '3 khối' },
-      { name: 'Rác', amount: 30000, type: 'service' },
-      { name: 'Internet', amount: 80000, type: 'internet' },
-      { name: 'Xe máy', amount: 50000, type: 'parking' },
+      { name: 'Tiền phòng', amount: 3000000, type: 'room', metric: '1 tháng' },
+      { name: 'Tiền điện', amount: 227500, type: 'electricity', metric: '65 số × 3.500' },
+      { name: 'Tiền nước', amount: 60000, type: 'water', metric: '3 khối × 20.000' },
+      { name: 'Rác', amount: 30000, type: 'service', metric: '1 phòng × 30.000' },
+      { name: 'Internet', amount: 80000, type: 'internet', metric: '2 người × 40.000' },
+      { name: 'Xe máy', amount: 50000, type: 'parking', metric: '1 chiếc × 50.000' },
       { name: 'Khác', amount: -52500, type: 'service' },
     ]);
   });
@@ -221,9 +221,9 @@ describe.each(BACKENDS)('phiên cư dân từ Worker [%s]', (backend) => {
     const novInv = invoices.find((i: any) => i.id === `INV-${nov}`);
     const oct = invoices.find((i: any) => i.id === 'INV-101');
     expect(novInv).toMatchObject({ status: 'paid', paymentMethod: 'qr' });
-    expect(novInv.paidAt).toContain('Đã thanh toán');
+    expect(novInv.paidAt).toBeUndefined(); // paid by money still waiting centrally: no day yet
     expect(oct).toMatchObject({ status: 'paid', paymentMethod: 'cash' });
-    expect(oct.paidAt).toContain('03/10/2026');
+    expect(oct.paidAt).toBe('03/10/2026'); // the day only: the app writes "Đã thanh toán ngày …" itself
   });
 
   it('tiền chờ của phòng khác không đổi trạng thái phòng 101', async () => {

@@ -130,6 +130,17 @@ describe.each(MODES)('SePay webhook, tiền trọ (%s)', (mode) => {
     }
   });
 
+  it('giờ trả tiền là giờ SePay nhận tiền (UTC trong kho), cả ở payments lẫn hoá đơn', async () => {
+    await webhook(DEV_KEY, { transferAmount: 3_500_000, content: `CHUYEN TIEN ${LVC_CODE}`, transactionDate: '2026-11-17 20:10:00' });
+    if (mode === 'migrating') {
+      await setStorage(e.DB, 1, 'd1');
+      await replayDeferred(e, 1);
+    }
+    const db = await storeOf(backend);
+    expect(await db.prepare(`SELECT paid_at FROM payments`).first()).toEqual({ paid_at: '2026-11-17 13:10:00' });
+    expect(await db.prepare(`SELECT paid_at FROM invoices WHERE room_id = 3 AND month = ?`).bind(MONTH).first()).toEqual({ paid_at: '2026-11-17 13:10:00' });
+  });
+
   it('webhook thiếu tiền: cả hai thấy chưa đóng; đủ phần còn lại thì Đã đóng', async () => {
     await webhook(DEV_KEY, { transferAmount: 1_000_000, content: LVC_CODE });
     expect(view(await seen(tokens))).toEqual(everyone('unpaid'));

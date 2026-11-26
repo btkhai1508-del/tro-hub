@@ -17,6 +17,7 @@ import { registerStorage } from './routes/storage.ts';
 import { registerTenantAccounts } from './routes/tenant.ts';
 import { registerSource } from './routes/source.ts';
 import { registerSession } from './routes/session.ts';
+import { registerPublicInvoice } from './routes/publicInvoice.ts';
 
 export { TenantStore } from './tenant/store.ts';
 
@@ -36,6 +37,7 @@ registerIntegrations(app);
 registerHouses(app);
 registerPeople(app);
 registerRent(app);
+registerPublicInvoice(app);
 registerTenantAccounts(app); // before registerAdmin: /api/admin/accounts is handled here
 registerAdmin(app);
 registerBilling(app);
