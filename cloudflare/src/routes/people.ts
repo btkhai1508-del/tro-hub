@@ -93,11 +93,16 @@ export function registerPeople(app: Hono<App>): void {
     if (current.some((h) => !scope.houseIds.includes(h)))
       return fail(c, 403, 'STAFF_FORBIDDEN', 'Tài khoản này còn quản lý nhà khác ngoài nhà của bạn.');
 
-    const body = await c.req.json<{ status?: string; houseIds?: string[] }>().catch(() => ({}) as Record<string, never>);
+    const body = await c.req.json<{ status?: string; houseIds?: string[]; fullName?: string }>().catch(() => ({}) as Record<string, never>);
     const writes: D1PreparedStatement[] = [];
     if (body.status !== undefined) {
       if (!['active', 'locked'].includes(body.status)) return fail(c, 400, 'STATUS_INVALID', 'Trạng thái không hợp lệ.');
       writes.push(c.env.DB.prepare(`UPDATE staff SET status = ? WHERE id = ?`).bind(body.status, id));
+    }
+    if (body.fullName !== undefined) {
+      const fullName = String(body.fullName).trim();
+      if (fullName.length < 2 || fullName.length > 80) return fail(c, 400, 'NAME_INVALID', 'Họ tên cần từ 2 đến 80 ký tự.');
+      writes.push(c.env.DB.prepare(`UPDATE staff SET full_name = ? WHERE id = ?`).bind(fullName, id));
     }
     if (body.houseIds !== undefined) {
       const houseIds = [...new Set(body.houseIds.map(String))];

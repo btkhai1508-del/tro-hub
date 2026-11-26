@@ -118,6 +118,7 @@ export interface RegisteredAccount {
   email: string;
   gender?: string;
   roomNumber: string;
+  houseName?: string;
   password?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;

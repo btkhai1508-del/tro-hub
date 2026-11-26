@@ -1,3 +1,4 @@
+import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -24,6 +25,7 @@ import { PhoneHint } from './PhoneHint';
 import { AppleCheckbox } from './AppleControls';
 
 export function LoginPage() {
+  const contactPhone = useContactPhone();
   const navigate = useNavigate();
   const location = useLocation();
   const { loginUser, loginWithZalo, registerResident } = useApp();
@@ -413,7 +415,7 @@ export function LoginPage() {
               <p className="apple-callout kit-text-secondary">Chủ trọ sẽ đối chiếu hợp đồng thuê phòng và kích hoạt tài khoản của bạn. Sau khi được duyệt, bạn có thể đăng nhập bằng số điện thoại này.</p>
 
               <div className="space-y-3">
-                <a href="https://zalo.me/0902371800" target="_blank" rel="noopener noreferrer" className="soft-button min-h-12 w-full px-4 py-3 apple-control">
+                <a href={`https://zalo.me/${contactPhone}`} target="_blank" rel="noopener noreferrer" className="soft-button min-h-12 w-full px-4 py-3 apple-control">
                   <img src="/brand/zalo-logo.png" alt="" className="h-5 w-5 shrink-0 object-contain" />
                   <span>Liên hệ BQL để duyệt</span>
                 </a>
@@ -456,7 +458,7 @@ export function LoginPage() {
 
         <div className="kit-login-footer flex flex-col items-center gap-1 px-5 py-3 text-center sm:px-7">
           <a
-            href="https://zalo.me/0902371800"
+            href={`https://zalo.me/${contactPhone}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[13px] font-semibold text-neutral-800 hover:text-blue-600 underline-offset-4 hover:underline dark:text-neutral-100 dark:hover:text-blue-400 transition-colors"

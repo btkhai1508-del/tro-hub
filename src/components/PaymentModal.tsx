@@ -1,3 +1,4 @@
+import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
 import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from './AppIcons';
@@ -8,6 +9,7 @@ import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { IconWallet3D, IconSecurity3D } from './Icons3D';
 
 export function PaymentModal() {
+  const contactPhone = useContactPhone();
   const { isPaymentModalOpen, closePaymentModal, activeInvoice, processPayment, profile, paymentGateStatus } = useApp();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -190,11 +192,11 @@ export function PaymentModal() {
                       <span className="text-slate-500">SĐT hỗ trợ:</span>
                       <button
                         type="button"
-                        onClick={() => handleCopy('0902371800', 'gate-modal-phone')}
+                        onClick={() => handleCopy(contactPhone, 'gate-modal-phone')}
                         className="font-bold font-num text-slate-900 dark:text-white hover:text-indigo-600 flex items-center gap-1 cursor-pointer"
                         title="Sao chép SĐT"
                       >
-                        <span>0902 371 800</span>
+                        <span>{formatPhoneSpaced(contactPhone)}</span>
                         {copiedField === 'gate-modal-phone' ? (
                           <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1 py-0.2 rounded">Đã chép</span>
                         ) : (
@@ -206,7 +208,7 @@ export function PaymentModal() {
 
                   <div className="flex gap-2 pt-1">
                     <a
-                      href="https://zalo.me/0902371800"
+                      href={`https://zalo.me/${contactPhone}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 py-2.5 rounded-xl bg-[#0068FF] hover:bg-[#0055d4] text-white text-xs font-bold flex items-center justify-center transition-all cursor-pointer"

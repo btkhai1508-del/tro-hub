@@ -13,6 +13,7 @@ interface Staff { id: number; full_name: string; phone: string; role: 'owner' | 
 export function ManagerAccounts() {
   const [houses, setHouses] = useState<House[]>([]);
   const [managers, setManagers] = useState<Staff[]>([]);
+  const [editing, setEditing] = useState<{ id: number; name: string; houseIds: string[] } | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -28,6 +29,16 @@ export function ManagerAccounts() {
   useEffect(() => { load(); }, [load]);
 
   const houseName = (id: string) => houses.find((h) => h.id === id)?.name ?? id;
+  const saveEdit = async () => {
+    if (!editing) return;
+    setMessage(null);
+    const res = await workerFetch(`/api/staff/${editing.id}`, { method: 'PATCH', body: JSON.stringify({ fullName: editing.name, houseIds: editing.houseIds }) }).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    if (!data?.success) return setMessage({ ok: false, text: data?.error || 'Chưa lưu được thông tin.' });
+    setMessage({ ok: true, text: 'Đã lưu thông tin Ban Quản Lý Trọ.' });
+    setEditing(null);
+    load();
+  };
   const setStatus = async (m: Staff, status: Staff['status']) => {
     setMessage(null);
     const res = await workerFetch(`/api/staff/${m.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }).catch(() => null);
@@ -62,6 +73,7 @@ export function ManagerAccounts() {
                   <span className="font-num">{m.phone}</span> · {m.house_ids.map(houseName).join(', ')}
                 </p>
               </div>
+              <button type="button" onClick={() => setEditing({ id: m.id, name: m.full_name, houseIds: m.house_ids })} className="soft-button min-h-11 px-3 text-xs font-semibold shrink-0">Sửa</button>
               <button
                 type="button"
                 onClick={() => setStatus(m, m.status === 'locked' ? 'active' : 'locked')}
@@ -73,6 +85,24 @@ export function ManagerAccounts() {
             </li>
           ))}
         </ul>
+        {editing && (
+          <div className="kit-data-surface space-y-3 rounded-2xl p-4">
+            <h4 className="font-semibold text-neutral-900 dark:text-white">Sửa thông tin</h4>
+            <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} aria-label="Họ tên" className="kit-field w-full rounded-xl px-3.5 py-2.5 text-sm" />
+            <div className="space-y-1">
+              {houses.map((h) => (
+                <label key={h.id} className="flex min-h-11 items-center gap-2 text-sm">
+                  <input type="checkbox" checked={editing.houseIds.includes(h.id)} onChange={(e) => setEditing({ ...editing, houseIds: e.target.checked ? [...editing.houseIds, h.id] : editing.houseIds.filter((x) => x !== h.id) })} />
+                  <span>{h.name}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setEditing(null)} className="soft-button min-h-11 px-4 text-sm">Huỷ</button>
+              <button type="button" onClick={saveEdit} disabled={!editing.houseIds.length} className="primary-button min-h-11 px-4 text-sm">Lưu</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

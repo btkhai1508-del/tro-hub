@@ -105,3 +105,32 @@ export function usePaymentPortal(): PaymentPortal {
   }, []);
   return portal;
 }
+
+const CONTACT_KEY = 'tro-hub:contact-phone';
+export const DEFAULT_CONTACT_PHONE = '0902371800';
+
+/** Phone residents call: the house's Ban Quản Lý Trọ, else the landlord. Remembered so the login page can show it too. */
+export function useContactPhone(): string {
+  const [phone, setPhone] = useState<string>(() => {
+    try { return localStorage.getItem(CONTACT_KEY) || DEFAULT_CONTACT_PHONE; } catch { return DEFAULT_CONTACT_PHONE; }
+  });
+  useEffect(() => {
+    let alive = true;
+    loadWorkerViewer()
+      .then((viewer) => (viewer?.kind === 'resident' && viewer.houseId ? workerFetch(`/api/houses/${encodeURIComponent(viewer.houseId)}/contact`) : null))
+      .then((res) => (res?.ok ? res.json() : null))
+      .then((data) => {
+        if (!alive || !data?.success || !data.phone) return;
+        setPhone(data.phone);
+        try { localStorage.setItem(CONTACT_KEY, data.phone); } catch { /* private mode */ }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return phone;
+}
+
+export function formatPhoneSpaced(p: string): string {
+  const d = p.replace(/\D/g, '');
+  return d.length === 10 ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : p;
+}

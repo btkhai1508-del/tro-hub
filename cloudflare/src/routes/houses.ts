@@ -271,6 +271,19 @@ export function registerHouses(app: Hono<App>): void {
   app.use('/api/houses/:houseId/*', requireHouse);
   app.use('/api/houses/:houseId', requireHouse);
 
+  /** Who residents call: the first active Ban Quản Lý Trọ of the house, else the landlord's phone. */
+  app.get('/api/houses/:houseId/contact', async (c) => {
+    const houseId = c.req.param('houseId');
+    const db = await tenantFor(c, houseId);
+    const house = await db.prepare(`SELECT landlord_phone FROM houses WHERE id = ?`).bind(houseId).first<{ landlord_phone: string | null }>();
+    if (!house) return fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy nhà trọ.');
+    const manager = await c.env.DB
+      .prepare(`SELECT s.phone FROM staff s JOIN staff_houses sh ON sh.staff_id = s.id WHERE sh.house_id = ? AND s.role = 'manager' AND s.status = 'active' ORDER BY s.id LIMIT 1`)
+      .bind(houseId)
+      .first<{ phone: string | null }>();
+    return c.json({ success: true, phone: manager?.phone || house.landlord_phone || null });
+  });
+
   /**
    * Payment portal of a house: the bank and account residents pay into. Everyone in the house can read
    * it (residents need it to pay); only Chủ trọ can change it. Zalo's quick transfer

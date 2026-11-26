@@ -1,3 +1,4 @@
+import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Receipt, FileText, User, PhoneCall, SlidersHorizontal, LogOut, LayoutGrid, Copy, Check } from 'lucide-react';
@@ -17,13 +18,14 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const contactPhone = useContactPhone();
   const { profile, invoices, openProfileEditModal, isSidebarCollapsed: collapsed, toggleSidebar, logoutUser } = useApp();
   const { collapsedLayout: isSidebarCollapsed, labelPhase } = useSidebarLabels(collapsed);
   const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
   const [hasCopiedPhone, setHasCopiedPhone] = useState(false);
   const handleCopyPhone = async () => {
     try {
-      await navigator.clipboard.writeText('0902371800');
+      await navigator.clipboard.writeText(contactPhone);
       setHasCopiedPhone(true);
       setTimeout(() => setHasCopiedPhone(false), 2000);
     } catch { setHasCopiedPhone(false); }
@@ -55,11 +57,11 @@ export function Sidebar() {
             <div data-tutorial="sidebar-bql-contact" className={cn('kit-sidebar-support', isSidebarCollapsed ? 'flex flex-col items-center gap-1' : 'px-3')}>
               {isSidebarCollapsed ? <>
                 <button type="button" onClick={handleCopyPhone} aria-label={hasCopiedPhone ? 'Đã sao chép số quản lý' : 'Sao chép số quản lý'} title="Sao chép số quản lý" className="kit-toolbar-control flex h-11 w-11 items-center justify-center rounded-xl text-[var(--text-secondary)]">{hasCopiedPhone ? <Check size={18} /> : <PhoneCall size={18} />}</button>
-                <a href="https://zalo.me/0902371800" target="_blank" rel="noopener noreferrer" aria-label="Nhắn Zalo cho quản lý" title="Nhắn Zalo cho quản lý" className="kit-toolbar-control flex h-11 w-11 items-center justify-center rounded-xl"><img src="/brand/zalo-logo.png" alt="" className="h-6 w-6 object-contain" /></a>
+                <a href={`https://zalo.me/${contactPhone}`} target="_blank" rel="noopener noreferrer" aria-label="Nhắn Zalo cho quản lý" title="Nhắn Zalo cho quản lý" className="kit-toolbar-control flex h-11 w-11 items-center justify-center rounded-xl"><img src="/brand/zalo-logo.png" alt="" className="h-6 w-6 object-contain" /></a>
               </> : <>
                 <p className="apple-subheadline kit-text-secondary mb-2 font-semibold">Ban quản lý</p>
-                <button type="button" onClick={handleCopyPhone} className="kit-toolbar-control -mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center gap-2.5 rounded-xl px-2 apple-body kit-text-secondary" aria-label={hasCopiedPhone ? 'Đã sao chép số điện thoại quản lý' : 'Sao chép số điện thoại quản lý'}><PhoneCall size={16} strokeWidth={1.7} /><span className="flex-1 text-left font-medium">0902 371 800</span>{hasCopiedPhone ? <Check size={14} /> : <Copy size={13} />}</button>
-                <a href="https://zalo.me/0902371800" target="_blank" rel="noopener noreferrer" className="kit-toolbar-control -mx-2 flex min-h-11 items-center gap-2.5 rounded-xl px-2 apple-body kit-text-secondary"><img src="/brand/zalo-logo.png" alt="" className="h-5 w-5 object-contain" /><span className="flex-1">Nhắn qua Zalo</span><ArrowUpRight size={14} /></a>
+                <button type="button" onClick={handleCopyPhone} className="kit-toolbar-control -mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center gap-2.5 rounded-xl px-2 apple-body kit-text-secondary" aria-label={hasCopiedPhone ? 'Đã sao chép số điện thoại quản lý' : 'Sao chép số điện thoại quản lý'}><PhoneCall size={16} strokeWidth={1.7} /><span className="flex-1 text-left font-medium">{formatPhoneSpaced(contactPhone)}</span>{hasCopiedPhone ? <Check size={14} /> : <Copy size={13} />}</button>
+                <a href={`https://zalo.me/${contactPhone}`} target="_blank" rel="noopener noreferrer" className="kit-toolbar-control -mx-2 flex min-h-11 items-center gap-2.5 rounded-xl px-2 apple-body kit-text-secondary"><img src="/brand/zalo-logo.png" alt="" className="h-5 w-5 object-contain" /><span className="flex-1">Nhắn qua Zalo</span><ArrowUpRight size={14} /></a>
               </>}
             </div>
 

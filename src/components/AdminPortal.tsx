@@ -2366,7 +2366,7 @@ export function AdminPortal() {
               { key: 'createNotification', label: 'Tạo thông báo', icon: IconNotification3D },
               { key: 'meter', label: 'Điện nước', icon: IconMeter3D },
               { key: 'contract', label: 'Hợp đồng & CT01', icon: IconContract3D },
-              { key: 'declaration', label: 'Kỳ kê khai', icon: IconCalendar3D },
+              { key: 'declaration', label: 'Kỳ kê khai', icon: NavIcons.Calendar },
               { key: 'config', label: 'Đơn giá dịch vụ', icon: IconSettings3D },
               { key: 'laundry', label: 'Giặt Sấy 24/7', icon: IconLaundry3D }
             ].filter(item => !enabledModules || enabledModules.has(item.key)).map(item => {
@@ -4365,7 +4365,7 @@ export function AdminPortal() {
                   }}
                   className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'approval' && "kit-segment-active")}
                 >
-                  <span>Xét duyệt tài khoản</span>
+                  <span>Quản lý tài khoản</span>
                   {pendingAccountCount > 0 && (
                     <span className="ml-1 inline-flex items-center justify-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold font-num text-amber-700 dark:text-amber-300">
                       {pendingAccountCount}
@@ -4446,7 +4446,7 @@ export function AdminPortal() {
                                 setViewingAccount(acc);
                               }
                             }}
-                            className="kit-data-surface rounded-[20px] p-4 flex items-center justify-between gap-3 hover:border-neutral-400/80 transition-all cursor-pointer group"
+                            className={cn("kit-data-surface rounded-[20px] p-4 flex items-center justify-between gap-3 hover:border-neutral-400/80 transition-all cursor-pointer group", acc.status === 'pending' && shownAccounts.filter(a => a.status === 'pending').slice(-1)[0]?.id === acc.id && shownAccounts.some(a => a.status !== 'pending') && "mb-4 border-b-2 border-amber-400/60")}
                           >
                             <div className="flex items-center gap-3.5 min-w-0 flex-1">
                               <div className="shrink-0">
@@ -4455,7 +4455,7 @@ export function AdminPortal() {
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="px-2.5 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs font-num">
-                                    Phòng {acc.roomNumber}
+                                    {acc.houseName ? `${acc.houseName} · ` : ''}Phòng {acc.roomNumber}
                                   </span>
                                   <span className="apple-body font-semibold kit-text-primary truncate">
                                     {acc.name}

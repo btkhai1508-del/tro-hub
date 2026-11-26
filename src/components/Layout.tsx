@@ -14,6 +14,16 @@ import { useApp } from '../context/AppContext';
 import { warmResidentRoutes } from '../lib/routePreload';
 import { cn } from '../lib/utils';
 import { FadeOutlet } from './FadeOutlet';
+import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
+
+function ContactFooter() {
+  const phone = useContactPhone();
+  return (
+    <footer className="lg:hidden px-4 pb-28 pt-4 text-center apple-subheadline kit-text-secondary">
+      Liên hệ ban quản lý: <a href={`tel:${phone}`} className="font-semibold underline-offset-2">{formatPhoneSpaced(phone)}</a> · <a href={`https://zalo.me/${phone}`} target="_blank" rel="noopener noreferrer" className="font-semibold underline-offset-2">Zalo</a>
+    </footer>
+  );
+}
 
 function PageLoading() {
   return (
@@ -66,6 +76,7 @@ export function Layout() {
           </div>
         </div>
       </main>
+      <ContactFooter />
 
       {/* Pop-up Modals for quick views */}
       <NotificationModal />

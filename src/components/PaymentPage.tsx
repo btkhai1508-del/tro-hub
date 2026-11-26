@@ -1,3 +1,4 @@
+import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Payment } from 'zmp-sdk/apis';
@@ -16,6 +17,7 @@ import { ChevronLeft, Download, Check, Home, Copy, CheckCircle2, ImageDown, Land
 import { getCurrentMonthStr, isSameMonth } from '../lib/utils';
 
 export function PaymentPage() {
+  const contactPhone = useContactPhone();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const invoiceIdParam = searchParams.get('invoiceId');
@@ -404,11 +406,11 @@ export function PaymentPage() {
                   <span className="apple-callout kit-text-secondary">Hotline hỗ trợ:</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy('0902371800', 'gate-bql-phone')}
+                    onClick={() => handleCopy(contactPhone, 'gate-bql-phone')}
                     className="apple-callout font-semibold font-num kit-text-primary hover:text-neutral-600 dark:hover:text-neutral-400 flex items-center gap-1.5 cursor-pointer"
                     title="Bấm để sao chép số điện thoại"
                   >
-                    <span>0902 371 800</span>
+                    <span>{formatPhoneSpaced(contactPhone)}</span>
                     {copiedKey === 'gate-bql-phone' ? (
                       <span className="apple-caption text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded">Đã chép</span>
                     ) : (
@@ -427,7 +429,7 @@ export function PaymentPage() {
               {/* Action Buttons */}
               <div className="w-full flex flex-col sm:flex-row gap-2.5">
                 <a
-                  href="https://zalo.me/0902371800"
+                  href={`https://zalo.me/${contactPhone}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="primary-button flex-1 min-h-12 px-4"

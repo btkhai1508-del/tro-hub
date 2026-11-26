@@ -1,3 +1,4 @@
+import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
 import { X, Copy, Check, Phone, MessageCircle, AlertTriangle, ShieldCheck, Wrench, Wifi, Droplet, Zap, Bike, FileText, CheckCircle2, Send, Clock } from './AppIcons';
@@ -57,6 +58,7 @@ const DEFAULT_TICKETS: MaintenanceTicket[] = [
 ];
 
 export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: UtilityDetailModalProps) {
+  const contactPhone = useContactPhone();
   const { profile } = useApp();
   const residentHouse = houseFromRoom(profile.room?.roomNumber);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -409,7 +411,7 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
 
               {/* Support note */}
               <div className="text-xs text-neutral-500 dark:text-neutral-400 p-3 rounded-xl bg-neutral-100/70 dark:bg-neutral-800/40">
-                💡 Nếu thiết bị kết nối chậm hoặc mạng chập chờn, vui lòng khởi động lại Wi-Fi trên máy hoặc gọi Hotline kỹ thuật <strong>0902 371 800</strong> để được hỗ trợ kiểm tra router phòng.
+                💡 Nếu thiết bị kết nối chậm hoặc mạng chập chờn, vui lòng khởi động lại Wi-Fi trên máy hoặc gọi Hotline kỹ thuật <strong>{formatPhoneSpaced(contactPhone)}</strong> để được hỗ trợ kiểm tra router phòng.
               </div>
 
             </div>
@@ -691,19 +693,19 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                 <div>
                   <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider block">Quản lý & Chủ nhà</span>
                   <h3 className="text-base font-bold text-neutral-900 dark:text-white mt-0.5">Bùi Trung Khải</h3>
-                  <p className="text-xs font-mono font-bold text-neutral-700 dark:text-neutral-300 mt-1">0902 371 800</p>
+                  <p className="text-xs font-mono font-bold text-neutral-700 dark:text-neutral-300 mt-1">{formatPhoneSpaced(contactPhone)}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <a
-                    href="tel:0902371800"
+                    href={`tel:${contactPhone}`}
                     className="primary-button px-4 text-sm"
                   >
                     <Phone size={14} />
                     <span>Gọi điện</span>
                   </a>
                   <a
-                    href="https://zalo.me/0902371800"
+                    href={`https://zalo.me/${contactPhone}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="soft-button px-4 text-sm"
@@ -721,10 +723,10 @@ export function UtilityDetailModal({ type, isOpen, onClose, onOpenContract }: Ut
                   <p className="text-neutral-500 dark:text-neutral-400 text-[11px] mt-0.5">Xử lý sự cố rò rỉ nước, mất điện phòng, chập điện khẩn cấp</p>
                 </div>
                 <a
-                  href="tel:0902371800"
+                  href={`tel:${contactPhone}`}
                   className="px-3.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold hover:bg-neutral-200 transition-colors shrink-0"
                 >
-                  0902 371 800
+                  {formatPhoneSpaced(contactPhone)}
                 </a>
               </div>
 

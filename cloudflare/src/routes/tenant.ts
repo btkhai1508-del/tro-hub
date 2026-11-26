@@ -158,6 +158,7 @@ export function registerTenantAccounts(app: Hono<App>): void {
     const accounts: Record<string, unknown>[] = [];
     for (const houseId of viewer.houseIds) {
       const db = await tenantFor(c, houseId);
+      const houseName = (await db.prepare(`SELECT name FROM houses WHERE id = ?`).bind(houseId).first<{ name: string }>())?.name ?? '';
       const { results } = await db
         .prepare(
           `SELECT r.id, r.house_id, r.room_id, r.full_name, r.gender, r.phone, r.email, r.status, r.created_at, rm.name AS room_name
@@ -180,6 +181,7 @@ export function registerTenantAccounts(app: Hono<App>): void {
           isAdmin: false,
           residentId: r.id,
           houseId: r.house_id,
+          houseName,
           roomId: r.room_id,
         });
       }
