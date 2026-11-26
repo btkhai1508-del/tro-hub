@@ -48,9 +48,10 @@ function writeHeader(w: PageWriter, m: Measurer, house: HouseInfo, numberText: s
   let leftEnd = y + 8;
   if (address) {
     // The house address under its name (invoice notice), then the rule and the number.
-    const afterAddress = w.flow([t(address, 'normal', 11)], { x: LEFT, right: LEFT + LEFT_COL_WIDTH, y: y - 2, lineHeight: 13, size: 11, align: 'center' });
-    w.line(leftCx - rule / 2, afterAddress - 9, leftCx + rule / 2, afterAddress - 9, 0.5);
-    leftEnd = afterAddress + 6;
+    // Name, its rule, the address, then the number.
+    w.line(leftCx - rule / 2, y - 10, leftCx + rule / 2, y - 10, 0.5);
+    const afterAddress = w.flow([t(address, 'normal', 11)], { x: LEFT, right: LEFT + LEFT_COL_WIDTH, y: y + 3, lineHeight: 13, size: 11, align: 'center' });
+    leftEnd = afterAddress + 4;
     w.center(leftCx, leftEnd, numberText, 13);
   } else {
     w.line(leftCx - rule / 2, y - 10, leftCx + rule / 2, y - 10, 0.5);
