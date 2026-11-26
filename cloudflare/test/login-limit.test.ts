@@ -17,8 +17,8 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 describe.each(BACKENDS)('login lockout on %s', (backend) => {
   beforeEach(() => seedWorld(backend));
 
-  it('4 wrong passwords answer 401, the 5th locks the phone for 15 minutes (429 AUTH_LOCKED)', async () => {
-    for (let i = 0; i < 4; i++) expect((await bad(PHONES.residentTk)).status).toBe(401);
+  it('5 wrong passwords answer 401, the 6th locks the phone for 15 minutes (429 AUTH_LOCKED)', async () => {
+    for (let i = 0; i < 5; i++) expect((await bad(PHONES.residentTk)).status).toBe(401);
     const fifth = await bad(PHONES.residentTk);
     expect(fifth.status).toBe(429);
     expect(await fifth.json()).toMatchObject({ success: false, errorCode: 'AUTH_LOCKED', error: 'Sai mật khẩu quá nhiều lần. Thử lại sau 15 phút.' });
@@ -31,7 +31,7 @@ describe.each(BACKENDS)('login lockout on %s', (backend) => {
   });
 
   it('the message names the minutes left', async () => {
-    for (let i = 0; i < 5; i++) await bad(PHONES.residentTk);
+    for (let i = 0; i < 6; i++) await bad(PHONES.residentTk);
     await e.DB.prepare(`UPDATE login_attempts SET locked_until = ? WHERE scope = 'phone_ip'`).bind(nowSec() + 5 * 60 + 30).run();
     const res = await bad(PHONES.residentTk);
     expect(res.status).toBe(429);
@@ -45,18 +45,18 @@ describe.each(BACKENDS)('login lockout on %s', (backend) => {
     expect((await row('phone_ip', pair(PHONES.residentTk)))!.count).toBe(3);
     await login(PHONES.residentTk);
     expect(await row('phone_ip', pair(PHONES.residentTk))).toBeNull();
-    for (let i = 0; i < 4; i++) expect((await bad(PHONES.residentTk)).status).toBe(401); // 4 again: not locked
+    for (let i = 0; i < 5; i++) expect((await bad(PHONES.residentTk)).status).toBe(401); // 5 again: not locked
   });
 
   it('the window expires: old failures stop counting', async () => {
-    for (let i = 0; i < 4; i++) await bad(PHONES.residentTk);
+    for (let i = 0; i < 5; i++) await bad(PHONES.residentTk);
     await e.DB.prepare(`UPDATE login_attempts SET window_start = window_start - ? WHERE scope = 'phone_ip'`).bind(LOGIN_LIMITS.windowSec + 1).run();
     expect((await bad(PHONES.residentTk)).status).toBe(401);
     expect((await row('phone_ip', pair(PHONES.residentTk)))!.count).toBe(1);
   });
 
   it('the lock expires on its own (also for the Developer)', async () => {
-    for (let i = 0; i < 5; i++) await bad(PHONES.developer);
+    for (let i = 0; i < 6; i++) await bad(PHONES.developer);
     expect((await post('/api/auth/login', { phone: PHONES.developer, password: '1' })).status).toBe(429);
     await e.DB.prepare(`UPDATE login_attempts SET locked_until = ?, window_start = window_start - 2000 WHERE scope = 'phone_ip'`).bind(nowSec() - 1).run();
     expect((await post('/api/auth/login', { phone: PHONES.developer, password: '1' })).status).toBe(200);
@@ -64,9 +64,9 @@ describe.each(BACKENDS)('login lockout on %s', (backend) => {
 
   it('an unknown phone locks too, with the same shape as a known one', async () => {
     const unknown = '0999999999';
-    for (let i = 0; i < 4; i++) expect((await bad(unknown)).status).toBe(401);
+    for (let i = 0; i < 5; i++) expect((await bad(unknown)).status).toBe(401);
     const a = await bad(unknown);
-    for (let i = 0; i < 4; i++) await bad(PHONES.residentLvc);
+    for (let i = 0; i < 5; i++) await bad(PHONES.residentLvc);
     const b = await bad(PHONES.residentLvc);
     expect(a.status).toBe(429);
     expect(await a.json()).toEqual(await b.json());
@@ -91,7 +91,7 @@ describe.each(BACKENDS)('login lockout on %s', (backend) => {
   });
 
   it('a stranger cannot lock the real owner: the lock is per (phone, IP)', async () => {
-    for (let i = 0; i < 5; i++) await bad(PHONES.owner, '198.51.100.66');
+    for (let i = 0; i < 6; i++) await bad(PHONES.owner, '198.51.100.66');
     expect((await post('/api/auth/login', { phone: PHONES.owner, password: '1' }, '198.51.100.66')).status).toBe(429);
     expect((await post('/api/auth/login', { phone: PHONES.owner, password: '1' }, '203.0.113.50')).status).toBe(200);
   });
@@ -104,7 +104,7 @@ describe.each(BACKENDS)('login lockout on %s', (backend) => {
   });
 
   it('Developer lists and clears locks (audited); others are refused', async () => {
-    for (let i = 0; i < 5; i++) await bad(PHONES.owner, '198.51.100.66');
+    for (let i = 0; i < 6; i++) await bad(PHONES.owner, '198.51.100.66');
     const dev = await login(PHONES.developer);
     const manager = await login(PHONES.manager);
     expect((await api('/api/dev/login-locks', {}, manager)).status).toBe(403);
@@ -137,11 +137,11 @@ describe('limiter helpers with an injected clock', () => {
 
   it('loginFailure counts, locks at the limit and restarts after the window', async () => {
     const t0 = 1_800_000_000;
-    for (let i = 1; i <= 4; i++) expect(await loginFailure(e.DB, '0900', null, t0 + i)).toEqual({ phoneLocked: false, ipLocked: false });
-    expect((await loginFailure(e.DB, '0900', null, t0 + 5)).phoneLocked).toBe(true);
-    expect(await loginStatus(e.DB, '0900', null, t0 + 6)).toMatchObject({ lockedUntil: t0 + 5 + LOGIN_LIMITS.lockSec });
-    expect((await loginStatus(e.DB, '0900', null, t0 + 5 + LOGIN_LIMITS.lockSec + 1)).lockedUntil).toBeNull();
-    expect((await loginFailure(e.DB, '0900', null, t0 + 5 + LOGIN_LIMITS.lockSec + 2)).phoneLocked).toBe(false);
+    for (let i = 1; i <= 5; i++) expect(await loginFailure(e.DB, '0900', null, t0 + i)).toEqual({ phoneLocked: false, ipLocked: false, attemptsLeft: 6 - i });
+    expect((await loginFailure(e.DB, '0900', null, t0 + 6)).phoneLocked).toBe(true);
+    expect(await loginStatus(e.DB, '0900', null, t0 + 7)).toMatchObject({ lockedUntil: t0 + 6 + LOGIN_LIMITS.lockSec });
+    expect((await loginStatus(e.DB, '0900', null, t0 + 6 + LOGIN_LIMITS.lockSec + 1)).lockedUntil).toBeNull();
+    expect((await loginFailure(e.DB, '0900', null, t0 + 6 + LOGIN_LIMITS.lockSec + 2)).phoneLocked).toBe(false);
   });
 
   it('registerHit allows the limit, then refuses without writing', async () => {
