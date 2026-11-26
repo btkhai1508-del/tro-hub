@@ -187,7 +187,7 @@ export function Profile() {
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
               <button type="button" onClick={() => setIsScanning(true)} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-3 text-sm"><QrCode size={16} /><span>QR CCCD</span></button>
               <button type="button" onClick={closeProfileEditModal} disabled={isSaving} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-3 text-sm"><X size={16} /><span>Hủy</span></button>
-              <button type="button" onClick={handleSave} disabled={isSaving} aria-busy={isSaving} className="primary-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-3 text-sm"><Check size={16} /><span>{isSaving ? 'Đang lưu…' : 'Lưu thay đổi'}</span></button>
+              <button type="button" onClick={handleSave} disabled={isSaving} aria-busy={isSaving} className="primary-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-3 text-[14.7px] font-bold text-black"><Check size={16} /><span>{isSaving ? 'Đang lưu…' : 'Lưu thay đổi'}</span></button>
             </div>
           ) : (
             <button type="button" onClick={openProfileEditModal} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 text-sm text-neutral-700 dark:text-neutral-200 sm:self-center"><Edit3 size={16} /><span>Chỉnh sửa hồ sơ</span></button>

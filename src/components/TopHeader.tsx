@@ -136,8 +136,8 @@ export function TopHeader() {
           <div className="min-h-0 max-h-[min(420px,calc(100svh_-_15rem))] space-y-1.5 overflow-y-auto overscroll-contain">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center px-4 py-8 text-center">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900/10 dark:bg-white/10 text-slate-800 dark:text-slate-200 shadow-xs">
-                  <Bell size={22} strokeWidth={1.8} className="text-slate-700 dark:text-slate-200" />
+                <div className="mb-3 flex h-14 w-14 items-center justify-center text-slate-800 dark:text-slate-200">
+                  <Bell size={31} strokeWidth={1.8} className="text-slate-700 dark:text-slate-200" />
                 </div>
                 <p className="apple-body font-bold text-slate-900 dark:text-white">Bạn đã cập nhật tất cả</p>
                 <p className="apple-callout mt-1 max-w-[240px] font-medium text-slate-600 dark:text-slate-300">

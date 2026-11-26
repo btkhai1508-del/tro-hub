@@ -21,7 +21,7 @@ export function Home() {
     <div className="kit-page resident-home">
       <header data-tutorial="resident-welcome" className="kit-page-header home-stagger-1">
         <div className="min-w-0">
-          <p className="kit-page-kicker">Trang chủ</p>
+          <p className="kit-page-kicker">Trọ-Hub, {profile.room?.building || 'Căn trọ'}</p>
           <h1 className="kit-page-title apple-large-title apple-strong">
             Xin chào{firstName ? `, ${firstName}` : ''}<span className="text-neutral-950 dark:text-white">.</span>
           </h1>
