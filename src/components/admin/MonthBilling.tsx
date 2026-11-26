@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Lock } from '../LineIcons';
 import { money, useAdminHouses, workerCall } from './workerAdmin';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
@@ -17,9 +17,13 @@ function badgeOf(r: Row): { text: string; cls: string } {
   return { text: 'Chưa đóng', cls: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200' };
 }
 
-/** Meter entry on the Worker, one row per room (issuing is the Tạo hoá đơn button of the Hoá đơn tab). Meters save with the Lưu button, Enter or on blur. */
+/** Meter entry on the Worker, one row per room (issuing is the Tạo hoá đơn button of the Hoá đơn tab). Meters save on blur or Enter (no button). */
 export default function MonthBilling({ month }: { month: string }) {
-  const { houses, houseId, setHouseId, error: houseError } = useAdminHouses();
+  const { houses, error: houseError } = useAdminHouses();
+  // 'all' = every house of this account (default), else one house id; same filter style as Phòng & Khách.
+  const [houseFilter, setHouseFilter] = useState('all');
+  const houseIds = houseFilter === 'all' ? houses.map((h) => h.id) : [houseFilter];
+  const houseKey = houseIds.join(',');
   const [rooms, setRooms] = useState<Row[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -33,19 +37,22 @@ export default function MonthBilling({ month }: { month: string }) {
 
   const loadSeq = useRef(0);
   const load = useCallback(async () => {
-    if (!houseId) return;
+    if (!houseKey) return;
     const seq = ++loadSeq.current;
     setRooms([]);
     setLoaded(false);
     setLoadError('');
     setEdits({});
     setRowError({});
-    const r = await workerCall(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(houseId)}`);
+    const ids = houseKey.split(',');
+    const answers = await Promise.all(ids.map((id) => workerCall(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(id)}`)));
     if (seq !== loadSeq.current) return; // a newer house/month request replaced this one
-    if (!r.ok) { setLoadError(r.error); return; }
-    setRooms(r.data.rooms ?? []);
+    const failed = answers.find((r) => !r.ok);
+    if (failed && !failed.ok) { setLoadError(failed.error); return; }
+    // Every row carries its house, so a save always goes to the right one.
+    setRooms(answers.flatMap((r, i) => (r.ok ? (r.data.rooms ?? []).map((row: Row) => ({ ...row, houseId: row.houseId || ids[i] })) : [])));
     setLoaded(true);
-  }, [houseId, month]);
+  }, [houseKey, month]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -60,7 +67,7 @@ export default function MonthBilling({ month }: { month: string }) {
     return data;
   };
 
-  // One save per room with what changed (blur, Enter or the Lưu button). An identical save already running is not sent twice.
+  // One save per room with what changed (blur or Enter). An identical save already running is not sent twice.
   const saveRoom = (room: Row) => {
     const data = dirtyOf(room);
     if (Object.keys(data).length === 0) {
@@ -71,7 +78,7 @@ export default function MonthBilling({ month }: { month: string }) {
     const sig = JSON.stringify(data);
     if (inflight.current[room.roomId] === sig) return;
     inflight.current[room.roomId] = sig;
-    const body = { month, houseId: room.houseId || houseId, room: room.roomName, data };
+    const body = { month, houseId: room.houseId, room: room.roomName, data };
     const run = async () => {
       setSaving((cur) => ({ ...cur, [room.roomId]: true }));
       const r = await workerCall('/api/admin/room-detail', { method: 'POST', body: JSON.stringify(body) });
@@ -104,26 +111,28 @@ export default function MonthBilling({ month }: { month: string }) {
       </div>
 
       {houses.length > 1 && (
-        <label className="block text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase">
-          Nhà trọ
-          <select aria-label="Chọn nhà trọ" value={houseId} onChange={(e) => setHouseId(e.target.value)} className={`${inputCls} mt-2`}>
-            {houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
-          </select>
-        </label>
+        <div className="admin-list-filters">
+          <label className="admin-status-filter"><span className="sr-only">Căn</span><select value={houseFilter} onChange={(e) => setHouseFilter(e.target.value)} aria-label="Lọc theo căn"><option value="all">Tất cả căn</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+        </div>
       )}
       {(houseError || loadError) && <p role="alert" className="text-xs font-bold text-rose-600">{houseError || loadError}</p>}
-      <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhập số mới rồi bấm Lưu. Hoá đơn ở trạng thái Nháp, cư dân chỉ thấy sau khi bấm Tạo hoá đơn ở tab Hoá đơn.</p>
+      <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhập số mới, tự lưu khi rời ô hoặc nhấn Enter. Hoá đơn ở trạng thái Nháp, cư dân chỉ thấy sau khi bấm Tạo hoá đơn ở tab Hoá đơn.</p>
 
       {!loaded && !loadError && !houseError && <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Đang tải danh sách phòng...</p>}
 
       <ul className="space-y-3">
-        {rooms.map((r) => {
+        {rooms.map((r, i) => {
+          const houseHead = houseFilter === 'all' && houses.length > 1 && (i === 0 || rooms[i - 1].houseId !== r.houseId)
+            ? <li className="pt-2 text-xs font-bold uppercase text-neutral-600 dark:text-neutral-300">{houses.find((h) => h.id === r.houseId)?.name || r.houseId}</li>
+            : null;
           const paid = r.paymentStatus === 'paid';
           const badge = r.invoiceId === null ? null : badgeOf(r);
           const e = edits[r.roomId]?.e ?? (r.dienMoi ? String(r.dienMoi) : '');
           const w = edits[r.roomId]?.w ?? (r.nuocMoi ? String(r.nuocMoi) : '');
           return (
-            <li key={r.roomId} data-testid="month-room" data-room={r.roomName} className="rounded-2xl border border-neutral-100 dark:border-neutral-700/60 bg-neutral-50 dark:bg-neutral-800/60 p-3 sm:p-4 space-y-3">
+            <Fragment key={r.roomId}>
+            {houseHead}
+            <li data-testid="month-room" data-room={r.roomName} className="rounded-2xl border border-neutral-100 dark:border-neutral-700/60 bg-neutral-50 dark:bg-neutral-800/60 p-3 sm:p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-neutral-900 dark:text-white">Phòng {r.roomName}</span>
@@ -150,14 +159,12 @@ export default function MonthBilling({ month }: { month: string }) {
                 </label>
               </div>
               <div className="flex items-center gap-3 min-h-0">
-                {Object.keys(dirtyOf(r)).length > 0 && (
-                  <button type="button" onClick={() => saveRoom(r)} disabled={saving[r.roomId]} aria-label={`Lưu chỉ số phòng ${r.roomName}`}
-                    className="primary-button min-h-11 px-5 text-xs font-bold cursor-pointer disabled:opacity-50">{saving[r.roomId] ? 'Đang lưu...' : 'Lưu'}</button>
-                )}
+                {saving[r.roomId] && <span role="status" className="text-xs font-bold text-neutral-600 dark:text-neutral-300">Đang lưu...</span>}
                 {!saving[r.roomId] && saved[r.roomId] && Object.keys(dirtyOf(r)).length === 0 && <span role="status" className="text-xs font-bold text-emerald-600">Đã lưu ✓</span>}
               </div>
               {rowError[r.roomId] && <p role="alert" className="text-xs font-bold text-rose-600">{rowError[r.roomId]}</p>}
             </li>
+            </Fragment>
           );
         })}
       </ul>
