@@ -10,6 +10,9 @@ Chia 8 đợt, làm lần lượt, deploy sau mỗi đợt khi người dùng n�
   đã trả thì hiện "Đã thanh toán ngày …" và không hiện QR; chống dò link bằng giới hạn theo IP; chủ trọ có nút "Tạo lại link". Link không hết hạn khi hoá đơn chưa trả.
 - Mất mạng: app mất mạng từ lúc mở thì đăng nhập/đăng ký báo "Mất kết nối internet, vui lòng chờ chút!", có mạng lại tự tải lại.
   Đã vào app thì hiện dữ liệu cũ kèm "đang ngoại tuyến"; thao tác ghi bị chặn và báo mất kết nối (không lưu tạm để gửi sau).
+- QR sau khi đã thanh toán: QR ngân hàng không thu hồi được. Làm 3 việc: (1) hoá đơn đã trả thì app và PDF in lại không có QR, ghi "Đã thanh toán ngày …";
+  (2) bản in dùng QR dạng link tới trang thanh toán công khai (đã trả thì trang không còn QR) — **CHƯA CHỐT**: người dùng chưa chọn giữa QR link và QR ngân hàng trong PDF, hãy hỏi lại trước khi làm đợt 2;
+  (3) báo chủ trọ khi có tiền vào hoá đơn đã trả (code hiện chỉ tính thành "surplus", chưa chắc có thông báo).
 - Mật khẩu (quên mật khẩu bằng CCCD, 123456, chủ trọ xem mật khẩu cư dân): **hoãn**, người dùng tính sâu rồi báo. Không làm.
 
 ## Đợt 1: chữ, tên gọi, icon, font
