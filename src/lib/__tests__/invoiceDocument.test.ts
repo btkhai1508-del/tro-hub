@@ -44,6 +44,12 @@ test('paid invoice: no QR, "Đã thanh toán ngày" written once', () => {
   assert.doesNotMatch(all, /0123456789/);
 });
 
+test('no previous debt: 0 and the total are written, never dots', () => {
+  const all = texts(buildInvoiceNotice(m, { invoice: invoice(), house, room: '101' }));
+  assert.match(all, /- Số tiền còn nợ tháng trước:\n0\n/);
+  assert.match(all, /Tổng cộng:\n3\.620\.000/);
+});
+
 test('without a payment page (Google Sheet mode) the notice has no QR', () => {
   assert.equal(images(buildInvoiceNotice(m, { invoice: invoice(), house, room: '101' })).length, 0);
 });

@@ -161,7 +161,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     w.image(qx, y - 12, size, size, payment.qrPng);
     w.center(qx + size / 2, y - 12 + size + 10, 'Quét để thanh toán', 9, 'italic');
   }
-  const debt = data.previousDebt;
+  const debt = data.previousDebt ?? 0; // no debt known → 0, never dots (user's choice for the payment block)
   const label = (text: string, value: string, bold = false) => {
     w.text(LEFT + (bold ? INDENT : 0), y, text, BODY, bold ? 'bold' : 'normal');
     w.rightText(LEFT + 330, y, value, BODY, bold ? 'bold' : 'normal');
@@ -170,9 +170,9 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   w.text(LEFT, y, 'Phần thanh toán:', BODY);
   w.line(LEFT, y + 2, LEFT + m.width('Phần thanh toán:', 'normal', BODY), y + 2, 0.5);
   y += LH;
-  label('- Số tiền còn nợ tháng trước:', debt === undefined ? '..............' : fmt(debt));
+  label('- Số tiền còn nợ tháng trước:', fmt(debt));
   label('- Phải trả tháng này:', fmt(invoice.total));
-  label('Tổng cộng:', debt === undefined ? '..............' : fmt(debt + invoice.total), true);
+  label('Tổng cộng:', fmt(debt + invoice.total), true);
   y += PARA + 2; // a little air between the totals and the payment details
   w.text(LEFT, y, 'Chi tiết thanh toán:', BODY);
   y += LH;
