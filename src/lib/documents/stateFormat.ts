@@ -165,7 +165,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   }
 
   writeSignatures(w, y + 6,
-    { title: 'NGƯỜI TRỌ', note: '(Ký, ghi rõ họ tên)', name: data.tenantName },
+    { title: 'NGƯỜI NỘP TIỀN', note: '(Ký, ghi rõ họ tên)', name: data.tenantName },
     { title: 'QUẢN LÝ NHÀ TRỌ', signed: true, name: house.landlord });
 
   return {
