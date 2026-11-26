@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, LayoutGrid, Receipt, FileText, User, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -15,28 +15,16 @@ const navItems = [
 
 export function BottomNav({ className }: { className?: string }) {
   const { invoices, logoutUser } = useApp();
-  const [confirmLogout, setConfirmLogout] = useState(false);
   const unpaidCount = invoices.filter(i => i.status === 'unpaid').length;
   return (
     <nav aria-label="Điều hướng chính" className={cn('kit-dock flex items-center gap-1 rounded-full p-1.5', className)}>
       {navItems.map(({ name, path, Icon, tutorial }) => <NavLink key={path} to={path} onPointerEnter={() => preloadRoute(path)} onFocus={() => preloadRoute(path)} onPointerDown={() => preloadRoute(path)} end={path === '/'} data-tutorial={tutorial} className={({ isActive }) => cn('kit-nav-item relative flex min-h-[54px] min-w-0 flex-1 touch-manipulation flex-col items-center justify-center gap-1 rounded-full px-0.5', isActive && 'kit-nav-active')}>
         {({ isActive }) => <><span className="relative flex items-center justify-center"><Icon size={20} strokeWidth={isActive ? 2.2 : 1.7} />{path === '/invoices' && unpaidCount > 0 && <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-xs ring-2 ring-white/80 dark:ring-neutral-800">{unpaidCount > 9 ? '9+' : unpaidCount}</span>}</span><span className={cn('text-[11px] leading-tight whitespace-nowrap transition-colors', isActive ? 'font-semibold text-neutral-900 dark:text-white' : 'font-medium text-neutral-600 dark:text-neutral-400')}>{name}</span></>}
       </NavLink>)}
-      <button type="button" onClick={() => setConfirmLogout(true)} aria-label="Đăng xuất" title="Đăng xuất" className="kit-nav-item relative flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 text-rose-600 dark:text-rose-400">
+      <button type="button" onClick={logoutUser} aria-label="Đăng xuất" title="Đăng xuất" className="kit-nav-item relative flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 text-rose-600 dark:text-rose-400">
         <LogOut size={20} strokeWidth={1.7} />
         <span className="text-[10px] font-medium">Đăng xuất</span>
       </button>
-      {confirmLogout && (
-        <div role="dialog" aria-modal="true" aria-label="Xác nhận đăng xuất" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onClick={() => setConfirmLogout(false)}>
-          <div className="w-full max-w-xs rounded-2xl bg-white p-5 text-center shadow-xl dark:bg-neutral-900" onClick={e => e.stopPropagation()}>
-            <p className="apple-headline kit-text-primary mb-4">Bạn muốn đăng xuất?</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setConfirmLogout(false)} className="soft-button min-h-11 flex-1">Huỷ</button>
-              <button type="button" onClick={logoutUser} className="min-h-11 flex-1 rounded-xl bg-rose-600 font-semibold text-white">Đăng xuất</button>
-            </div>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

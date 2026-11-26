@@ -691,11 +691,12 @@ export function registerAdmin(app: Hono<App>): void {
     const body = await readBody(c);
     const houseId = pickHouse(c, body.houseId);
     if (houseId instanceof Response) return houseId;
-    const month = pickMonth(c, body.month);
-    if (month instanceof Response) return month;
+    const asked = pickMonth(c, body.month);
+    if (asked instanceof Response) return asked;
     await tenantFor(c, houseId); // the access check (403 / 404) before anything is read or written
-    // A prepared month (last 5 days of the previous one) can hold drafts but cannot be opened for payment before its day 1.
-    if (month > currentMonth()) return fail(c, 409, 'MONTH_NOT_STARTED', `${monthLabel(month)} mở thu được từ 01/${month.slice(5)}/${month.slice(0, 4)}.`);
+    const month = pickFeeMonth(c, asked); // up to next month
+    if (month instanceof Response) return month;
+    // The next month can be issued as soon as it is prepared (pickMonth allows at most next month).
     const { issued, missingMeters } = await issueMonth(c.env, houseId, month, body.force === true);
     if (issued > 0) await audit(c, actorOf(c.get('viewer')), 'admin_issue_month', houseId, `${month}:${issued}`);
     return c.json({ success: true, issued, missingMeters });

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2, ReceiptText } from 'lucide-react';
 import { workerCall } from './workerAdmin';
 import ConfirmSaveDialog from './ConfirmSaveDialog';
-import { isFutureMonth } from '../../lib/utils';
 import { houseResultText, issueScope, missingMeterRooms, monthLabel, type IssueRow } from '../../lib/issueMonth';
 import { refreshBilling, refreshDashboard, refreshGate, refreshRooms } from '../../lib/adminRefresh';
 
@@ -33,7 +32,6 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
 
   const label = monthLabel(month);
   const scope = issueScope(rows, houseFilter);
-  const future = isFutureMonth(label);
   const houseName = (id: string) => houses.find((h) => h.id === id)?.name || id;
   const allHouses = houseFilter === 'all' && houses.length > 1;
 
@@ -52,7 +50,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
 
   /** Reads the scope fresh from the Worker, then asks once (with the rooms still missing meters, if any). */
   const prepare = async () => {
-    if (busyRef.current || future) return;
+    if (busyRef.current) return;
     start();
     setNote(null);
     const ids = houseFilter !== 'all'
@@ -121,10 +119,9 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   };
 
   const pill = scope.allIssued && !busy;
-  const disabled = busy || future || scope.drafts === 0;
+  const disabled = busy || scope.drafts === 0;
   const text = phase === 'running' ? 'Đang tạo hoá đơn…'
     : phase === 'checking' ? 'Đang kiểm tra…'
-    : future ? `Tạo được từ 01/${label}`
     : pill ? `Đã tạo hoá đơn tháng ${label}`
     : `Tạo hoá đơn tháng ${label}`;
 
@@ -135,7 +132,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
           {pill
             ? `Mọi hoá đơn tháng ${label} đã được tạo, cư dân đã thấy và thanh toán được.`
             : scope.drafts > 0
-              ? <><span className="font-bold text-neutral-900 dark:text-white tabular-nums">{scope.drafts} hoá đơn nháp</span> — cư dân chưa thấy. {future ? `Tạo hoá đơn được từ 01/${label}.` : 'Nhập xong điện nước và dịch vụ thì bấm Tạo hoá đơn.'}</>
+              ? <><span className="font-bold text-neutral-900 dark:text-white tabular-nums">{scope.drafts} hoá đơn nháp</span> — cư dân chưa thấy. Nhập xong điện nước và dịch vụ thì bấm Tạo hoá đơn.</>
               : `Chưa có hoá đơn nháp nào của tháng ${label}.`}
         </p>
         <button
@@ -150,7 +147,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
         >
           {spinning ? <Loader2 size={16} className="animate-spin" /> : pill ? <CheckCircle2 size={16} /> : <ReceiptText size={16} />}
           <span className="whitespace-nowrap">{text}</span>
-          {!spinning && !future && !pill && scope.drafts > 0 && (
+          {!spinning && !pill && scope.drafts > 0 && (
             <span className="tabular-nums rounded-full border border-current px-2 py-0.5 text-[11px] opacity-80">{scope.drafts}</span>
           )}
         </button>

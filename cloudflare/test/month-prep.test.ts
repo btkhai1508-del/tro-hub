@@ -139,21 +139,17 @@ describe.each(BACKENDS)('chuẩn bị tháng sau 5 ngày cuối tháng [%s]', (b
     expect(JSON.stringify(dec)).not.toMatch(/3\d{6}/); // no amount of an invisible draft
   });
 
-  it('issue-month tháng 12 ngày 28/11 → 409 MONTH_NOT_STARTED; ngày 1/12 → 200', async () => {
+  it('issue-month tháng 12 ngày 28/11: tháng sau đã chuẩn bị thì tạo hoá đơn được ngay, cư dân thấy hoá đơn tháng 12', async () => {
     const t = vn(2026, 11, 28, 10);
     vi.setSystemTime(t);
     await runCron(MONTH_CRON, e, t);
-    const owner = await call(PHONES.owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: '12/2026', force: true });
-    expect(owner.status).toBe(409);
-    expect(await json(owner)).toEqual({ success: false, errorCode: 'MONTH_NOT_STARTED', error: 'Tháng 12/2026 mở thu được từ 01/12/2026.' });
-    expect((await invoiceOf('LVC', '101', DEC)).issued_at).toBeNull();
-
-    const t1 = vn(2026, 12, 1, 0, 5);
-    vi.setSystemTime(t1);
     const ok = await call(PHONES.owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: '12/2026', force: true });
     expect(ok.status).toBe(200);
     expect((await json(ok)).issued).toBe(1);
     expect((await invoiceOf('LVC', '101', DEC)).issued_at).not.toBeNull();
+    // Two months ahead is still refused (only up to next month).
+    const far = await call(PHONES.owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: '01/2027', force: true });
+    expect(far.status).toBe(400);
   });
 
   it('nhập chỉ số mới tháng 11 sau khi đã có nháp tháng 12: số cũ và tiền của nháp tháng 12 đổi theo', async () => {

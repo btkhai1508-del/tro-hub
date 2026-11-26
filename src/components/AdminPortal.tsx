@@ -2425,7 +2425,7 @@ export function AdminPortal() {
 
         {workerMode && isFutureMonth(selectedMonth) && (
           <div role="status" data-testid="prep-banner" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-100">
-            Đang chuẩn bị hoá đơn tháng {selectedMonth} — cư dân chưa thấy cho tới khi tháng bắt đầu và bạn mở thu.
+            Đang chuẩn bị hoá đơn tháng {selectedMonth} — cư dân chưa thấy cho tới khi bạn bấm Tạo hoá đơn.
           </div>
         )}
 
