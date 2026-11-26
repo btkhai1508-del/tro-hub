@@ -30,7 +30,8 @@ export function newToken(): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-const linkUrl = (c: Context<App>, token: string) => `${(c.env.PUBLIC_APP_ORIGIN || DEFAULT_ORIGIN).replace(/\/+$/, '')}/pay/${token}`;
+// The app uses a hash router (and relative assets), so the page lives at /#/pay/<token>.
+const linkUrl = (c: Context<App>, token: string) => `${(c.env.PUBLIC_APP_ORIGIN || DEFAULT_ORIGIN).replace(/\/+$/, '')}/#/pay/${token}`;
 const pad3 = (n: number) => String(n).padStart(3, '0');
 
 interface InvoiceHead { id: number; house_id: string; room_id: number; room: string; month: string; total: number; status: InvoiceStatus; paid_at: string | null; issued_at: string | null }
@@ -40,6 +41,23 @@ const headOf = (db: TenantDb, houseId: string, invoiceId: number) =>
     `SELECT i.id, i.house_id, i.room_id, rm.name AS room, i.month, i.total, i.status, i.paid_at, i.issued_at
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.id = ? AND i.house_id = ?`
   ).bind(invoiceId, houseId).first<InvoiceHead>();
+
+/** What a payer needs besides the lines: pay code and the house's bank account (null when the house has none). */
+async function payInfo(db: TenantDb, inv: InvoiceHead) {
+  const house = await db.prepare(
+    `SELECT name, bank_bin, bank_name, bank_account_no, bank_account_name, landlord_name, pay_no FROM houses WHERE id = ?`
+  ).bind(inv.house_id).first<{ name: string; bank_bin: string | null; bank_name: string | null; bank_account_no: string | null; bank_account_name: string | null; landlord_name: string | null; pay_no: number | null }>();
+  const roomNo = await db.prepare(`SELECT pay_no FROM rooms WHERE id = ?`).bind(inv.room_id).first<{ pay_no: number | null }>();
+  const [yyyy, mm] = inv.month.split('-');
+  const payCode = house?.pay_no != null && roomNo?.pay_no != null ? `${pad3(house.pay_no)}${pad3(roomNo.pay_no)}${mm}${yyyy}` : null;
+  const bank = !house?.bank_bin || !house.bank_account_no ? null : {
+    bin: house.bank_bin,
+    name: house.bank_name,
+    accountNo: house.bank_account_no,
+    accountName: house.bank_account_name || house.landlord_name || '',
+  };
+  return { houseName: house?.name ?? '', payCode, bank };
+}
 
 /** The link of an invoice, created on first use. */
 async function linkFor(c: Context<App>, db: TenantDb, ownerId: number, inv: InvoiceHead): Promise<string> {
@@ -75,7 +93,8 @@ export function registerPublicInvoice(app: Hono<App>): void {
     const r = await invoiceForLink(c);
     if ('error' in r) return r.error;
     const token = await linkFor(c, r.db, r.ownerId, r.inv);
-    return c.json({ success: true, url: linkUrl(c, token) });
+    const info = await payInfo(r.db, r.inv);
+    return c.json({ success: true, url: linkUrl(c, token), payCode: info.payCode, bank: info.bank });
   });
 
   app.post('/api/houses/:houseId/invoices/:invoiceId/public-link/rotate', staffOnly, async (c) => {
@@ -84,7 +103,8 @@ export function registerPublicInvoice(app: Hono<App>): void {
     await c.env.DB.prepare(`DELETE FROM invoice_links WHERE house_id = ? AND invoice_id = ?`).bind(r.inv.house_id, r.inv.id).run();
     const token = await linkFor(c, r.db, r.ownerId, r.inv);
     await audit(c, actorOf(c.get('viewer')), 'invoice_link_rotated', r.inv.house_id, `invoice:${r.inv.id}`);
-    return c.json({ success: true, url: linkUrl(c, token) });
+    const info = await payInfo(r.db, r.inv);
+    return c.json({ success: true, url: linkUrl(c, token), payCode: info.payCode, bank: info.bank });
   });
 
   app.get('/api/public/invoice/:token', async (c) => {
@@ -112,33 +132,23 @@ export function registerPublicInvoice(app: Hono<App>): void {
 
     const status = await (await statusView(c.env.DB, db, [inv.house_id], inv.month))(inv);
     const paid = status === 'paid' || status === 'cash';
-    const house = await db.prepare(
-      `SELECT name, bank_bin, bank_name, bank_account_no, bank_account_name, landlord_name, pay_no FROM houses WHERE id = ?`
-    ).bind(inv.house_id).first<{ name: string; bank_bin: string | null; bank_name: string | null; bank_account_no: string | null; bank_account_name: string | null; landlord_name: string | null; pay_no: number | null }>();
-    const roomNo = await db.prepare(`SELECT pay_no FROM rooms WHERE id = ?`).bind(inv.room_id).first<{ pay_no: number | null }>();
-    const [yyyy, mm] = inv.month.split('-');
-    const payCode = house?.pay_no != null && roomNo?.pay_no != null ? `${pad3(house.pay_no)}${pad3(roomNo.pay_no)}${mm}${yyyy}` : null;
+    const info = await payInfo(db, inv);
     const lines = (await sheetLines(db, [inv.id])).get(inv.id) ?? [];
 
     return c.json({
       success: true,
       invoice: {
-        houseName: house?.name ?? '',
+        houseName: info.houseName,
         room: inv.room,
         month: toSheetMonth(inv.month),
         lines: lines.map((l) => ({ name: l.name, formula: l.formula, amount: l.amount })),
         total: inv.total,
-        payCode,
+        payCode: info.payCode,
         dueDate: dueDateOf(inv.issued_at),
         paid,
         paidDate: paid ? vnDate(inv.paid_at) || null : null,
         // Paid: no account and no QR. Unpaid: what the bank QR needs.
-        bank: paid || !house?.bank_bin || !house.bank_account_no ? null : {
-          bin: house.bank_bin,
-          name: house.bank_name,
-          accountNo: house.bank_account_no,
-          accountName: house.bank_account_name || house.landlord_name || '',
-        },
+        bank: paid ? null : info.bank,
       },
     });
   });

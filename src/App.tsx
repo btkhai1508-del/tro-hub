@@ -21,6 +21,7 @@ const LoginPage = lazy(() => routeLoaders.login().then(module => ({ default: mod
 const AdminPortal = lazy(() => routeLoaders.admin().then(module => ({ default: module.AdminPortal })));
 const DeveloperPortal = lazy(() => routeLoaders.developer().then(module => ({ default: module.DeveloperPortal })));
 const CccdPhoneScan = lazy(() => import('./components/CccdPhoneScan'));
+const PublicInvoicePage = lazy(() => import('./components/PublicInvoicePage').then(module => ({ default: module.PublicInvoicePage })));
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated } = useApp();
@@ -126,6 +127,9 @@ function AppRoutes() {
 
       {/* Opened on a phone from the QR a computer shows; works without logging in */}
       <Route path="/cccd-scan/:id" element={<CccdPhoneScan />} />
+
+      {/* Public payment page of one invoice (QR on the printed invoice): no login, no menu, read-only */}
+      <Route path="/pay/:token" element={<PublicInvoicePage />} />
 
       {/* Main Authenticated Layout matching root / */}
       <Route 

@@ -54,7 +54,7 @@ for (const backend of BACKENDS) {
       const res = await linkAs(owner);
       expect(res.status).toBe(200);
       const { url } = (await res.json()) as { url: string };
-      expect(url).toMatch(/^https:\/\/tro-hub\.onrender\.com\/pay\/[A-Za-z0-9_-]{32}$/);
+      expect(url).toMatch(/^https:\/\/tro-hub\.onrender\.com\/#\/pay\/[A-Za-z0-9_-]{32}$/);
       // The resident of the room gets the same link; asking again does not change it.
       const resident = await login(PHONES.residentLvc);
       expect(((await (await linkAs(resident)).json()) as { url: string }).url).toBe(url);
