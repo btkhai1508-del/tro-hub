@@ -2327,20 +2327,6 @@ export function AdminPortal() {
               <RefreshCw size={15} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
             </button>
 
-            {/* Logout Button */}
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click');
-                logoutUser();
-                navigate('/login');
-              }}
-              className="admin-header-logout flex min-h-11 min-w-[125px] items-center justify-center gap-1.5 rounded-2xl border border-rose-300 bg-rose-50/70 px-4 text-xs font-bold text-rose-600 shadow-xs transition-all hover:bg-rose-100 dark:border-rose-800/80 dark:bg-rose-950/30 dark:text-rose-400 dark:hover:bg-rose-900/50 cursor-pointer"
-              title="Đăng xuất Admin"
-            >
-              <LogOut size={15} strokeWidth={2} />
-              <span>Đăng xuất</span>
-            </button>
           </div>
         </header>
         {!adminLoadError && roomsLoadedMonth === selectedMonth && roomsList.length === 0 && (
@@ -4351,7 +4337,8 @@ export function AdminPortal() {
               </div>
 
               {/* 2 Sub-tabs Segmented Control */}
-              <div className={cn("kit-segmented grid gap-1 p-1", isAdminTong ? "grid-cols-3 max-w-xl" : "grid-cols-2 max-w-md")} role="tablist" aria-label="Chọn chức năng quản lý tài khoản">
+              <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Chọn chức năng quản lý tài khoản">
+                <div className="kit-segmented p-1">
                 <button
                   type="button"
                   role="tab"
@@ -4372,6 +4359,8 @@ export function AdminPortal() {
                     </span>
                   )}
                 </button>
+                </div>
+                <div className="kit-segmented p-1">
                 <button
                   type="button"
                   role="tab"
@@ -4387,7 +4376,9 @@ export function AdminPortal() {
                 >
                   <span>Tạo tài khoản mới</span>
                 </button>
+                </div>
                 {isAdminTong && (
+                  <div className="kit-segmented p-1">
                   <button
                     type="button"
                     role="tab"
@@ -4401,6 +4392,7 @@ export function AdminPortal() {
                   >
                     <span>Ban Quản Lý Trọ</span>
                   </button>
+                  </div>
                 )}
               </div>
 
