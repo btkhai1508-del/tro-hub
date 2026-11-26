@@ -60,7 +60,7 @@ import { HOUSES, houseFromRoom } from '../lib/houses';
 import { buildContract, buildCt01, Person } from '../lib/documents/legalForms';
 import { buildDeclaration } from '../lib/documents/stateFormat';
 import { roomInvoice } from '../lib/documents/fromProfile';
-import { fetchPublicLink, rotatePublicLink, usePaymentBlock } from '../lib/invoicePayment';
+import { fetchPublicLink, usePaymentBlock } from '../lib/invoicePayment';
 import { DocumentActions, DocumentSheet, useBuiltDocument } from './DocumentSheet';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
 import { ModernLineGraph } from './ModernLineGraph';
@@ -1844,33 +1844,27 @@ export function AdminPortal() {
   // Worker mode: the printed invoice carries a QR linking to that room's public payment page (unpaid only).
   const invoiceLinkTarget = workerMode && selectedInvoiceRoom?.invoiceId != null && !selectedInvoiceRoom?.draft
     ? { houseId: String(selectedInvoiceRoom.houseId || ''), invoiceId: Number(selectedInvoiceRoom.invoiceId) } : null;
-  const [linkRevision, setLinkRevision] = useState(0);
   const invoicePayment = usePaymentBlock({
     houseId: invoiceLinkTarget?.houseId ?? null,
     invoiceId: invoiceLinkTarget?.invoiceId ?? null,
     paid: (selectedInvoiceRoom?.paymentStatus || selectedInvoiceRoom?.status) === 'paid',
-    revision: linkRevision,
   });
   const { doc: invoiceDoc } = useBuiltDocument(
     m => roomInvoice(m, selectedInvoiceRoom || { room: '' }, selectedMonth, invoicePayment),
-    `${selectedMonth}|${JSON.stringify(selectedInvoiceRoom || null)}|${invoicePayment ? invoicePayment.qrPng.length + String(invoicePayment.payCode) + linkRevision : String(invoicePayment)}`,
+    `${selectedMonth}|${JSON.stringify(selectedInvoiceRoom || null)}|${invoicePayment ? invoicePayment.qrPng.length + String(invoicePayment.payCode) : String(invoicePayment)}`,
     invoicePayment !== undefined
   );
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkMessage, setLinkMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const invoiceLinkAction = async (rotate: boolean) => {
+  const copyInvoiceLink = async () => {
     if (!invoiceLinkTarget || linkBusy) return;
-    if (rotate && !window.confirm('Tạo link mới cho hoá đơn này? Link và QR cũ (kể cả PDF đã gửi) sẽ không mở được nữa.')) return;
     setLinkBusy(true);
     setLinkMessage(null);
     try {
-      const link = rotate
-        ? await rotatePublicLink(invoiceLinkTarget.houseId, invoiceLinkTarget.invoiceId)
-        : await fetchPublicLink(invoiceLinkTarget.houseId, invoiceLinkTarget.invoiceId);
-      if (rotate) setLinkRevision(n => n + 1);
+      const link = await fetchPublicLink(invoiceLinkTarget.houseId, invoiceLinkTarget.invoiceId);
       await navigator.clipboard.writeText(link.url).then(
-        () => setLinkMessage({ ok: true, text: rotate ? 'Đã tạo link mới và sao chép. Hãy gửi lại PDF mới cho cư dân.' : 'Đã sao chép link thanh toán.' }),
-        () => setLinkMessage({ ok: true, text: rotate ? `Đã tạo link mới: ${link.url}` : link.url }),
+        () => setLinkMessage({ ok: true, text: 'Đã sao chép link thanh toán.' }),
+        () => setLinkMessage({ ok: true, text: link.url }),
       );
     } catch (err: any) {
       setLinkMessage({ ok: false, text: err?.message || 'Chưa lấy được link thanh toán. Vui lòng thử lại.' });
@@ -1878,6 +1872,7 @@ export function AdminPortal() {
       setLinkBusy(false);
     }
   };
+
 
   const monthSelect = (
     <select
@@ -3200,12 +3195,8 @@ export function AdminPortal() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {invoiceLinkTarget && (
-                  <>
-                    <button type="button" onClick={() => invoiceLinkAction(false)} disabled={linkBusy}
-                      className="soft-button min-h-11 px-4 py-2.5">Sao chép link thanh toán</button>
-                    <button type="button" onClick={() => invoiceLinkAction(true)} disabled={linkBusy}
-                      className="soft-button min-h-11 px-4 py-2.5">Tạo lại link</button>
-                  </>
+                  <button type="button" onClick={copyInvoiceLink} disabled={linkBusy}
+                    className="soft-button min-h-11 px-4 py-2.5">Sao chép link thanh toán</button>
                 )}
                 <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" />
               </div>
