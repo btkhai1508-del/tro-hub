@@ -13,11 +13,11 @@ const pub = (token: string, ip = '203.0.113.7') => api(`/api/public/invoice/${to
 
 describe('formulas', () => {
   it('writes each line the way the resident reads it', () => {
-    expect(lineFormula({ kind: 'electricity', qty: 50, unitPrice: 3500 }, 1250)).toBe('1.250 − 1.200 = 50 số × 3.500');
-    expect(lineFormula({ kind: 'water', qty: 3, unitPrice: 20000 })).toBe('3 khối × 20.000');
-    expect(lineFormula({ kind: 'service', qty: 2, unitPrice: 50000, per: 'vehicle' })).toBe('2 chiếc × 50.000');
-    expect(lineFormula({ kind: 'service', qty: 1, unitPrice: 30000, per: 'room' })).toBe('1 phòng × 30.000');
-    expect(lineFormula({ kind: 'room', qty: 1, unitPrice: 3000000 })).toBe('1 tháng');
+    expect(lineFormula({ kind: 'electricity', qty: 50, unitPrice: 3500 }, 1250)).toBe('(1.250 − 1.200) × 3.500');
+    expect(lineFormula({ kind: 'water', qty: 3, unitPrice: 20000 })).toBe('3 × 20.000');
+    expect(lineFormula({ kind: 'service', qty: 2, unitPrice: 50000, per: 'vehicle' })).toBe('2 × 50.000');
+    expect(lineFormula({ kind: 'service', qty: 1, unitPrice: 30000, per: 'room' })).toBe('1 × 30.000');
+    expect(lineFormula({ kind: 'room', qty: 1, unitPrice: 3000000 })).toBe('');
   });
   it('due date is one week after issuing, Vietnam time', () => {
     expect(dueDateOf('2026-11-01 00:00:00')).toBe('08/11/2026');
@@ -67,7 +67,7 @@ for (const backend of BACKENDS) {
       expect(body.invoice).toMatchObject({ houseName: 'NHÀ TRỌ 109/6', room: '101', month: '11/2026', total: 3500000, paid: false, paidDate: null, dueDate: '08/11/2026' });
       expect(body.invoice.payCode).toMatch(/^002\d{3}112026$/);
       // An invoice from the old Sheet has no invoice_lines: its money columns are listed instead.
-      expect(body.invoice.lines[0]).toEqual({ name: 'Tiền phòng', formula: '1 tháng', amount: 3500000 });
+      expect(body.invoice.lines[0]).toEqual({ name: 'Tiền phòng', formula: '', amount: 3500000 });
       expect(Object.keys(body.invoice).sort()).toEqual(['bank', 'dueDate', 'houseName', 'lines', 'month', 'paid', 'paidDate', 'payCode', 'room', 'total']);
       const text = JSON.stringify(body);
       expect(text).not.toContain(PHONES.residentLvc);

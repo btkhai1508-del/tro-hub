@@ -2,7 +2,7 @@ import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
 import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from './AppIcons';
-import { useApp, getTransferContent } from '../context/AppContext';
+import { useApp, transferContentFor } from '../context/AppContext';
 import { getCurrentMonthStr } from '../lib/utils';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
@@ -44,12 +44,12 @@ export function PaymentModal() {
 
   // Nothing is drawn before the portal answered, so the old transfer format never flashes first.
   const portalLoaded = portal.loaded !== false;
-  const transferContent = portalLoaded ? getTransferContent(profile.room?.roomNumber || '203', activeInvoice.month || getCurrentMonthStr(), portal.payPrefix) : '…';
+  const transferContent = portalLoaded ? transferContentFor(activeInvoice, profile.room?.roomNumber || '203', portal.payPrefix) : '';
   const bankAccount = portal.accountNo;
   const bankName = portal.bankName;
   const accountHolder = portal.accountName;
   // A paid invoice shows no QR (a bank QR cannot be taken back once printed or saved).
-  const qrUrl = portalLoaded && activeInvoice.status !== 'paid' ? vietQrUrl(portal, activeInvoice.total, transferContent) : '';
+  const qrUrl = transferContent && activeInvoice.status !== 'paid' ? vietQrUrl(portal, activeInvoice.total, transferContent) : '';
 
   return (
     <div
@@ -284,11 +284,11 @@ export function PaymentModal() {
                       <div className="flex items-center justify-between bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
                         <div>
                           <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Nội dung CK</span>
-                          <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{transferContent}</span>
+                          <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{transferContent || '…'}</span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleCopy(transferContent, 'content')}
+                          onClick={() => transferContent && handleCopy(transferContent, 'content')}
                           className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
                         >
                           {copiedField === 'content' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}

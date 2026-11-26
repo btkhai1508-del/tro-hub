@@ -2,7 +2,7 @@ import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Payment } from 'zmp-sdk/apis';
-import { useApp, getTransferContent } from '../context/AppContext';
+import { useApp, transferContentFor } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { prepareQrImage, saveQrToDevice } from '../lib/qrHelper';
@@ -182,10 +182,10 @@ export function PaymentPage() {
   // Transfer content: the numeric pay code (XXXPPPMMYYYY) once the portal answered. Nothing is drawn before
   // that, so the old room-name format never flashes first.
   const portalLoaded = portal.loaded !== false;
-  const transferContent = portalLoaded ? getTransferContent(profile.room?.roomNumber || '', targetInvoice.month, portal.payPrefix) : '…';
+  const transferContent = portalLoaded ? transferContentFor(targetInvoice, profile.room?.roomNumber || '', portal.payPrefix) : '';
 
   // Pure QR code matrix without borders or background
-  const qrUrl = portalLoaded ? vietQrUrl(portal, targetInvoice.total, transferContent) : '';
+  const qrUrl = transferContent ? vietQrUrl(portal, targetInvoice.total, transferContent) : '';
 
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [isOpeningTransfer, setIsOpeningTransfer] = useState(false);
@@ -209,7 +209,7 @@ export function PaymentPage() {
 
   /** Opens Zalo's own bank transfer. The server signs the order, because the signing key must not ship in the app. */
   const handleQuickTransfer = async () => {
-    if (isOpeningTransfer) return;
+    if (isOpeningTransfer || !transferContent) return;
     setIsOpeningTransfer(true);
     setQrSaveResult(null);
     try {
@@ -573,10 +573,10 @@ export function PaymentPage() {
                       <div className="flex items-center justify-between apple-body">
                         <span className="kit-text-secondary font-normal">Nội dung CK</span>
                         <button type="button" aria-label="Sao chép nội dung chuyển khoản"
-                          onClick={() => handleCopy(transferContent, 'd-content')}
+                          onClick={() => transferContent && handleCopy(transferContent, 'd-content')}
                           className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
                         >
-                          <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
+                          <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent || '…'}</span>
                           {copiedKey === 'd-content' ? (
                             <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                           ) : (
@@ -722,10 +722,10 @@ export function PaymentPage() {
                       <button
                         type="button"
                         aria-label="Sao chép nội dung chuyển khoản"
-                        onClick={() => handleCopy(transferContent, 'm-content')}
+                        onClick={() => transferContent && handleCopy(transferContent, 'm-content')}
                         className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer text-right"
                       >
-                        <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent}</span>
+                        <span className="font-semibold kit-text-secondary font-num apple-callout">{transferContent || '…'}</span>
                         {copiedKey === 'm-content' ? (
                           <Check data-stage="copied" size={14} strokeWidth={2.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         ) : (

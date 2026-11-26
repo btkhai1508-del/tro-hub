@@ -7,22 +7,20 @@ import type { TenantDb } from '../tenant/db.ts';
 export interface SheetLine { kind: string; name: string; qty: number; unitPrice: number; amount: number; formula: string; per?: string | null; sheetCol?: string | null }
 
 const vnd = (n: number) => Math.round(n).toLocaleString('vi-VN');
-const PER_UNIT: Record<string, string> = { room: 'phòng', person: 'người', vehicle: 'chiếc' };
 
-/** The "Chi tiết" text of one line. `meterNew` = the new reading of that meter for the month (null = unknown). */
+/**
+ * The "Chi tiết" text of one line. Rent: none. Electricity/water: "(1.250 − 1.210) × 3.500" (just "40 × 3.500"
+ * when the readings are unknown). Services and the price difference: "2 × 40.000", no unit word.
+ * `meterNew` = the new reading of that meter for the month (null = unknown).
+ */
 export function lineFormula(l: { kind: string; qty: number; unitPrice: number; per?: string | null }, meterNew: number | null = null): string {
-  if (l.kind === 'room') return '1 tháng';
+  if (l.kind === 'room') return '';
   if (l.kind === 'electricity' || l.kind === 'water') {
-    const unit = l.kind === 'electricity' ? 'số' : 'khối';
-    const usage = `${vnd(l.qty)} ${unit} × ${vnd(l.unitPrice)}`;
-    return meterNew !== null && meterNew >= l.qty ? `${vnd(meterNew)} − ${vnd(meterNew - l.qty)} = ${usage}` : usage;
+    return meterNew !== null && meterNew >= l.qty ? `(${vnd(meterNew)} − ${vnd(meterNew - l.qty)}) × ${vnd(l.unitPrice)}` : `${vnd(l.qty)} × ${vnd(l.unitPrice)}`;
   }
-  if (l.kind === 'service') {
-    if (l.per === 'room') return `1 phòng × ${vnd(l.unitPrice)}`;
-    return `${vnd(l.qty)} ${PER_UNIT[l.per ?? ''] ?? ''} × ${vnd(l.unitPrice)}`.replace(/\s+×/, ' ×');
-  }
+  if (l.kind === 'service') return `${vnd(l.qty)} × ${vnd(l.unitPrice)}`;
   // 'other': the electricity price difference (usage × difference); a one-off amount has no formula.
-  return l.qty > 1 ? `${vnd(l.qty)} số × ${vnd(l.unitPrice)}` : '';
+  return l.qty > 1 ? `${vnd(l.qty)} × ${vnd(l.unitPrice)}` : '';
 }
 
 interface LineRow { invoice_id: number; kind: string; name: string; qty: number; unit_price: number; amount: number; per: string | null; sheet_col: string | null }
@@ -32,21 +30,21 @@ interface LegacyRow {
   electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null;
 }
 
-/** "1.250 − 1.210 = 40 số × 3.000" from an old Sheet row (no invoice_lines): the price only when it divides evenly. */
-function legacyMeter(amount: number, oldR: number | null, newR: number | null, unit: string): string {
+/** "(1.250 − 1.210) × 3.000" from an old Sheet row (no invoice_lines): the price only when it divides evenly. */
+function legacyMeter(amount: number, oldR: number | null, newR: number | null): string {
   if (oldR === null || newR === null || newR < oldR) return '';
   const usage = newR - oldR;
   const price = usage > 0 && amount % usage === 0 ? ` × ${vnd(amount / usage)}` : '';
-  return `${vnd(newR)} − ${vnd(oldR)} = ${vnd(usage)} ${unit}${price}`;
+  return `(${vnd(newR)} − ${vnd(oldR)})${price}`;
 }
 
 function legacyLines(r: LegacyRow): SheetLine[] {
   const line = (kind: string, name: string, amount: number, formula: string, sheetCol: string | null = null): SheetLine =>
     ({ kind, name, qty: 0, unitPrice: 0, amount, formula, sheetCol });
   const out = [
-    line('room', 'Tiền phòng', r.room_rent, '1 tháng'),
-    line('electricity', 'Tiền điện', r.electricity, legacyMeter(r.electricity, r.electric_old, r.electric_new, 'số')),
-    line('water', 'Tiền nước', r.water, legacyMeter(r.water, r.water_old, r.water_new, 'khối')),
+    line('room', 'Tiền phòng', r.room_rent, ''),
+    line('electricity', 'Tiền điện', r.electricity, legacyMeter(r.electricity, r.electric_old, r.electric_new)),
+    line('water', 'Tiền nước', r.water, legacyMeter(r.water, r.water_old, r.water_new)),
   ];
   if (r.trash) out.push(line('service', 'Rác', r.trash, '', 'K'));
   if (r.internet) out.push(line('service', 'Internet', r.internet, '', 'L'));

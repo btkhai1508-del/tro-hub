@@ -192,13 +192,14 @@ describe.each(BACKENDS)('phiên cư dân từ Worker [%s]', (backend) => {
     const { invoices } = await session();
     const oct = invoices.find((i: any) => i.id === 'INV-101');
     expect(oct).toMatchObject({ month: '10/2026', issueDate: '01/10/2026', dueDate: '08/10/2026', total: 3395000, status: 'unpaid' });
+    expect(oct.payCode).toMatch(/^001\d{3}102026$/); // the new transfer content, never the old room-name format
     expect(oct.details).toEqual([
-      { name: 'Tiền phòng', amount: 3000000, type: 'room', metric: '1 tháng' },
-      { name: 'Tiền điện', amount: 227500, type: 'electricity', metric: '65 số × 3.500' },
-      { name: 'Tiền nước', amount: 60000, type: 'water', metric: '3 khối × 20.000' },
-      { name: 'Rác', amount: 30000, type: 'service', metric: '1 phòng × 30.000' },
-      { name: 'Internet', amount: 80000, type: 'internet', metric: '2 người × 40.000' },
-      { name: 'Xe máy', amount: 50000, type: 'parking', metric: '1 chiếc × 50.000' },
+      { name: 'Tiền phòng', amount: 3000000, type: 'room' },
+      { name: 'Tiền điện', amount: 227500, type: 'electricity', metric: '65 × 3.500' },
+      { name: 'Tiền nước', amount: 60000, type: 'water', metric: '3 × 20.000' },
+      { name: 'Rác', amount: 30000, type: 'service', metric: '1 × 30.000' },
+      { name: 'Internet', amount: 80000, type: 'internet', metric: '2 × 40.000' },
+      { name: 'Xe máy', amount: 50000, type: 'parking', metric: '1 × 50.000' },
       { name: 'Khác', amount: -52500, type: 'service' },
     ]);
   });

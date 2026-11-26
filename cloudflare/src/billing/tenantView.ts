@@ -8,6 +8,7 @@ import { bankReceived, effectiveStatus, type InvoiceStatus } from '../central/de
 import { paymentStatusOut, statusView, vnDate, vnDateTime } from '../routes/rent.ts';
 import { legacyRoomCode, toSheetMonth } from '../sheetSync.ts';
 import { dueDateOf, sheetLines, type SheetLine } from './invoiceSheet.ts';
+import { assignPayNumbers } from '../routes/houses.ts';
 import { tenantFor } from '../tenant/route.ts';
 import type { App, Viewer } from '../app.ts';
 
@@ -17,6 +18,22 @@ export interface InvoiceDetailOut { name: string; amount: number; type: 'room' |
 export interface InvoiceOut {
   id: string; month: string; issueDate: string; dueDate: string; total: number; status: 'unpaid' | 'paid' | 'pending';
   paidAt?: string; paymentMethod?: 'qr' | 'cash'; details: InvoiceDetailOut[];
+  /** Nội dung chuyển khoản XXXPPPMMYYYY (số căn, số phòng, tháng); null only when the numbers cannot be assigned. */
+  payCode: string | null;
+}
+
+const pad3 = (n: number) => String(n).padStart(3, '0');
+
+/** "XXXPPP" of the resident's room, assigning the numbers first when the house or room has none yet. */
+async function payPrefixOf(c: Context<App>, db: Awaited<ReturnType<typeof tenantFor>>, viewer: Resident): Promise<string | null> {
+  const read = () => db.prepare(`SELECT h.pay_no AS house_no, rm.pay_no AS room_no FROM rooms rm JOIN houses h ON h.id = rm.house_id WHERE rm.id = ? AND h.id = ?`)
+    .bind(viewer.roomId, viewer.houseId).first<{ house_no: number | null; room_no: number | null }>();
+  let nums = await read();
+  if (nums && (nums.house_no == null || nums.room_no == null)) {
+    await assignPayNumbers(c.env, db, viewer.houseId).catch(() => {});
+    nums = await read();
+  }
+  return nums?.house_no != null && nums.room_no != null ? `${pad3(nums.house_no)}${pad3(nums.room_no)}` : null;
 }
 
 function detailOf(l: SheetLine): InvoiceDetailOut {
@@ -40,6 +57,7 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
     .all<{ id: number; house_id: string; month: string; total: number; status: InvoiceStatus; paid_at: string | null; issued_at: string }>();
   if (!rows.length) return [];
   const lines = await sheetLines(db, rows.map((r) => r.id));
+  const prefix = await payPrefixOf(c, db, viewer);
 
   const views = new Map<string, Awaited<ReturnType<typeof statusView>>>();
   const out: InvoiceOut[] = [];
@@ -57,6 +75,7 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
       // paidAt = when the money arrived, "dd/mm/yyyy HH:mm" (no label: the app writes "Đã thanh toán ngày …" itself).
       ...(shown.paymentMethod ? { paidAt: vnDateTime(r.paid_at) || undefined, paymentMethod: shown.paymentMethod as 'qr' | 'cash' } : {}),
       details: (lines.get(r.id) ?? []).map(detailOf),
+      payCode: prefix ? `${prefix}${r.month.slice(5, 7)}${r.month.slice(0, 4)}` : null,
     });
   }
   return out;

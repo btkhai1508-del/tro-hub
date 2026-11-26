@@ -173,6 +173,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   label('- Số tiền còn nợ tháng trước:', debt === undefined ? '..............' : fmt(debt));
   label('- Phải trả tháng này:', fmt(invoice.total));
   label('Tổng cộng:', debt === undefined ? '..............' : fmt(debt + invoice.total), true);
+  y += PARA + 2; // a little air between the totals and the payment details
   w.text(LEFT, y, 'Chi tiết thanh toán:', BODY);
   y += LH;
 

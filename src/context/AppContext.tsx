@@ -27,6 +27,8 @@ export interface Invoice {
   paymentMethod?: 'qr' | 'cash';
   transactionId?: string;
   details: InvoiceDetailItem[];
+  /** Worker mode: the transfer content XXXPPPMMYYYY computed by the Worker for this invoice. */
+  payCode?: string | null;
 }
 
 /**
@@ -51,6 +53,18 @@ export function getTransferContent(roomNumber: string = '203', month: string = g
   const y = monthParts[1] || '2026';
 
   return isLVC ? `LVC${cleanRoom}-T${m}-${y}` : `${cleanRoom}-T${m}-${y}`;
+}
+
+/**
+ * The transfer content of one invoice. Worker mode only ever uses the numeric code (the invoice's own, else
+ * the house/room prefix + month); without either it answers '' (no QR) instead of the old room-name format.
+ * Google Sheet mode keeps the old behaviour.
+ */
+export function transferContentFor(invoice: Pick<Invoice, 'month'> & { payCode?: string | null }, roomNumber: string, payPrefix?: string | null): string {
+  if (invoice.payCode && /^\d{12}$/.test(invoice.payCode)) return invoice.payCode;
+  if (payPrefix && /^\d{6}$/.test(payPrefix)) return getTransferContent(roomNumber, invoice.month || getCurrentMonthStr(), payPrefix);
+  if (getSource() === 'worker') return '';
+  return getTransferContent(roomNumber, invoice.month || getCurrentMonthStr(), payPrefix);
 }
 
 /**
