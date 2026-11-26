@@ -1927,13 +1927,13 @@ export function AdminPortal() {
                 </div>
                 <div data-brand-copy className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span data-brand-title className="font-bold text-base tracking-tight text-neutral-900 dark:text-white truncate">Phong Lan</span>
+                    <span data-brand-title className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub</span>
                     <span className="admin-role-badge px-1.5 py-0.2 text-[10px] font-bold rounded-md font-num border uppercase">
                       Admin
                     </span>
                   </div>
                   <p data-brand-subtitle className="text-[11px] text-neutral-600 font-medium truncate dark:text-neutral-300">
-                    Quản lý chủ trọ
+                    {accountTargets.houses.length === 1 ? accountTargets.houses[0].name : 'Quản lý chủ trọ'}
                   </p>
                 </div>
               </div>
@@ -1964,13 +1964,9 @@ export function AdminPortal() {
                       setActiveMenu(item.key as any);
                     }}
                     className={cn(
-                      "group relative transition-all duration-200 select-none cursor-pointer",
-                      sidebarCollapsedLayout
-                        ? "w-11 h-11 rounded-2xl flex items-center justify-center mx-auto"
-                        : "w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl",
-                      isActive
-                        ? "bg-neutral-500/10 text-neutral-700 dark:bg-neutral-400/15 dark:text-neutral-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] font-semibold"
-                        : "text-neutral-600 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70 font-medium"
+                      "kit-nav-item group relative flex min-h-11 items-center gap-3 rounded-xl px-3 apple-body select-none cursor-pointer",
+                      sidebarCollapsedLayout ? "mx-auto w-11 justify-center px-0" : "w-full",
+                      isActive && "kit-nav-active"
                     )}
                     title={item.label}
                   >
@@ -4390,7 +4386,7 @@ export function AdminPortal() {
                     }}
                     className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'managers' && "kit-segment-active")}
                   >
-                    <span>Ban Quản Lý Trọ</span>
+                    <span>Quản lý toà nhà</span>
                   </button>
                   </div>
                 )}
