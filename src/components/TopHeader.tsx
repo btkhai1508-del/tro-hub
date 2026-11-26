@@ -14,7 +14,7 @@ const badgeColorMap = {
   success: 'bg-emerald-500/15 text-emerald-700',
   info: 'bg-sky-500/15 text-sky-700',
 };
-const pageLabels: Record<string, string> = { '/': 'Tổng quan', '/utilities': 'Tiện ích', '/invoices': 'Hóa đơn', '/contract': 'Hợp đồng', '/profile': 'Cá nhân', '/laundry': 'Giặt sấy' };
+const pageLabels: Record<string, string> = { '/': 'Tổng quan', '/utilities': 'Tiện ích', '/invoices': 'Hoá đơn & Thanh toán', '/contract': 'Hợp đồng & cư trú', '/profile': 'Hồ sơ cá nhân', '/laundry': 'Giặt sấy' };
 
 export function TopHeader() {
   const { profile, notifications, unreadNotiCount, isNotificationPanelOpen, setIsNotificationPanelOpen, openNotificationModal, markAllNotificationsAsRead } = useApp();

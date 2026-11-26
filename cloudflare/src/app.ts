@@ -47,7 +47,7 @@ export async function audit(c: Context<App>, actor: string, action: string, hous
 }
 
 export const actorOf = (v: Viewer) => `${v.kind}:${v.id}`;
-/** Admin Tổng: owns their houses, sets their bank accounts, sees their summary and creates Admin căn. */
+/** Chủ trọ: owns their houses, sets their bank accounts, sees their summary and creates Ban Quản Lý Trọ. */
 export const isOwner = (v: Viewer) => v.kind === 'staff' && v.role === 'owner';
 /** Developer: the person who sells Trọ Hub; can open every house. */
 export const isDeveloper = (v: Viewer) => v.kind === 'staff' && v.role === 'developer';
@@ -72,7 +72,7 @@ export const staffOnly = async (c: Context<App>, next: Next) =>
   c.get('viewer').kind === 'staff' ? next() : fail(c, 403, 'STAFF_ONLY', 'Chỉ quản lý mới dùng được chức năng này.');
 
 export const ownerOnly = async (c: Context<App>, next: Next) =>
-  isOwner(c.get('viewer')) ? next() : fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng dùng được chức năng này.');
+  isOwner(c.get('viewer')) ? next() : fail(c, 403, 'OWNER_ONLY', 'Chỉ Chủ trọ dùng được chức năng này.');
 
 export const developerOnly = async (c: Context<App>, next: Next) =>
   isDeveloper(c.get('viewer')) ? next() : fail(c, 403, 'DEVELOPER_ONLY', 'Chỉ Developer dùng được chức năng này.');

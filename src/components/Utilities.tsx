@@ -29,9 +29,9 @@ export function Utilities() {
     <div className="kit-page">
       <header className="kit-page-header">
         <div>
-          <p className="kit-page-kicker">Dành cho cư dân</p>
+          
           <h1 className="kit-page-title">Tiện ích</h1>
-          <p className="kit-page-description">Các tiện ích của ứng dụng.</p>
+          <p className="kit-page-description">Dành cho cư dân</p>
         </div>
       </header>
 

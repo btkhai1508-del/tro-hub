@@ -8,7 +8,7 @@
  * Cost control for the D1 write budget: a failure is one batched upsert, a success writes only when a row
  * exists, a refused register attempt writes nothing. `now` is Unix seconds, injectable for tests.
  */
-export const LOGIN_LIMITS = { maxFails: 5, phoneMaxFails: 50, ipMaxFails: 100, windowSec: 15 * 60, lockSec: 15 * 60 } as const;
+export const LOGIN_LIMITS = { maxFails: 6, phoneMaxFails: 50, ipMaxFails: 100, windowSec: 15 * 60, lockSec: 15 * 60 } as const;
 export const REGISTER_LIMITS = { ip: { max: 30, windowSec: 3600 }, phone: { max: 5, windowSec: 86400 } } as const;
 
 /** phone_ip: key `phone|ip-key`; phone_all: key phone (all IPs); ip: ip-key; reg_*: register throttles. */
@@ -62,18 +62,18 @@ const failUpsert = (db: D1Database, scope: LimitScope, key: string, limit: numbe
          count = CASE WHEN window_start + ?4 <= ?3 THEN 1 ELSE count + 1 END,
          window_start = CASE WHEN window_start + ?4 <= ?3 THEN ?3 ELSE window_start END,
          locked_until = CASE WHEN (CASE WHEN window_start + ?4 <= ?3 THEN 1 ELSE count + 1 END) >= ?5 THEN ?3 + ?6 ELSE NULL END
-       RETURNING locked_until`
+       RETURNING locked_until, count`
     )
     .bind(scope, key, now, LOGIN_LIMITS.windowSec, limit, LOGIN_LIMITS.lockSec);
 
 /** Records one wrong password (pair, phone ceiling, IP when known) in one batch; says which just became locked. */
-export async function loginFailure(db: D1Database, phone: string, ip: string | null, now = nowSec()): Promise<{ phoneLocked: boolean; ipLocked: boolean }> {
+export async function loginFailure(db: D1Database, phone: string, ip: string | null, now = nowSec()): Promise<{ phoneLocked: boolean; ipLocked: boolean; attemptsLeft: number }> {
   const ik = ipKey(ip);
   const stmts = [failUpsert(db, 'phone_ip', `${phone}|${ik ?? ''}`, LOGIN_LIMITS.maxFails, now), failUpsert(db, 'phone_all', phone, LOGIN_LIMITS.phoneMaxFails, now)];
   if (ik) stmts.push(failUpsert(db, 'ip', ik, LOGIN_LIMITS.ipMaxFails, now));
-  const out = await db.batch<{ locked_until: number | null }>(stmts);
+  const out = await db.batch<{ locked_until: number | null; count: number }>(stmts);
   const hit = (i: number) => out[i]?.results[0]?.locked_until != null;
-  return { phoneLocked: hit(0) || hit(1), ipLocked: ik ? hit(2) : false };
+  return { phoneLocked: hit(0) || hit(1), ipLocked: ik ? hit(2) : false, attemptsLeft: Math.max(0, LOGIN_LIMITS.maxFails - (out[0]?.results[0]?.count ?? LOGIN_LIMITS.maxFails)) };
 }
 
 /** A correct password: forget this (phone, IP)'s failures. Call only when loginStatus saw the row (no write otherwise). */

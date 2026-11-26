@@ -41,7 +41,7 @@ export function Home() {
               </div>
               {currentInvoice && <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 apple-callout font-medium', isPaid ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : isPending ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-neutral-500/10 text-neutral-700 dark:text-neutral-300')}>
                 {isPaid ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}
-                {isPaid ? 'Đã thanh toán' : isPending ? 'Chờ xác nhận' : 'Chưa thanh toán'}
+                {isPaid ? (currentInvoice?.paidAt ? `Đã thanh toán: ${currentInvoice.paidAt}` : 'Đã thanh toán') : isPending ? 'Chờ xác nhận' : 'Chưa thanh toán'}
               </span>}
             </div>
 

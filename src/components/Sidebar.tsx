@@ -11,9 +11,9 @@ import { useSidebarLabels } from '../lib/useSidebarLabels';
 const navItems = [
   { name: 'Trang chủ', path: '/', icon: Home, tutorial: 'nav-dashboard' },
   { name: 'Tiện ích', path: '/utilities', icon: LayoutGrid, tutorial: 'nav-utilities' },
-  { name: 'Hóa đơn', path: '/invoices', icon: Receipt, tutorial: 'nav-invoices' },
-  { name: 'Hợp đồng', path: '/contract', icon: FileText, tutorial: 'nav-contract' },
-  { name: 'Cá nhân', path: '/profile', icon: User, tutorial: 'nav-profile' },
+  { name: 'Hoá đơn & Thanh toán', path: '/invoices', icon: Receipt, tutorial: 'nav-invoices' },
+  { name: 'Hợp đồng & cư trú', path: '/contract', icon: FileText, tutorial: 'nav-contract' },
+  { name: 'Hồ sơ cá nhân', path: '/profile', icon: User, tutorial: 'nav-profile' },
 ];
 
 export function Sidebar() {
@@ -38,7 +38,7 @@ export function Sidebar() {
               <div data-brand-logo className="flex h-11 w-11 shrink-0 items-center justify-center">
                 <IconHome3D size={52} />
               </div>
-              {!isSidebarCollapsed && <div data-brand-copy className="min-w-0"><span data-brand-title className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub</span><span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate whitespace-nowrap">Nhà trọ Phong Lan</span></div>}
+              {!isSidebarCollapsed && <div data-brand-copy className="min-w-0"><span data-brand-title className="apple-title2 kit-text-primary block truncate whitespace-nowrap font-semibold">Trọ-Hub</span><span data-brand-subtitle className="apple-subheadline kit-text-secondary block truncate whitespace-nowrap">{profile.room?.building || 'Nhà trọ'}</span></div>}
             </NavLink>
           </div>
 

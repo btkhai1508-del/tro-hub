@@ -81,7 +81,7 @@ export function registerWorkerSession(app: Express) {
 
     try {
       // The Worker already checked the password, so the sheet row is found by phone alone.
-      // Staff created on the Worker (Admin Tổng, Admin căn) have no sheet row: their profile comes from the Worker.
+      // Staff created on the Worker (Chủ trọ, Ban Quản Lý Trọ) have no sheet row: their profile comes from the Worker.
       // With source 'worker' the Worker answers for everyone (residents and staff) and the Sheet is not read.
       let result: Awaited<ReturnType<typeof authenticateUser>>;
       if ((await readSource()) === 'worker') {

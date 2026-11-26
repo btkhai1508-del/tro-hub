@@ -205,11 +205,11 @@ const escapeHtml = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', 
 
 
 export function registerSepay(app: Hono<App>): void {
-  /** Bank transfers not yet tied to a house, limited to accounts used by this Admin Tổng's houses. */
+  /** Bank transfers not yet tied to a house, limited to accounts used by this Chủ trọ's houses. */
   app.use('/api/payments/unassigned', requireAuth);
   app.get('/api/payments/unassigned', async (c) => {
     const viewer = c.get('viewer');
-    if (!isOwner(viewer) || viewer.kind !== 'staff' || !viewer.houseIds.length) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng xem được mục này.');
+    if (!isOwner(viewer) || viewer.kind !== 'staff' || !viewer.houseIds.length) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Chủ trọ xem được mục này.');
     const db = await tenantOfOwner(c.env, viewer.id);
     const marks = viewer.houseIds.map(() => '?').join(',');
     const { results: houses } = await db.prepare(`SELECT bank_account_no FROM houses WHERE id IN (${marks}) AND bank_account_no IS NOT NULL`)

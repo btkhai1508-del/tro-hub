@@ -101,7 +101,7 @@ export function LoginPage() {
       }
     } catch (err: any) {
       setIsLoading(false);
-      let friendlyMsg = 'Tính năng đăng nhập nhanh Zalo 1-chạm chỉ hoạt động khi mở trong ứng dụng Zalo trên điện thoại. Trên trình duyệt web, vui lòng đăng nhập bằng Số điện thoại và Mật khẩu bên dưới.';
+      let friendlyMsg = 'Đăng nhập Zalo chỉ khả dụng trong Zalo Mini App, vui lòng đăng nhập bằng số điện thoại bên dưới';
       if (err?.code !== -2000 && err?.message && !err.message.includes('-2000') && !err.message.includes('Unknown error')) {
         friendlyMsg = err.message;
       }

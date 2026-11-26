@@ -1,5 +1,5 @@
 /**
- * Google access as each Admin Tổng's own Google account (OAuth), not a service account: new service
+ * Google access as each Chủ trọ's own Google account (OAuth), not a service account: new service
  * accounts have no Drive storage, so they cannot create the Sheets. The only Drive scope is
  * drive.file, which reaches just the files this app created, and the refresh token is kept in
  * D1 encrypted with CCCD_KEY.
@@ -17,7 +17,7 @@ export interface GoogleEnv {
 const SCOPES = ['https://www.googleapis.com/auth/drive.file', 'openid', 'email'];
 const STATE_TTL_SECONDS = 10 * 60;
 
-/** One Google link per Admin Tổng, stored as 'google:staff:<id>'. */
+/** One Google link per Chủ trọ, stored as 'google:staff:<id>'. */
 export const googleKey = (actor: string) => `google:${actor}`;
 
 export const redirectUri = (origin: string) => `${origin}/api/google/callback`;
@@ -104,7 +104,7 @@ async function accessToken(env: GoogleEnv, actor: string): Promise<string> {
   return data.access_token;
 }
 
-/** Calls the Sheets API as the Google account this Admin Tổng linked. `path` starts after /v4/. */
+/** Calls the Sheets API as the Google account this Chủ trọ linked. `path` starts after /v4/. */
 export async function sheetsApi<T = any>(env: GoogleEnv, actor: string, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await fetch(`https://sheets.googleapis.com/v4/${path}`, {
     method: init.method ?? 'GET',

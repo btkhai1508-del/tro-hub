@@ -76,7 +76,7 @@ async function send<T = any>(path: string, method: string, body?: unknown): Prom
 }
 
 /**
- * Developer: sells Trọ Hub. One card lists every landlord (Admin Tổng) and their houses.
+ * Developer: sells Trọ Hub. One card lists every landlord (Chủ trọ) and their houses.
  * "+ Chủ trọ" creates a landlord; "+ Căn trọ" on a landlord opens the house wizard.
  */
 export function DeveloperPortal() {
@@ -886,7 +886,7 @@ function LandlordDialog({ onClose, onCreated }: { onClose: () => void; onCreated
   return (
     <Dialog
       title="Chủ trọ mới"
-      subtitle="Tài khoản Admin Tổng. Chủ trọ đăng nhập bằng số điện thoại này."
+      subtitle="Tài khoản Chủ trọ. Chủ trọ đăng nhập bằng số điện thoại này."
       onClose={onClose}
       busy={busy}
       footer={

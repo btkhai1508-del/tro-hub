@@ -1,6 +1,6 @@
 /**
  * Account creation on the Cloudflare Worker for the admin "Tạo tài khoản mới" form: pick a house,
- * then a room or "Admin" (an Admin căn of that house, Admin Tổng only).
+ * then a room or "Admin" (an Ban Quản Lý Trọ of that house, Chủ trọ only).
  */
 import { useEffect, useState } from 'react';
 import { workerFetch } from './api';
@@ -40,7 +40,7 @@ export function useAccountTargets(enabled: boolean) {
   return { houses, houseId, setHouseId, rooms };
 }
 
-/** Creates a resident in a room, or an Admin căn when the room is ADMIN_ROOM. */
+/** Creates a resident in a room, or an Ban Quản Lý Trọ when the room is ADMIN_ROOM. */
 export async function createAccountOnWorker(input: {
   houseId: string;
   room: string;
@@ -65,7 +65,7 @@ export async function createAccountOnWorker(input: {
   return {
     success: true,
     message: isAdmin
-      ? `Đã tạo Admin căn ${input.fullName.trim()}. Người này đăng nhập bằng số ${phone}.`
+      ? `Đã tạo Ban Quản Lý Trọ ${input.fullName.trim()}. Người này đăng nhập bằng số ${phone}.`
       : `Đã tạo tài khoản cư dân phòng ${data.room}. Đăng nhập bằng số ${phone}.`,
   };
 }

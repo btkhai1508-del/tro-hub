@@ -14,7 +14,7 @@ const fieldClass =
 const labelClass = 'text-[11px] font-bold text-neutral-600 uppercase block mb-1.5 dark:text-neutral-300';
 
 /**
- * Admin Tổng sets, per house, the bank and account residents pay rent into.
+ * Chủ trọ sets, per house, the bank and account residents pay rent into.
  * VietQR draws the code from them; Zalo's quick transfer is offered when the account is the
  * one registered with Zalo Checkout.
  */
@@ -180,7 +180,7 @@ export function PaymentPortalSettings({ onBack }: { onBack: () => void }) {
                 <span>{busy ? 'Đang lưu...' : 'Lưu thông tin thanh toán'}</span>
               </button>
             ) : (
-              <p className="text-xs text-neutral-600 dark:text-neutral-300">Chỉ Admin Tổng được đổi ngân hàng và số tài khoản.</p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-300">Chỉ Chủ trọ được đổi ngân hàng và số tài khoản.</p>
             )}
             {message && (
               <p role={message.ok ? 'status' : 'alert'} className={cn('text-xs font-semibold', message.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>

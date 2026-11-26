@@ -14,7 +14,7 @@ import { tenantFor, tenantOfOwner } from '../tenant/route.ts';
 import { houseModules, moduleCatalog, monthlyPerRoom, refreshCounts } from './houses.ts';
 import { requireAuth } from './auth.ts';
 
-const ROLE_LABEL: Record<StaffRole, string> = { developer: 'Developer', owner: 'Admin Tổng', manager: 'Admin căn' };
+const ROLE_LABEL: Record<StaffRole, string> = { developer: 'Developer', owner: 'Chủ trọ', manager: 'Ban Quản Lý Trọ' };
 const PHONE_TAKEN = 'Số điện thoại này đã có tài khoản.';
 
 /** Which roles this viewer may create or edit, and on which houses. */
@@ -36,7 +36,7 @@ function temporaryPassword(length = 8) {
 
 export function registerPeople(app: Hono<App>): void {
   // -------------------------------------------------------------------------
-  // Staff accounts. Admin Tổng creates and locks Admin căn for their own houses.
+  // Staff accounts. Chủ trọ creates and locks Ban Quản Lý Trọ for their own houses.
   // -------------------------------------------------------------------------
   app.use('/api/staff', requireAuth);
   app.use('/api/staff/*', requireAuth);
@@ -51,7 +51,7 @@ export function registerPeople(app: Hono<App>): void {
     ).all<{ id: number; role: StaffRole; house_ids: string | null }>();
     const staff = results
       .map((s) => ({ ...s, house_ids: s.house_ids ? s.house_ids.split(',') : [], role_label: ROLE_LABEL[s.role] }))
-      // Admin Tổng sees themself and the Admin căn of their houses.
+      // Chủ trọ sees themself and the Ban Quản Lý Trọ of their houses.
       .filter((s) => s.id === viewer.id || (s.role === 'manager' && s.house_ids.some((h) => scope.houseIds.includes(h))));
     return c.json({ success: true, staff, canCreate: scope.roles.map((r) => ({ role: r, label: ROLE_LABEL[r] })) });
   });
@@ -113,7 +113,7 @@ export function registerPeople(app: Hono<App>): void {
   });
 
   /**
-   * Admin Tổng or Admin căn creates a resident account straight into a room, already approved.
+   * Chủ trọ or Ban Quản Lý Trọ creates a resident account straight into a room, already approved.
    * A room holds at most its capacity (3) of approved and pending residents.
    */
   app.post('/api/houses/:houseId/residents', staffOnly, async (c) => {
@@ -225,7 +225,7 @@ export function registerPeople(app: Hono<App>): void {
     return c.json({ success: true, landlords });
   });
 
-  /** A new landlord: an Admin Tổng account that logs in with this phone and password. */
+  /** A new landlord: an Chủ trọ account that logs in with this phone and password. */
   app.post('/api/dev/landlords', async (c) => {
     const viewer = c.get('viewer');
     const body = await c.req.json<{ fullName?: string; phone?: string; password?: string; email?: string }>().catch(() => ({}) as Record<string, never>);

@@ -7,7 +7,7 @@ interface House { id: string; name: string }
 interface Staff { id: number; full_name: string; phone: string; role: 'owner' | 'manager'; status: 'active' | 'locked'; house_ids: string[] }
 
 /**
- * Admin Tổng's list of Admin căn, with lock and unlock. New ones are made in "Tạo tài khoản mới"
+ * Chủ trọ's list of Ban Quản Lý Trọ, with lock and unlock. New ones are made in "Tạo tài khoản mới"
  * by picking the "Admin" room. The Worker checks every rule.
  */
 export function ManagerAccounts() {
@@ -22,7 +22,7 @@ export function ManagerAccounts() {
     ]);
     setHouses(h?.houses ?? []);
     setManagers((s?.staff ?? []).filter((x: Staff) => x.role === 'manager'));
-    if (!s?.success) setMessage({ ok: false, text: s?.error || 'Chưa tải được danh sách Admin căn.' });
+    if (!s?.success) setMessage({ ok: false, text: s?.error || 'Chưa tải được danh sách Ban Quản Lý Trọ.' });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -40,7 +40,7 @@ export function ManagerAccounts() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-neutral-600 dark:text-neutral-300">
-        Tạo Admin căn ở mục <b>Tạo tài khoản mới</b>: chọn nhà, rồi chọn phòng <b>Admin (Admin căn trọ)</b>. Admin căn quản lý nhà được giao, không đổi được ngân hàng nhận tiền và không tạo được tài khoản quản lý khác.
+        Tạo Ban Quản Lý Trọ ở mục <b>Tạo tài khoản mới</b>: chọn nhà, rồi chọn phòng <b>Admin (Ban Quản Lý Trọ)</b>. Ban Quản Lý Trọ quản lý nhà được giao, không đổi được ngân hàng nhận tiền và không tạo được tài khoản quản lý khác.
       </p>
       {message && (
         <p role={message.ok ? 'status' : 'alert'} className={cn('text-xs font-semibold', message.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600')}>
@@ -48,8 +48,8 @@ export function ManagerAccounts() {
         </p>
       )}
       <div className="space-y-3">
-        <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Admin căn hiện có</h3>
-        {managers.length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-300">Chưa có Admin căn nào.</p>}
+        <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Ban Quản Lý Trọ hiện có</h3>
+        {managers.length === 0 && <p className="text-sm text-neutral-600 dark:text-neutral-300">Chưa có Ban Quản Lý Trọ nào.</p>}
         <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
           {managers.map((m) => (
             <li key={m.id} className="py-3 flex items-center justify-between gap-3">

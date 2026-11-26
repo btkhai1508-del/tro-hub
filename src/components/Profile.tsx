@@ -162,7 +162,7 @@ export function Profile() {
     <div className="kit-page mx-auto max-w-5xl pb-6">
       <header className="kit-page-header">
         <div><p className="kit-page-kicker">Tài khoản</p>
-        <h1 className="kit-page-title apple-large-title apple-strong">Hồ sơ của bạn</h1>
+        <h1 className="kit-page-title apple-large-title apple-strong">Hồ sơ cá nhân</h1>
         <p className="kit-page-description apple-body kit-text-secondary">Thông tin cư trú và những tùy chỉnh dành riêng cho bạn.</p></div>
       </header>
 

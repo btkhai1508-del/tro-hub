@@ -30,9 +30,9 @@ export function InvoicesAndPayment() {
     <div className="kit-page mx-auto max-w-5xl pb-6">
       <header data-tutorial="invoices-header" className="kit-page-header">
         <div>
-          <p className="kit-page-kicker">Quản lý chi phí</p>
-          <h1 className="kit-page-title">Hóa đơn & thanh toán</h1>
-          <p className="kit-page-description">Khoản phí và lịch sử thanh toán.</p>
+          
+          <h1 className="kit-page-title">Hoá đơn & Thanh toán</h1>
+          <p className="kit-page-description">Quản lý chi phí</p>
         </div>
         <button type="button" onClick={() => setIsExportModalOpen(true)} className="soft-button inline-flex min-h-11 items-center justify-center gap-2 self-start px-4 py-3 apple-control kit-text-secondary">
           <Download size={16} />Xuất lịch sử PDF
@@ -104,7 +104,7 @@ export function InvoicesAndPayment() {
             </div>
           </article>
         ))}
-        {filteredInvoices.length > visibleCount && <div className="border-t border-[var(--separator)] p-4 text-center"><button type="button" data-stage-filter="invoice-results" onClick={() => setVisibleCount(count => count + 6)} className="soft-button min-h-11 px-5">Xem thêm hóa đơn</button></div>}
+        {filteredInvoices.length > visibleCount && <div className="border-t border-[var(--separator)] p-4 text-center"><button type="button" data-stage-filter="invoice-results" onClick={() => setVisibleCount(count => count + 6)} className="min-h-11 bg-transparent px-5 text-[var(--text-secondary)] font-light opacity-90">Xem thêm hoá đơn</button></div>}
       </section>
       <PaymentHistoryExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>

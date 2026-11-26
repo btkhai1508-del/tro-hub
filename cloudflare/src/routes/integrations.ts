@@ -1,4 +1,4 @@
-/** VietQR bank list and each Admin Tổng's Google account link. Central tables only; nothing here touches a landlord's store. */
+/** VietQR bank list and each Chủ trọ's Google account link. Central tables only; nothing here touches a landlord's store. */
 import type { Hono } from 'hono';
 import { actorOf, audit, fail, ownerOnly, type App } from '../app.ts';
 import { checkState, connectUrl, finishConnect, googleKey, sheetsApi } from '../google.ts';
@@ -30,7 +30,7 @@ export function registerIntegrations(app: Hono<App>): void {
     return c.json({ success: true, banks: banks.map(({ bin, code, shortName, name, logo }) => ({ bin, code, shortName, name, logo })) });
   });
 
-  /** Each Admin Tổng links their own Google account; their houses' Sheets live in their Drive. */
+  /** Each Chủ trọ links their own Google account; their houses' Sheets live in their Drive. */
   app.use('/api/google/status', requireAuth, ownerOnly);
   app.get('/api/google/status', async (c) => {
     const row = await c.env.DB.prepare(`SELECT account, updated_at FROM integrations WHERE name = ?`)
@@ -39,7 +39,7 @@ export function registerIntegrations(app: Hono<App>): void {
     return c.json({ success: true, connected: Boolean(row), account: row?.account ?? null, since: row?.updated_at ?? null });
   });
 
-  /** Admin Tổng opens this link in a browser and allows access with the Google account that should own the Sheets. */
+  /** Chủ trọ opens this link in a browser and allows access with the Google account that should own the Sheets. */
   app.use('/api/google/connect-url', requireAuth, ownerOnly);
   app.post('/api/google/connect-url', async (c) => {
     const url = await connectUrl(c.env, new URL(c.req.url).origin, actorOf(c.get('viewer')));

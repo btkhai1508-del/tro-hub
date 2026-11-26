@@ -169,7 +169,7 @@ export function PaymentPage() {
     }
   };
 
-  // The house's own bank account, set by Admin Tổng in the payment portal.
+  // The house's own bank account, set by Chủ trọ in the payment portal.
   const portal = usePaymentPortal();
   const recipientName = portal.accountName;
   const bankName = portal.bankName;

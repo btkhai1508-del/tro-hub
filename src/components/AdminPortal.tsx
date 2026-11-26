@@ -299,7 +299,7 @@ export function AdminPortal() {
   const [activeMenu, setActiveMenu] = useState<
     'dashboard' | 'rooms' | 'roomDetail' | 'billing' | 'contract' | 'invoices' | 'meter' | 'config' | 'declaration' | 'utilities' | 'createNotification' | 'laundry' | 'accountManagement' | 'paymentPortal'
   >('dashboard');
-  // Admin Tổng sets each house's bank account in "Thông tin thanh toán" and creates Admin căn.
+  // Chủ trọ sets each house's bank account in "Thông tin thanh toán" and creates Ban Quản Lý Trọ.
   const workerViewer = useWorkerViewer();
   const isAdminTong = workerViewer?.role === 'owner';
   // Accounts made from "Tạo tài khoản mới" go to the Worker: pick a house, then a room or "Admin".
@@ -2219,7 +2219,7 @@ export function AdminPortal() {
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
               <span className="admin-role-badge px-2 py-0.5 rounded-md font-bold text-[10px] tracking-wide uppercase font-num">
-                {isAdminTong ? 'Admin tổng' : workerViewer?.role === 'manager' ? 'Admin căn' : 'Admin'}
+                {isAdminTong ? 'Chủ trọ' : workerViewer?.role === 'manager' ? 'Ban Quản Lý Trọ' : 'Admin'}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -4399,12 +4399,12 @@ export function AdminPortal() {
                     }}
                     className={cn("kit-segment min-h-11 px-3 apple-body font-medium", accountSubTab === 'managers' && "kit-segment-active")}
                   >
-                    <span>Admin căn</span>
+                    <span>Ban Quản Lý Trọ</span>
                   </button>
                 )}
               </div>
 
-              {/* Sub-tab 3: Admin căn (Admin Tổng only) */}
+              {/* Sub-tab 3: Ban Quản Lý Trọ (Chủ trọ only) */}
               {accountSubTab === 'managers' && isAdminTong && <ManagerAccounts />}
 
               {/* Sub-tab 1: Xét duyệt tài khoản */}
@@ -4684,7 +4684,7 @@ export function AdminPortal() {
                           {isWorkerStaff ? (
                             <>
                               {isAdminTong && (
-                                <option value={ADMIN_ROOM} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Admin (Admin căn trọ)</option>
+                                <option value={ADMIN_ROOM} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Admin (Ban Quản Lý Trọ)</option>
                               )}
                               {accountTargets.rooms.map(r => (
                                 <option key={r.id} value={String(r.id)} disabled={r.occupants >= r.capacity} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
@@ -4745,7 +4745,7 @@ export function AdminPortal() {
                     </div>
 
                     <button type="submit" className="primary-button min-h-12 w-full px-4 py-3 apple-control">
-                      <span>{adminRegRoom === ADMIN_ROOM ? 'Tạo Admin căn' : 'Tạo tài khoản cư dân'}</span>
+                      <span>{adminRegRoom === ADMIN_ROOM ? 'Tạo Ban Quản Lý Trọ' : 'Tạo tài khoản cư dân'}</span>
                       <ArrowRight aria-hidden="true" size={17} className="shrink-0" />
                     </button>
                   </form>

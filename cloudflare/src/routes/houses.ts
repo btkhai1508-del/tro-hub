@@ -238,7 +238,7 @@ function cleanRoom(input: NewRoom, floors: number) {
 }
 
 export function registerHouses(app: Hono<App>): void {
-  /** The houses the caller may open: ids from the session, rows from each landlord's store. Admin Tổng gets the summary across their houses. */
+  /** The houses the caller may open: ids from the session, rows from each landlord's store. Chủ trọ gets the summary across their houses. */
   app.get('/api/houses', async (c) => {
     const viewer = c.get('viewer');
     const ids = viewer.kind === 'resident' ? [viewer.houseId] : viewer.houseIds;
@@ -273,7 +273,7 @@ export function registerHouses(app: Hono<App>): void {
 
   /**
    * Payment portal of a house: the bank and account residents pay into. Everyone in the house can read
-   * it (residents need it to pay); only Admin Tổng can change it. Zalo's quick transfer
+   * it (residents need it to pay); only Chủ trọ can change it. Zalo's quick transfer
    * pays into the one account registered with Zalo Checkout, so it is offered only when they match.
    */
   app.get('/api/houses/:houseId/payment-portal', async (c) => {
@@ -317,7 +317,7 @@ export function registerHouses(app: Hono<App>): void {
     const houseId = c.req.param('houseId') ?? '';
     if (!isOwner(viewer)) {
       await audit(c, actorOf(viewer), 'bank_edit_denied', houseId);
-      return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Admin Tổng được đổi ngân hàng và số tài khoản.');
+      return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Chủ trọ được đổi ngân hàng và số tài khoản.');
     }
     const body = await c.req.json<{ bankBin?: string; accountNo?: string }>().catch(() => ({}) as { bankBin?: string; accountNo?: string });
     const accountNo = String(body.accountNo ?? '').replace(/\s/g, '');
@@ -333,10 +333,10 @@ export function registerHouses(app: Hono<App>): void {
     return c.json({ success: true });
   });
 
-  // New house (Admin Tổng): house, rates and rooms in one request; the house belongs to its creator.
+  // New house (Chủ trọ): house, rates and rooms in one request; the house belongs to its creator.
   app.post('/api/houses', async (c) => {
     const viewer = c.get('viewer');
-    if (!isOwner(viewer)) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Admin Tổng được tạo nhà trọ.');
+    if (!isOwner(viewer)) return fail(c, 403, 'OWNER_ONLY', 'Chỉ Chủ trọ được tạo nhà trọ.');
     const body = await c.req.json<Record<string, any>>().catch(() => ({}) as Record<string, any>);
     const name = String(body.name ?? '').trim();
     const abbreviation = String(body.abbreviation ?? '').trim().toUpperCase();
@@ -374,14 +374,14 @@ export function registerHouses(app: Hono<App>): void {
     return c.json({ success: true, house, rates, canEditBank: isOwner(c.get('viewer')) });
   });
 
-  /** House details: both admin levels. Bank and account number: Admin Tổng only. */
+  /** House details: both admin levels. Bank and account number: Chủ trọ only. */
   app.patch('/api/houses/:houseId', staffOnly, async (c) => {
     const viewer = c.get('viewer');
     const houseId = c.req.param('houseId') ?? '';
     const body = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
     if (BANK_FIELDS.some((f) => f in body) && !isOwner(viewer)) {
       await audit(c, actorOf(viewer), 'bank_edit_denied', houseId);
-      return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Admin Tổng được đổi ngân hàng và số tài khoản.');
+      return fail(c, 403, 'BANK_OWNER_ONLY', 'Chỉ Chủ trọ được đổi ngân hàng và số tài khoản.');
     }
     const fields = [...HOUSE_FIELDS, ...BANK_FIELDS].filter((f) => f in body);
     if (!fields.length) return fail(c, 400, 'NOTHING_TO_UPDATE', 'Không có thông tin nào để cập nhật.');

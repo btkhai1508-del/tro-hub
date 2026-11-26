@@ -51,7 +51,7 @@ async function loadViewer(
     .bind(sub, limit)
     .first<{ id: number; full_name: string; phone: string; role: StaffRole }>();
   if (!staff) return null;
-  // Admin Tổng and Admin căn alike see only the houses in staff_houses: each Admin Tổng is an independent landlord.
+  // Chủ trọ and Ban Quản Lý Trọ alike see only the houses in staff_houses: each Chủ trọ is an independent landlord.
   // The Developer sells the service and can open every house (the directory lists them whatever store holds the data).
   const houses = staff.role === 'developer'
     ? await db.prepare(`SELECT house_id FROM house_directory`).all<{ house_id: string }>()
@@ -134,7 +134,7 @@ export function registerAuth(app: Hono<App>) {
         if (failed.ipLocked) await audit(c, 'anonymous', 'login_locked', null, `ip:${ipKey(ip)}`);
         return locked(c, Math.floor(Date.now() / 1000) + LOGIN_LIMITS.lockSec);
       }
-      return fail(c, 401, 'AUTH_INVALID_CREDENTIALS', 'Số điện thoại hoặc mật khẩu không chính xác.');
+      return fail(c, 401, 'AUTH_INVALID_CREDENTIALS', `Số điện thoại hoặc mật khẩu không chính xác. Bạn còn ${failed.attemptsLeft} lần.`);
     }
     if (status.phoneRow) await loginSuccess(c.env.DB, phone, ip); // only when there is something to reset
     return signIn(c, account);

@@ -1,6 +1,6 @@
 /**
  * Who is signed in on the Cloudflare Worker, and the payment portal of their house: the bank
- * and account rent is paid into. Admin Tổng sets it per house; residents read their own house's.
+ * and account rent is paid into. Chủ trọ sets it per house; residents read their own house's.
  * Sessions without a Worker token (Zalo login, older sessions) fall back to the account the app
  * used before the portal existed.
  */
