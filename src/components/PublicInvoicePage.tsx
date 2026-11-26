@@ -46,9 +46,9 @@ export function PublicInvoicePage() {
   }, [state]);
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#f7f8fa] px-3 py-4 sm:px-6 sm:py-8 dark:bg-[#101114]">
+    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[#f7f8fa] px-3 py-4 sm:px-6 sm:py-8 dark:bg-[#101114]">
       {state.kind === 'loading' && (
-        <div role="status" aria-label="Đang tải" className="flex min-h-[60dvh] items-center justify-center"><span aria-hidden="true" className="ui-spinner h-6 w-6" /></div>
+        <div role="status" aria-label="Đang tải" className="flex items-center justify-center"><span aria-hidden="true" className="ui-spinner h-6 w-6" /></div>
       )}
       {state.kind === 'error' && (
         <div className="flex w-full justify-center py-6">
