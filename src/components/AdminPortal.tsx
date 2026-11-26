@@ -2964,16 +2964,13 @@ export function AdminPortal() {
                 const isPaid = item.paymentStatus === 'paid';
                 return (
                   <div key={`${item.houseId || ''}|${item.room}`} className="soft-card p-4 space-y-3.5 font-apple">
-                    {/* Header: Room, Tenant, AppleSwitch */}
+                    {/* Header: Room, AppleSwitch */}
                     <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2.5 font-apple">
                       <button type="button" onClick={() => openBillingInvoice(item)} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="flex items-center gap-2.5 min-w-0 min-h-11 text-left cursor-pointer font-apple">
                         <span className="px-2.5 py-1 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-semibold text-xs shrink-0 font-apple">
                           {item.room}
                         </span>
                         {workerMode && item.draft && <DraftBadge />}
-                        <span className="min-w-0 font-apple">
-                          <span className="block font-semibold text-neutral-900 dark:text-white text-xs truncate font-apple">{item.name}</span>
-                        </span>
                         <ChevronRight size={16} className="shrink-0 text-neutral-500" />
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
@@ -3040,7 +3037,6 @@ export function AdminPortal() {
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">Phòng</th>
-                      <th className="p-4 font-semibold font-apple">Khách thuê</th>
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
                       <th className="p-4 font-semibold font-apple">Điện</th>
                       <th className="p-4 font-semibold font-apple">Nước</th>
@@ -3057,7 +3053,6 @@ export function AdminPortal() {
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
                           <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
-                          <td className="p-4 font-semibold text-neutral-700 dark:text-neutral-200 font-apple">{item.name}</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienNuoc)} đ</td>
