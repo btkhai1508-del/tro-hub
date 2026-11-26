@@ -28,9 +28,12 @@ test('unpaid invoice with a payment page: QR link, account and pay code next to 
   const doc = buildInvoiceNotice(m, { invoice: invoice(), house, room: '101', payment });
   assert.equal(images(doc).length, 1);
   const all = texts(doc);
-  assert.match(all, /0123456789 - MB BANK - Chủ trọ/);
-  assert.match(all, /Mã đơn \(ghi ở nội dung chuyển khoản\): 002101112026/);
-  assert.match(all, /Hạn thanh toán: 08\/11\/2026/);
+  const flat = all.replace(/\n/g, ' ');
+  assert.match(flat, /Tên ngân hàng: MB BANK/);
+  assert.match(flat, /Tên chủ tài khoản: Chủ trọ/);
+  assert.match(flat, /Số tài khoản: 0123456789/);
+  assert.match(flat, /Nội dung chuyển khoản: 002101112026/);
+  assert.match(flat, /Hạn thanh toán: 08\/11\/2026/);
   assert.match(all.replace(/\n/g, ' '), /109\/6 Lê Văn Chí/); // address under the house name (one op per word)
   assert.ok(doc.pages.flat().some((op: any) => op.t === 'rect' && op.fill !== undefined), 'gray total row');
 });
@@ -46,8 +49,8 @@ test('paid invoice: no QR, "Đã thanh toán ngày" written once', () => {
 
 test('no previous debt: 0 and the total are written, never dots', () => {
   const all = texts(buildInvoiceNotice(m, { invoice: invoice(), house, room: '101' }));
-  assert.match(all, /- Số tiền còn nợ tháng trước:\n0\n/);
-  assert.match(all, /Tổng cộng:\n3\.620\.000/);
+  assert.match(all, /- Số tiền còn nợ tháng trước:\n0 đ\n/);
+  assert.match(all, /Tổng cộng:\n3\.620\.000 đ/);
 });
 
 test('without a payment page (Google Sheet mode) the notice has no QR', () => {
