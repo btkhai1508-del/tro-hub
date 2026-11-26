@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Lock, Unlock } from './LineIcons';
+import { Pencil } from './AppIcons';
 import { workerFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 
@@ -73,15 +74,20 @@ export function ManagerAccounts() {
                   <span className="font-num">{m.phone}</span> · {m.house_ids.map(houseName).join(', ')}
                 </p>
               </div>
-              <button type="button" onClick={() => setEditing({ id: m.id, name: m.full_name, houseIds: m.house_ids })} className="soft-button min-h-11 px-3 text-xs font-semibold shrink-0">Sửa</button>
-              <button
-                type="button"
-                onClick={() => setStatus(m, m.status === 'locked' ? 'active' : 'locked')}
-                className="soft-button min-h-11 px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0"
-              >
-                {m.status === 'locked' ? <Unlock size={14} /> : <Lock size={14} />}
-                <span>{m.status === 'locked' ? 'Mở khoá' : 'Khoá'}</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button type="button" onClick={() => setEditing({ id: m.id, name: m.full_name, houseIds: m.house_ids })} className="soft-button min-h-11 px-3 text-xs font-semibold inline-flex items-center gap-1.5">
+                  <Pencil size={14} strokeWidth={1.8} />
+                  <span>Sửa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus(m, m.status === 'locked' ? 'active' : 'locked')}
+                  className="soft-button min-h-11 px-3 text-xs font-semibold inline-flex items-center gap-1.5"
+                >
+                  {m.status === 'locked' ? <Unlock size={14} /> : <Lock size={14} />}
+                  <span>{m.status === 'locked' ? 'Mở khoá' : 'Khoá'}</span>
+                </button>
+              </div>
             </li>
           ))}
         </ul>

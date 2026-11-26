@@ -41,7 +41,7 @@ function writeHeader(w: PageWriter, m: Measurer, house: HouseInfo, numberText: s
   const motto = 'Độc lập - Tự do - Hạnh phúc';
   w.center(rightCx, y, motto, 14, 'bold');
   const mottoWidth = m.width(motto, 'bold', 14);
-  w.line(rightCx - mottoWidth / 2, y + 3, rightCx + mottoWidth / 2, y + 3, 0.5);
+  w.line(rightCx - mottoWidth / 2, y + 5.5, rightCx + mottoWidth / 2, y + 5.5, 0.5); // clear of the dot under "Độc lập"
 
   const nameWidth = m.width(house.name, 'bold', 13);
   const rule = nameWidth * 0.45;
@@ -67,9 +67,7 @@ function writeTitle(w: PageWriter, m: Measurer, y: number, title: string, subtit
   const cx = (LEFT + right) / 2;
   w.center(cx, y, title, 14, 'bold');
   y += LH;
-  w.center(cx, y, subtitle, 14, 'bold');
-  const rule = m.width(subtitle, 'bold', 14) * 0.45;
-  w.line(cx - rule / 2, y + 5, cx + rule / 2, y + 5, 0.5);
+  w.center(cx, y, subtitle, 14, 'bold'); // no rule under the subtitle (user's choice)
   return y + LH + 12;
 }
 
