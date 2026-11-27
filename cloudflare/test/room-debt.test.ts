@@ -102,3 +102,19 @@ for (const backend of BACKENDS) {
     });
   });
 }
+
+for (const backend of BACKENDS) {
+  describe(`lookups by invoice use an index (${backend})`, () => {
+    beforeEach(() => seedWorld(backend));
+    it('fee lines and money of one invoice are found without scanning the table', async () => {
+      const db = await tenantOfOwner(e, 1);
+      for (const sql of [
+        `SELECT SUM(qty) FROM invoice_lines WHERE invoice_id = 1 AND kind = 'electricity'`,
+        `SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = 1 AND method = 'bank'`,
+      ]) {
+        const plan = JSON.stringify((await db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all()).results);
+        expect(plan).toMatch(/USING INDEX (invoice_lines_invoice|payments_invoice)/);
+      }
+    });
+  });
+}

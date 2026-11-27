@@ -303,4 +303,10 @@ ALTER TABLE houses ADD COLUMN default_deposit INTEGER;      -- NULL = no common 
 ALTER TABLE rooms ADD COLUMN price_custom INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE rooms ADD COLUMN deposit_custom INTEGER NOT NULL DEFAULT 1;
 `,
+
+  // 0028: lookups by invoice (fee lines, money booked). Mirrors D1 migration 0028 (same statements).
+  `
+CREATE INDEX IF NOT EXISTS invoice_lines_invoice ON invoice_lines(invoice_id);
+CREATE INDEX IF NOT EXISTS payments_invoice ON payments(invoice_id);
+`,
 ];
