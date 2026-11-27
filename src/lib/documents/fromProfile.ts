@@ -37,7 +37,7 @@ const monthValue = (month: string) => {
 
 export function residentInvoice(m: Measurer, profile: UserProfile, invoice: Invoice, invoices: Invoice[], payment?: InvoicePayment | null) {
   const room = profile.room?.roomNumber;
-  const previousDebt = invoices
+  const previousDebt = invoice.previousDebt ?? invoices
     .filter(item => item.status !== 'paid' && monthValue(item.month) < monthValue(invoice.month))
     .reduce((sum, item) => sum + (item.total || 0), 0);
   return buildInvoiceNotice(m, {

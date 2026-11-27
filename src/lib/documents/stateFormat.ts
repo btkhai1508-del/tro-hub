@@ -96,7 +96,11 @@ export interface InvoiceDocData {
   payment?: InvoicePayment;
 }
 
-export interface InvoicePayment { qrPng: string; bankName?: string | null; accountNo: string; accountName?: string | null; payCode?: string | null }
+export interface InvoicePayment {
+  qrPng: string; bankName?: string | null; accountNo: string; accountName?: string | null; payCode?: string | null;
+  /** Worker: still owed on earlier months (what the public page and the bank QR add to this month). */
+  previousDebt?: number;
+}
 
 /** "dd/mm/yyyy" out of a paid label ("Đã thanh toán ngày 03/10/2026", "03/10/2026 10:00", …); '' when none. */
 
@@ -159,7 +163,8 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     w.image(qx, y - 12, size, size, payment.qrPng);
     w.center(qx + size / 2, y - 12 + size + 10, 'Quét để thanh toán', 9, 'italic');
   }
-  const debt = data.previousDebt ?? 0; // no debt known → 0, never dots (user's choice for the payment block)
+  // The Worker's figure wins (same as the public page asks for); no debt known → 0, never dots (user's choice).
+  const debt = data.payment?.previousDebt ?? data.previousDebt ?? 0;
   const label = (text: string, value: string, bold = false) => {
     w.text(LEFT + (bold ? INDENT : 0), y, text, BODY, bold ? 'bold' : 'normal');
     w.rightText(LEFT + 330, y, value, BODY, bold ? 'bold' : 'normal');

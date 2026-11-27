@@ -15,6 +15,8 @@ interface PublicInvoice {
   room: string;
   month: string;
   total: number;
+  /** Earlier months still owed + this month: what the QR asks for ("Tổng cộng"). */
+  amountDue?: number;
   payCode: string | null;
   paid: boolean;
   paidDate: string | null;
@@ -82,8 +84,9 @@ export function PublicInvoicePage() {
 function Portal({ invoice }: { invoice: PublicInvoice }) {
   // A house without its own account still pays into the old one (same rule as the resident app).
   const bank = invoice.bank ?? { bin: DEFAULT_PORTAL.bankBin, name: DEFAULT_PORTAL.bankName, accountNo: DEFAULT_PORTAL.accountNo, accountName: DEFAULT_PORTAL.accountName };
+  const due = invoice.amountDue || invoice.total; // pay the "Tổng cộng": earlier debt included
   const qrUrl = !invoice.paid && invoice.payCode
-    ? vietQrUrl({ bankBin: bank.bin, accountNo: bank.accountNo, accountName: bank.accountName }, invoice.total, invoice.payCode)
+    ? vietQrUrl({ bankBin: bank.bin, accountNo: bank.accountNo, accountName: bank.accountName }, due, invoice.payCode)
     : '';
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [qrSaveResult, setQrSaveResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -120,7 +123,7 @@ function Portal({ invoice }: { invoice: PublicInvoice }) {
         bankName={bank.name || ''}
         accountNumber={bank.accountNo}
         transferContent={invoice.payCode || ''}
-        total={invoice.total}
+        total={due}
         onSaveQR={handleSaveQR}
         isSavingQR={isSavingQR}
         qrSaveResult={qrSaveResult}

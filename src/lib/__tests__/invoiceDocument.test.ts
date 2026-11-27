@@ -57,3 +57,11 @@ test('no previous debt: 0 and the total are written, never dots', () => {
 test('without a payment page (Google Sheet mode) the notice has no QR', () => {
   assert.equal(images(buildInvoiceNotice(m, { invoice: invoice(), house, room: '101' })).length, 0);
 });
+
+test('the Worker debt fills "còn nợ tháng trước" and the Tổng cộng (what the QR page asks for)', () => {
+  const doc = buildInvoiceNotice(m, { invoice: invoice(), house, room: '101', payment: { ...payment, previousDebt: 1_500_000 }, previousDebt: 99 });
+  const all = texts(doc);
+  assert.ok(all.includes('1.500.000 ₫'), 'debt from the Worker');
+  assert.ok(all.includes('5.120.000 ₫'), 'Tổng cộng = debt + this month');
+  assert.ok(!all.includes('99 ₫'));
+});

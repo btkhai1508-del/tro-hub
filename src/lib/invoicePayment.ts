@@ -19,12 +19,12 @@ export function workerInvoiceId(id: string | number | null | undefined): number 
 
 const linkPath = (houseId: string, invoiceId: number) => `/api/houses/${encodeURIComponent(houseId)}/invoices/${invoiceId}/public-link`;
 
-export interface PublicLink { url: string; payCode: string | null; bank: { name: string | null; accountNo: string; accountName: string } | null }
+export interface PublicLink { url: string; payCode: string | null; bank: { name: string | null; accountNo: string; accountName: string } | null; previousDebt?: number }
 
 async function readLink(res: Response): Promise<PublicLink> {
   const body = await res.json().catch(() => null);
   if (!res.ok || !body?.success || typeof body.url !== 'string') throw new Error(body?.error || 'Chưa lấy được link thanh toán.');
-  return { url: body.url, payCode: body.payCode ?? null, bank: body.bank ?? null };
+  return { url: body.url, payCode: body.payCode ?? null, bank: body.bank ?? null, previousDebt: typeof body.previousDebt === 'number' ? body.previousDebt : undefined };
 }
 
 /** The public link of an issued invoice (created on first use), with its pay code and the house's bank account. */
@@ -71,7 +71,7 @@ export function usePaymentBlock({ houseId, invoiceId, paid, revision = 0 }: Paym
           const link = await fetchPublicLink(houseId, invoiceId);
           // A house without its own account still pays into the old one (same rule as the app and the public page).
           const bank = link.bank ?? { name: DEFAULT_PORTAL.bankName, accountNo: DEFAULT_PORTAL.accountNo, accountName: DEFAULT_PORTAL.accountName };
-          done({ qrPng: await qrPng(link.url), accountNo: bank.accountNo, bankName: bank.name, accountName: bank.accountName, payCode: link.payCode });
+          done({ qrPng: await qrPng(link.url), accountNo: bank.accountNo, bankName: bank.name, accountName: bank.accountName, payCode: link.payCode, previousDebt: link.previousDebt });
         })
         .catch(() => done(null)); // no link (draft, offline): the invoice prints without the QR, as before
     }

@@ -2,7 +2,7 @@ import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Payment } from 'zmp-sdk/apis';
-import { useApp, transferContentFor } from '../context/AppContext';
+import { useApp, transferContentFor, amountDueOf } from '../context/AppContext';
 import { apiFetch } from '../lib/api';
 import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { prepareQrImage, saveQrToDevice } from '../lib/qrHelper';
@@ -186,7 +186,7 @@ export function PaymentPage() {
   const transferContent = portalLoaded ? transferContentFor(targetInvoice, profile.room?.roomNumber || '', portal.payPrefix) : '';
 
   // Pure QR code matrix without borders or background
-  const qrUrl = transferContent ? vietQrUrl(portal, targetInvoice.total, transferContent) : '';
+  const qrUrl = transferContent ? vietQrUrl(portal, amountDueOf(targetInvoice), transferContent) : '';
 
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [isOpeningTransfer, setIsOpeningTransfer] = useState(false);
@@ -217,7 +217,7 @@ export function PaymentPage() {
       const res = await apiFetch('/api/payment/zalo-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: targetInvoice.total, desc: transferContent, invoiceId: targetInvoice.id }),
+        body: JSON.stringify({ amount: amountDueOf(targetInvoice), desc: transferContent, invoiceId: targetInvoice.id }),
       });
       const order = await res.json();
       if (!order?.success) throw new Error(order?.error);
@@ -279,7 +279,7 @@ export function PaymentPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="kit-text-secondary">Số tiền:</span>
-                  <span className="font-semibold kit-text-primary font-num">{formatCurrency(targetInvoice.total)} ₫</span>
+                  <span className="font-semibold kit-text-primary font-num">{formatCurrency(amountDueOf(targetInvoice))} ₫</span>
                 </div>
               </div>
 
@@ -412,7 +412,7 @@ export function PaymentPage() {
               bankName={bankName}
               accountNumber={accountNumber}
               transferContent={transferContent}
-              total={targetInvoice.total}
+              total={amountDueOf(targetInvoice)}
               onSaveQR={handleSaveQR}
               isSavingQR={isSavingQR}
               qrSaveResult={qrSaveResult}

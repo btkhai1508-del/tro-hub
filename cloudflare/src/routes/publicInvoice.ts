@@ -13,6 +13,7 @@ import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { houseOwner } from '../central/directory.ts';
 import type { InvoiceStatus } from '../central/deferred.ts';
 import { dueDateOf, sheetLines } from '../billing/invoiceSheet.ts';
+import { roomDue } from '../billing/roomDue.ts';
 import { ipKey, registerHit } from '../loginLimit.ts';
 import { toSheetMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
@@ -94,7 +95,8 @@ export function registerPublicInvoice(app: Hono<App>): void {
     if ('error' in r) return r.error;
     const token = await linkFor(c, r.db, r.ownerId, r.inv);
     const info = await payInfo(r.db, r.inv);
-    return c.json({ success: true, url: linkUrl(c, token), payCode: info.payCode, bank: info.bank });
+    const due = await roomDue(r.db, r.inv.room_id, r.inv);
+    return c.json({ success: true, url: linkUrl(c, token), payCode: info.payCode, bank: info.bank, ...due });
   });
 
   /**
@@ -165,6 +167,8 @@ export function registerPublicInvoice(app: Hono<App>): void {
     const paid = status === 'paid' || status === 'cash';
     const info = await payInfo(db, inv);
     const lines = (await sheetLines(db, [inv.id])).get(inv.id) ?? [];
+    // Paying follows the printed "Tổng cộng": earlier months still owed + this month.
+    const due = paid ? { previousDebt: 0, amountDue: 0 } : await roomDue(db, inv.room_id, inv);
 
     return c.json({
       success: true,
@@ -174,6 +178,8 @@ export function registerPublicInvoice(app: Hono<App>): void {
         month: toSheetMonth(inv.month),
         lines: lines.map((l) => ({ name: l.name, formula: l.formula, amount: l.amount })),
         total: inv.total,
+        previousDebt: due.previousDebt,
+        amountDue: due.amountDue,
         payCode: info.payCode,
         dueDate: dueDateOf(inv.issued_at),
         paid,

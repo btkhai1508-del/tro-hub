@@ -68,7 +68,7 @@ for (const backend of BACKENDS) {
       expect(body.invoice.payCode).toMatch(/^002\d{3}112026$/);
       // An invoice from the old Sheet has no invoice_lines: its money columns are listed instead.
       expect(body.invoice.lines[0]).toEqual({ name: 'Tiền phòng', formula: '', amount: 3500000 });
-      expect(Object.keys(body.invoice).sort()).toEqual(['bank', 'dueDate', 'houseName', 'lines', 'month', 'paid', 'paidDate', 'payCode', 'room', 'total']);
+      expect(Object.keys(body.invoice).sort()).toEqual(['amountDue', 'bank', 'dueDate', 'houseName', 'lines', 'month', 'paid', 'paidDate', 'payCode', 'previousDebt', 'room', 'total']);
       const text = JSON.stringify(body);
       expect(text).not.toContain(PHONES.residentLvc);
       expect(text).not.toContain(PHONES.owner);

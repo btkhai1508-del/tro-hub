@@ -29,7 +29,14 @@ export interface Invoice {
   details: InvoiceDetailItem[];
   /** Worker mode: the transfer content XXXPPPMMYYYY computed by the Worker for this invoice. */
   payCode?: string | null;
+  /** Worker mode: still owed on earlier months' invoices. */
+  previousDebt?: number;
+  /** Worker mode: what paying this invoice means, earlier debt + this month ("Tổng cộng" of the printed invoice). */
+  amountDue?: number;
 }
+
+/** What a payment of this invoice must be: its "Tổng cộng" (earlier debt included) when known, else its own total. */
+export const amountDueOf = (invoice: Pick<Invoice, 'total' | 'amountDue'>) => invoice.amountDue ?? invoice.total;
 
 /**
  * Format transfer syntax based on room identifier:
