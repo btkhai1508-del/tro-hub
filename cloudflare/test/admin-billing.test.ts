@@ -422,6 +422,25 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       expect((await (await store()).prepare(`SELECT electricity_per_kwh AS e FROM house_rates WHERE house_id = 'LVC'`).first<any>()).e).toBe(3500);
     });
 
+    it('quản lý Trung Kim lách bằng mã phòng LVC-101 hoặc id phòng LVC kèm nhà của mình: không ghi được gì', async () => {
+      const db = await store();
+      const before = await db.prepare(`SELECT COUNT(*) AS n FROM meter_readings`).first<any>();
+      for (const body of [
+        { month: A, room: 'LVC-101', data: { dienMoi: 5 } },
+        { month: A, room: 'LVC-101', houseId: 'TRUNG_KIM', data: { dienMoi: 5 } },
+      ]) {
+        const res = await call(manager, 'POST', '/api/admin/room-detail', body);
+        expect(res.status, JSON.stringify(body)).not.toBe(200);
+      }
+      // Room 3 is LVC 101: asked through the manager's own house it is not found.
+      expect((await call(manager, 'PATCH', '/api/admin/rooms/3', { houseId: 'TRUNG_KIM', month: A, price: 1 })).status).toBe(404);
+      expect((await call(manager, 'PATCH', '/api/admin/rooms/3', { houseId: 'LVC', month: A, price: 1 })).status).toBe(403);
+      expect(await db.prepare(`SELECT COUNT(*) AS n FROM meter_readings`).first<any>()).toEqual(before);
+      expect((await db.prepare(`SELECT price FROM rooms WHERE id = 3`).first<any>()).price).toBe(3_500_000);
+      const houses = await json(await call(manager, 'GET', '/api/houses'));
+      expect(houses.houses.map((h: any) => h.id)).toEqual(['TRUNG_KIM']);
+    });
+
     it('chủ trọ khác: 403 với nhà không phải của mình', async () => {
       for (const [m, path, body] of routes) expect((await call(otherOwner, m, path, body)).status, `${m} ${path}`).toBe(403);
     });
