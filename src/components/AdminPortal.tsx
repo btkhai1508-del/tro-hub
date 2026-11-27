@@ -3247,10 +3247,12 @@ export function AdminPortal() {
                 <span>Quay lại Tiện ích</span>
               </button>
 
+              {!workerMode && (
               <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                 <Zap size={15} className="text-neutral-900 dark:text-white" />
                 <span>Nhập chỉ số điện nước</span>
               </div>
+              )}
             </div>
 
             {workerMode && <MonthBilling month={selectedMonth} months={meterMonthChoices(months)} onMonthChange={pickMonthByHand} />}

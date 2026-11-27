@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { meterCellError, meterMonthChoices, meterUsage, nextMonthStr, prepMonthStr } from '../meterSheet';
+import { meterCellError, meterMonthChoices, meterUsage, nextMonthStr, prepMonthStr, usageLimit } from '../meterSheet';
 
 // Vietnam is UTC+7: hh:mm there = hh-7:mm UTC.
 const vn = (y: number, m: number, d: number, h = 12) => Date.UTC(y, m - 1, d, h - 7);
@@ -35,6 +35,13 @@ test('meterCellError: nhỏ hơn số cũ thì báo lỗi, trống thì không',
   assert.equal(meterCellError(100, ''), null);
   assert.equal(meterCellError(100, '100'), null);
   assert.equal(meterCellError(100, '150'), null);
-  assert.equal(meterCellError(100, '90'), 'Nhỏ hơn số cũ (100).');
+  assert.equal(meterCellError(100, '90'), 'Chỉ số phải lớn hơn số cũ.');
   assert.equal(meterCellError(100, '0'), null);
+});
+
+test('usageLimit: 100 kWh và 8 m³ mỗi người, phòng trống tính 1 người', () => {
+  assert.equal(usageLimit('e', 2), 200);
+  assert.equal(usageLimit('w', 3), 24);
+  assert.equal(usageLimit('e', 0), 100);
+  assert.equal(usageLimit('w', 0), 8);
 });
