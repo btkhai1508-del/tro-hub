@@ -41,6 +41,22 @@ export function PublicInvoicePage() {
     return () => { alive = false; };
   }, [token]);
 
+  // While the page shows an unpaid invoice, ask again every 15 seconds: once the money arrives it turns into
+  // the same "Thanh toán hoàn tất" card the resident sees. A paid invoice is final, so polling stops there.
+  const waiting = state.kind === 'ready' && !state.invoice.paid;
+  useEffect(() => {
+    if (!waiting) return;
+    let alive = true;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      fetch(`${WORKER_API_URL}/api/public/invoice/${encodeURIComponent(token)}`, { credentials: 'omit', cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((body) => { if (alive && body?.success && body.invoice?.paid) setState({ kind: 'ready', invoice: body.invoice }); })
+        .catch(() => {});
+    }, 15000); // every 15 s, only while the tab is visible: a light load on the database
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [waiting, token]);
+
   useEffect(() => {
     document.title = state.kind === 'ready' ? `Thanh toán phòng ${state.invoice.room} · Tháng ${state.invoice.month}` : 'Thanh toán tiền phòng';
   }, [state]);

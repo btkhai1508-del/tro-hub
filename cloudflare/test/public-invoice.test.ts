@@ -75,6 +75,15 @@ for (const backend of BACKENDS) {
       expect(text).not.toContain('Cư dân LVC');
     });
 
+    it('an old Sheet invoice shows quantity × price for its services', async () => {
+      await (await store()).prepare(`UPDATE invoices SET trash = 30000, internet = 80000, parking = 70000 WHERE id = ?`).bind(invoiceId).run();
+      const { url } = (await (await linkAs(owner)).json()) as { url: string };
+      const lines = ((await (await pub(tokenOf(url))).json()) as any).invoice.lines;
+      expect(lines.find((l: any) => l.name === 'Rác').formula).toBe('1 × 30.000');
+      expect(lines.find((l: any) => l.name === 'Internet').formula).toBe('2 × 40.000');
+      expect(lines.find((l: any) => l.name === 'Xe máy').formula).toBe(''); // 70.000 is not a whole number of 50.000
+    });
+
     it('a resident cannot reach another room or rotate a link', async () => {
       const other = await login(PHONES.residentTk);
       expect((await linkAs(other)).status).toBe(403);

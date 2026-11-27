@@ -10,6 +10,7 @@ import { actorOf, audit, fail, staffOnly, type App } from '../app.ts';
 import { phoneTaken, PhoneTakenError, updateResidentIndex } from '../central/directory.ts';
 import { normalizePhone } from '../password.ts';
 import { cccdColumns, CCCD_INVALID_MESSAGE, CCCD_TAKEN_MESSAGE, cleanCccd, isCccd, PHONE_INVALID_MESSAGE, storablePhone } from '../residentInput.ts';
+import { sheetLines } from '../billing/invoiceSheet.ts';
 import { assertCanRecompute, effectiveOld, ensureDraft, InvoiceFrozenError, InvoiceLockedError, issueMonth, previousReadings, recompute, recomputeDrafts } from '../billing/invoices.ts';
 import { deferredByRoom, type InvoiceStatus } from '../central/deferred.ts';
 import { feeConfigFor, mirrorTemplate } from '../billing/fees.ts';
@@ -101,6 +102,9 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
   const bank = new Map(banks.map((b) => [b.invoice_id, b.paid]));
   rooms.sort((a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true }));
 
+  // The fee lines with their "Chi tiết" text (old Sheet invoices included), for the room invoice the admin prints.
+  const feeLines = await sheetLines(db, rooms.filter((r) => r.invoice_id !== null).map((r) => r.invoice_id!));
+
   return Promise.all(rooms.map(async (r) => {
     const occupants = people.filter((p) => p.room_id === r.id);
     const slot = (n: number) => ({ name: occupants[n]?.full_name ?? '', phone: occupants[n]?.phone ?? '', plate: occupants[n]?.plate_number ?? '' });
@@ -138,6 +142,7 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
       draft: hasInvoice && r.issued_at === null,
       surplus: hasInvoice ? Math.max(received - r.total!, 0) : 0,
       missingMeters: missing,
+      feeLines: r.invoice_id === null ? [] : (feeLines.get(r.invoice_id) ?? []).map((l) => ({ kind: l.kind, name: l.name, amount: l.amount, formula: l.formula })),
       dienCu: eOld ?? 0, dienMoi: eNew ?? 0, dienUsed: used(eOld, eNew),
       nuocCu: wOld ?? 0, nuocMoi: wNew ?? 0, nuocUsed: used(wOld, wNew),
       tienPhong: money(r.room_rent), tienDien: money(r.electricity), tienNuoc: money(r.water), tienRac: money(r.trash), tienNet: money(r.internet),
