@@ -55,6 +55,7 @@ import { cn, getCurrentMonthStr, isFutureMonth, DEFAULT_ROOM_NUMBERS } from '../
 import { apiFetch, ensureSource, getSource, workerFetch } from '../lib/api';
 import FeeSettings from './admin/FeeSettings';
 import MonthBilling from './admin/MonthBilling';
+import { meterMonthChoices } from '../lib/meterSheet';
 import ConfirmSaveDialog from './admin/ConfirmSaveDialog';
 import IssueInvoicesBar from './admin/IssueInvoicesBar';
 import { HOUSES, houseFromRoom } from '../lib/houses';
@@ -727,6 +728,14 @@ export function AdminPortal() {
 
     loadPaymentGateStatus(selectedMonth);
   }, []);
+
+  /** A month picked on a screen (Điện nước): kept in the month list so the header arrows still move from it. */
+  const pickMonthByHand = (m: string) => {
+    monthPickedByHand.current = true;
+    setMonths(prev => prev.includes(m) ? prev : [...prev, m].sort((a, b) => (a.slice(3) + a.slice(0, 2)).localeCompare(b.slice(3) + b.slice(0, 2))));
+    setSelectedMonth(m);
+    playSound('click');
+  };
 
   const handlePrevMonth = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -3262,7 +3271,7 @@ export function AdminPortal() {
               </div>
             </div>
 
-            {workerMode && <MonthBilling month={selectedMonth} />}
+            {workerMode && <MonthBilling month={selectedMonth} months={meterMonthChoices(months)} onMonthChange={pickMonthByHand} />}
             {sourceReady && !workerMode && (
             <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
               <div className="admin-section-toolbar flex flex-wrap items-center justify-between gap-3">
