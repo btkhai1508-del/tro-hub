@@ -31,6 +31,8 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
   const [rowError, setRowError] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
+  // Cells the admin has left (blur or Enter): only those show their error, never while typing.
+  const [left, setLeft] = useState<Record<string, boolean>>({});
   const inflight = useRef<Record<number, string>>({});
   // Saves of one room run one after another, so two quick blurs cannot overtake each other.
   const queue = useRef<Record<number, Promise<unknown>>>({});
@@ -44,6 +46,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
     setLoadError('');
     setEdits({});
     setRowError({});
+    setLeft({});
     const ids = houseKey.split(',');
     const answers = await Promise.all(ids.map((id) => workerCall(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(id)}`)));
     if (seq !== loadSeq.current) return; // a newer house/month request replaced this one
@@ -56,8 +59,10 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
 
   useEffect(() => { load(); }, [load]);
 
-  const setEdit = (roomId: number, key: Kind, value: string) =>
+  const setEdit = (roomId: number, key: Kind, value: string) => {
+    setLeft((cur) => (cur[`${roomId}${key}`] ? { ...cur, [`${roomId}${key}`]: false } : cur));
     setEdits((cur) => ({ ...cur, [roomId]: { ...cur[roomId], [key]: value.replace(/\D/g, '') } }));
+  };
 
   const textOf = (r: Row, k: Kind) => {
     const saved = k === 'e' ? r.dienMoi : r.nuocMoi;
@@ -123,17 +128,19 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
   const oldCls = 'w-24 bg-neutral-100 dark:bg-neutral-800 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-500 dark:text-neutral-400 outline-none cursor-default';
   const badCls = '!border-rose-500 focus:!ring-rose-500';
 
+  const leave = (r: Row, k: Kind) => { setLeft((cur) => ({ ...cur, [`${r.roomId}${k}`]: true })); saveRoom(r); };
+
   /** "Mới" cell as in the old table; a reading below the old one shows its error under the field and is not saved. */
   const reading = (r: Row, k: Kind) => {
-    const err = errorOf(r, k);
+    const err = left[`${r.roomId}${k}`] ? errorOf(r, k) : null;
     const errId = `meter-err-${r.roomId}-${k}`;
     return (
       <>
         <input type="text" inputMode="numeric" value={textOf(r, k)} disabled={r.paymentStatus === 'paid' || !loaded}
           aria-label={`${k === 'e' ? 'Điện' : 'Nước'} mới phòng ${r.roomName}`}
           aria-invalid={err ? true : undefined} aria-describedby={err ? errId : undefined}
-          onChange={(ev) => setEdit(r.roomId, k, ev.target.value)} onBlur={() => saveRoom(r)}
-          onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveRoom(r); } }}
+          onChange={(ev) => setEdit(r.roomId, k, ev.target.value)} onBlur={() => leave(r, k)}
+          onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); leave(r, k); } }}
           className={`${fieldCls} disabled:opacity-60 ${err ? badCls : ''}`} />
         {err && <span id={errId} role="alert" className="mt-1 block text-[11px] font-bold text-rose-600 dark:text-rose-400">{err}</span>}
       </>
@@ -156,25 +163,24 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
   const newHouse = (i: number) => showHouseHeads && (i === 0 || rooms[i - 1].houseId !== rooms[i].houseId);
 
   return (
-    <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
-      <div className="admin-section-toolbar flex flex-wrap items-center justify-between gap-3">
-        <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {month}</h3>
-        <div className="admin-list-filters">
-          {months.length > 0 && onMonthChange && (
-            <label className="admin-status-filter">
-              <span className="sr-only">Tháng</span>
-              <select value={month} onChange={(e) => onMonthChange(e.target.value)} aria-label="Chọn tháng">
-                {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>Tháng {m}</option>)}
-              </select>
-            </label>
-          )}
-          {houses.length > 1 && (
-            <label className="admin-status-filter"><span className="sr-only">Căn</span><select value={houseFilter} onChange={(e) => setHouseFilter(e.target.value)} aria-label="Lọc theo căn"><option value="all">Tất cả căn</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
-          )}
-        </div>
+    <>
+      {/* Month and house filters sit between the Quay lại card and the table card, without a card of their own. */}
+      <div className="admin-list-filters">
+        {months.length > 0 && onMonthChange && (
+          <label className="admin-status-filter">
+            <span className="sr-only">Tháng</span>
+            <select value={month} onChange={(e) => onMonthChange(e.target.value)} aria-label="Chọn tháng">
+              {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>Tháng {m}</option>)}
+            </select>
+          </label>
+        )}
+        {houses.length > 1 && (
+          <label className="admin-status-filter"><span className="sr-only">Căn</span><select value={houseFilter} onChange={(e) => setHouseFilter(e.target.value)} aria-label="Lọc theo căn"><option value="all">Tất cả căn</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+        )}
       </div>
+
+    <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
       {(houseError || loadError) && <p role="alert" className="text-xs font-bold text-rose-600">{houseError || loadError}</p>}
-      <p className="text-xs text-neutral-600 dark:text-neutral-300">Số cũ là số mới của tháng trước. Nhập số mới, tự lưu khi rời ô hoặc nhấn Enter.</p>
       {!loaded && !loadError && !houseError && <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Đang tải danh sách phòng...</p>}
 
       {loaded && rooms.length > 0 && (
@@ -213,5 +219,6 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
       )}
       {loaded && rooms.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhà này chưa có phòng.</p>}
     </div>
+    </>
   );
 }
