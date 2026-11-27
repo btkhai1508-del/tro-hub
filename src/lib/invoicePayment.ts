@@ -80,3 +80,32 @@ export function usePaymentBlock({ houseId, invoiceId, paid, revision = 0 }: Paym
 
   return state?.key === key ? state.value : undefined;
 }
+
+/** Staff: the public link of every issued invoice of a house in a month, by invoice id. */
+export async function fetchMonthLinks(houseId: string, month: string): Promise<Record<number, string>> {
+  const res = await workerFetch(`/api/houses/${encodeURIComponent(houseId)}/public-links?month=${encodeURIComponent(month)}`);
+  const body = await res.json().catch(() => null);
+  return res.ok && body?.success ? body.links ?? {} : {};
+}
+
+/**
+ * The links of the given houses for a month, keyed "houseId|invoiceId"; reloads when the month or the set of
+ * houses changes. Worker mode only (pass enabled = false otherwise).
+ */
+export function useMonthLinks(enabled: boolean, month: string, houseIds: string[]): Record<string, string> {
+  const [links, setLinks] = useState<Record<string, string>>({});
+  const key = enabled ? `${month}|${[...new Set(houseIds)].sort().join(',')}` : '';
+  useEffect(() => {
+    if (!key) { setLinks({}); return; }
+    let alive = true;
+    const ids = key.split('|')[1].split(',').filter(Boolean);
+    Promise.all(ids.map(async (h) => [h, await fetchMonthLinks(h, month).catch(() => ({}))] as const)).then((all) => {
+      if (!alive) return;
+      const out: Record<string, string> = {};
+      for (const [h, map] of all) for (const [id, url] of Object.entries(map)) out[`${h}|${id}`] = url;
+      setLinks(out);
+    });
+    return () => { alive = false; };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return links;
+}

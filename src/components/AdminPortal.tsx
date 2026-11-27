@@ -60,10 +60,11 @@ import { HOUSES, houseFromRoom } from '../lib/houses';
 import { buildContract, buildCt01, Person } from '../lib/documents/legalForms';
 import { buildDeclaration } from '../lib/documents/stateFormat';
 import { roomInvoice } from '../lib/documents/fromProfile';
-import { fetchPublicLink, usePaymentBlock } from '../lib/invoicePayment';
+import { fetchPublicLink, useMonthLinks, usePaymentBlock } from '../lib/invoicePayment';
+import { InvoiceQrThumb } from './admin/InvoiceQrThumb';
 import { DocumentActions, DocumentSheet, useBuiltDocument } from './DocumentSheet';
 import { canonicalRoomId, pushUpdateToGoogleSheet } from '../services/googleSheetSyncService';
-import { ModernLineGraph } from './ModernLineGraph';
+import { UsageBarCharts } from './UsageBarCharts';
 import { Background } from './Background';
 import { useSidebarLabels } from '../lib/useSidebarLabels';
 import { AccountDeleteDialog, AccountDeleteMode } from './AccountDeleteDialog';
@@ -1841,6 +1842,10 @@ export function AdminPortal() {
     billingScrollRef.current = null;
     requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
   }, [activeMenu]);
+  // Worker mode, Hoá đơn list: a small QR per issued invoice; tapping it copies that room's payment link.
+  const monthLinks = useMonthLinks(workerMode && activeMenu === 'billing', selectedMonth, billingList.map((r: any) => String(r.houseId || '')).filter(Boolean));
+  const linkOf = (item: any) => (item.invoiceId != null && !item.draft ? monthLinks[`${item.houseId}|${item.invoiceId}`] : undefined);
+  const copiedLinkToast = (ok: boolean) => showPortalToast(ok ? 'Đã sao chép link thanh toán.' : 'Chưa sao chép được. Hãy mở hoá đơn và bấm Sao chép link thanh toán.', ok ? 'success' : 'error');
   // Worker mode: the printed invoice carries a QR linking to that room's public payment page (unpaid only).
   const invoiceLinkTarget = workerMode && selectedInvoiceRoom?.invoiceId != null && !selectedInvoiceRoom?.draft
     ? { houseId: String(selectedInvoiceRoom.houseId || ''), invoiceId: Number(selectedInvoiceRoom.invoiceId) } : null;
@@ -2546,7 +2551,7 @@ export function AdminPortal() {
                   LINE GRAPH (BIỂU ĐỒ ĐIỆN NƯỚC: 6 THÁNG GẦN NHẤT THIẾT KẾ CHUẨN HIỆN ĐẠI)
                  ========================================================================= */}
               <AdminDisclosure className="md:col-span-12" title="Xu hướng điện nước" description="Mở biểu đồ và chọn kỳ tháng"><div className="soft-card p-5 sm:p-7 space-y-4">
-                <ModernLineGraph
+                <UsageBarCharts
                   data={dashboardData?.usageTrend || []}
                   selectedMonth={selectedMonth}
                   onSelectMonth={(m) => {
@@ -2969,6 +2974,7 @@ export function AdminPortal() {
                         <ChevronRight size={16} className="shrink-0 text-neutral-500" />
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
+                        {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
                         <AppleSwitch
                           checked={isPaid}
                           onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
@@ -3032,6 +3038,7 @@ export function AdminPortal() {
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">Phòng</th>
+                      {workerMode && <th className="p-4 font-semibold font-apple"><span className="sr-only">Mã QR thanh toán</span>QR</th>}
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
                       <th className="p-4 font-semibold font-apple">Điện</th>
                       <th className="p-4 font-semibold font-apple">Nước</th>
@@ -3048,6 +3055,7 @@ export function AdminPortal() {
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
                           <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
+                          {workerMode && <td className="p-2 font-apple" onClick={(e) => e.stopPropagation()}><InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} /></td>}
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienNuoc)} đ</td>

@@ -18,7 +18,7 @@ import { toSheetMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantFor, tenantOfOwner } from '../tenant/route.ts';
 import { assignPayNumbers } from './houses.ts';
-import { statusView, vnDate } from './rent.ts';
+import { parseMonth, statusView, vnDate } from './rent.ts';
 
 export const PUBLIC_LINK_LIMITS = { maxMisses: 20, windowSec: 3600 } as const;
 const DEFAULT_ORIGIN = 'https://tro-hub.onrender.com';
@@ -95,6 +95,37 @@ export function registerPublicInvoice(app: Hono<App>): void {
     const token = await linkFor(c, r.db, r.ownerId, r.inv);
     const info = await payInfo(r.db, r.inv);
     return c.json({ success: true, url: linkUrl(c, token), payCode: info.payCode, bank: info.bank });
+  });
+
+  /**
+   * Staff: the public link of every issued invoice of a month in one call (missing ones are created), for the QR
+   * thumbnails of the Hoá đơn list. Drafts have none. Answer: { links: { [invoiceId]: url } }.
+   */
+  app.get('/api/houses/:houseId/public-links', staffOnly, async (c) => {
+    const houseId = c.req.param('houseId') ?? '';
+    const month = parseMonth(c.req.query('month'));
+    if (!month) return fail(c, 400, 'MONTH_INVALID', 'Tháng không hợp lệ (dùng 11/2026 hoặc 2026-11).');
+    const db = await tenantFor(c, houseId);
+    const ownerId = await houseOwner(c.env.DB, houseId);
+    if (ownerId === null) return fail(c, 404, 'HOUSE_NOT_FOUND', 'Không tìm thấy nhà trọ.');
+    const { results: invoices } = await db.prepare(`SELECT id FROM invoices WHERE house_id = ? AND month = ? AND issued_at IS NOT NULL`)
+      .bind(houseId, month).all<{ id: number }>();
+    if (!invoices.length) return c.json({ success: true, links: {} });
+    const readAll = async () => new Map((await c.env.DB.prepare(`SELECT invoice_id, token FROM invoice_links WHERE house_id = ?`).bind(houseId)
+      .all<{ invoice_id: number; token: string }>()).results.map((r) => [r.invoice_id, r.token]));
+    let tokens = await readAll();
+    const missing = invoices.filter((i) => !tokens.has(i.id));
+    if (missing.length) {
+      await assignPayNumbers(c.env, db, houseId); // the page shows the pay code
+      const by = actorOf(c.get('viewer'));
+      await c.env.DB.batch(missing.map((i) => c.env.DB.prepare(
+        `INSERT OR IGNORE INTO invoice_links (token, owner_id, house_id, invoice_id, created_by) VALUES (?, ?, ?, ?, ?)`
+      ).bind(newToken(), ownerId, houseId, i.id, by)));
+      tokens = await readAll();
+    }
+    const links: Record<number, string> = {};
+    for (const i of invoices) { const t = tokens.get(i.id); if (t) links[i.id] = linkUrl(c, t); }
+    return c.json({ success: true, links });
   });
 
   app.post('/api/houses/:houseId/invoices/:invoiceId/public-link/rotate', staffOnly, async (c) => {

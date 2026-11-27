@@ -338,8 +338,13 @@ export function registerRent(app: Hono<App>): void {
       const marks = inList(store.houseIds);
       const { results: trend } = await store.db.prepare(
         `SELECT i.month,
-                SUM(MAX(COALESCE(m.electric_new - m.electric_old, 0), 0)) AS dien,
-                SUM(MAX(COALESCE(m.water_new - m.water_old, 0), 0)) AS nuoc,
+                -- Usage = what the invoice billed (its electricity/water line). A stored old reading of 0 means "take the
+                -- previous month's" (effectiveOld), so new - old would count the whole meter. Invoices from the old
+                -- Sheet have no lines: their own readings are used, only when the old reading is real (> 0).
+                SUM(COALESCE((SELECT SUM(l.qty) FROM invoice_lines l WHERE l.invoice_id = i.id AND l.kind = 'electricity'),
+                             CASE WHEN m.electric_old > 0 THEN MAX(m.electric_new - m.electric_old, 0) ELSE 0 END)) AS dien,
+                SUM(COALESCE((SELECT SUM(l.qty) FROM invoice_lines l WHERE l.invoice_id = i.id AND l.kind = 'water'),
+                             CASE WHEN m.water_old > 0 THEN MAX(m.water_new - m.water_old, 0) ELSE 0 END)) AS nuoc,
                 SUM(i.electricity) AS tienDien, SUM(i.water) AS tienNuoc, SUM(i.total) AS doanhThu
            FROM invoices i LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
           WHERE i.house_id IN (${marks}) AND i.month <= ? AND i.issued_at IS NOT NULL

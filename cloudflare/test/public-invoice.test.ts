@@ -110,6 +110,17 @@ for (const backend of BACKENDS) {
       expect((await pub(tokenOf(after))).status).toBe(200);
     });
 
+    it('staff get every link of a month at once; residents cannot', async () => {
+      const res = await api('/api/houses/LVC/public-links?month=11/2026', {}, owner);
+      expect(res.status).toBe(200);
+      const { links } = (await res.json()) as { links: Record<string, string> };
+      expect(Object.keys(links)).toEqual([String(invoiceId)]);
+      // Same link as the single-invoice API, and asking again changes nothing.
+      expect(((await (await linkAs(owner)).json()) as { url: string }).url).toBe(links[invoiceId]);
+      expect(((await (await api('/api/houses/LVC/public-links?month=11/2026', {}, owner)).json()) as any).links).toEqual(links);
+      expect((await api('/api/houses/LVC/public-links?month=11/2026', {}, await login(PHONES.residentLvc))).status).toBe(403);
+    });
+
     it('the link is not a login', async () => {
       const { url } = (await (await linkAs(owner)).json()) as { url: string };
       for (const path of ['/api/houses/LVC/invoices', '/api/payment/status', '/api/me', '/api/tenant/session'])
