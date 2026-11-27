@@ -192,6 +192,18 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       expect(next.data).toMatchObject({ dienCu: 150, dienUsed: 30 });
     });
 
+    it('tháng đầu (chưa có tháng trước) được nhập số cũ; từ tháng sau số cũ khoá theo tháng trước', async () => {
+      let row = (await json(await call(owner, 'GET', `/api/admin/rooms?month=${A}&houseId=LVC`))).rooms[0];
+      expect(row).toMatchObject({ dienCuEditable: true, nuocCuEditable: true });
+      const first = await json(await enter(A, { dienCu: 5000, nuocCu: 300 }));
+      expect(first.data).toMatchObject({ dienCu: 5000, nuocCu: 300 });
+      await enter(A, { dienMoi: 5080, nuocMoi: 306 });
+      row = (await json(await call(owner, 'GET', `/api/admin/rooms?month=${A}&houseId=LVC`))).rooms[0];
+      expect(row).toMatchObject({ dienCu: 5000, dienUsed: 80, nuocUsed: 6, dienCuEditable: true });
+      row = (await json(await call(owner, 'GET', `/api/admin/rooms?month=${B}&houseId=LVC`))).rooms[0];
+      expect(row).toMatchObject({ dienCu: 5080, nuocCu: 306, dienCuEditable: false, nuocCuEditable: false });
+    });
+
     it('paymentStatus paid đánh dấu đã đóng như /api/admin/payment-status', async () => {
       await enter(A, { dienCu: 100, dienMoi: 150 });
       const res = await enter(A, { paymentStatus: 'paid' });

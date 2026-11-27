@@ -179,6 +179,8 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
       feeLines: r.invoice_id === null ? [] : (feeLines.get(r.invoice_id) ?? []).map((l) => ({ kind: l.kind, name: l.name, amount: l.amount, formula: l.formula })),
       dienCu: eOld ?? 0, dienMoi: eNew ?? 0, dienUsed: used(eOld, eNew),
       nuocCu: wOld ?? 0, nuocMoi: wNew ?? 0, nuocUsed: used(wOld, wNew),
+      // No earlier reading (a new house, room or meter): the old reading of this month is typed by hand.
+      dienCuEditable: r.prev_e === null, nuocCuEditable: r.prev_w === null,
       tienPhong: money(r.room_rent), tienDien: money(r.electricity), tienNuoc: money(r.water), tienRac: money(r.trash), tienNet: money(r.internet),
       tienXe: money(r.parking), tienKhac: money(r.other), tienCoc: r.room_deposit, tongTien: money(r.total),
       nguoi1: p1.name, cccd1: '', sdt1: p1.phone, xe1: p1.plate,

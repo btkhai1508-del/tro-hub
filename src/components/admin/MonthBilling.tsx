@@ -2,14 +2,16 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Lock } from '../LineIcons';
 import { useAdminHouses, workerCall } from './workerAdmin';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
-import { compareRoomNames, meterCellError, usageLimit } from '../../lib/meterSheet';
+import { compareRoomNames, meterCellError, meterUsage, usageLimit } from '../../lib/meterSheet';
 import ConfirmSaveDialog from './ConfirmSaveDialog';
 
 interface Row {
   houseId?: string; roomId: number; roomName: string; invoiceId: number | null; draft: boolean; paymentStatus: string;
   dienCu: number; dienMoi: number; nuocCu: number; nuocMoi: number; missingMeters: boolean; soNguoi?: number;
+  /** True when no earlier month has a reading: the old reading is typed by hand (first month of a house, room or meter). */
+  dienCuEditable?: boolean; nuocCuEditable?: boolean;
 }
-type Edits = Record<number, { e?: string; w?: string }>;
+type Edits = Record<number, { e?: string; w?: string; eo?: string; wo?: string }>;
 type Kind = 'e' | 'w';
 
 
@@ -63,7 +65,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
 
   useEffect(() => { load(); }, [load]);
 
-  const setEdit = (roomId: number, key: Kind, value: string) => {
+  const setEdit = (roomId: number, key: Kind | 'eo' | 'wo', value: string) => {
     setLeft((cur) => (cur[`${roomId}${key}`] ? { ...cur, [`${roomId}${key}`]: false } : cur));
     setEdits((cur) => ({ ...cur, [roomId]: { ...cur[roomId], [key]: value.replace(/\D/g, '') } }));
   };
@@ -72,14 +74,22 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
     const saved = k === 'e' ? r.dienMoi : r.nuocMoi;
     return edits[r.roomId]?.[k] ?? (saved ? String(saved) : '');
   };
+  /** The old reading in force: the one being typed (first month only), else the saved one. */
+  const oldOf = (r: Row, k: Kind) => {
+    const typed = edits[r.roomId]?.[k === 'e' ? 'eo' : 'wo'];
+    return typed !== undefined && typed !== '' ? Number(typed) : (k === 'e' ? r.dienCu : r.nuocCu);
+  };
   const errorOf = (r: Row, k: Kind) => {
     const ed = edits[r.roomId]?.[k];
-    return ed === undefined ? null : meterCellError(k === 'e' ? r.dienCu : r.nuocCu, ed);
+    return ed === undefined ? null : meterCellError(oldOf(r, k), ed);
   };
+
 
   const dirtyOf = (room: Row) => {
     const ed = edits[room.roomId] ?? {};
-    const data: { dienMoi?: number; nuocMoi?: number } = {};
+    const data: { dienMoi?: number; nuocMoi?: number; dienCu?: number; nuocCu?: number } = {};
+    if (room.dienCuEditable && ed.eo !== undefined && ed.eo !== '' && Number(ed.eo) !== room.dienCu) data.dienCu = Number(ed.eo);
+    if (room.nuocCuEditable && ed.wo !== undefined && ed.wo !== '' && Number(ed.wo) !== room.nuocCu) data.nuocCu = Number(ed.wo);
     if (ed.e !== undefined && ed.e !== '' && Number(ed.e) !== room.dienMoi) data.dienMoi = Number(ed.e);
     if (ed.w !== undefined && ed.w !== '' && Number(ed.w) !== room.nuocMoi) data.nuocMoi = Number(ed.w);
     return data;
@@ -98,7 +108,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
     for (const k of ['e', 'w'] as Kind[]) {
       const v = k === 'e' ? data.dienMoi : data.nuocMoi;
       if (v === undefined) continue;
-      const use = v - (k === 'e' ? room.dienCu : room.nuocCu);
+      const use = v - oldOf(room, k);
       if (use > usageLimit(k, people) && !confirmed.current[`${room.roomId}${k}=${v}`]) over.push({ k, use });
     }
     if (over.length > 0) {
@@ -118,6 +128,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
       setEdits((cur) => {
         const ed = { ...(cur[room.roomId] ?? {}) };
         for (const k of ['e', 'w'] as Kind[]) if (!errorOf(room, k)) delete ed[k];
+        delete ed.eo; delete ed.wo;
         return { ...cur, [room.roomId]: ed };
       });
       return;
@@ -138,6 +149,8 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
         const ed = { ...(cur[room.roomId] ?? {}) };
         if (data.dienMoi !== undefined && Number(ed.e) === data.dienMoi) delete ed.e;
         if (data.nuocMoi !== undefined && Number(ed.w) === data.nuocMoi) delete ed.w;
+        if (data.dienCu !== undefined && Number(ed.eo) === data.dienCu) delete ed.eo;
+        if (data.nuocCu !== undefined && Number(ed.wo) === data.nuocCu) delete ed.wo;
         return { ...cur, [room.roomId]: ed };
       });
       const fresh: Row | undefined = r.data.data;
@@ -163,20 +176,39 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
     const errId = `meter-err-${r.roomId}-${k}`;
     return (
       <>
-        <input type="text" inputMode="numeric" value={textOf(r, k)} disabled={r.paymentStatus === 'paid' || !loaded}
-          aria-label={`${k === 'e' ? 'Điện' : 'Nước'} mới phòng ${r.roomName}`}
-          aria-invalid={err ? true : undefined} aria-describedby={err ? errId : undefined}
-          onChange={(ev) => setEdit(r.roomId, k, ev.target.value)} onBlur={() => leave(r, k)}
-          onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); leave(r, k); } }}
-          className={`${fieldCls} disabled:opacity-60 ${err ? badCls : ''}`} />
+        <span className="meter-new-wrap relative inline-block w-36 max-w-full">
+          <input type="text" inputMode="numeric" value={textOf(r, k)} disabled={r.paymentStatus === 'paid' || !loaded}
+            aria-label={`${k === 'e' ? 'Điện' : 'Nước'} mới phòng ${r.roomName}`}
+            aria-invalid={err ? true : undefined} aria-describedby={err ? errId : `meter-use-${r.roomId}-${k}`}
+            onChange={(ev) => setEdit(r.roomId, k, ev.target.value)} onBlur={() => leave(r, k)}
+            onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); leave(r, k); } }}
+            className={`${fieldCls} !w-full pr-16 disabled:opacity-60 ${err ? badCls : ''}`} />
+          {/* The use of the month, faint at the end of the box. */}
+          <span id={`meter-use-${r.roomId}-${k}`} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+            {usedOf(r, k) > 0 ? `${usedOf(r, k)} ` : ''}{k === 'e' ? 'kWh' : 'm³'}
+          </span>
+        </span>
         {err && <span id={errId} role="alert" className="mt-1 block text-[11px] font-bold text-rose-600 dark:text-rose-400">{err}</span>}
       </>
     );
   };
-  /** "Cũ" cell: last month's new reading, read-only. */
-  const oldCell = (r: Row, k: Kind) => (
-    <input type="text" readOnly tabIndex={-1} value={k === 'e' ? r.dienCu : r.nuocCu} aria-label={`${k === 'e' ? 'Điện' : 'Nước'} cũ phòng ${r.roomName}`} className={oldCls} />
-  );
+  const usedOf = (r: Row, k: Kind) => meterUsage(oldOf(r, k), textOf(r, k));
+
+  /** "Cũ" cell: last month's new reading, read-only; typed by hand only while no earlier month has a reading. */
+  const oldCell = (r: Row, k: Kind) => {
+    const label = `${k === 'e' ? 'Điện' : 'Nước'} cũ phòng ${r.roomName}`;
+    const editable = (k === 'e' ? r.dienCuEditable : r.nuocCuEditable) && r.paymentStatus !== 'paid';
+    if (!editable) return <input type="text" readOnly tabIndex={-1} value={k === 'e' ? r.dienCu : r.nuocCu} aria-label={label} className={oldCls} />;
+    const key = k === 'e' ? 'eo' : 'wo';
+    const saved = k === 'e' ? r.dienCu : r.nuocCu;
+    return (
+      <input type="text" inputMode="numeric" value={edits[r.roomId]?.[key] ?? (saved ? String(saved) : '')} disabled={!loaded}
+        aria-label={label} placeholder="Số đầu" title="Tháng đầu tiên: nhập số đang hiện trên đồng hồ"
+        onChange={(ev) => setEdit(r.roomId, key, ev.target.value)} onBlur={() => saveRoom(r)}
+        onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveRoom(r); } }}
+        className={`${fieldCls} disabled:opacity-60`} />
+    );
+  };
 
   const roomState = (r: Row) => {
     if (saving[r.roomId]) return <span role="status" className="block text-[11px] font-bold text-neutral-500">Đang lưu...</span>;

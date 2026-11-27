@@ -62,6 +62,7 @@
   .admin-meter-table td:first-child { grid-column: 1 / -1; padding-bottom: 4px; font-size: 15px; }
   .admin-meter-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 5px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
   .admin-meter-table input { width: 100%; }
+  .admin-meter-table .meter-new-wrap { display: block; width: 100%; }
   .admin-meter-table tbody tr.meter-house-row { display: block; padding: 8px 0 0; border: 0; border-radius: 0; background: none; }
   .admin-laundry-actions { flex-direction: column; align-items: stretch; }
   .admin-laundry-actions > div:first-child { justify-content: flex-start; }
