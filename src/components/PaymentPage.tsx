@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Payment } from 'zmp-sdk/apis';
 import { useApp, transferContentFor, amountDueOf } from '../context/AppContext';
-import { apiFetch } from '../lib/api';
+import { apiFetch, getSource } from '../lib/api';
 import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
 import { prepareQrImage, saveQrToDevice } from '../lib/qrHelper';
 import { isZaloMiniApp } from '../lib/platform';
@@ -150,8 +150,13 @@ export function PaymentPage() {
     // Run immediately on mount
     checkLiveStatus();
 
-    // Poll every 3 seconds while unpaid
-    pollInterval = setInterval(checkLiveStatus, 3000);
+    // Poll while unpaid: every 3 s on the Sheet; every 10 s in worker mode, only while the tab is visible
+    // (each check reads the database).
+    const worker = getSource() === 'worker';
+    pollInterval = setInterval(() => {
+      if (worker && document.visibilityState === 'hidden') return;
+      checkLiveStatus();
+    }, worker ? 10_000 : 3000);
 
     return () => {
       isMounted = false;

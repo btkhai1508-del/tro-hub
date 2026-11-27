@@ -8,6 +8,10 @@ import { isZaloMiniApp } from '../lib/platform';
 import { events, EventName, closeLoading } from 'zmp-sdk/apis';
 import { getCurrentMonthStr, isSameMonth, paidDay } from '../lib/utils';
 
+/** Worker mode: how often an open app reads the database by itself (each read counts toward the daily row limit). */
+const WORKER_POLL_MS = 60_000;
+const WORKER_FOCUS_GAP_MS = 15_000;
+
 export interface InvoiceDetailItem {
   name: string;
   amount: number;
@@ -614,8 +618,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Staff in worker mode never read the resident's own bill: the admin screen has its own refresh.
     const skipResidentPolls = () => isStaffRef.current && getSource() === 'worker';
-    const pollResident = () => {
+    // Worker mode reads the database on every poll: at most once a minute on the timer, and a focus or
+    // visibility change refreshes only if the last read is 15 s old. Sheet mode keeps its 5 s rhythm.
+    let lastPoll = 0;
+    const pollResident = (minGapMs = 0) => {
       if (skipResidentPolls()) return;
+      if (getSource() === 'worker' && Date.now() - lastPoll < minGapMs) return;
+      lastPoll = Date.now();
       refreshTenantDataFromSheet(true);
       fetchPaymentStatus();
       fetchPaymentGateStatus();
@@ -629,17 +638,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // The app can stay open across midnight on the 1st: move on to the new month by itself.
       const month = getCurrentMonthStr();
       if (sheetConfigRef.current.monthlyTab !== month) updateSheetConfig({ monthlyTab: month });
-      pollResident();
+      pollResident(WORKER_POLL_MS);
     }, 5000);
 
     // Window focus / visibility change listeners
     const handleFocus = () => {
       if (document.visibilityState === 'hidden') return;
-      pollResident();
+      pollResident(WORKER_FOCUS_GAP_MS);
     };
     window.addEventListener('focus', handleFocus);
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') pollResident();
+      if (document.visibilityState === 'visible') pollResident(WORKER_FOCUS_GAP_MS);
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
@@ -1198,8 +1207,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Periodic notification polling (every 8s)
   useEffect(() => {
     refreshNotifications();
+    let last = Date.now();
     const interval = setInterval(() => {
-      if (document.visibilityState !== 'hidden') refreshNotifications();
+      if (document.visibilityState === 'hidden') return;
+      if (getSource() === 'worker' && Date.now() - last < WORKER_POLL_MS) return; // worker: once a minute
+      last = Date.now();
+      refreshNotifications();
     }, 8000);
     return () => clearInterval(interval);
   }, [refreshNotifications]);
