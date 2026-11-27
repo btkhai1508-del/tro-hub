@@ -58,6 +58,40 @@ function pickFeeMonth(c: Context<App>, given: unknown): string | Response {
   return month <= max ? month : fail(c, 400, 'MONTH_INVALID', 'Tháng không hợp lệ: chỉ chọn đến tháng sau.');
 }
 
+/**
+ * A month's new reading moved (was → now): the later months that stored the OLD value as their own old reading
+ * (a copy, e.g. written by the room screen or the Sheet) are set back to 0, so they follow the earlier month again.
+ * Only months up to the first later one with its own new reading depend on this month. A later old reading that
+ * differs (a replaced meter) is kept, and so is one on a paid or frozen invoice. Returns the months changed.
+ */
+async function followLaterMonths(db: TenantDb, central: D1Database, roomId: number, month: string, moved: { e?: [number, number]; w?: [number, number] }): Promise<string[]> {
+  const { results: later } = await db.prepare(
+    `SELECT month, electric_old AS eo, electric_new AS en, water_old AS wo, water_new AS wn FROM meter_readings WHERE room_id = ? AND month > ? ORDER BY month`
+  ).bind(roomId, month).all<{ month: string; eo: number; en: number; wo: number; wn: number }>();
+  const reset = new Map<string, { e: boolean; w: boolean }>();
+  const walk = (pair: [number, number] | undefined, old: 'eo' | 'wo', neu: 'en' | 'wn', key: 'e' | 'w') => {
+    if (!pair || pair[0] <= 0 || pair[0] === pair[1]) return;
+    for (const r of later) {
+      if (r[old] === pair[0]) reset.set(r.month, { ...(reset.get(r.month) ?? { e: false, w: false }), [key]: true });
+      if ((r[neu] ?? 0) > 0) break; // the months after this one follow its own new reading
+    }
+  };
+  walk(moved.e, 'eo', 'en', 'e');
+  walk(moved.w, 'wo', 'wn', 'w');
+  const changed: string[] = [];
+  for (const [m, which] of reset) {
+    const inv = await invoiceFor(db, roomId, m);
+    if (inv) {
+      try { assertCanRecompute({ status: inv.status, issued_at: inv.issued_at, month: m }); } catch { continue; }
+    }
+    const sets = [which.e ? 'electric_old = 0' : '', which.w ? 'water_old = 0' : ''].filter(Boolean).join(', ');
+    await db.prepare(`UPDATE meter_readings SET ${sets} WHERE room_id = ? AND month = ?`).bind(roomId, m).run();
+    if (inv) await recompute(db, inv.id, { central }).catch((err) => { if (!(err instanceof InvoiceLockedError)) console.warn('[admin] later month recompute', roomId, m, err); });
+    changed.push(m);
+  }
+  return changed;
+}
+
 // ── Reading a month of rooms ───────────────────────────────────────────────
 
 interface RoomJoin {
@@ -410,8 +444,13 @@ export function registerAdmin(app: Hono<App>): void {
         ).bind(room.house_id, room.id, month, next.eo, next.en, next.wo, next.wn).run();
         if (inv) await recompute(db, inv.id, { central: c.env.DB });
         else await ensureDraft(db, room.house_id, room.id, month, c.env.DB); // makes the draft (and prices it) when the room has residents
+        // Later months that stored this month's previous new reading as their old one follow the new value (repriced there).
+        const followed = await followLaterMonths(db, c.env.DB, room.id, month, {
+          e: given.dienMoi !== undefined ? [stored?.en ?? 0, next.en] : undefined,
+          w: given.nuocMoi !== undefined ? [stored?.wn ?? 0, next.wn] : undefined,
+        });
         // The next month's DRAFT (prepared in the last 5 days) starts from this month's new readings: price it again.
-        const following = await invoiceFor(db, room.id, nextMonthOf(month));
+        const following = followed.includes(nextMonthOf(month)) ? null : await invoiceFor(db, room.id, nextMonthOf(month));
         if (following && following.issued_at === null) {
           await recompute(db, following.id, { central: c.env.DB }).catch((err) => { if (!(err instanceof InvoiceLockedError)) console.warn('[admin] next draft recompute', room.id, err); });
         }

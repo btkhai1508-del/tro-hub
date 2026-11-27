@@ -144,6 +144,31 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
       expect(await invoiceOf('LVC', '101', A)).toMatchObject({ status: 'paid', electricity: 175_000 });
     });
 
+    it('tháng sau lưu sẵn số cũ = số mới tháng trước (bản sao > 0): sửa tháng trước thì tháng sau đổi theo, tiền tính lại', async () => {
+      await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
+      await enter(B, { dienMoi: 180, nuocMoi: 20 });
+      // As the Sheet import (or an older screen) writes it: B keeps its own copy of A's new readings.
+      await (await store()).prepare(`UPDATE meter_readings SET electric_old = 150, water_old = 14 WHERE month = ?`).bind(B).run();
+      expect(await enter(A, { dienMoi: 160, nuocMoi: 16 }).then((r) => r.status)).toBe(200);
+      const row = (await json(await call(owner, 'GET', `/api/admin/rooms?month=${B}&houseId=LVC`))).rooms[0];
+      expect(row).toMatchObject({ dienCu: 160, dienMoi: 180, dienUsed: 20, nuocCu: 16, nuocUsed: 4 });
+      expect(await invoiceOf('LVC', '101', B)).toMatchObject({ electricity: 20 * 3500, water: 4 * 20_000 });
+      // Changed again: still follows (B now holds 0 = "the earlier month decides").
+      await enter(A, { dienMoi: 170 });
+      expect((await json(await call(owner, 'GET', `/api/admin/rooms?month=${B}&houseId=LVC`))).rooms[0]).toMatchObject({ dienCu: 170, dienUsed: 10 });
+    });
+
+    it('tháng sau có số cũ riêng (thay đồng hồ) hoặc đã đóng: sửa tháng trước không đụng tới', async () => {
+      await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
+      await enter(B, { dienMoi: 180, nuocMoi: 20 });
+      const db = await store();
+      await db.prepare(`UPDATE meter_readings SET electric_old = 5, electric_new = 30, water_old = 14 WHERE month = ?`).bind(B).run(); // new meter started at 5
+      await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE month = ?`).bind(B).run();
+      await enter(A, { dienMoi: 160, nuocMoi: 16 });
+      const row = await db.prepare(`SELECT electric_old AS eo, water_old AS wo FROM meter_readings WHERE month = ?`).bind(B).first<any>();
+      expect(row).toEqual({ eo: 5, wo: 14 }); // 5 is not a copy; 14 is, but B is paid
+    });
+
     it('sửa hai trường từ hai tab: không ghi đè nhau; chỉ số trên 10.000.000 bị từ chối', async () => {
       await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
       // Another tab changed water between our read and write: only the electric column is written by us.
