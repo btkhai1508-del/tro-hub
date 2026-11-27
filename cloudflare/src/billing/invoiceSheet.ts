@@ -26,7 +26,7 @@ export function lineFormula(l: { kind: string; qty: number; unitPrice: number; p
 interface LineRow { invoice_id: number; kind: string; name: string; qty: number; unit_price: number; amount: number; per: string | null; sheet_col: string | null }
 
 interface LegacyRow {
-  invoice_id: number; room_rent: number; electricity: number; water: number; trash: number; internet: number; parking: number; other: number;
+  invoice_id: number; house_id: string; room_rent: number; electricity: number; water: number; trash: number; internet: number; parking: number; other: number;
   electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null;
 }
 
@@ -38,7 +38,14 @@ function legacyMeter(amount: number, oldR: number | null, newR: number | null): 
   return `(${vnd(newR)} − ${vnd(oldR)})${price}`;
 }
 
-function legacyLines(r: LegacyRow): SheetLine[] {
+/** "2 × 40.000" when an old Sheet amount is a whole number of the house's service price, else ''. */
+function legacyService(amount: number, price: number | undefined): string {
+  if (!price || price <= 0 || amount <= 0 || amount % price !== 0) return '';
+  return `${vnd(amount / price)} × ${vnd(price)}`;
+}
+
+function legacyLines(r: LegacyRow, prices: Map<string, number> = new Map()): SheetLine[] {
+  const price = (col: string) => prices.get(`${r.house_id}|${col}`);
   const line = (kind: string, name: string, amount: number, formula: string, sheetCol: string | null = null): SheetLine =>
     ({ kind, name, qty: 0, unitPrice: 0, amount, formula, sheetCol });
   const out = [
@@ -46,9 +53,9 @@ function legacyLines(r: LegacyRow): SheetLine[] {
     line('electricity', 'Tiền điện', r.electricity, legacyMeter(r.electricity, r.electric_old, r.electric_new)),
     line('water', 'Tiền nước', r.water, legacyMeter(r.water, r.water_old, r.water_new)),
   ];
-  if (r.trash) out.push(line('service', 'Rác', r.trash, '', 'K'));
-  if (r.internet) out.push(line('service', 'Internet', r.internet, '', 'L'));
-  if (r.parking) out.push(line('service', 'Xe máy', r.parking, '', 'M'));
+  if (r.trash) out.push(line('service', 'Rác', r.trash, legacyService(r.trash, price('K')), 'K'));
+  if (r.internet) out.push(line('service', 'Internet', r.internet, legacyService(r.internet, price('L')), 'L'));
+  if (r.parking) out.push(line('service', 'Xe máy', r.parking, legacyService(r.parking, price('M')), 'M'));
   if (r.other) out.push(line('other', 'Khác', r.other, ''));
   return out;
 }
@@ -68,7 +75,7 @@ export async function sheetLines(db: TenantDb, invoiceIds: number[]): Promise<Ma
         WHERE l.invoice_id IN (${marks}) ORDER BY l.id`
     ).bind(...invoiceIds).all<LineRow>(),
     db.prepare(
-      `SELECT i.id AS invoice_id, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking, i.other,
+      `SELECT i.id AS invoice_id, i.house_id, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking, i.other,
               m.electric_old, m.electric_new, m.water_old, m.water_new
          FROM invoices i LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
         WHERE i.id IN (${marks})`
@@ -83,9 +90,15 @@ export async function sheetLines(db: TenantDb, invoiceIds: number[]): Promise<Ma
     list.push({ kind: l.kind, name: l.name, qty: l.qty, unitPrice: l.unit_price, amount: l.amount, per: l.per, sheetCol: l.sheet_col, formula: lineFormula({ kind: l.kind, qty: l.qty, unitPrice: l.unit_price, per: l.per }, meterNew || null) });
     out.set(l.invoice_id, list);
   }
-  for (const id of invoiceIds) {
-    const head = headOf.get(id);
-    if (!out.has(id) && head) out.set(id, legacyLines(head));
+  const legacy = invoiceIds.filter((id) => !out.has(id) && headOf.has(id));
+  if (legacy.length) {
+    // Old Sheet invoices only have amounts: the house's service prices turn them back into "quantity × price".
+    const houses = [...new Set(legacy.map((id) => headOf.get(id)!.house_id))];
+    const { results: services } = await db.prepare(
+      `SELECT house_id, sheet_col, price FROM house_services WHERE house_id IN (${houses.map(() => '?').join(',')}) AND sheet_col IS NOT NULL AND active = 1`
+    ).bind(...houses).all<{ house_id: string; sheet_col: string; price: number }>();
+    const prices = new Map(services.map((x) => [`${x.house_id}|${x.sheet_col}`, x.price]));
+    for (const id of legacy) out.set(id, legacyLines(headOf.get(id)!, prices));
   }
   return out;
 }

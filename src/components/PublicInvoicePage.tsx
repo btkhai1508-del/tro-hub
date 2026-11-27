@@ -15,6 +15,8 @@ interface PublicInvoice {
   room: string;
   month: string;
   total: number;
+  /** Earlier months still owed + this month: what the QR asks for ("Tổng cộng"). */
+  amountDue?: number;
   payCode: string | null;
   paid: boolean;
   paidDate: string | null;
@@ -41,6 +43,22 @@ export function PublicInvoicePage() {
     return () => { alive = false; };
   }, [token]);
 
+  // While the page shows an unpaid invoice, ask again every 15 seconds: once the money arrives it turns into
+  // the same "Thanh toán hoàn tất" card the resident sees. A paid invoice is final, so polling stops there.
+  const waiting = state.kind === 'ready' && !state.invoice.paid;
+  useEffect(() => {
+    if (!waiting) return;
+    let alive = true;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      fetch(`${WORKER_API_URL}/api/public/invoice/${encodeURIComponent(token)}`, { credentials: 'omit', cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((body) => { if (alive && body?.success && body.invoice?.paid) setState({ kind: 'ready', invoice: body.invoice }); })
+        .catch(() => {});
+    }, 15000); // every 15 s, only while the tab is visible: a light load on the database
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [waiting, token]);
+
   useEffect(() => {
     document.title = state.kind === 'ready' ? `Thanh toán phòng ${state.invoice.room} · Tháng ${state.invoice.month}` : 'Thanh toán tiền phòng';
   }, [state]);
@@ -66,8 +84,9 @@ export function PublicInvoicePage() {
 function Portal({ invoice }: { invoice: PublicInvoice }) {
   // A house without its own account still pays into the old one (same rule as the resident app).
   const bank = invoice.bank ?? { bin: DEFAULT_PORTAL.bankBin, name: DEFAULT_PORTAL.bankName, accountNo: DEFAULT_PORTAL.accountNo, accountName: DEFAULT_PORTAL.accountName };
+  const due = invoice.amountDue || invoice.total; // pay the "Tổng cộng": earlier debt included
   const qrUrl = !invoice.paid && invoice.payCode
-    ? vietQrUrl({ bankBin: bank.bin, accountNo: bank.accountNo, accountName: bank.accountName }, invoice.total, invoice.payCode)
+    ? vietQrUrl({ bankBin: bank.bin, accountNo: bank.accountNo, accountName: bank.accountName }, due, invoice.payCode)
     : '';
   const [isSavingQR, setIsSavingQR] = useState(false);
   const [qrSaveResult, setQrSaveResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -104,7 +123,7 @@ function Portal({ invoice }: { invoice: PublicInvoice }) {
         bankName={bank.name || ''}
         accountNumber={bank.accountNo}
         transferContent={invoice.payCode || ''}
-        total={invoice.total}
+        total={due}
         onSaveQR={handleSaveQR}
         isSavingQR={isSavingQR}
         qrSaveResult={qrSaveResult}

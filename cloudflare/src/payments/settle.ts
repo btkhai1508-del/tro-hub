@@ -10,6 +10,7 @@
 import type { Env } from '../app.ts';
 import { getStorage } from '../central/directory.ts';
 import { bankReceived, deferredByRoom, eventReference } from '../central/deferred.ts';
+import { allocate, openInvoices } from '../billing/roomDue.ts';
 import { invoiceFor, invoiceOrSync } from '../routes/rent.ts';
 import { paintSheetPayment } from '../sheetSync.ts';
 import { TenantLockedError, tenantOfOwner } from '../tenant/route.ts';
@@ -62,10 +63,13 @@ export async function recordUnassigned(env: Env, t: SepayTransfer, sepayId: stri
 }
 
 /**
- * Records the transfer in the landlord's store and marks the invoice paid once the bank money for it
- * reaches the total. The same transfer twice books once (payments.reference is UNIQUE).
- * The payment's reference is always `sepay-<id>` (one per SePay event), so a direct booking, a retry
- * and a replay of the same event can never book it twice. Painting the old Sheet's cell is idempotent.
+ * Records the transfer in the landlord's store and marks invoices paid once their money reaches their total.
+ * Payment follows the printed "Tổng cộng" (earlier debt + this month): the money pays the room's earlier
+ * open invoices first, oldest first, and what is left goes to the month's own invoice (an overpayment stays
+ * there). Each part is one payment row: the first is `sepay-<id>` (what the deferred overlay looks for), the
+ * others `sepay-<id>#<invoiceId>`. A transfer already booked (any of those rows) is never split again, so a
+ * direct booking, a retry and a replay of the same event book it once; marking and painting the old Sheet's
+ * cell are idempotent and run again.
  */
 export async function settleRent(
   env: Env, ownerId: number, houseId: string, room: string, month: string, t: SepayTransfer, sepayId: string,
@@ -75,11 +79,28 @@ export async function settleRent(
   if (!roomRow) return { settled: false, reason: 'room' };
   const inv = await invoiceOrSync(db, env.DB, roomRow.id, month);
   const amount = Math.round(Number(t.transferAmount) || 0);
-  await db.prepare(
-    `INSERT OR IGNORE INTO payments (house_id, invoice_id, amount, method, bank_name, account_no, reference, content, paid_at, confirmed_by)
-     VALUES (?, ?, ?, 'bank', ?, ?, ?, ?, ?, 'sepay')`
-  ).bind(houseId, inv?.id ?? null, amount, t.gateway ?? null, t.accountNumber ?? null, eventReference(sepayId),
-    String(t.content ?? '').slice(0, 300), receivedAtUtc(t.transactionDate)).run();
+  const anchor = eventReference(sepayId);
+  const paidAt = receivedAtUtc(t.transactionDate);
+  const older = (await openInvoices(db, roomRow.id, month)).filter((o) => o.month < month);
+  const booked = await db.prepare(`SELECT 1 AS one FROM payments WHERE reference = ? OR reference LIKE ? LIMIT 1`).bind(anchor, `${anchor}#%`).first();
+  if (!booked) {
+    const parts = allocate(amount, older, inv?.id ?? null);
+    const rows = parts.map((p, i) => db.prepare(
+      `INSERT OR IGNORE INTO payments (house_id, invoice_id, amount, method, bank_name, account_no, reference, content, paid_at, confirmed_by)
+       VALUES (?, ?, ?, 'bank', ?, ?, ?, ?, ?, 'sepay')`
+    ).bind(houseId, p.invoiceId, p.amount, t.gateway ?? null, t.accountNumber ?? null, i === 0 ? anchor : `${anchor}#${p.invoiceId ?? 'none'}`,
+      String(t.content ?? '').slice(0, 300), paidAt));
+    // Several parts are written together (all or none); the usual single part is one plain insert.
+    if (rows.length === 1) await rows[0].run();
+    else await db.batch(rows);
+  }
+  // Earlier invoices this money (or an earlier run of it) covered: marked paid, Sheet painted.
+  for (const o of older) {
+    if ((await bankReceived(db, o.id)) < o.total) continue;
+    const r = await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = ?, status_by = 'sepay' WHERE id = ? AND status NOT IN ('paid', 'cash')`)
+      .bind(paidAt, o.id).run();
+    if (r.meta?.changes) await paintSheetPayment(env, houseId, room, true, o.month, o.sheet_row);
+  }
   if (!inv) return { settled: false, reason: 'invoice' };
   const received = await bankReceived(db, inv.id);
   // A draft is not yet billed to the resident: the money is kept, the status waits for issuing (issueMonth re-evaluates it).
@@ -92,7 +113,7 @@ export async function settleRent(
   if (inv.status === 'paid' || inv.status === 'cash') return { settled: true, already: true, invoiceId: inv.id, received, total: inv.total };
   if (received < inv.total) return { settled: false, reason: 'short', invoiceId: inv.id, received, total: inv.total };
   await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = ?, status_by = 'sepay' WHERE id = ?`)
-    .bind(receivedAtUtc(t.transactionDate), inv.id).run();
+    .bind(paidAt, inv.id).run();
   await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
   return { settled: true, invoiceId: inv.id, received, total: inv.total };
 }

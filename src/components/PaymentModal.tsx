@@ -2,7 +2,7 @@ import { useContactPhone, formatPhoneSpaced } from '../lib/paymentPortal';
 import { useDialogFocus } from '../lib/useDialogFocus';
 import React, { useState } from 'react';
 import { X, Copy, Check, CheckCircle2, ShieldCheck, Download, ImageDown, Lock } from './AppIcons';
-import { useApp, transferContentFor } from '../context/AppContext';
+import { useApp, transferContentFor, amountDueOf } from '../context/AppContext';
 import { getCurrentMonthStr } from '../lib/utils';
 import { saveQrToDevice } from '../lib/qrHelper';
 import { usePaymentPortal, vietQrUrl } from '../lib/paymentPortal';
@@ -49,7 +49,7 @@ export function PaymentModal() {
   const bankName = portal.bankName;
   const accountHolder = portal.accountName;
   // A paid invoice shows no QR (a bank QR cannot be taken back once printed or saved).
-  const qrUrl = transferContent && activeInvoice.status !== 'paid' ? vietQrUrl(portal, activeInvoice.total, transferContent) : '';
+  const qrUrl = transferContent && activeInvoice.status !== 'paid' ? vietQrUrl(portal, amountDueOf(activeInvoice), transferContent) : '';
 
   return (
     <div
@@ -107,7 +107,7 @@ export function PaymentModal() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 dark:text-slate-400">Số tiền:</span>
-                  <span className="font-bold text-slate-900 dark:text-white font-num">{formatCurrency(activeInvoice.total)} ₫</span>
+                  <span className="font-bold text-slate-900 dark:text-white font-num">{formatCurrency(amountDueOf(activeInvoice))} ₫</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 dark:text-slate-400">Hình thức:</span>
@@ -151,7 +151,7 @@ export function PaymentModal() {
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Price Total / Tổng thanh toán</span>
                     <div className="type-h1 text-white font-num font-bold tracking-tight mt-0.5 flex items-baseline gap-1">
-                      {formatCurrency(activeInvoice.total)}
+                      {formatCurrency(amountDueOf(activeInvoice))}
                       <span className="text-sm font-normal text-slate-400">₫</span>
                     </div>
                   </div>

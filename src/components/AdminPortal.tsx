@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import * as LucideNav from 'lucide-react';
 import { ChevronLeft as LineChevronLeft, ChevronRight as LineChevronRight, ChevronDown as LineChevronDown } from './LineIcons';
 const NavIcons = { ...LucideNav, ChevronLeft: LineChevronLeft, ChevronRight: LineChevronRight, ChevronDown: LineChevronDown };
@@ -284,6 +285,9 @@ function WorkerNotifTargets({ houses, target, onTarget, picked, onPicked }: {
   );
 }
 
+/** Module-level: the prep popup shows once per app open, whatever menu or month the admin moves to. */
+let prepNoticeShownThisOpen = false;
+
 export function AdminPortal() {
   const navigate = useNavigate();
   const { logoutUser, addNotification, registerResident, registeredAccounts, updateAccountStatus, forgetRegisteredAccount } = useApp();
@@ -292,6 +296,8 @@ export function AdminPortal() {
   // Active Menu
   // Worker mode: fee settings and meter entry are served by the Worker; sheet mode keeps the old screens.
   const [workerMode, setWorkerMode] = useState(() => getSource() === 'worker');
+  // "Đang chuẩn bị hoá đơn tháng …": a popup once per app open (not on every menu change).
+  const [prepNotice, setPrepNotice] = useState<string | null>(null);
   // Staff with a Worker token: until /api/source answers we do not know which screens apply, so nothing old is drawn meanwhile.
   const [sourceReady, setSourceReady] = useState(() => getSource() === 'worker' || !storage.getItem(STORAGE_KEYS.WORKER_TOKEN));
   useEffect(() => {
@@ -750,6 +756,12 @@ export function AdminPortal() {
       playSound('click');
     }
   };
+
+  useEffect(() => {
+    if (prepNoticeShownThisOpen || !workerMode || !isFutureMonth(selectedMonth)) return;
+    prepNoticeShownThisOpen = true;
+    setPrepNotice(selectedMonth);
+  }, [workerMode, selectedMonth]);
 
   // Compute complete dashboard statistics from room list
   const updateDashboardStats = (list: any[], month: string) => {
@@ -1609,7 +1621,7 @@ export function AdminPortal() {
     if (month !== selectedMonthRef.current) return;
     const saved: number[] = Array.isArray(result.data?.optOut) ? result.data.optOut : optOut;
     // Only what the switch changes: the opt-outs and the invoice lines; anything typed and not saved yet stays.
-    const fields = ['optOut', 'lines', 'tienRac', 'tienNet', 'tienXe', 'tienKhac', 'tongTien', 'soNet', 'status', 'paymentStatus', 'statusText', 'draft', 'surplus'];
+    const fields = ['optOut', 'lines', 'feeLines', 'tienRac', 'tienNet', 'tienXe', 'tienKhac', 'tongTien', 'soNet', 'status', 'paymentStatus', 'statusText', 'draft', 'surplus'];
     if (fresh) applyRoomUpdate({ ...fresh, optOut: saved }, fields);
     else {
       const total = result.data?.invoice?.total;
@@ -1854,7 +1866,7 @@ export function AdminPortal() {
   // Worker mode, Hoá đơn list: a small QR per issued invoice; tapping it copies that room's payment link.
   const monthLinks = useMonthLinks(workerMode && activeMenu === 'billing', selectedMonth, billingList.map((r: any) => String(r.houseId || '')).filter(Boolean));
   const linkOf = (item: any) => (item.invoiceId != null && !item.draft ? monthLinks[`${item.houseId}|${item.invoiceId}`] : undefined);
-  const copiedLinkToast = (ok: boolean) => showPortalToast(ok ? 'Đã sao chép link thanh toán.' : 'Chưa sao chép được. Hãy mở hoá đơn và bấm Sao chép link thanh toán.', ok ? 'success' : 'error');
+  const copiedLinkToast = (message: string, ok: boolean) => showPortalToast(message, ok ? 'success' : 'error');
   // Worker mode: the printed invoice carries a QR linking to that room's public payment page (unpaid only).
   const invoiceLinkTarget = workerMode && selectedInvoiceRoom?.invoiceId != null && !selectedInvoiceRoom?.draft
     ? { houseId: String(selectedInvoiceRoom.houseId || ''), invoiceId: Number(selectedInvoiceRoom.invoiceId) } : null;
@@ -2432,10 +2444,16 @@ export function AdminPortal() {
           </div>
         )}
 
-        {workerMode && isFutureMonth(selectedMonth) && (
-          <div role="status" data-testid="prep-banner" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-100">
-            Đang chuẩn bị hoá đơn tháng {selectedMonth} — cư dân chưa thấy cho tới khi bạn bấm Tạo hoá đơn.
-          </div>
+        {prepNotice && createPortal(
+          <div className="tahoe-dialog-overlay fixed inset-0 z-[90] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm" onClick={() => setPrepNotice(null)}>
+            <div role="dialog" aria-modal="true" aria-labelledby="prep-notice-title" data-testid="prep-banner" onClick={(e) => e.stopPropagation()}
+              className="tahoe-dialog w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl dark:bg-neutral-900">
+              <h2 id="prep-notice-title" className="apple-title3 font-semibold kit-text-primary">Đang chuẩn bị hoá đơn tháng {prepNotice}</h2>
+              <p className="mt-2 apple-body kit-text-secondary">Cư dân chưa thấy hoá đơn tháng này cho tới khi bạn bấm Tạo hoá đơn ở mục Hoá đơn.</p>
+              <button type="button" autoFocus onClick={() => setPrepNotice(null)} className="primary-button mt-5 min-h-11 w-full px-4">Đã hiểu</button>
+            </div>
+          </div>,
+          document.body,
         )}
 
         {/* =========================================================================

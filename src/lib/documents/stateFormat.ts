@@ -41,7 +41,7 @@ function writeHeader(w: PageWriter, m: Measurer, house: HouseInfo, numberText: s
   const motto = 'Độc lập - Tự do - Hạnh phúc';
   w.center(rightCx, y, motto, 14, 'bold');
   const mottoWidth = m.width(motto, 'bold', 14);
-  w.line(rightCx - mottoWidth / 2, y + 5.5, rightCx + mottoWidth / 2, y + 5.5, 0.5); // clear of the dot under "Độc lập"
+  w.line(rightCx - mottoWidth / 2, y + 9, rightCx + mottoWidth / 2, y + 9, 0.5); // halfway between the motto and the date line
 
   const nameWidth = m.width(house.name, 'bold', 13);
   const rule = nameWidth * 0.45;
@@ -96,7 +96,11 @@ export interface InvoiceDocData {
   payment?: InvoicePayment;
 }
 
-export interface InvoicePayment { qrPng: string; bankName?: string | null; accountNo: string; accountName?: string | null; payCode?: string | null }
+export interface InvoicePayment {
+  qrPng: string; bankName?: string | null; accountNo: string; accountName?: string | null; payCode?: string | null;
+  /** Worker: still owed on earlier months (what the public page and the bank QR add to this month). */
+  previousDebt?: number;
+}
 
 /** "dd/mm/yyyy" out of a paid label ("Đã thanh toán ngày 03/10/2026", "03/10/2026 10:00", …); '' when none. */
 
@@ -137,7 +141,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     w.center((cols[0] + cols[1]) / 2, base, String(i + 1), T);
     w.text(cols[1] + 4, base, item.name, T);
     if (item.metric) w.text(cols[2] + 4, base, item.metric, T);
-    w.rightText(cols[4] - 4, base, `${fmt(item.amount)} đ`, T);
+    w.rightText(cols[4] - 4, base, `${fmt(item.amount)} ₫`, T);
     rowTop += rowH;
     rowLine(rowTop);
   });
@@ -146,7 +150,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   w.fill(LEFT, totalTop, RIGHT - LEFT, rowH, 236);
   rowLine(totalTop);
   w.center((cols[1] + cols[3]) / 2, totalTop + 14, 'Tổng cộng', T, 'bold');
-  w.rightText(cols[4] - 4, totalTop + 14, `${fmt(invoice.total)} đ`, T, 'bold');
+  w.rightText(cols[4] - 4, totalTop + 14, `${fmt(invoice.total)} ₫`, T, 'bold');
   rowTop += rowH;
   rowLine(rowTop);
   cols.forEach(x => w.line(x, tableTop, x, x === cols[2] ? totalTop : rowTop, 0.5));
@@ -159,7 +163,8 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     w.image(qx, y - 12, size, size, payment.qrPng);
     w.center(qx + size / 2, y - 12 + size + 10, 'Quét để thanh toán', 9, 'italic');
   }
-  const debt = data.previousDebt ?? 0; // no debt known → 0, never dots (user's choice for the payment block)
+  // The Worker's figure wins (same as the public page asks for); no debt known → 0, never dots (user's choice).
+  const debt = data.payment?.previousDebt ?? data.previousDebt ?? 0;
   const label = (text: string, value: string, bold = false) => {
     w.text(LEFT + (bold ? INDENT : 0), y, text, BODY, bold ? 'bold' : 'normal');
     w.rightText(LEFT + 330, y, value, BODY, bold ? 'bold' : 'normal');
@@ -168,9 +173,9 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   w.text(LEFT, y, 'Phần thanh toán:', BODY);
   w.line(LEFT, y + 2, LEFT + m.width('Phần thanh toán:', 'normal', BODY), y + 2, 0.5);
   y += LH;
-  label('- Số tiền còn nợ tháng trước:', `${fmt(debt)} đ`);
-  label('- Phải trả tháng này:', `${fmt(invoice.total)} đ`);
-  label('Tổng cộng:', `${fmt(debt + invoice.total)} đ`, true);
+  label('- Số tiền còn nợ tháng trước:', `${fmt(debt)} ₫`);
+  label('- Phải trả tháng này:', `${fmt(invoice.total)} ₫`);
+  label('Tổng cộng:', `${fmt(debt + invoice.total)} ₫`, true);
   y += PARA + 2; // a little air between the totals and the payment details
   w.text(LEFT, y, 'Chi tiết thanh toán:', BODY, 'bold');
   y += LH;
@@ -179,9 +184,8 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
   type Line = string | { label: string; value: string };
   const lines: Line[] = [];
   if (invoice.status === 'paid') {
-    const via = invoice.paymentMethod === 'cash' ? 'tiền mặt' : 'chuyển khoản';
     const day = paidDay(invoice.paidAt);
-    lines.push(`Đã thanh toán${day ? ` ngày ${day}` : ''} bằng ${via}${invoice.transactionId ? `, mã giao dịch ${invoice.transactionId}` : ''}.`);
+    lines.push(`Đã thanh toán${day ? ` ngày ${day}` : ''}.`);
   } else {
     if (invoice.status === 'pending') lines.push('Đã ghi nhận giao dịch, đang chờ đối soát.');
     if (payment) {
@@ -192,7 +196,7 @@ export function buildInvoiceNotice(m: Measurer, data: InvoiceDocData): BuiltDocu
     }
     if (invoice.status !== 'pending' && invoice.dueDate) lines.push({ label: 'Hạn thanh toán', value: invoice.dueDate });
   }
-  if (deposit) lines.push(`Tiền đặt cọc đã giữ: ${fmt(deposit.amount)} đ (không tính vào tổng).`);
+  if (deposit) lines.push(`Tiền đặt cọc đã giữ: ${fmt(deposit.amount)} ₫ (không tính vào tổng).`);
   const dotted = Math.max(lines.length, Math.max(2, Math.min(3, Math.floor((BOTTOM - y - 118) / 17))));
   for (let i = 0; i < dotted; i += 1) {
     const line = lines[i];
@@ -264,7 +268,7 @@ export function buildPaymentHistory(m: Measurer, data: HistoryDocData): BuiltDoc
     const base = top + 14;
     w.center((cols[0] + cols[1]) / 2, base, String(i + 1), T);
     w.center((cols[1] + cols[2]) / 2, base, invoice.month, T);
-    w.rightText(cols[3] - 4, base, `${fmt(invoice.total)} đ`, T);
+    w.rightText(cols[3] - 4, base, `${fmt(invoice.total)} ₫`, T);
     w.center((cols[3] + cols[4]) / 2, base, statusLabel(invoice.status), T);
     w.center((cols[4] + cols[5]) / 2, base, invoice.status === 'paid' ? paidMoment(invoice.paidAt) : '', T);
     top += rowH;
@@ -280,9 +284,9 @@ export function buildPaymentHistory(m: Measurer, data: HistoryDocData): BuiltDoc
     top = TOP + 10;
   }
   y = top + 22;
-  w.text(LEFT, y, `Đã thanh toán: ${fmt(paid)} đ.`, BODY);
+  w.text(LEFT, y, `Đã thanh toán: ${fmt(paid)} ₫.`, BODY);
   y += LH;
-  w.text(LEFT, y, `Còn phải thanh toán: ${fmt(unpaid)} đ.`, BODY);
+  w.text(LEFT, y, `Còn phải thanh toán: ${fmt(unpaid)} ₫.`, BODY);
   writeSignatures(w, y + LH + 6,
     { title: 'NGƯỜI THUÊ', note: '(Ký, ghi rõ họ tên)', name: data.tenantName },
     { title: 'QUẢN LÝ NHÀ TRỌ', note: '(Ký, ghi rõ họ tên)', name: house.landlord });

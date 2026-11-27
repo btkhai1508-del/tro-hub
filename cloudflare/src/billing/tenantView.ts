@@ -3,6 +3,7 @@
  * invoices of the resident's room (newest first, last 12 months) and the same data in the shape the
  * Express `tenant-data` route answers with. Drafts (issued_at NULL) never appear here.
  */
+import { dueOf, openInvoices } from './roomDue.ts';
 import type { Context } from 'hono';
 import { bankReceived, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
 import { paymentStatusOut, statusView, vnDate, vnDateTime } from '../routes/rent.ts';
@@ -20,6 +21,8 @@ export interface InvoiceOut {
   paidAt?: string; paymentMethod?: 'qr' | 'cash'; details: InvoiceDetailOut[];
   /** Nội dung chuyển khoản XXXPPPMMYYYY (số căn, số phòng, tháng); null only when the numbers cannot be assigned. */
   payCode: string | null;
+  previousDebt?: number;
+  amountDue?: number;
 }
 
 const pad3 = (n: number) => String(n).padStart(3, '0');
@@ -59,6 +62,7 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
   const lines = await sheetLines(db, rows.map((r) => r.id));
   const prefix = await payPrefixOf(c, db, viewer);
 
+  const open = await openInvoices(db, viewer.roomId, rows[0].month); // rows are newest first
   const views = new Map<string, Awaited<ReturnType<typeof statusView>>>();
   const out: InvoiceOut[] = [];
   for (const r of rows) {
@@ -76,6 +80,8 @@ export async function residentInvoices(c: Context<App>, viewer: Resident): Promi
       ...(shown.paymentMethod ? { paidAt: vnDateTime(r.paid_at) || undefined, paymentMethod: shown.paymentMethod as 'qr' | 'cash' } : {}),
       details: (lines.get(r.id) ?? []).map(detailOf),
       payCode: prefix ? `${prefix}${r.month.slice(5, 7)}${r.month.slice(0, 4)}` : null,
+      // Paying follows "Tổng cộng": earlier months still owed + what this month still owes.
+      ...(shown.paymentMethod ? {} : dueOf(open, r)),
     });
   }
   return out;

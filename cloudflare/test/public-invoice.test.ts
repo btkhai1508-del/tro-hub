@@ -68,11 +68,20 @@ for (const backend of BACKENDS) {
       expect(body.invoice.payCode).toMatch(/^002\d{3}112026$/);
       // An invoice from the old Sheet has no invoice_lines: its money columns are listed instead.
       expect(body.invoice.lines[0]).toEqual({ name: 'Tiền phòng', formula: '', amount: 3500000 });
-      expect(Object.keys(body.invoice).sort()).toEqual(['bank', 'dueDate', 'houseName', 'lines', 'month', 'paid', 'paidDate', 'payCode', 'room', 'total']);
+      expect(Object.keys(body.invoice).sort()).toEqual(['amountDue', 'bank', 'dueDate', 'houseName', 'lines', 'month', 'paid', 'paidDate', 'payCode', 'previousDebt', 'room', 'total']);
       const text = JSON.stringify(body);
       expect(text).not.toContain(PHONES.residentLvc);
       expect(text).not.toContain(PHONES.owner);
       expect(text).not.toContain('Cư dân LVC');
+    });
+
+    it('an old Sheet invoice shows quantity × price for its services', async () => {
+      await (await store()).prepare(`UPDATE invoices SET trash = 30000, internet = 80000, parking = 70000 WHERE id = ?`).bind(invoiceId).run();
+      const { url } = (await (await linkAs(owner)).json()) as { url: string };
+      const lines = ((await (await pub(tokenOf(url))).json()) as any).invoice.lines;
+      expect(lines.find((l: any) => l.name === 'Rác').formula).toBe('1 × 30.000');
+      expect(lines.find((l: any) => l.name === 'Internet').formula).toBe('2 × 40.000');
+      expect(lines.find((l: any) => l.name === 'Xe máy').formula).toBe(''); // 70.000 is not a whole number of 50.000
     });
 
     it('a resident cannot reach another room or rotate a link', async () => {

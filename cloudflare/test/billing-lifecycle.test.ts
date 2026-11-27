@@ -36,6 +36,8 @@ describe.each(BACKENDS)('hoá đơn nháp, phát hành, quy tắc sửa [%s]', (
     await e.DB.prepare(`DELETE FROM sepay_events`).run();
     await e.DB.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('legacy_sync:2099-01', ?)`).bind(new Date().toISOString()).run(); // no Sheet read
     const db = await store();
+    // The seeded months are settled here: these tests are about 2099 alone (old debt is paid first, see sepay tests).
+    await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = '2026-01-01 00:00:00' WHERE month < '2099-01'`).run();
     await db.batch([
       db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('LVC', 3500, 20000)`),
       db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('TRUNG_KIM', 3500, 20000)`),
@@ -385,6 +387,8 @@ describe.each(BACKENDS)('vòng sửa lỗi sau review [%s]', (backend) => {
     await e.DB.prepare(`DELETE FROM sepay_events`).run();
     await e.DB.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('legacy_sync:2099-01', ?)`).bind(new Date().toISOString()).run();
     const db = await store();
+    // The seeded months are settled here: these tests are about 2099 alone (old debt is paid first, see sepay tests).
+    await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = '2026-01-01 00:00:00' WHERE month < '2099-01'`).run();
     await db.batch([
       db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('LVC', 3500, 20000)`),
       db.prepare(`INSERT INTO house_rates (house_id, electricity_per_kwh, water_per_m3) VALUES ('TRUNG_KIM', 3500, 20000)`),
@@ -522,6 +526,7 @@ describe.each(BACKENDS)('vòng sửa lỗi 2 [%s]', (backend) => {
     await e.DB.prepare(`DELETE FROM sepay_events`).run();
     await e.DB.prepare(`DELETE FROM settings WHERE key LIKE 'legacy_sync:%'`).run();
     await e.DB.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES ('legacy_sheet_id', 'S1'), ('legacy_sheet_houses', 'LVC')`).run();
+    await (await store()).prepare(`UPDATE invoices SET status = 'paid', paid_at = '2026-01-01 00:00:00' WHERE month < '2099-01'`).run(); // 2099 alone
   });
 
   const watch = () => {
@@ -575,9 +580,10 @@ describe.each(BACKENDS)('vòng sửa lỗi 2 [%s]', (backend) => {
     ).bind(M).run();
     await issueMonth(e, 'LVC', M, true);
     expect(await invoiceOf('LVC', '101')).toMatchObject({ status: 'unpaid' }); // 2.000.000 counted once, total 3.570.000
-    // a second landlord-side payment completes it on a new draft
+    // a second transfer pays what January still owes first (1.570.000), the rest covers February's draft
     await createDrafts(e, OWNER, '2099-02');
-    await settleRent(e, OWNER, 'LVC', '101', '2099-02', transfer(3_570_000), 'RP2');
+    await settleRent(e, OWNER, 'LVC', '101', '2099-02', transfer(1_570_000 + 3_570_000), 'RP2');
+    expect(await invoiceOf('LVC', '101')).toMatchObject({ status: 'paid', status_by: 'sepay' });
     await issueMonth(e, 'LVC', '2099-02', true);
     expect(await invoiceOf('LVC', '101', '2099-02')).toMatchObject({ status: 'paid', status_by: 'issue' });
   });

@@ -391,12 +391,6 @@ export function PaymentDoneCard({ total, room, month, statusText, children }: Pa
           <span className="font-semibold kit-text-primary">Tháng {month}</span>
         </div>
         <div className="py-3 flex items-center justify-between">
-          <span className="kit-text-secondary">Phương thức</span>
-          <span className="font-semibold kit-text-primary">
-            Chuyển khoản / VietQR
-          </span>
-        </div>
-        <div className="py-3 flex items-center justify-between">
           <span className="kit-text-secondary shrink-0 whitespace-nowrap pr-3">Trạng thái</span>
           <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 size={16} />
