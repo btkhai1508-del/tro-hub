@@ -63,10 +63,7 @@ Chia 8 đợt, làm lần lượt, deploy sau mỗi đợt khi người dùng n�
 - Email chủ trọ bắt buộc; bỏ nút xoá cạnh căn trọ (giữ trong ô sửa chủ trọ).
 - Tạo/sửa chủ trọ và căn trọ: trang riêng, tối giản, không popup (điện thoại cũng vậy).
 - Tiện ích theo căn: các tiện ích hiện có nằm hết trong gói; thêm dòng "muốn thêm tiện ích, liên hệ email để được báo giá".
-- Developer đăng nhập cần xác thực 2 bước bằng Google Authenticator (TOTP), CHỈ cho tài khoản Developer (chủ trọ, cư dân không dùng).
-  **ĐÃ CHỐT: nhập mã 6 số MỖI LẦN đăng nhập Developer, không có "nhớ thiết bị này".** Luồng: lần đầu hiện QR + mã dự phòng, nhập mã 6 số xác nhận; các lần sau mật khẩu + mã 6 số; có bộ mã khôi phục dùng một lần (băm khi lưu).
-  Cần migration D1 (khoá TOTP đã mã hoá + mã khôi phục băm) và 1 khoá bí mật mới trên Cloudflare (ví dụ TOTP_ENC_KEY, người dùng tự nhập qua dashboard; agent chỉ tham chiếu theo tên, chỉ viết migration và test local).
-  Chấp nhận lệch ±1 bước 30 giây; dùng lại cơ chế khoá đăng nhập khi sai nhiều lần. Mặc định đề xuất: cho bật + nhắc trước, chỉ bắt buộc sau khi Developer đã bật xong (tránh tự khoá mình ra ngoài) — CHƯA CHỐT, hỏi lại người dùng.
+- (HOÃN, để sau, không làm) Developer đăng nhập bằng Google Authenticator (TOTP) mỗi lần đăng nhập, chỉ cho Developer. Cần migration D1 và khoá bí mật TOTP_ENC_KEY khi làm.
 
 ## Đợt 7: đăng nhập, đăng ký, mất mạng, loading
 - Đăng ký mới: bước 1 nhập số điện thoại chủ trọ; form: Họ tên + Số điện thoại + Giới tính cùng một dòng, dòng sau Căn trọ + Số phòng.
