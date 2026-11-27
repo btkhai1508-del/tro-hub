@@ -26,7 +26,7 @@ export default function ConfirmSaveDialog({ open, title, lines, onConfirm, onCan
           </ul>
         )}
         {message && <p className="text-sm text-neutral-700 dark:text-neutral-200">{message}</p>}
-        <div className="kit-dialog-footer flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-1">
           <button type="button" onClick={onCancel} className="soft-button min-h-11 px-5 text-sm font-bold cursor-pointer">Huỷ</button>
           <button type="button" onClick={onConfirm} className="primary-button min-h-11 px-5 text-sm font-bold cursor-pointer">{confirmLabel}</button>
         </div>
