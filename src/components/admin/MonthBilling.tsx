@@ -2,11 +2,12 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Lock } from '../LineIcons';
 import { useAdminHouses, workerCall } from './workerAdmin';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
-import { meterCellError } from '../../lib/meterSheet';
+import { meterCellError, usageLimit } from '../../lib/meterSheet';
+import ConfirmSaveDialog from './ConfirmSaveDialog';
 
 interface Row {
   houseId?: string; roomId: number; roomName: string; invoiceId: number | null; draft: boolean; paymentStatus: string;
-  dienCu: number; dienMoi: number; nuocCu: number; nuocMoi: number; missingMeters: boolean;
+  dienCu: number; dienMoi: number; nuocCu: number; nuocMoi: number; missingMeters: boolean; soNguoi?: number;
 }
 type Edits = Record<number, { e?: string; w?: string }>;
 type Kind = 'e' | 'w';
@@ -31,6 +32,9 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
   const [rowError, setRowError] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
+  // A usage far above the usual (per person) waits for a confirmation before it is saved.
+  const [ask, setAsk] = useState<{ roomId: number; kinds: Kind[]; lines: string[] } | null>(null);
+  const confirmed = useRef<Record<string, boolean>>({});
   // Cells the admin has left (blur or Enter): only those show their error, never while typing.
   const [left, setLeft] = useState<Record<string, boolean>>({});
   const inflight = useRef<Record<number, string>>({});
@@ -82,10 +86,33 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
   };
 
   // One save per room with what changed (blur or Enter). A cell with an error is not sent; an identical save already running is not sent twice.
-  const saveRoom = (room: Row) => {
+  const saveRoom = (room: Row, skip: Kind[] = []) => {
     const data = dirtyOf(room);
-    if (errorOf(room, 'e')) delete data.dienMoi;
-    if (errorOf(room, 'w')) delete data.nuocMoi;
+    if (errorOf(room, 'e') || skip.includes('e')) delete data.dienMoi;
+    if (errorOf(room, 'w') || skip.includes('w')) delete data.nuocMoi;
+    // Cells the admin cancelled go back to the saved reading.
+    if (skip.length > 0) setEdits((cur) => { const ed = { ...(cur[room.roomId] ?? {}) }; for (const k of skip) delete ed[k]; return { ...cur, [room.roomId]: ed }; });
+    // Too much used for the people of the room: ask first (Huỷ puts the cell back, Lưu saves it).
+    const people = Number(room.soNguoi) || 0;
+    const over: { k: Kind; use: number }[] = [];
+    for (const k of ['e', 'w'] as Kind[]) {
+      const v = k === 'e' ? data.dienMoi : data.nuocMoi;
+      if (v === undefined) continue;
+      const use = v - (k === 'e' ? room.dienCu : room.nuocCu);
+      if (use > usageLimit(k, people) && !confirmed.current[`${room.roomId}${k}=${v}`]) over.push({ k, use });
+    }
+    if (over.length > 0) {
+      if (ask) return;
+      const who = people > 0 ? `${people} người` : 'phòng chưa có người';
+      setAsk({
+        roomId: room.roomId,
+        kinds: over.map((o) => o.k),
+        lines: over.map((o) => o.k === 'e'
+          ? `Điện: dùng ${o.use} kWh (${who}, thường không quá ${usageLimit('e', people)} kWh)`
+          : `Nước: dùng ${o.use} m³ (${who}, thường không quá ${usageLimit('w', people)} m³)`),
+      });
+      return;
+    }
     if (Object.keys(data).length === 0) {
       // Empty or unchanged text: nothing to save, drop it (a wrong number stays on screen with its error).
       setEdits((cur) => {
@@ -219,6 +246,28 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
       )}
       {loaded && rooms.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhà này chưa có phòng.</p>}
     </div>
+    <ConfirmSaveDialog
+      open={ask !== null}
+      title={`Phòng ${rooms.find((x) => x.roomId === ask?.roomId)?.roomName ?? ''} dùng nhiều hơn bình thường`}
+      lines={ask?.lines ?? []}
+      message="Kiểm tra lại chỉ số mới. Đúng thì bấm Lưu, nhập nhầm thì bấm Huỷ để nhập lại."
+      confirmLabel="Lưu"
+      onConfirm={() => {
+        const room = rooms.find((x) => x.roomId === ask?.roomId);
+        const kinds = ask?.kinds ?? [];
+        setAsk(null);
+        if (!room) return;
+        const ed = edits[room.roomId] ?? {};
+        for (const kind of kinds) confirmed.current[`${room.roomId}${kind}=${Number(ed[kind])}`] = true;
+        saveRoom(room);
+      }}
+      onCancel={() => {
+        const room = rooms.find((x) => x.roomId === ask?.roomId);
+        const kinds = ask?.kinds ?? [];
+        setAsk(null);
+        if (room) saveRoom(room, kinds);
+      }}
+    />
     </>
   );
 }

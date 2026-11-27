@@ -45,6 +45,14 @@ export function meterCellError(oldReading: number, newText: string): string | nu
   if (newText === '') return null;
   const n = Number(newText);
   if (!Number.isInteger(n) || n < 0) return 'Chỉ nhập số nguyên.';
-  if (n > 0 && n < oldReading) return `Nhỏ hơn số cũ (${oldReading}).`;
+  if (n > 0 && n < oldReading) return 'Chỉ số phải lớn hơn số cũ.';
   return null;
+}
+
+/** Usual monthly use per person: above it the admin is asked to confirm (a mistyped reading is the common cause). */
+export const USUAL_PER_PERSON = { e: 100, w: 8 } as const;
+
+/** The usage above which a new reading needs a confirmation: per person × people (a room without residents counts as one). */
+export function usageLimit(kind: 'e' | 'w', people: number): number {
+  return USUAL_PER_PERSON[kind] * Math.max(1, Math.trunc(people) || 0);
 }
