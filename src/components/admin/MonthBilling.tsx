@@ -27,9 +27,6 @@ function useWide(): boolean {
   return wide;
 }
 
-const cellInput = 'w-full min-w-0 bg-white dark:bg-neutral-900 px-2.5 py-2 rounded-lg border font-bold text-sm font-num tabular-nums text-right text-neutral-900 dark:text-white outline-none focus:ring-2 disabled:opacity-60 disabled:bg-neutral-100 dark:disabled:bg-neutral-800';
-const okBorder = 'border-neutral-200 dark:border-neutral-700 focus:ring-neutral-500';
-const badBorder = 'border-rose-500 dark:border-rose-400 focus:ring-rose-500 bg-rose-50 dark:bg-rose-950/40';
 
 /**
  * Meter entry on the Worker (Điện nước tool): only readings and usage, no money (issuing is the Tạo hoá đơn button of
@@ -149,8 +146,8 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
           aria-invalid={err ? true : undefined} aria-describedby={err ? errId : undefined}
           onChange={(ev) => setEdit(r.roomId, k, ev.target.value)} onBlur={() => saveRoom(r)}
           onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveRoom(r); } }}
-          className={`${cellInput} ${err ? badBorder : okBorder} ${compact ? '' : 'mt-1'}`} />
-        {err && <span id={errId} role="alert" className="mt-1 block text-[11px] font-bold leading-tight text-rose-600 dark:text-rose-400 text-left">{err}</span>}
+          className={`meter-input font-num ${compact ? '' : 'mt-1.5'}`} />
+        {err && <span id={errId} role="alert" className="meter-error">{err}</span>}
       </>
     );
   };
@@ -168,10 +165,6 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
   const newHouse = (i: number) => showHouseHeads && (i === 0 || rooms[i - 1].houseId !== rooms[i].houseId);
   const used = (r: Row, k: Kind) => meterUsage(k === 'e' ? r.dienCu : r.nuocCu, textOf(r, k));
 
-  const th = 'px-3 font-bold text-[11px] uppercase tracking-wide';
-  const elecHead = 'bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-100';
-  const waterHead = 'bg-sky-100 text-sky-900 dark:bg-sky-900/50 dark:text-sky-100';
-  const groupEdge = 'border-l-2 border-neutral-300 dark:border-neutral-600';
 
   return (
     <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
@@ -198,41 +191,38 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
       {!loaded && !loadError && !houseError && <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Đang tải danh sách phòng...</p>}
 
       {loaded && rooms.length > 0 && wide && (
-        <div className="max-h-[70vh] overflow-auto rounded-xl border border-neutral-200 dark:border-neutral-700" data-testid="meter-table">
-          <table className="w-full border-separate border-spacing-0 text-sm">
+        <div className="meter-sheet-wrap" data-testid="meter-table">
+          <table className="meter-sheet">
             <thead>
-              <tr className="h-9">
-                <th rowSpan={2} scope="col" className={`${th} w-28 sticky top-0 left-0 z-30 text-left bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-white border-b-2 border-neutral-300 dark:border-neutral-600`}>Phòng</th>
-                <th colSpan={3} scope="colgroup" className={`${th} sticky top-0 z-20 text-center ${elecHead} ${groupEdge}`}>Điện (kWh)</th>
-                <th colSpan={3} scope="colgroup" className={`${th} sticky top-0 z-20 text-center ${waterHead} ${groupEdge}`}>Nước (m³)</th>
+              <tr>
+                <th rowSpan={2} scope="col" className="meter-room-head w-28">Phòng</th>
+                <th colSpan={3} scope="colgroup" className="meter-group meter-group--e meter-edge text-center"><span><i className="meter-dot meter-dot--e" aria-hidden="true" />Điện (kWh)</span></th>
+                <th colSpan={3} scope="colgroup" className="meter-group meter-group--w meter-edge text-center"><span><i className="meter-dot meter-dot--w" aria-hidden="true" />Nước (m³)</span></th>
               </tr>
-              <tr className="h-8">
+              <tr>
                 {(['e', 'w'] as Kind[]).flatMap((k) => ['Cũ', 'Mới', 'Dùng'].map((t, j) => (
-                  <th key={k + t} scope="col" className={`${th} sticky top-9 z-20 text-right border-b-2 border-neutral-300 dark:border-neutral-600 ${k === 'e' ? elecHead : waterHead} ${j === 0 ? groupEdge : ''}`}>{t}</th>
+                  <th key={k + t} scope="col" className={`text-right ${j === 0 ? 'meter-edge' : ''}`}>{t}</th>
                 )))}
               </tr>
             </thead>
             <tbody>
               {rooms.map((r, i) => {
                 const paid = r.paymentStatus === 'paid';
-                const td = 'px-3 py-2 align-top border-b border-neutral-200 dark:border-neutral-700';
                 return (
                   <Fragment key={r.roomId}>
-                    {newHouse(i) && (
-                      <tr><td colSpan={7} className="px-3 pt-3 pb-1 text-xs font-bold uppercase text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-700">{houseName(r.houseId)}</td></tr>
-                    )}
-                    <tr data-testid="month-room" data-room={r.roomName} className="bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
-                      <th scope="row" className={`${td} sticky left-0 z-10 text-left bg-inherit`}>
-                        <span className="flex items-center gap-1.5 font-bold text-neutral-900 dark:text-white whitespace-nowrap">
-                          {r.roomName}{paid && <Lock size={13} aria-label="Đã đóng, đã khoá" className="text-neutral-500" />}
+                    {newHouse(i) && <tr className="meter-house"><td colSpan={7}>{houseName(r.houseId)}</td></tr>}
+                    <tr data-testid="month-room" data-room={r.roomName}>
+                      <th scope="row">
+                        <span className="flex items-center gap-1.5 whitespace-nowrap pt-2">
+                          {r.roomName}{paid && <Lock size={13} aria-label="Đã đóng, đã khoá" style={{ color: 'var(--text-tertiary)' }} />}
                         </span>
                         <span className="block min-w-[5rem]">{statusLine(r)}</span>
                       </th>
                       {(['e', 'w'] as Kind[]).map((k) => (
                         <Fragment key={k}>
-                          <td className={`${td} ${groupEdge} text-right font-num tabular-nums text-neutral-600 dark:text-neutral-300`}><span className="inline-block pt-2">{k === 'e' ? r.dienCu : r.nuocCu}</span></td>
-                          <td className={`${td} w-36`}>{input(r, k, true)}</td>
-                          <td className={`${td} text-right font-num tabular-nums font-bold text-neutral-900 dark:text-white`}><span className="inline-block pt-2">{used(r, k)}</span></td>
+                          <td className="meter-edge meter-old text-right font-num tabular-nums"><span className="inline-block pt-2.5">{k === 'e' ? r.dienCu : r.nuocCu}</span></td>
+                          <td className="w-36">{input(r, k, true)}</td>
+                          <td className="meter-used text-right font-num tabular-nums"><span className="inline-block pt-2.5">{used(r, k)}</span></td>
                         </Fragment>
                       ))}
                     </tr>
@@ -245,7 +235,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
       )}
 
       {loaded && rooms.length > 0 && !wide && (
-        <ul className="divide-y divide-neutral-200 dark:divide-neutral-700">
+        <ul className="meter-cards">
           {rooms.map((r, i) => {
             const paid = r.paymentStatus === 'paid';
             return (
@@ -253,15 +243,15 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
                 {newHouse(i) && <li className="pt-3 pb-1 text-xs font-bold uppercase text-neutral-600 dark:text-neutral-300">{houseName(r.houseId)}</li>}
                 <li data-testid="month-room" data-room={r.roomName} className="py-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-neutral-900 dark:text-white">Phòng {r.roomName}</span>
-                    {paid && <Lock size={14} aria-label="Đã đóng, đã khoá" className="text-neutral-500" />}
+                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Phòng {r.roomName}</span>
+                    {paid && <Lock size={14} aria-label="Đã đóng, đã khoá" style={{ color: 'var(--text-tertiary)' }} />}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {(['e', 'w'] as Kind[]).map((k) => (
-                      <label key={k} className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
-                        <span className={k === 'e' ? 'text-amber-800 dark:text-amber-200' : 'text-sky-800 dark:text-sky-200'}>{k === 'e' ? 'Điện mới' : 'Nước mới'}</span>
+                      <label key={k} className="block min-w-0">
+                        <span className="meter-card-label"><i className={`meter-dot meter-dot--${k}`} aria-hidden="true" />{k === 'e' ? 'Điện mới' : 'Nước mới'}</span>
                         {input(r, k, false)}
-                        <span className="mt-1 flex justify-between gap-2 font-semibold font-num tabular-nums text-[11px] text-neutral-500 dark:text-neutral-400">
+                        <span className="meter-card-meta">
                           <span>Cũ {k === 'e' ? r.dienCu : r.nuocCu}</span>
                           <span>Dùng {used(r, k)} {k === 'e' ? 'kWh' : 'm³'}</span>
                         </span>
