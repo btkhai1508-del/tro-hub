@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Lock } from '../LineIcons';
 import { useAdminHouses, workerCall } from './workerAdmin';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
-import { meterCellError, meterUsage } from '../../lib/meterSheet';
+import { meterCellError } from '../../lib/meterSheet';
 
 interface Row {
   houseId?: string; roomId: number; roomName: string; invoiceId: number | null; draft: boolean; paymentStatus: string;
@@ -11,31 +11,14 @@ interface Row {
 type Edits = Record<number, { e?: string; w?: string }>;
 type Kind = 'e' | 'w';
 
-const WIDE_QUERY = '(min-width: 1024px)';
-
-/** True on wide screens (desktop, landscape tablet): the full table; otherwise one card per room. */
-function useWide(): boolean {
-  const [wide, setWide] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(WIDE_QUERY).matches);
-  useEffect(() => {
-    const mq = window.matchMedia?.(WIDE_QUERY);
-    if (!mq) return;
-    const on = () => setWide(mq.matches);
-    on();
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  return wide;
-}
-
 
 /**
- * Meter entry on the Worker (Điện nước tool): only readings and usage, no money (issuing is the Tạo hoá đơn button of
- * the Hoá đơn tab). Wide screens get a table (Cũ / Mới per meter), phones one card per room with only the new readings.
- * The old reading is last month's new one (read-only). A new reading saves on blur or Enter; one smaller than the old
+ * Meter entry on the Worker (Điện nước tool), in the old main table (Phòng | Điện cũ | Điện mới | Nước cũ | Nước mới;
+ * admin-meter-table turns rows into cards on phones). Only readings, no money (issuing is the Tạo hoá đơn button of the
+ * Hoá đơn tab). The old reading is last month's new one (read-only). A new reading saves on blur or Enter; one smaller than the old
  * reading shows its error in place and is not sent.
  */
 export default function MonthBilling({ month, months = [], onMonthChange }: { month: string; months?: string[]; onMonthChange?: (m: string) => void }) {
-  const wide = useWide();
   const { houses, error: houseError } = useAdminHouses();
   // 'all' = every house of this account (default), else one house id; same filter style as Phòng & Khách.
   const [houseFilter, setHouseFilter] = useState('all');
@@ -136,134 +119,97 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
     queue.current[room.roomId] = (queue.current[room.roomId] ?? Promise.resolve()).then(run, run);
   };
 
-  const input = (r: Row, k: Kind, compact: boolean) => {
-    const label = `${k === 'e' ? 'Điện' : 'Nước'} mới phòng ${r.roomName}`;
+  const fieldCls = 'w-24 bg-white dark:bg-neutral-900 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white';
+  const oldCls = 'w-24 bg-neutral-100 dark:bg-neutral-800 p-2 rounded-lg border border-neutral-200 dark:border-neutral-700 font-bold text-neutral-500 dark:text-neutral-400 outline-none cursor-default';
+  const badCls = '!border-rose-500 focus:!ring-rose-500';
+
+  /** "Mới" cell as in the old table; a reading below the old one shows its error under the field and is not saved. */
+  const reading = (r: Row, k: Kind) => {
     const err = errorOf(r, k);
     const errId = `meter-err-${r.roomId}-${k}`;
     return (
       <>
-        <input type="text" inputMode="numeric" value={textOf(r, k)} disabled={r.paymentStatus === 'paid' || !loaded} aria-label={label} placeholder="—"
+        <input type="text" inputMode="numeric" value={textOf(r, k)} disabled={r.paymentStatus === 'paid' || !loaded}
+          aria-label={`${k === 'e' ? 'Điện' : 'Nước'} mới phòng ${r.roomName}`}
           aria-invalid={err ? true : undefined} aria-describedby={err ? errId : undefined}
           onChange={(ev) => setEdit(r.roomId, k, ev.target.value)} onBlur={() => saveRoom(r)}
           onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveRoom(r); } }}
-          className={`meter-input font-num ${compact ? '' : 'mt-1.5'}`} />
-        {err && <span id={errId} role="alert" className="meter-error">{err}</span>}
+          className={`${fieldCls} disabled:opacity-60 ${err ? badCls : ''}`} />
+        {err && <span id={errId} role="alert" className="mt-1 block text-[11px] font-bold text-rose-600 dark:text-rose-400">{err}</span>}
       </>
     );
   };
-
-  const statusLine = (r: Row) => (
-    <>
-      {saving[r.roomId] && <span role="status" className="text-xs font-bold text-neutral-600 dark:text-neutral-300">Đang lưu...</span>}
-      {!saving[r.roomId] && saved[r.roomId] && Object.keys(dirtyOf(r)).length === 0 && <span role="status" className="text-xs font-bold text-emerald-600">Đã lưu ✓</span>}
-      {rowError[r.roomId] && <span role="alert" className="block text-xs font-bold text-rose-600">{rowError[r.roomId]}</span>}
-    </>
+  /** "Cũ" cell: last month's new reading, read-only. */
+  const oldCell = (r: Row, k: Kind) => (
+    <input type="text" readOnly tabIndex={-1} value={k === 'e' ? r.dienCu : r.nuocCu} aria-label={`${k === 'e' ? 'Điện' : 'Nước'} cũ phòng ${r.roomName}`} className={oldCls} />
   );
+
+  const roomState = (r: Row) => {
+    if (saving[r.roomId]) return <span role="status" className="block text-[11px] font-bold text-neutral-500">Đang lưu...</span>;
+    if (rowError[r.roomId]) return <span role="alert" className="block text-[11px] font-bold text-rose-600">{rowError[r.roomId]}</span>;
+    if (saved[r.roomId] && Object.keys(dirtyOf(r)).length === 0) return <span role="status" className="block text-[11px] font-bold text-emerald-600">Đã lưu ✓</span>;
+    return null;
+  };
 
   const houseName = (id?: string) => houses.find((h) => h.id === id)?.name || id || '';
   const showHouseHeads = houseFilter === 'all' && houses.length > 1;
   const newHouse = (i: number) => showHouseHeads && (i === 0 || rooms[i - 1].houseId !== rooms[i].houseId);
-  const used = (r: Row, k: Kind) => meterUsage(k === 'e' ? r.dienCu : r.nuocCu, textOf(r, k));
-
 
   return (
     <div className="soft-card kit-form-surface p-4 sm:p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Chỉ số điện nước tháng {month}</h3>
-        {months.length > 0 && onMonthChange && (
-          <label className="admin-status-filter">
-            <span className="sr-only">Tháng</span>
-            <select value={month} onChange={(e) => onMonthChange(e.target.value)} aria-label="Chọn tháng">
-              {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>Tháng {m}</option>)}
-            </select>
-          </label>
-        )}
-      </div>
-
-      {houses.length > 1 && (
+      <div className="admin-section-toolbar flex flex-wrap items-center justify-between gap-3">
+        <h3 className="type-h3 font-bold text-neutral-900 dark:text-white">Nhập chỉ số điện nước tháng {month}</h3>
         <div className="admin-list-filters">
-          <label className="admin-status-filter"><span className="sr-only">Căn</span><select value={houseFilter} onChange={(e) => setHouseFilter(e.target.value)} aria-label="Lọc theo căn"><option value="all">Tất cả căn</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+          {months.length > 0 && onMonthChange && (
+            <label className="admin-status-filter">
+              <span className="sr-only">Tháng</span>
+              <select value={month} onChange={(e) => onMonthChange(e.target.value)} aria-label="Chọn tháng">
+                {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>Tháng {m}</option>)}
+              </select>
+            </label>
+          )}
+          {houses.length > 1 && (
+            <label className="admin-status-filter"><span className="sr-only">Căn</span><select value={houseFilter} onChange={(e) => setHouseFilter(e.target.value)} aria-label="Lọc theo căn"><option value="all">Tất cả căn</option>{houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+          )}
         </div>
-      )}
+      </div>
       {(houseError || loadError) && <p role="alert" className="text-xs font-bold text-rose-600">{houseError || loadError}</p>}
       <p className="text-xs text-neutral-600 dark:text-neutral-300">Số cũ là số mới của tháng trước. Nhập số mới, tự lưu khi rời ô hoặc nhấn Enter.</p>
-
       {!loaded && !loadError && !houseError && <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Đang tải danh sách phòng...</p>}
 
-      {loaded && rooms.length > 0 && wide && (
-        <div className="meter-sheet-wrap" data-testid="meter-table">
-          <table className="meter-sheet">
+      {loaded && rooms.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="admin-meter-table w-full text-left text-xs">
             <thead>
-              <tr>
-                <th rowSpan={2} scope="col" className="meter-room-head w-28">Phòng</th>
-                <th colSpan={3} scope="colgroup" className="meter-group meter-group--e meter-edge text-center"><span><i className="meter-dot meter-dot--e" aria-hidden="true" />Điện (kWh)</span></th>
-                <th colSpan={3} scope="colgroup" className="meter-group meter-group--w meter-edge text-center"><span><i className="meter-dot meter-dot--w" aria-hidden="true" />Nước (m³)</span></th>
-              </tr>
-              <tr>
-                {(['e', 'w'] as Kind[]).flatMap((k) => ['Cũ', 'Mới', 'Dùng'].map((t, j) => (
-                  <th key={k + t} scope="col" className={`text-right ${j === 0 ? 'meter-edge' : ''}`}>{t}</th>
-                )))}
+              <tr className="bg-neutral-50 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-200 font-bold uppercase">
+                <th className="p-3">Phòng</th>
+                <th className="p-3">Điện cũ</th>
+                <th className="p-3">Điện mới</th>
+                <th className="p-3">Nước cũ</th>
+                <th className="p-3">Nước mới</th>
               </tr>
             </thead>
-            <tbody>
-              {rooms.map((r, i) => {
-                const paid = r.paymentStatus === 'paid';
-                return (
-                  <Fragment key={r.roomId}>
-                    {newHouse(i) && <tr className="meter-house"><td colSpan={7}>{houseName(r.houseId)}</td></tr>}
-                    <tr data-testid="month-room" data-room={r.roomName}>
-                      <th scope="row">
-                        <span className="flex items-center gap-1.5 whitespace-nowrap pt-2">
-                          {r.roomName}{paid && <Lock size={13} aria-label="Đã đóng, đã khoá" style={{ color: 'var(--text-tertiary)' }} />}
-                        </span>
-                        <span className="block min-w-[5rem]">{statusLine(r)}</span>
-                      </th>
-                      {(['e', 'w'] as Kind[]).map((k) => (
-                        <Fragment key={k}>
-                          <td className="meter-edge meter-old text-right font-num tabular-nums"><span className="inline-block pt-2.5">{k === 'e' ? r.dienCu : r.nuocCu}</span></td>
-                          <td className="w-36">{input(r, k, true)}</td>
-                          <td className="meter-used text-right font-num tabular-nums"><span className="inline-block pt-2.5">{used(r, k)}</span></td>
-                        </Fragment>
-                      ))}
-                    </tr>
-                  </Fragment>
-                );
-              })}
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {rooms.map((r, i) => (
+                <Fragment key={r.roomId}>
+                  {newHouse(i) && (
+                    <tr><td colSpan={5} className="p-3 pt-4 font-bold text-neutral-600 dark:text-neutral-300">{houseName(r.houseId)}</td></tr>
+                  )}
+                  <tr data-testid="month-room" data-room={r.roomName} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition-colors">
+                    <td className="p-3 font-bold text-neutral-900 dark:text-white">
+                      <span className="inline-flex items-center gap-1.5">{r.roomName}{r.paymentStatus === 'paid' && <Lock size={13} aria-label="Đã đóng, đã khoá" className="text-neutral-500" />}</span>
+                      {roomState(r)}
+                    </td>
+                    <td data-label="Điện cũ" className="p-2">{oldCell(r, 'e')}</td>
+                    <td data-label="Điện mới" className="p-2">{reading(r, 'e')}</td>
+                    <td data-label="Nước cũ" className="p-2">{oldCell(r, 'w')}</td>
+                    <td data-label="Nước mới" className="p-2">{reading(r, 'w')}</td>
+                  </tr>
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      {loaded && rooms.length > 0 && !wide && (
-        <ul className="meter-cards">
-          {rooms.map((r, i) => {
-            const paid = r.paymentStatus === 'paid';
-            return (
-              <Fragment key={r.roomId}>
-                {newHouse(i) && <li className="pt-3 pb-1 text-xs font-bold uppercase text-neutral-600 dark:text-neutral-300">{houseName(r.houseId)}</li>}
-                <li data-testid="month-room" data-room={r.roomName} className="py-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Phòng {r.roomName}</span>
-                    {paid && <Lock size={14} aria-label="Đã đóng, đã khoá" style={{ color: 'var(--text-tertiary)' }} />}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(['e', 'w'] as Kind[]).map((k) => (
-                      <label key={k} className="block min-w-0">
-                        <span className="meter-card-label"><i className={`meter-dot meter-dot--${k}`} aria-hidden="true" />{k === 'e' ? 'Điện mới' : 'Nước mới'}</span>
-                        {input(r, k, false)}
-                        <span className="meter-card-meta">
-                          <span>Cũ {k === 'e' ? r.dienCu : r.nuocCu}</span>
-                          <span>Dùng {used(r, k)} {k === 'e' ? 'kWh' : 'm³'}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <div>{statusLine(r)}</div>
-                </li>
-              </Fragment>
-            );
-          })}
-        </ul>
       )}
       {loaded && rooms.length === 0 && <p className="text-xs text-neutral-600 dark:text-neutral-300">Nhà này chưa có phòng.</p>}
     </div>
