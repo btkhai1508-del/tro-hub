@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Lock } from '../LineIcons';
 import { useAdminHouses, workerCall } from './workerAdmin';
 import { refreshBilling, refreshDashboard, refreshRooms } from '../../lib/adminRefresh';
-import { meterCellError, usageLimit } from '../../lib/meterSheet';
+import { compareRoomNames, meterCellError, usageLimit } from '../../lib/meterSheet';
 import ConfirmSaveDialog from './ConfirmSaveDialog';
 
 interface Row {
@@ -57,7 +57,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
     const failed = answers.find((r) => !r.ok);
     if (failed && !failed.ok) { setLoadError(failed.error); return; }
     // Every row carries its house, so a save always goes to the right one.
-    setRooms(answers.flatMap((r, i) => (r.ok ? (r.data.rooms ?? []).map((row: Row) => ({ ...row, houseId: row.houseId || ids[i] })) : [])));
+    setRooms(answers.flatMap((r, i) => (r.ok ? (r.data.rooms ?? []).map((row: Row) => ({ ...row, houseId: row.houseId || ids[i] })).sort((a: Row, b: Row) => compareRoomNames(a.roomName, b.roomName)) : [])));
     setLoaded(true);
   }, [houseKey, month]);
 
@@ -226,7 +226,7 @@ export default function MonthBilling({ month, months = [], onMonthChange }: { mo
               {rooms.map((r, i) => (
                 <Fragment key={r.roomId}>
                   {newHouse(i) && (
-                    <tr><td colSpan={5} className="p-3 pt-4 font-bold text-neutral-600 dark:text-neutral-300">{houseName(r.houseId)}</td></tr>
+                    <tr className="meter-house-row"><td colSpan={5} className="p-2 pt-4"><div className="rounded-xl bg-neutral-100 dark:bg-neutral-800 px-4 py-2.5 text-center text-base font-bold tracking-wide text-neutral-900 dark:text-white">{houseName(r.houseId)}</div></td></tr>
                   )}
                   <tr data-testid="month-room" data-room={r.roomName} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition-colors">
                     <td className="p-3 font-bold text-neutral-900 dark:text-white">

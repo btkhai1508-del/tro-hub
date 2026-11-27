@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { meterCellError, meterMonthChoices, meterUsage, nextMonthStr, prepMonthStr, usageLimit } from '../meterSheet';
+import { meterCellError, meterMonthChoices, meterUsage, nextMonthStr, prepMonthStr, usageLimit, compareRoomNames } from '../meterSheet';
 
 // Vietnam is UTC+7: hh:mm there = hh-7:mm UTC.
 const vn = (y: number, m: number, d: number, h = 12) => Date.UTC(y, m - 1, d, h - 7);
@@ -44,4 +44,8 @@ test('usageLimit: 100 kWh và 8 m³ mỗi người, phòng trống tính 1 ngư�
   assert.equal(usageLimit('w', 3), 24);
   assert.equal(usageLimit('e', 0), 100);
   assert.equal(usageLimit('w', 0), 8);
+});
+
+test('compareRoomNames: tầng trệt G lên đầu, rồi theo số', () => {
+  assert.deepEqual(['201', '101', 'G02', '102', 'G01', '1001'].sort(compareRoomNames), ['G01', 'G02', '101', '102', '201', '1001']);
 });

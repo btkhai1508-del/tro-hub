@@ -56,3 +56,9 @@ export const USUAL_PER_PERSON = { e: 100, w: 8 } as const;
 export function usageLimit(kind: 'e' | 'w', people: number): number {
   return USUAL_PER_PERSON[kind] * Math.max(1, Math.trunc(people) || 0);
 }
+
+/** Room order of the meter list: ground floor (G…) first, then by number (101, 102, …, 201). */
+export function compareRoomNames(a: string, b: string): number {
+  const ground = (x: string) => (/^g/i.test(x.trim()) ? 0 : 1);
+  return ground(a) - ground(b) || a.localeCompare(b, 'vi', { numeric: true, sensitivity: 'base' });
+}
