@@ -3035,13 +3035,14 @@ export function AdminPortal() {
         {activeMenu === 'billing' && (
           <div className="font-apple space-y-4 sm:space-y-6">
             {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast}
-              selected={pickedRows} onIssued={() => setPickedBilling(new Set())} />}
+              selected={pickedRows} onIssued={() => setPickedBilling(new Set())}
+              extra={visibleBilling.length > 0 && (
+                // Phone: "Tất cả" sits next to the button (the desktop table has it in its header).
+                <label className="md:hidden flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl px-3 text-xs font-semibold soft-button"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-5 w-5 cursor-pointer" /><span>Tất cả</span></label>
+              )} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
-              {selectionOn && visibleBilling.length > 0 && (
-                <label className="soft-card flex min-h-11 cursor-pointer items-center gap-2 px-4 text-xs font-semibold"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-5 w-5 cursor-pointer" /><span>Tất cả</span></label>
-              )}
               {visibleBilling.map(item => {
                 const isPaid = item.paymentStatus === 'paid';
                 return (

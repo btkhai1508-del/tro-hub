@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Loader2, ReceiptText } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
 import { workerCall } from './workerAdmin';
 import ConfirmSaveDialog from './ConfirmSaveDialog';
 import { houseResultText, issueScope, missingMeterRooms, monthLabel, type IssueRow } from '../../lib/issueMonth';
@@ -10,11 +10,11 @@ interface Plan { houseId: string; force: boolean; roomIds?: number[] }
 interface Dialog { count: number; missing: string[]; plan: Plan[] }
 
 /**
- * Worker mode, Hoá đơn tab: "Tạo hoá đơn tháng MM/YYYY" issues the month's draft invoices (POST /api/admin/issue-month,
- * which also opens payment for the house). Scope = the house filter on screen, or every house for "Tất cả căn".
- * Until then the invoices are drafts ("Nháp") and residents do not see them.
+ * Worker mode, Hoá đơn tab: "Tạo hoá đơn" issues the draft invoices of the rooms ticked in the list (POST /api/admin/issue-month
+ * with roomIds, which also opens payment for the house and sends each room its payment notice). Until then the invoices
+ * are drafts and residents do not see them.
  */
-export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, onIssued }: {
+export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, onIssued, extra }: {
   month: string;
   rows: IssueRow[];
   houses: House[];
@@ -24,6 +24,8 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   selected: IssueRow[];
   /** Called after invoices were issued (the list clears its ticks). */
   onIssued?: () => void;
+  /** Shown right after the button (the phone list puts its "Tất cả" box there). */
+  extra?: ReactNode;
 }) {
   // The Hoá đơn list (/api/admin/billing) carries only the room code ('LVC-101'); the fresh read (/api/admin/rooms)
   // carries the same code plus roomName and roomId. Rows are matched by house + code.
@@ -38,7 +40,6 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   const [note, setNote] = useState<{ ok: boolean; lines: string[] } | null>(null);
 
   const label = monthLabel(month);
-  const scope = issueScope(rows, houseFilter);
   const houseName = (id: string) => houses.find((h) => h.id === id)?.name || id;
   const allHouses = houseFilter === 'all' && houses.length > 1;
 
@@ -134,64 +135,35 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
     stop();
   };
 
-  const pill = scope.allIssued && !busy;
-  const disabled = busy || scope.drafts === 0;
-  const text = phase === 'running' ? 'Đang tạo hoá đơn…'
-    : phase === 'checking' ? 'Đang kiểm tra…'
-    : pill ? 'Đã tạo tất cả hoá đơn'
-    : 'Tạo tất cả hoá đơn';
-
   return (
     <div className="space-y-3">
-    <div className="soft-card kit-data-surface p-3 sm:p-4 space-y-2" data-testid="issue-bar">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <p className="text-xs text-neutral-700 dark:text-neutral-200 min-w-0">
-          {pill
-            ? `Mọi hoá đơn tháng ${label} đã được tạo, cư dân đã thấy và thanh toán được.`
-            : scope.drafts > 0
-              ? <><span className="font-bold text-neutral-900 dark:text-white tabular-nums">{scope.drafts} hoá đơn nháp</span> — cư dân chưa thấy. Vui lòng chọn phòng tạo hoá đơn.</>
-              : `Chưa có hoá đơn nháp nào của tháng ${label}.`}
-        </p>
-        <button
-          type="button"
-          data-testid="issue-button"
-          onClick={() => prepare('all')}
-          disabled={disabled}
-          aria-busy={spinning}
-          className={pill
-            ? 'shrink-0 min-h-11 px-4 rounded-full inline-flex items-center justify-center gap-2 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800 cursor-default'
-            : 'primary-button shrink-0 min-h-11 px-5 text-xs font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'}
-        >
-          {spinning ? <Loader2 size={16} className="animate-spin" /> : pill ? <CheckCircle2 size={16} /> : <ReceiptText size={16} />}
-          <span className="whitespace-nowrap">{text}</span>
-          {!spinning && !pill && scope.drafts > 0 && (
-            <span className="tabular-nums rounded-full border border-current px-2 py-0.5 text-[11px] opacity-80">{scope.drafts}</span>
-          )}
-        </button>
-      </div>
-      {note && (
-        <ul role={note.ok ? 'status' : 'alert'} data-testid="issue-note" className={`text-xs font-bold space-y-0.5 ${note.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-          {note.lines.map((l, i) => <li key={i}>{l}</li>)}
-        </ul>
-      )}
-      <ConfirmSaveDialog
-        open={dialog !== null}
-        title={dialog?.missing.length
-          ? `Còn ${dialog.missing.length} phòng chưa nhập chỉ số điện nước tháng ${label}`
-          : `Tạo hoá đơn tháng ${label} cho ${dialog?.count ?? 0} phòng? Cư dân sẽ thấy và thanh toán được.`}
-        message={dialog?.missing.length
-          ? `Hoá đơn các phòng này sẽ tính 0 số điện nước. Vẫn tạo hoá đơn tháng ${label} cho ${dialog.count} phòng? Cư dân sẽ thấy và thanh toán được.`
-          : undefined}
-        lines={dialog?.missing ?? []}
-        confirmLabel={dialog?.missing.length ? 'Vẫn tạo' : 'Tạo hoá đơn'}
-        onCancel={cancel}
-        onConfirm={() => { if (dialog) run(dialog.plan); }}
-      />
-    </div>
     <div className="flex flex-wrap items-center gap-3" data-testid="issue-selection-bar">
-      <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} className="primary-button min-h-11 px-5 text-xs font-bold disabled:opacity-50">{selected.length > 0 ? `Tạo ${selected.length} hoá đơn` : 'Tạo hoá đơn'}</button>
+      <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} aria-busy={spinning}
+        className="primary-button min-h-11 px-5 text-xs font-bold inline-flex items-center gap-2 disabled:opacity-50">
+        {spinning && <Loader2 size={16} className="animate-spin" />}
+        <span>{phase === 'running' ? 'Đang tạo hoá đơn…' : phase === 'checking' ? 'Đang kiểm tra…' : selected.length > 0 ? `Tạo ${selected.length} hoá đơn` : 'Tạo hoá đơn'}</span>
+      </button>
+      {extra}
       {selected.length === 0 && <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Vui lòng chọn phòng tạo hoá đơn</span>}
     </div>
+    {note && (
+      <ul role={note.ok ? 'status' : 'alert'} data-testid="issue-note" className={`text-xs font-bold space-y-0.5 ${note.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+        {note.lines.map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
+    )}
+    <ConfirmSaveDialog
+      open={dialog !== null}
+      title={dialog?.missing.length
+        ? `Còn ${dialog.missing.length} phòng chưa nhập chỉ số điện nước tháng ${label}`
+        : `Tạo hoá đơn tháng ${label} cho ${dialog?.count ?? 0} phòng? Cư dân sẽ thấy và thanh toán được.`}
+      message={dialog?.missing.length
+        ? `Hoá đơn các phòng này sẽ tính 0 số điện nước. Vẫn tạo hoá đơn tháng ${label} cho ${dialog.count} phòng? Cư dân sẽ thấy và thanh toán được.`
+        : undefined}
+      lines={dialog?.missing ?? []}
+      confirmLabel={dialog?.missing.length ? 'Vẫn tạo' : 'Tạo hoá đơn'}
+      onCancel={cancel}
+      onConfirm={() => { if (dialog) run(dialog.plan); }}
+    />
     </div>
   );
 }

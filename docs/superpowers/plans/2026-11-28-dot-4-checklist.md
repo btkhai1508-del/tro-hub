@@ -28,17 +28,17 @@ Giao diện không tự cập nhật khi sửa code: báo Claude bật lại `do
 - [ ] Bấm **Sửa hoá đơn** → mở màn chi tiết phòng của đúng phòng và tháng đó.
 
 ## 3. Chọn phòng rồi Tạo hoá đơn
-- [ ] Cột ô chọn trước số phòng; ô "chọn tất cả" ở đầu bảng (điện thoại: dòng "Tất cả").
+- [ ] Cột ô chọn trước số phòng; ô "chọn tất cả" ở đầu bảng. Điện thoại: ô "Tất cả" nằm ngay cạnh nút Tạo hoá đơn.
 - [ ] Chưa chọn phòng nào: nút ghi "Tạo hoá đơn" kèm dòng "Vui lòng chọn phòng tạo hoá đơn"; bấm thì nhắc chọn phòng.
 - [ ] Chọn 2 phòng → nút thành "Tạo 2 hoá đơn" → popup → tạo đúng 2 phòng, các phòng khác vẫn là nháp. (Tạo riêng 1 phòng: chọn đúng phòng đó.)
 - [ ] Sau khi tạo, các ô đã chọn tự bỏ chọn.
 - [ ] Phòng còn thiếu chỉ số điện nước: popup cảnh báo "chưa nhập chỉ số", nút "Vẫn tạo".
 
-## 4. Tạo tất cả hoá đơn + thông báo cư dân
-- [ ] Nút **Tạo tất cả hoá đơn** nằm dưới thanh tìm kiếm/bộ lọc, trên bảng, có số nháp.
-- [ ] Bấm → tạo mọi phòng còn nháp (theo bộ lọc căn), toast "… và gửi thông báo thanh toán cho cư dân".
+## 4. Thông báo cư dân khi tạo hoá đơn
+- [ ] Không còn card "… hoá đơn nháp — cư dân chưa thấy" và nút "Tạo tất cả hoá đơn" (đã bỏ theo yêu cầu). Muốn tạo cả căn: bấm ô "chọn tất cả" rồi "Tạo x hoá đơn".
+- [ ] Tạo xong → toast "… và gửi thông báo thanh toán cho cư dân".
 - [ ] Đăng nhập một cư dân của phòng vừa tạo → mục Thông báo có đúng **1** thông báo "Thông báo thanh toán tiền phòng tháng …" ghi tổng tiền phòng mình.
-- [ ] Bấm "Tạo tất cả" lần nữa → báo đã tạo hết, cư dân không nhận thêm thông báo.
+- [ ] Tạo lại cùng phòng (đã tạo rồi) → cư dân không nhận thêm thông báo.
 
 ## 5. Đổi tháng / người ở ghép tháng sau
 - [ ] Đổi sang tháng 11/2026 → danh sách hiện dữ liệu tháng 11 (trạng thái Đã đóng của các phòng đã đánh dấu), đổi lại 12 thì về tháng 12.
