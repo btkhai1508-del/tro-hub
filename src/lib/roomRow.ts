@@ -66,26 +66,3 @@ export function matchesRoomFilters(row: any, houseId: string, status: RoomStatus
   if (status === 'issued-unpaid') return !notIssued && (row?.paymentStatus || row?.status || 'unpaid') === 'unpaid';
   return (row?.paymentStatus || row?.status || 'unpaid') === status;
 }
-
-/**
- * The fee lines of a room's month as the room card shows them: the invoice's own lines (every service by its name)
- * when the Worker sent them, otherwise the classic columns. Zero service lines are left out; rent, electricity and
- * water always show.
- */
-export function roomFeeLines(room: any): { label: string; amount: number }[] {
-  const lines: any[] = Array.isArray(room?.feeLines) ? room.feeLines : [];
-  if (lines.length) {
-    return lines
-      .filter((l) => l && (['room', 'electricity', 'water'].includes(l.kind) || Number(l.amount) !== 0))
-      .map((l) => ({ label: String(l.name || ''), amount: Number(l.amount) || 0 }));
-  }
-  const n = (v: any) => Number(v) || 0;
-  return [
-    { label: 'Tiền phòng', amount: n(room?.tienPhong) },
-    { label: 'Tiền điện', amount: n(room?.tienDien) },
-    { label: 'Tiền nước', amount: n(room?.tienNuoc) },
-    { label: 'Rác', amount: n(room?.tienRac) },
-    { label: 'Internet', amount: n(room?.tienNet) },
-    { label: 'Xe', amount: n(room?.tienXe) },
-  ].filter((l, i) => i < 3 || l.amount !== 0);
-}

@@ -63,7 +63,8 @@ export function DocumentSheet({ doc, className }: { doc: BuiltDocument | null; c
 }
 
 /** Download and print actions; both work from the generated PDF and never from the page. */
-export function DocumentActions({ doc, downloadLabel = 'Tải PDF', className = '' }: { doc: BuiltDocument | null; downloadLabel?: string; className?: string }) {
+/** `dark`: every button black (the room invoice screen in worker mode), otherwise "In" stays light. */
+export function DocumentActions({ doc, downloadLabel = 'Tải PDF', className = '', dark = false }: { doc: BuiltDocument | null; downloadLabel?: string; className?: string; dark?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -85,7 +86,7 @@ export function DocumentActions({ doc, downloadLabel = 'Tải PDF', className = 
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
         {canPrintDocuments && (
-          <button type="button" disabled={!doc || busy} onClick={() => run(() => printDocument(doc!))} className="soft-button min-h-11 px-4 py-2.5">
+          <button type="button" disabled={!doc || busy} onClick={() => run(() => printDocument(doc!))} className={`${dark ? 'primary-button' : 'soft-button'} min-h-11 px-4 py-2.5`}>
             <Printer size={16} />
             <span>In</span>
           </button>

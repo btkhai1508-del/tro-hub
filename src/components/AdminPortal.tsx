@@ -46,7 +46,8 @@ import {
   X,
   User,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Pencil
 } from './AppIcons';
 import { useApp, RegisteredAccount } from '../context/AppContext';
 import { useTheme } from '../context/ThemeContext';
@@ -107,7 +108,7 @@ import { PhoneHint } from './PhoneHint';
 import { STORAGE_KEYS } from '../lib/storage';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
-import { matchesRoomFilters, occupiedSlots, roomCapacity, roomFeeLines, ROOM_SLOTS, sanitizeRoomRow } from '../lib/roomRow';
+import { matchesRoomFilters, occupiedSlots, roomCapacity, ROOM_SLOTS, sanitizeRoomRow } from '../lib/roomRow';
 
 // Unified UI Sound Manager with Low-Latency Acoustic Feedback
 const playSound = (type: 'click' | 'hover' | 'success' | 'tab' | 'alert') => {
@@ -478,8 +479,6 @@ export function AdminPortal() {
   const [billingList, setBillingList] = useState<any[]>([]);
   // Worker mode, Hoá đơn tab: rooms ticked in the list (key = house|room).
   const [pickedBilling, setPickedBilling] = useState<Set<string>>(new Set());
-  // One row's "Tạo hoá đơn" (Hoá đơn tab): handed to IssueInvoicesBar, which checks, asks and issues.
-  const [issueRequest, setIssueRequest] = useState<{ rows: any[]; seq: number } | null>(null);
   const billingKey = (item: any) => `${item.houseId || ''}|${item.room}`;
   const [adminSearch, setAdminSearch] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('all');
@@ -2642,25 +2641,17 @@ export function AdminPortal() {
                 return (
                   <div
                     key={r.room}
-                    data-testid="admin-room-card"
-                    onClick={workerMode ? () => openRoomDetail(r.room, r.houseId) : undefined}
                     className="admin-room-card soft-card p-5 flex flex-col gap-4 hover:border-neutral-500 transition-all cursor-pointer group"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); openRoomDetail(r.room, r.houseId); }}
+                        onClick={() => openRoomDetail(r.room, r.houseId)}
                         className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                         aria-label={'Mở chi tiết phòng ' + r.room}
                       >
                         {r.room}
                       </button>
-                      {/* Worker mode: the paid state is set on the Hoá đơn tab (Tình trạng thanh toán); here it is only shown. */}
-                      {workerMode ? (
-                        <span className={cn('text-[11px] font-bold', r.draft || r.invoiceId == null ? 'text-neutral-500 dark:text-neutral-400' : isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                          {r.invoiceId == null ? 'Chưa có hoá đơn' : r.draft ? 'Chưa tạo hoá đơn' : isPaid ? 'Đã đóng' : 'Chưa đóng'}
-                        </span>
-                      ) : (
                       <div
                         className="flex items-center gap-2"
                         onClick={(e) => e.stopPropagation()}
@@ -2679,7 +2670,6 @@ export function AdminPortal() {
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
                       </div>
-                      )}
                     </div>
 
                     {workerMode && accountTargets.houses.length > 1 && (() => {
@@ -2687,24 +2677,6 @@ export function AdminPortal() {
                       return house ? <p className="-mt-2 text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 truncate">{house.abbreviation || house.name}</p> : null;
                     })()}
                     <RoomOccupancy count={residents.length} capacity={roomCapacity(r)} />
-
-                    {/* Worker mode: the fees of the month, always shown (no fold). */}
-                    {workerMode && (r.invoiceId == null
-                      ? <p className="text-xs text-neutral-600 dark:text-neutral-300">Chưa có hoá đơn tháng này.</p>
-                      : (
-                        <dl data-testid="admin-room-fees" className="kit-data-surface rounded-xl p-3 space-y-1 text-xs">
-                          {roomFeeLines(r).map(l => (
-                            <div key={l.label} className="flex items-center justify-between gap-2">
-                              <dt className="text-neutral-700 dark:text-neutral-200 truncate">{l.label}</dt>
-                              <dd className="whitespace-nowrap tabular-nums font-semibold text-neutral-900 dark:text-white">{fmt(l.amount)} đ</dd>
-                            </div>
-                          ))}
-                          <div className="flex items-center justify-between gap-2 border-t border-neutral-200 dark:border-neutral-700 pt-1.5 mt-1.5">
-                            <dt className="font-bold text-neutral-900 dark:text-white">Tổng cộng</dt>
-                            <dd className="whitespace-nowrap tabular-nums font-bold text-neutral-900 dark:text-white">{fmt(r.tongTien)} đ</dd>
-                          </div>
-                        </dl>
-                      ))}
 
                     {/* A plate search shows which plate brought this room up. */}
                     {matchingPlates(r).length > 0 && (
@@ -2783,12 +2755,6 @@ export function AdminPortal() {
                 <ArrowLeft size={16} />
                 <span>Danh sách phòng</span>
               </button>
-              {workerMode ? (
-                // Worker mode: no collect switch here; the paid state is changed on the Hoá đơn tab (Tình trạng thanh toán).
-                <span className={cn('text-xs font-bold px-2', room.draft ? 'text-neutral-500 dark:text-neutral-400' : room.paymentStatus === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                  {room.draft ? 'Chưa tạo hoá đơn' : room.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'}
-                </span>
-              ) : (
               <div className="flex items-center gap-2">
                 <AppleSwitch
                   checked={room.paymentStatus === 'paid'}
@@ -2801,7 +2767,6 @@ export function AdminPortal() {
                   {room.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'}
                 </span>
               </div>
-              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] gap-3 items-start">
@@ -3072,29 +3037,10 @@ export function AdminPortal() {
         {/* =========================================================================
             3. BILLING TAB (THU TIỀN THÁNG)
            ========================================================================= */}
-        {activeMenu === 'billing' && (() => {
-          // Worker mode: the three actions of a room (Tình trạng thanh toán, Tạo hoá đơn, Sửa hoá đơn).
-          const actionCls = 'min-h-11 cursor-pointer whitespace-nowrap rounded-xl px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 font-apple';
-          const statusAction = (item: any, isPaid: boolean, short = false) => item.draft
-            ? <span className="whitespace-nowrap px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 font-apple">{short ? 'Chưa tạo' : 'Chưa tạo hoá đơn'}</span>
-            : <button type="button" data-testid="row-status" onClick={(e) => { e.stopPropagation(); updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId); }}
-                aria-label={`Tình trạng thanh toán phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`} title="Tình trạng thanh toán"
-                className={cn(actionCls, 'px-1 underline underline-offset-4', isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                {isPaid ? 'Đã đóng' : 'Chưa đóng'}
-              </button>;
-          // `short`: the desktop table, where the column header already says "Tạo hoá đơn" / "Sửa hoá đơn".
-          const createAction = (item: any, short = false) => item.draft
-            ? <button type="button" data-testid="row-issue" onClick={(e) => { e.stopPropagation(); setIssueRequest(prev => ({ rows: [item], seq: (prev?.seq ?? 0) + 1 })); }}
-                aria-label={`Tạo hoá đơn phòng ${item.room}`} className={cn(actionCls, 'primary-button px-3')}>{short ? 'Tạo' : 'Tạo hoá đơn'}</button>
-            : <span className="whitespace-nowrap px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 font-apple">{item.invoiceId == null ? '—' : 'Đã tạo'}</span>;
-          const editAction = (item: any, short = false) => (
-            <button type="button" data-testid="row-edit" onClick={(e) => { e.stopPropagation(); openRoomDetail(item.room, item.houseId); }}
-              aria-label={`Sửa hoá đơn phòng ${item.room}`} className={cn(actionCls, 'soft-button px-3 text-neutral-800 dark:text-neutral-100')}>{short ? 'Sửa' : 'Sửa hoá đơn'}</button>
-          );
-          return (
+        {activeMenu === 'billing' && (
           <div className="font-apple space-y-4 sm:space-y-6">
             {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast}
-              selected={pickedRows} request={issueRequest} onIssued={() => setPickedBilling(new Set())} />}
+              selected={pickedRows} onIssued={() => setPickedBilling(new Set())} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
@@ -3117,8 +3063,8 @@ export function AdminPortal() {
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        {workerMode
-                          ? null
+                        {workerMode && item.draft
+                          ? <span className="whitespace-nowrap px-1 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo hoá đơn</span>
                           : <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
                           className={cn("min-h-11 cursor-pointer whitespace-nowrap px-1 text-[11px] font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
@@ -3162,13 +3108,6 @@ export function AdminPortal() {
                         {fmt(item.tongTien)} đ
                       </span>
                     </div>
-                    {workerMode && (
-                      <div className="grid grid-cols-3 items-center gap-2 border-t border-neutral-100 dark:border-neutral-800 pt-2.5 font-apple" data-testid="row-actions">
-                        <div className="flex justify-center">{statusAction(item, isPaid)}</div>
-                        <div className="flex justify-center">{createAction(item)}</div>
-                        <div className="flex justify-center">{editAction(item)}</div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -3191,11 +3130,7 @@ export function AdminPortal() {
                       <th className="p-4 font-semibold font-apple">Net</th>
                       <th className="p-4 font-semibold font-apple">Xe</th>
                       <th className="p-4 font-semibold text-neutral-900 dark:text-white font-apple">Tổng cộng</th>
-                      {workerMode ? <>
-                        <th className="p-4 text-center font-semibold font-apple whitespace-normal leading-tight w-24">Tình trạng thanh toán</th>
-                        <th className="p-4 text-center font-semibold font-apple whitespace-normal leading-tight min-w-16">Tạo hoá đơn</th>
-                        <th className="p-4 text-center font-semibold font-apple whitespace-normal leading-tight min-w-16">Sửa hoá đơn</th>
-                      </> : <th className="p-4 text-center font-semibold font-apple">Trạng thái</th>}
+                      <th className="p-4 text-center font-semibold font-apple">{workerMode ? 'Tình trạng thanh toán' : 'Trạng thái'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 font-apple">
@@ -3203,7 +3138,7 @@ export function AdminPortal() {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
-                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap">{selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} onClick={(e) => e.stopPropagation()} aria-label={`Chọn phòng ${item.room}`} className="mr-3 h-4 w-4 cursor-pointer align-middle" />}<span className="inline-block w-14 text-center"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button></span></td>
+                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap">{selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} onClick={(e) => e.stopPropagation()} aria-label={`Chọn phòng ${item.room}`} className="mr-3 h-4 w-4 cursor-pointer align-middle" />}<span className="inline-block w-14 text-center"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button></span>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
                           {workerMode && <td className="p-2 font-apple" onClick={(e) => e.stopPropagation()}><InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} /></td>}
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>
@@ -3214,11 +3149,6 @@ export function AdminPortal() {
                           <td className="whitespace-nowrap tabular-nums p-4 font-semibold text-sm text-neutral-900 dark:text-white font-apple">
                             {fmt(item.tongTien)} đ
                           </td>
-                          {workerMode ? <>
-                            <td className="p-2 text-center font-apple" onClick={(e) => e.stopPropagation()}>{statusAction(item, isPaid, true)}</td>
-                            <td className="p-2 text-center font-apple" onClick={(e) => e.stopPropagation()}>{createAction(item, true)}</td>
-                            <td className="p-2 text-center font-apple" onClick={(e) => e.stopPropagation()}>{editAction(item, true)}</td>
-                          </> : (
                           <td className="p-4 font-apple" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center font-apple">
                               {workerMode && item.draft
@@ -3230,7 +3160,6 @@ export function AdminPortal() {
                               </button>}
                             </div>
                           </td>
-                          )}
                         </tr>
                       );
                     })}
@@ -3239,8 +3168,7 @@ export function AdminPortal() {
               </div>
             </div>
           </div>
-          );
-        })()}
+        )}
 
         {/* =========================================================================
             5. CONTRACT & CT01 (A4 PDF/PRINT FORMAT MATCHING USER CODE)
@@ -3354,9 +3282,14 @@ export function AdminPortal() {
               <div className="flex flex-wrap items-center gap-2">
                 {invoiceLinkTarget && (
                   <button type="button" onClick={copyInvoiceLink} disabled={linkBusy}
-                    className="soft-button min-h-11 px-4 py-2.5">Sao chép link thanh toán</button>
+                    className={cn(workerMode ? 'primary-button' : 'soft-button', 'min-h-11 px-4 py-2.5')}>Sao chép link thanh toán</button>
                 )}
-                <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" />
+                {/* Worker mode: edit this room's invoice (the room editor for the month shown), between copy link and print. */}
+                {workerMode && selectedInvoiceRoom && (
+                  <button type="button" data-testid="invoice-edit" onClick={() => openRoomDetail(selectedInvoiceRoom.room, selectedInvoiceRoom.houseId)}
+                    className="primary-button min-h-11 px-4 py-2.5 inline-flex items-center gap-2"><Pencil size={16} /><span>Sửa hoá đơn</span></button>
+                )}
+                <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" dark={workerMode} />
               </div>
               {linkMessage && <p role={linkMessage.ok ? 'status' : 'alert'} className={`w-full text-xs ${linkMessage.ok ? 'text-neutral-600 dark:text-neutral-300' : 'text-red-700 dark:text-red-300'} break-all`}>{linkMessage.text}</p>}
             </div>

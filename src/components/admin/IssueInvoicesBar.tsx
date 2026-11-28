@@ -14,7 +14,7 @@ interface Dialog { count: number; missing: string[]; plan: Plan[] }
  * which also opens payment for the house). Scope = the house filter on screen, or every house for "Tất cả căn".
  * Until then the invoices are drafts ("Nháp") and residents do not see them.
  */
-export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, request, onIssued }: {
+export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, onIssued }: {
   month: string;
   rows: IssueRow[];
   houses: House[];
@@ -22,8 +22,6 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   onToast: (message: string, type: 'success' | 'error' | 'info') => void;
   /** Rooms ticked in the list below. */
   selected: IssueRow[];
-  /** A "Tạo hoá đơn" pressed on one row of the list: those rows are issued with the same checks and dialog. */
-  request?: { rows: IssueRow[]; seq: number } | null;
   /** Called after invoices were issued (the list clears its ticks). */
   onIssued?: () => void;
 }) {
@@ -88,15 +86,6 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   };
 
   const cancel = () => { setDialog(null); stop(); };
-
-  // One row's "Tạo hoá đơn": same path as the ticked rooms.
-  const lastRequest = useRef(0);
-  useEffect(() => {
-    if (!request || request.seq === lastRequest.current) return;
-    lastRequest.current = request.seq;
-    prepare('selected', request.rows);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [request?.seq]);
 
   const runningRef = useRef(false);
   const run = async (plan: Plan[]) => {
