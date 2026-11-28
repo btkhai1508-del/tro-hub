@@ -63,7 +63,7 @@ Chia 8 đợt, làm lần lượt, deploy sau mỗi đợt khi người dùng n�
 - Email chủ trọ bắt buộc; bỏ nút xoá cạnh căn trọ (giữ trong ô sửa chủ trọ).
 - Tạo/sửa chủ trọ và căn trọ: trang riêng, tối giản, không popup (điện thoại cũng vậy).
 - Tiện ích theo căn: các tiện ích hiện có nằm hết trong gói; thêm dòng "muốn thêm tiện ích, liên hệ email để được báo giá".
-- Developer đăng nhập cần Google Authentication.
+- (HOÃN, để sau, không làm) Developer đăng nhập bằng Google Authenticator (TOTP) mỗi lần đăng nhập, chỉ cho Developer. Cần migration D1 và khoá bí mật TOTP_ENC_KEY khi làm.
 
 ## Đợt 7: đăng nhập, đăng ký, mất mạng, loading
 - Đăng ký mới: bước 1 nhập số điện thoại chủ trọ; form: Họ tên + Số điện thoại + Giới tính cùng một dòng, dòng sau Căn trọ + Số phòng.
