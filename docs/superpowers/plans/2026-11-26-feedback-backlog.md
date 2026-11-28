@@ -52,6 +52,10 @@ Chia 8 đợt, làm lần lượt, deploy sau mỗi đợt khi người dùng n�
 - Đổi tháng tải dữ liệu tháng cũ; thêm người ở ghép tháng sau thì tự tạo cho tháng đó; cập nhật số người ở theo tháng (hợp đồng).
 - Nút Trả phòng dưới Lưu thay đổi (popup xác nhận); sửa phòng: Lưu, Huỷ, Xoá phòng.
 - Bỏ nút thu tiền mặt.
+- Thông báo thanh toán cho chủ trọ và quản lý trọ (ĐÃ CHỐT): ô chuông thông báo ở góc trên bên phải giao diện admin (dùng lại được cho yêu cầu quên mật khẩu sau này).
+  Có thông báo khi hoá đơn được thanh toán (SePay báo tiền về, hoặc đánh dấu thanh toán) và khi có tiền vào hoá đơn đã thanh toán (tiền thừa).
+  Chủ trọ thấy mọi căn họ quản lý; quản lý trọ chỉ thấy đúng căn được giao. Mỗi thông báo ghi căn, phòng, số tiền, thời gian nhận.
+  Nút "Tạo lại link" thanh toán: BỎ QUA (giữ chỉ copy link).
 
 ## Đợt 5: Tổng quan, thông báo
 - Điện/nước tiêu thụ hiện kWh và m³; doanh thu tổng, chọn tổng hoặc từng căn (fade chậm); card xe máy ghi "Xe máy: 68".
