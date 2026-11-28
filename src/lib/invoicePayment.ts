@@ -92,7 +92,8 @@ export async function fetchMonthLinks(houseId: string, month: string): Promise<R
  * The links of the given houses for a month, keyed "houseId|invoiceId"; reloads when the month or the set of
  * houses changes. Worker mode only (pass enabled = false otherwise).
  */
-export function useMonthLinks(enabled: boolean, month: string, houseIds: string[]): Record<string, string> {
+/** `version` changes when invoices were issued, so the links of the new ones are read without a page refresh. */
+export function useMonthLinks(enabled: boolean, month: string, houseIds: string[], version: string | number = 0): Record<string, string> {
   const [links, setLinks] = useState<Record<string, string>>({});
   const key = enabled ? `${month}|${[...new Set(houseIds)].sort().join(',')}` : '';
   useEffect(() => {
@@ -106,6 +107,6 @@ export function useMonthLinks(enabled: boolean, month: string, houseIds: string[
       setLinks(out);
     });
     return () => { alive = false; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, version]); // eslint-disable-line react-hooks/exhaustive-deps
   return links;
 }

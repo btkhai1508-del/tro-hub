@@ -14,7 +14,7 @@ interface Dialog { count: number; missing: string[]; plan: Plan[] }
  * which also opens payment for the house). Scope = the house filter on screen, or every house for "Tất cả căn".
  * Until then the invoices are drafts ("Nháp") and residents do not see them.
  */
-export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, onEdit, onSetStatus }: {
+export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected }: {
   month: string;
   rows: IssueRow[];
   houses: House[];
@@ -22,10 +22,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   onToast: (message: string, type: 'success' | 'error' | 'info') => void;
   /** Rooms ticked in the list below. */
   selected: IssueRow[];
-  onEdit: (row: IssueRow) => void;
-  onSetStatus: (rows: IssueRow[], status: 'paid' | 'unpaid') => void;
 }) {
-  const [statusMenu, setStatusMenu] = useState(false);
   const modeRef = useRef<'all' | 'selected'>('all');
   const roomOf = (r: IssueRow) => r.roomName || r.room || '';
   const keyOf = (r: IssueRow) => `${r.houseId || ''}|${roomOf(r)}`;
@@ -162,7 +159,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
           {pill
             ? `Mọi hoá đơn tháng ${label} đã được tạo, cư dân đã thấy và thanh toán được.`
             : scope.drafts > 0
-              ? <><span className="font-bold text-neutral-900 dark:text-white tabular-nums">{scope.drafts} hoá đơn nháp</span> — cư dân chưa thấy. Nhập xong điện nước và dịch vụ thì bấm Tạo hoá đơn.</>
+              ? <><span className="font-bold text-neutral-900 dark:text-white tabular-nums">{scope.drafts} hoá đơn nháp</span> — cư dân chưa thấy. Vui lòng chọn phòng tạo hoá đơn.</>
               : `Chưa có hoá đơn nháp nào của tháng ${label}.`}
         </p>
         <button
@@ -184,18 +181,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200/60 pt-2 dark:border-neutral-700/60" data-testid="issue-selection-bar">
         <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">{selected.length > 0 ? `Đã chọn ${selected.length} phòng` : 'Chưa chọn phòng'}</span>
-        <div className="relative">
-          <button type="button" onClick={() => { if (selected.length === 0) onToast('Chọn phòng để đổi tình trạng thanh toán.', 'info'); else setStatusMenu((v) => !v); }}
-            className="soft-button min-h-11 px-4 text-xs font-bold" aria-haspopup="menu" aria-expanded={statusMenu}>Tình trạng thanh toán</button>
-          {statusMenu && (
-            <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-40 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
-              <button type="button" role="menuitem" className="block min-h-11 w-full rounded-lg px-3 text-left text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800" onClick={() => { setStatusMenu(false); onSetStatus(selected, 'paid'); }}>Đã đóng</button>
-              <button type="button" role="menuitem" className="block min-h-11 w-full rounded-lg px-3 text-left text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800" onClick={() => { setStatusMenu(false); onSetStatus(selected, 'unpaid'); }}>Chưa đóng</button>
-            </div>
-          )}
-        </div>
-        <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} className="soft-button min-h-11 px-4 text-xs font-bold disabled:opacity-50">Tạo hoá đơn</button>
-        <button type="button" onClick={() => { if (selected.length !== 1) onToast('Chọn một phòng để sửa hoá đơn.', 'info'); else onEdit(selected[0]); }} className="soft-button min-h-11 px-4 text-xs font-bold">Sửa hoá đơn</button>
+        <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} className="primary-button min-h-11 px-5 text-xs font-bold disabled:opacity-50">Tạo hoá đơn</button>
       </div>
       {note && (
         <ul role={note.ok ? 'status' : 'alert'} data-testid="issue-note" className={`text-xs font-bold space-y-0.5 ${note.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>

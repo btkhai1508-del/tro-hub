@@ -1874,7 +1874,7 @@ export function AdminPortal() {
     requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, y)));
   }, [activeMenu]);
   // Worker mode, Hoá đơn list: a small QR per issued invoice; tapping it copies that room's payment link.
-  const monthLinks = useMonthLinks(workerMode && activeMenu === 'billing', selectedMonth, billingList.map((r: any) => String(r.houseId || '')).filter(Boolean));
+  const monthLinks = useMonthLinks(workerMode && activeMenu === 'billing', selectedMonth, billingList.map((r: any) => String(r.houseId || '')).filter(Boolean), billingList.filter((r: any) => r.invoiceId != null && !r.draft).length);
   const linkOf = (item: any) => (item.invoiceId != null && !item.draft ? monthLinks[`${item.houseId}|${item.invoiceId}`] : undefined);
   const copiedLinkToast = (message: string, ok: boolean) => showPortalToast(message, ok ? 'success' : 'error');
   // Worker mode: the printed invoice carries a QR linking to that room's public payment page (unpaid only).
@@ -2994,18 +2994,20 @@ export function AdminPortal() {
         {activeMenu === 'billing' && (
           <div className="font-apple space-y-4 sm:space-y-6">
             {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast}
-              selected={pickedRows}
-              onEdit={(row) => openBillingInvoice(row)}
-              onSetStatus={async (rows, status) => { for (const r of rows as any[]) await updateRoomPaymentStatus(r.room, status, r.row, r.houseId); }} />}
+              selected={pickedRows} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
+              {selectionOn && visibleBilling.length > 0 && (
+                <label className="soft-card flex min-h-11 cursor-pointer items-center gap-2 px-4 text-xs font-semibold"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-5 w-5 cursor-pointer" /><span>Tất cả</span></label>
+              )}
               {visibleBilling.map(item => {
                 const isPaid = item.paymentStatus === 'paid';
                 return (
                   <div key={`${item.houseId || ''}|${item.room}`} className="soft-card p-4 space-y-3.5 font-apple">
                     {/* Header: Room, AppleSwitch */}
                     <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2.5 font-apple">
+                      {selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-5 w-5 shrink-0 cursor-pointer" />}
                       <button type="button" onClick={() => openBillingInvoice(item)} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="flex items-center gap-2.5 min-w-0 min-h-11 text-left cursor-pointer font-apple">
                         <span className="px-2.5 py-1 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-semibold text-xs shrink-0 font-apple">
                           {item.room}
@@ -3015,15 +3017,13 @@ export function AdminPortal() {
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        {selectionOn
-                          ? <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-5 w-5 cursor-pointer" />
-                          : <AppleSwitch
+                        <AppleSwitch
                           checked={isPaid}
                           onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           color="emerald"
                           size="sm"
                           ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                        />}
+                        />
                         <span className={cn(
                           "text-[11px] font-semibold min-w-14 text-right transition-colors font-apple",
                           isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
@@ -3079,7 +3079,7 @@ export function AdminPortal() {
                 <table className="w-full text-left text-xs font-apple">
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
-                      {selectionOn && <th className="w-10 p-4"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /></th>}
+                      {selectionOn && <th className="p-4"><label className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /><span>Tất cả</span></label></th>}
                       <th className="p-4 font-semibold font-apple">Phòng</th>
                       {workerMode && <th className="p-4 font-semibold font-apple"><span className="sr-only">Mã QR thanh toán</span>QR</th>}
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
@@ -3097,7 +3097,7 @@ export function AdminPortal() {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
-                          {selectionOn && <td className="w-10 p-4" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-4 w-4 cursor-pointer" /></td>}
+                          {selectionOn && <td className="p-4" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-4 w-4 cursor-pointer" /></td>}
                           <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
                           {workerMode && <td className="p-2 font-apple" onClick={(e) => e.stopPropagation()}><InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} /></td>}
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
@@ -3111,13 +3111,13 @@ export function AdminPortal() {
                           </td>
                           <td className="p-4 font-apple" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-2.5 font-apple">
-                              {!selectionOn && <AppleSwitch
+                              <AppleSwitch
                                 checked={isPaid}
                                 onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                                 color="emerald"
                                 size="sm"
                                 ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                              />}
+                              />
                               <span className={cn(
                                 "text-xs font-semibold min-w-16 text-left transition-colors font-apple",
                                 isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
