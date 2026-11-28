@@ -788,13 +788,17 @@ export const LaundryService = {
  * Background Worker: Checks RUNNING machines every 3s
  * Automatically turns off smart plug and resets status when expectedEndTime is reached
  */
-export function startLaundryWorker(): NodeJS.Timeout {
+/** `sheetOff`: true while the Worker owns the data; the Google Sheet (Machines, Logs) is then never read. */
+export function startLaundryWorker(sheetOff: () => Promise<boolean> = async () => false): NodeJS.Timeout {
   console.log('[LaundryService] 🚀 Background worker started (3s ticker)');
 
-  // Initial sync from Google Sheet Machines tab if available
-  LaundryService.syncFromGoogleSheet().catch(() => {});
-  // Initial scan for bank payments in Google Sheet Logs tab
-  LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
+  sheetOff().then((off) => {
+    if (off) return;
+    // Initial sync from Google Sheet Machines tab if available
+    LaundryService.syncFromGoogleSheet().catch(() => {});
+    // Initial scan for bank payments in Google Sheet Logs tab
+    LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
+  }).catch(() => {});
 
   let lastLogsScanTime = 0;
 
@@ -805,7 +809,7 @@ export function startLaundryWorker(): NodeJS.Timeout {
       // Scan Google Sheet Logs every 4 seconds for new bank transfers
       if (now - lastLogsScanTime >= 4000) {
         lastLogsScanTime = now;
-        LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
+        sheetOff().then((off) => { if (!off) LaundryService.scanGoogleSheetPaymentLogs().catch(() => {}); }).catch(() => {});
       }
       let changed = false;
 

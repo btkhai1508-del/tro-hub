@@ -1092,6 +1092,7 @@ export function AdminPortal() {
           // A slower answer for a month the admin already left must not repaint the screen.
           if (month !== selectedMonthRef.current) return;
           if (d.success) setContractHistory(d.history || []);
+          else setAdminLoadError(d.error || 'Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.');
         })
         .catch(() => setAdminLoadError('Chưa tải được dữ liệu cho mục này. Vui lòng thử lại.'));
     }

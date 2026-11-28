@@ -14,6 +14,14 @@ export const WORKER_API_URL = (process.env.WORKER_API_URL || 'https://tro-hub-ap
 
 const readSource = createSourceReader(WORKER_API_URL);
 
+/**
+ * True while the Worker owns the data (source 'worker'): Express then reads nothing from the Google Sheet
+ * (laundry log scans, contract history, declaration). A Worker that cannot be reached counts as the Sheet.
+ */
+export async function sheetReadsOff(): Promise<boolean> {
+  return (await readSource().catch(() => 'sheet' as const)) === 'worker';
+}
+
 /** Tiện ích gate for Express routes: re-reads the Worker's list (60 s cache) with the Worker bearer carried in the session. */
 export const moduleGate = createModuleGate(WORKER_API_URL);
 

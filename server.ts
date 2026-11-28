@@ -16,7 +16,7 @@ import { signTenantToken, verifyTenantToken, requireAuth, requireAdmin, MODULE_D
 import { getZaloProfile, getZaloPhoneNumber, isValidZaloNotify, signZaloBankOrder } from './src/server/zaloService.js';
 import { createLoginLimiter, lockedMessage } from './src/server/loginLimiter.js';
 import { registerCccdHandoff } from './src/server/cccdHandoff.js';
-import { registerWorkerSession, sourceChangedGuard, moduleGate } from './src/server/workerSession.js';
+import { registerWorkerSession, sourceChangedGuard, moduleGate, sheetReadsOff } from './src/server/workerSession.js';
 import {
   getMonthList,
   getDashboardData,
@@ -647,7 +647,7 @@ async function startServer() {
     try {
       const now = Date.now();
       // Periodically scan Google Sheet Logs on status requests (throttled to once every 2.5s)
-      if (now - lastLaundryLogsScan >= 2500) {
+      if (now - lastLaundryLogsScan >= 2500 && !(await sheetReadsOff())) {
         lastLaundryLogsScan = now;
         await LaundryService.scanGoogleSheetPaymentLogs().catch(() => {});
       }
@@ -765,6 +765,7 @@ async function startServer() {
   // Sync machines directly from Google Sheet tab "Machines"
   app.post('/api/laundry/admin/sync-sheet', requireAdmin, moduleGate.requireModule('laundry'), async (_req, res) => {
     try {
+      if (await sheetReadsOff()) return res.status(409).json({ success: false, errorCode: 'SHEET_READS_OFF', error: 'Chế độ dữ liệu mới không đọc Google Sheet.' });
       const result = await LaundryService.syncFromGoogleSheet();
       res.json(result);
     } catch (e: any) {
@@ -887,12 +888,18 @@ async function startServer() {
     }
   });
 
+  /** Worker mode: these tools read the Google Sheet, which is no longer read; they come back with the Worker later. */
+  const SHEET_OFF_MESSAGE = 'Mục này chưa có ở chế độ dữ liệu mới. Sẽ có ở bản sau.';
+
   app.get('/api/admin/contract/config', moduleGate.requireModule('contract'), (req, res) => {
     res.json({ success: true, config: HOUSES_CONFIG });
   });
 
   app.get('/api/admin/contract/history', moduleGate.requireModule('contract'), async (req, res) => {
     try {
+      if (await sheetReadsOff()) {
+        return res.status(409).json({ success: false, errorCode: 'SHEET_READS_OFF', error: SHEET_OFF_MESSAGE });
+      }
       const month = (req.query.month as string) || '10/2026';
       const houseKey = (req.query.houseKey as string) || 'TRUNG_KIM';
       const rooms = (await getRoomListByMonth(month)).filter(room =>
@@ -923,6 +930,9 @@ async function startServer() {
 
   app.get('/api/admin/declaration', moduleGate.requireModule('declaration'), async (req, res) => {
     try {
+      if (await sheetReadsOff()) {
+        return res.status(409).json({ success: false, errorCode: 'SHEET_READS_OFF', error: SHEET_OFF_MESSAGE });
+      }
       const month = (req.query.month as string) || '10/2026';
       const houseKey = ((req.query.houseKey as string) === 'LVC' ? 'LVC' : 'TRUNG_KIM') as 'LVC' | 'TRUNG_KIM';
       const declaration = await getDeclarationData(month, houseKey);
@@ -1127,7 +1137,7 @@ async function startServer() {
   }
 
   // Start laundry background worker (auto turn-off machines when cycle completes)
-  startLaundryWorker();
+  startLaundryWorker(sheetReadsOff);
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[EcoStay Server] Running at http://0.0.0.0:${PORT} in ${isProduction ? 'production' : 'development'} mode`);
