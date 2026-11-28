@@ -17,18 +17,24 @@ Ghi chú dữ liệu: tháng mặc định là **12/2026** (đang chuẩn bị t
 Mỗi lần mở trang sẽ hiện popup "Đang chuẩn bị hoá đơn tháng 12/2026": bấm **Đã hiểu**.
 Giao diện không tự cập nhật khi sửa code: báo Claude bật lại `dot4-ui`.
 
+## 0. Chung (điện thoại và máy tính)
+- [ ] Điện thoại: tiêu đề trang không còn nền card phía sau.
+- [ ] Trang Hoá đơn không còn dòng mô tả "Hoá đơn từng phòng trong tháng…".
+- [ ] Không còn nút Làm mới (thanh bên trái, thanh bên thu gọn, thanh tháng trên điện thoại); dữ liệu vẫn tự cập nhật.
+
 ## 1. Phòng & Khách (giao diện cũ, có switch)
-- [ ] Thẻ phòng như trước: số phòng, switch Đã đóng/Chưa đóng, số người. Không có bảng phí trên thẻ.
+- [ ] Thẻ phòng như trước: số phòng (nền đen giống Hoá đơn), switch Đã đóng/Chưa đóng, số người. Không có bảng phí trên thẻ.
 - [ ] Bấm số phòng → mở màn chi tiết phòng; màn này vẫn có switch ở góc trên.
 
 ## 2. Tab Hoá đơn
 - [ ] Bảng không còn nút Tạo / Sửa; cột cuối là **Tình trạng** (phòng nháp ghi "Chưa tạo", không còn chữ "Nháp", phòng đã tạo bấm đổi Đã đóng ↔ Chưa đóng). Bảng không tràn ngang ở ~1280px.
-- [ ] Điện thoại: trạng thái nằm ở đầu thẻ như trước; phần phí hiện sẵn, không gập.
-- [ ] Bấm vào một phòng → màn chi tiết hoá đơn giống layout Hợp đồng: một card bên trái (chọn phòng, tháng ở trên; 4 nút **màu đen** ở dưới theo thứ tự Sao chép link thanh toán, **Sửa hoá đơn**, In, Lưu PDF), hoá đơn thu nhỏ vừa màn hình bên phải. Điện thoại: card ở trên, hoá đơn ở dưới.
+- [ ] Điện thoại: ô chọn nằm sát số phòng, số phòng to hơn; trạng thái ở đầu thẻ; phần phí hiện sẵn, không gập.
+- [ ] Bấm vào một phòng → màn chi tiết hoá đơn giống layout Hợp đồng: card bên trái gồm bộ lọc **Căn** và **Phòng** (không còn chọn tháng, dùng tháng chung của trang) và 4 nút **màu đen**: Sao chép link thanh toán, **Sửa hoá đơn**, In, Lưu PDF; hoá đơn thu nhỏ bên phải. Điện thoại: lọc 2 cột, nút 2 cột (nút sao chép ghi gọn "Sao chép link"), hoá đơn bên dưới.
+- [ ] Đổi Căn → danh sách Phòng chỉ còn phòng của căn đó.
 - [ ] Bấm **Sửa hoá đơn** → mở màn chi tiết phòng của đúng phòng và tháng đó.
 
 ## 3. Chọn phòng rồi Tạo hoá đơn
-- [ ] Cột ô chọn trước số phòng; ô "chọn tất cả" ở đầu bảng. Điện thoại: ô "Tất cả" nằm ngay cạnh nút Tạo hoá đơn.
+- [ ] Cột ô chọn trước số phòng; tiêu đề bảng không còn ô chọn; ô "Tất cả" nằm ngay cạnh nút Tạo hoá đơn (máy tính và điện thoại).
 - [ ] Chưa chọn phòng nào: nút ghi "Tạo hoá đơn" kèm dòng "Vui lòng chọn phòng tạo hoá đơn"; bấm thì nhắc chọn phòng.
 - [ ] Chọn 2 phòng → nút thành "Tạo 2 hoá đơn" → popup → tạo đúng 2 phòng, các phòng khác vẫn là nháp. (Tạo riêng 1 phòng: chọn đúng phòng đó.)
 - [ ] Sau khi tạo, các ô đã chọn tự bỏ chọn.

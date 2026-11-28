@@ -1787,7 +1787,7 @@ export function AdminPortal() {
     dashboard: { title: 'Tổng quan', description: 'Doanh thu và tình hình nhà trọ trong tháng.' },
     rooms: { title: 'Phòng & khách thuê', description: 'Tìm phòng, xem cư dân và cập nhật thông tin.' },
     roomDetail: { title: 'Chi tiết phòng', description: 'Thông tin cư dân, chỉ số và chi phí phòng.' },
-    billing: { title: 'Hoá đơn', description: 'Hoá đơn từng phòng trong tháng: bấm vào phòng để xem chi tiết.' },
+    billing: { title: 'Hoá đơn', description: '' },
     utilities: { title: 'Công cụ quản lý', description: 'Chọn công việc bạn cần thực hiện.' },
     meter: { title: 'Chỉ số điện nước', description: 'Nhập chỉ số từng phòng theo kỳ tháng.' },
     contract: { title: 'Hồ sơ cư trú', description: 'Tờ khai CT01 và hợp đồng thuê phòng.' },
@@ -2136,8 +2136,8 @@ export function AdminPortal() {
                   </div>
                 </div>
 
-                {/* 2. Theme Toggle & Refresh Row - 3D Glassmorphism Cards */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* 2. Theme Toggle & Refresh Row - 3D Glassmorphism Cards (worker mode: no refresh, the lists refresh themselves) */}
+                <div className={cn("grid gap-2", workerMode ? "grid-cols-1" : "grid-cols-2")}>
                   <button
                     type="button"
                     onClick={toggleTheme}
@@ -2157,7 +2157,7 @@ export function AdminPortal() {
                     </span>
                   </button>
 
-                  <button
+                  {!workerMode && <button
                     type="button"
                     onClick={() => loadTabContent(activeMenu, selectedMonth)}
                     className="soft-surface h-10 px-2 rounded-2xl relative overflow-hidden flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer group"
@@ -2166,7 +2166,7 @@ export function AdminPortal() {
                     <div className="pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 dark:via-white/10 to-transparent" />
                     <NavIcons.RefreshCw size={14} className={cn("text-neutral-900 dark:text-white shrink-0", isLoading && "animate-spin")} />
                     <span className="truncate text-[11px] font-bold">Làm mới</span>
-                  </button>
+                  </button>}
                 </div>
 
                 {/* 3. Cổng thanh toán (Sheet mode only: on the Worker, "Tạo hoá đơn" on the Hoá đơn tab opens payments) */}
@@ -2242,15 +2242,15 @@ export function AdminPortal() {
                   )}
                 </button>
 
-                {/* Refresh in Collapsed Mode */}
-                <button
+                {/* Refresh in Collapsed Mode (Sheet mode only) */}
+                {!workerMode && <button
                   type="button"
                   onClick={() => loadTabContent(activeMenu, selectedMonth)}
                   className="soft-surface w-11 h-11 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white transition-all cursor-pointer"
                   title="Làm mới dữ liệu từ Google Sheets"
                 >
                   <NavIcons.RefreshCw size={17} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
-                </button>
+                </button>}
 
                 {/* Payment Gate in Collapsed Mode (Sheet mode only) */}
                 {!workerMode && <button
@@ -2317,9 +2317,9 @@ export function AdminPortal() {
                 </span>
               )}
             </div>
-            <p className="apple-body kit-text-secondary mt-0.5">
+            {currentAdminPage.description && <p className="apple-body kit-text-secondary mt-0.5">
               {currentAdminPage.description}
-            </p>
+            </p>}
           </div>
 
           {/* Action Capsule: Month & Refresh - Only shown on mobile, moved to sidebar on desktop */}
@@ -2395,8 +2395,8 @@ export function AdminPortal() {
               <span>{mode === 'light' ? 'Sáng' : mode === 'dark' ? 'Tối' : 'Tự động'}</span>
             </button>
 
-            {/* Refresh Button */}
-            <button
+            {/* Refresh Button (Sheet mode only) */}
+            {!workerMode && <button
               type="button"
               onClick={() => {
                 playSound('click');
@@ -2406,7 +2406,7 @@ export function AdminPortal() {
               title="Làm mới dữ liệu từ Google Sheets"
             >
               <RefreshCw size={15} className={cn("text-neutral-900 dark:text-white", isLoading && "animate-spin")} />
-            </button>
+            </button>}
 
           </div>
         </header>
@@ -2642,7 +2642,7 @@ export function AdminPortal() {
                       <button
                         type="button"
                         onClick={() => openRoomDetail(r.room, r.houseId)}
-                        className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                        className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-bold text-base hover:bg-neutral-700 dark:hover:bg-neutral-500 transition-colors"
                         aria-label={'Mở chi tiết phòng ' + r.room}
                       >
                         {r.room}
@@ -3037,8 +3037,8 @@ export function AdminPortal() {
             {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast}
               selected={pickedRows} onIssued={() => setPickedBilling(new Set())}
               extra={visibleBilling.length > 0 && (
-                // Phone: "Tất cả" sits next to the button (the desktop table has it in its header).
-                <label className="md:hidden flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl px-3 text-xs font-semibold soft-button"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-5 w-5 cursor-pointer" /><span>Tất cả</span></label>
+                // "Tất cả" sits next to the button (not in the table heading).
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl px-3 text-xs font-semibold soft-button"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-5 w-5 cursor-pointer" /><span>Tất cả</span></label>
               )} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
@@ -3049,13 +3049,16 @@ export function AdminPortal() {
                   <div key={`${item.houseId || ''}|${item.room}`} className="soft-card p-4 space-y-3.5 font-apple">
                     {/* Header: Room, AppleSwitch */}
                     <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2.5 font-apple">
+                      {/* The tick box and the room sit together on the left. */}
+                      <div className="flex items-center gap-3 min-w-0">
                       {selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-5 w-5 shrink-0 cursor-pointer" />}
-                      <button type="button" onClick={() => openBillingInvoice(item)} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="flex items-center gap-2.5 min-w-0 min-h-11 text-left cursor-pointer font-apple">
-                        <span className="px-2.5 py-1 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-semibold text-xs shrink-0 font-apple">
+                      <button type="button" onClick={() => openBillingInvoice(item)} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="flex items-center gap-2 min-w-0 min-h-11 text-left cursor-pointer font-apple">
+                        <span className="px-3.5 py-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-bold text-base shrink-0 font-apple">
                           {item.room}
                         </span>
                         <ChevronRight size={16} className="shrink-0 text-neutral-500" />
                       </button>
+                      </div>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
                         {workerMode && item.draft
@@ -3115,7 +3118,7 @@ export function AdminPortal() {
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">{selectionOn
-                        ? <label className="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /><span className="inline-block w-14 text-center">Phòng</span></label>
+                        ? <span className="inline-block w-14 ml-7 text-center">Phòng</span>
                         : 'Phòng'}</th>
                       {workerMode && <th className="p-4 font-semibold font-apple"><span className="sr-only">Mã QR thanh toán</span>QR</th>}
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
@@ -3265,21 +3268,32 @@ export function AdminPortal() {
             {/* Same layout as Hợp đồng: one card on the left (filters on top, buttons below), the invoice beside it, scaled to the screen. */}
             <div className="resident-document-workspace">
             <aside className="resident-document-options soft-card p-4 space-y-4" aria-label="Chọn hoá đơn và thao tác">
-              <div className="flex flex-col gap-3 [&>select]:w-full">
+              {/* Filters: căn and phòng (the month is the one chosen for the whole admin screen). Two columns on a phone. */}
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
+                {workerMode && accountTargets.houses.length > 0 && (
+                  <select
+                    aria-label="Chọn căn"
+                    value={selectedInvoiceRoom?.houseId || invoiceHouse}
+                    onChange={e => { const h = e.target.value; setInvoiceHouse(h); setInvoiceRoom(roomsList.find((r: any) => r.houseId === h)?.room || ''); }}
+                    className="w-full min-w-0 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+                  >
+                    {accountTargets.houses.map(h => <option key={h.id} value={h.id} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">{h.name}</option>)}
+                  </select>
+                )}
                 <select
                   aria-label="Chọn phòng"
                   value={selectedInvoiceRoom ? `${selectedInvoiceRoom.houseId || ''}|${selectedInvoiceRoom.room}` : ''}
                   onChange={e => { const [h, ...rest] = e.target.value.split('|'); setInvoiceHouse(h); setInvoiceRoom(rest.join('|')); }}
-                  className="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+                  className={cn("w-full min-w-0 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer", !(workerMode && accountTargets.houses.length > 0) && "col-span-2 md:col-span-1")}
                 >
-                  {roomsList.map((r: any) => <option key={`${r.houseId || ''}|${r.room}`} value={`${r.houseId || ''}|${r.room}`} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Phòng {r.room}{r.nguoi1 ? ` – ${r.nguoi1}` : ''}</option>)}
+                  {roomsList.filter((r: any) => !workerMode || !accountTargets.houses.length || r.houseId === (selectedInvoiceRoom?.houseId || invoiceHouse)).map((r: any) => <option key={`${r.houseId || ''}|${r.room}`} value={`${r.houseId || ''}|${r.room}`} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Phòng {r.room}{r.nguoi1 ? ` – ${r.nguoi1}` : ''}</option>)}
                 </select>
-                {monthSelect}
+                {!workerMode && monthSelect}
               </div>
-              <div className="admin-invoice-actions flex flex-col gap-2">
+              <div className="admin-invoice-actions grid grid-cols-2 md:grid-cols-1 gap-2">
                 {invoiceLinkTarget && (
                   <button type="button" onClick={copyInvoiceLink} disabled={linkBusy}
-                    className={cn(workerMode ? 'primary-button' : 'soft-button', 'min-h-11 px-4 py-2.5')}>Sao chép link thanh toán</button>
+                    className={cn(workerMode ? 'primary-button' : 'soft-button', 'min-h-11 px-4 py-2.5')} aria-label="Sao chép link thanh toán"><span className="md:hidden">Sao chép link</span><span className="hidden md:inline">Sao chép link thanh toán</span></button>
                 )}
                 {/* Worker mode: edit this room's invoice (the room editor for the month shown), between copy link and print. */}
                 {workerMode && selectedInvoiceRoom && (
@@ -3287,7 +3301,7 @@ export function AdminPortal() {
                     className="primary-button min-h-11 px-4 py-2.5 inline-flex items-center gap-2"><Pencil size={16} /><span>Sửa hoá đơn</span></button>
                 )}
                 <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" dark={workerMode} />
-                {linkMessage && <p role={linkMessage.ok ? 'status' : 'alert'} className={`text-xs ${linkMessage.ok ? 'text-neutral-600 dark:text-neutral-300' : 'text-red-700 dark:text-red-300'} break-all`}>{linkMessage.text}</p>}
+                {linkMessage && <p role={linkMessage.ok ? 'status' : 'alert'} className={`col-span-2 md:col-span-1 text-xs ${linkMessage.ok ? 'text-neutral-600 dark:text-neutral-300' : 'text-red-700 dark:text-red-300'} break-all`}>{linkMessage.text}</p>}
               </div>
             </aside>
 

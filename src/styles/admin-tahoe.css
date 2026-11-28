@@ -38,7 +38,7 @@
   .admin-workspace :where(button, select) { min-height: 44px; }
   .admin-workspace :where(input:not([type='checkbox']):not([type='radio']), textarea) { min-height: 44px; font-size: 16px; }
   .admin-page-header { gap: 12px; }
-  .admin-page-header > div:first-child { padding: 12px 14px; border-radius: 20px; background: var(--material-thick); }
+  .admin-page-header > div:first-child { padding: 4px 0; } /* no card behind the page title on phones */
   .admin-page-header > div:first-child > p { font-size: 13px; line-height: 1.45; }
   .admin-header-logout { display: none; } /* Also available in Công cụ quản lý. */
   .admin-header-theme { min-width: 44px; width: 44px; padding-inline: 0; justify-content: center; }
@@ -165,5 +165,11 @@
 .admin-billing-compact th, .admin-billing-compact td { padding: 10px 6px; }
 .admin-billing-compact th:first-child, .admin-billing-compact td:first-child { padding-left: 16px; }
 
-/* Room invoice screen (Hợp đồng layout): the action buttons fill the left card, one per row. */
+/* Room invoice screen (Hợp đồng layout): the action buttons fill their cell (2 per row on a phone, 1 per row beside the
+   invoice). In and Lưu PDF come wrapped by DocumentActions: its wrappers step aside so they are cells of the grid too. */
 .admin-invoice-actions button { width: 100%; justify-content: center; }
+.admin-invoice-actions > div, .admin-invoice-actions > div > div:first-child { display: contents; }
+.admin-invoice-actions > div > p { grid-column: 1 / -1; }
+@media (max-width: 767px) {
+  .admin-invoice-actions button { padding-inline: 10px; font-size: 13px; }
+}
