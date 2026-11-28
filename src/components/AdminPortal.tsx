@@ -3071,8 +3071,9 @@ export function AdminPortal() {
                 <table className="w-full text-left text-xs font-apple">
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
-                      {selectionOn && <th className="p-4"><label className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /><span>Tất cả</span></label></th>}
-                      <th className="p-4 font-semibold font-apple">Phòng</th>
+                      <th className="p-4 font-semibold font-apple">{selectionOn
+                        ? <label className="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /><span>Tất cả</span></label>
+                        : 'Phòng'}</th>
                       {workerMode && <th className="p-4 font-semibold font-apple"><span className="sr-only">Mã QR thanh toán</span>QR</th>}
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
                       <th className="p-4 font-semibold font-apple">Điện</th>
@@ -3089,8 +3090,7 @@ export function AdminPortal() {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
-                          {selectionOn && <td className="p-4" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-4 w-4 cursor-pointer" /></td>}
-                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
+                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap">{selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} onClick={(e) => e.stopPropagation()} aria-label={`Chọn phòng ${item.room}`} className="mr-3 h-4 w-4 cursor-pointer align-middle" />}<button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
                           {workerMode && <td className="p-2 font-apple" onClick={(e) => e.stopPropagation()}><InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} /></td>}
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>
