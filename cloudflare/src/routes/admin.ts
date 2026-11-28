@@ -743,7 +743,7 @@ export function registerAdmin(app: Hono<App>): void {
     const month = pickFeeMonth(c, asked); // up to next month
     if (month instanceof Response) return month;
     // The next month can be issued as soon as it is prepared (pickMonth allows at most next month).
-    const { issued, missingMeters } = await issueMonth(c.env, houseId, month, body.force === true);
+    const { issued, missingMeters } = await issueMonth(c.env, houseId, month, body.force === true, Array.isArray(body.rooms) ? body.rooms.map(String).slice(0, 500) : undefined);
     if (issued > 0) await audit(c, actorOf(c.get('viewer')), 'admin_issue_month', houseId, `${month}:${issued}`);
     return c.json({ success: true, issued, missingMeters });
   });

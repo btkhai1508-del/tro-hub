@@ -414,6 +414,19 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
     });
   });
 
+  describe('POST /api/admin/issue-month với rooms', () => {
+    it('chỉ phát hành các phòng được chọn; phòng khác giữ nguyên là nháp', async () => {
+      await startMonthA();
+      await enter(A, { dienCu: 100, dienMoi: 150, nuocCu: 10, nuocMoi: 14 });
+      const none = await json(await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, rooms: ['999'] }));
+      expect(none).toEqual({ success: true, issued: 0, missingMeters: [] });
+      expect((await invoiceOf('LVC', '101', A)).issued_at).toBeNull();
+      const picked = await json(await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, rooms: ['101'] }));
+      expect(picked).toEqual({ success: true, issued: 1, missingMeters: [] });
+      expect((await invoiceOf('LVC', '101', A)).issued_at).not.toBeNull();
+    });
+  });
+
   describe('quyền', () => {
     const routes: [string, string, unknown?][] = [
       ['GET', `/api/admin/rooms?month=${A}&houseId=LVC`],

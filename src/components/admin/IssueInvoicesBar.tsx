@@ -6,7 +6,7 @@ import { houseResultText, issueScope, missingMeterRooms, monthLabel, type IssueR
 import { refreshBilling, refreshDashboard, refreshGate, refreshRooms } from '../../lib/adminRefresh';
 
 interface House { id: string; name: string }
-interface Plan { houseId: string; force: boolean }
+interface Plan { houseId: string; force: boolean; rooms?: string[] }
 interface Dialog { count: number; missing: string[]; plan: Plan[] }
 
 /**
@@ -14,13 +14,21 @@ interface Dialog { count: number; missing: string[]; plan: Plan[] }
  * which also opens payment for the house). Scope = the house filter on screen, or every house for "Tất cả căn".
  * Until then the invoices are drafts ("Nháp") and residents do not see them.
  */
-export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast }: {
+export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, onEdit, onSetStatus }: {
   month: string;
   rows: IssueRow[];
   houses: House[];
   houseFilter: string;
   onToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  /** Rooms ticked in the list below. */
+  selected: IssueRow[];
+  onEdit: (row: IssueRow) => void;
+  onSetStatus: (rows: IssueRow[], status: 'paid' | 'unpaid') => void;
 }) {
+  const [statusMenu, setStatusMenu] = useState(false);
+  const modeRef = useRef<'all' | 'selected'>('all');
+  const roomOf = (r: IssueRow) => r.roomName || r.room || '';
+  const keyOf = (r: IssueRow) => `${r.houseId || ''}|${roomOf(r)}`;
   // checking: reading the scope fresh · confirm: the dialog is open · running: issuing. Any of them blocks a second press.
   const [phase, setPhase] = useState<'idle' | 'checking' | 'confirm' | 'running'>('idle');
   const busyRef = useRef(false);
@@ -49,18 +57,24 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   };
 
   /** Reads the scope fresh from the Worker, then asks once (with the rooms still missing meters, if any). */
-  const prepare = async () => {
+  const prepare = async (mode: 'all' | 'selected' = 'all') => {
     if (busyRef.current) return;
+    if (mode === 'selected' && selected.length === 0) { onToast('Chọn phòng để tạo hoá đơn.', 'info'); return; }
+    modeRef.current = mode;
     start();
     setNote(null);
-    const ids = houseFilter !== 'all'
+    const picked = new Set(selected.map(keyOf));
+    const ids = mode === 'selected'
+      ? [...new Set(selected.map((r) => r.houseId).filter((x): x is string => !!x))]
+      : houseFilter !== 'all'
       ? [houseFilter]
       : (houses.length ? houses.map((h) => h.id) : [...new Set(rows.map((r) => r.houseId).filter((x): x is string => !!x))]);
     const reads = await Promise.all(ids.map((id) => workerCall(`/api/admin/rooms?month=${encodeURIComponent(month)}&houseId=${encodeURIComponent(id)}`)));
     const failed = reads.find((r) => !r.ok);
     if (failed) { stop(); setNote({ ok: false, lines: [failed.error] }); return; }
-    const fresh: IssueRow[] = reads.flatMap((r) => r.data?.rooms ?? []);
-    const s = issueScope(fresh, houseFilter);
+    const freshAll: IssueRow[] = reads.flatMap((r) => r.data?.rooms ?? []);
+    const fresh = mode === 'selected' ? freshAll.filter((r) => picked.has(keyOf(r))) : freshAll;
+    const s = issueScope(fresh, mode === 'selected' ? 'all' : houseFilter);
     if (s.drafts === 0) {
       stop();
       onToast(s.invoices ? `Đã tạo hết hoá đơn tháng ${label}.` : `Chưa có hoá đơn nháp nào của tháng ${label}.`, 'info');
@@ -68,7 +82,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
       return;
     }
     draftCounts.current = new Map([...s.draftsByHouse.entries()].map(([id, list]) => [id, list.length]));
-    const plan = [...s.draftsByHouse.entries()].map(([houseId, list]) => ({ houseId, force: list.some((r) => r.missingMeters) }));
+    const plan: Plan[] = [...s.draftsByHouse.entries()].map(([houseId, list]) => ({ houseId, force: list.some((r) => r.missingMeters), rooms: mode === 'selected' ? list.map(roomOf) : undefined }));
     setPhase('confirm');
     setDialog({ count: s.drafts, missing: missingMeterRooms(s, houseName, allHouses), plan });
   };
@@ -85,34 +99,50 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
     const lines: string[] = [];
     let issued = 0;
     let errors = 0;
-    const later: { houseId: string; rooms: string[] }[] = [];
+    const later: { houseId: string; rooms: string[]; pick?: string[] }[] = [];
+    const issuedHouses: string[] = [];
     // One house after another: each house is its own batch on the server.
     for (const p of plan) {
       const r = await workerCall<{ issued: number; missingMeters: string[] }>('/api/admin/issue-month', {
-        method: 'POST', body: JSON.stringify({ houseId: p.houseId, month, force: p.force }),
+        method: 'POST', body: JSON.stringify({ houseId: p.houseId, month, force: p.force, rooms: p.rooms }),
       });
       const n = r.ok ? Number(r.data?.issued ?? 0) : 0;
       const missing = r.ok ? r.data?.missingMeters ?? [] : [];
       if (r.ok && !p.force && n === 0 && missing.length) {
         // The server found rooms without meters that the list did not show: ask about those too.
-        later.push({ houseId: p.houseId, rooms: missing });
+        later.push({ houseId: p.houseId, rooms: missing, pick: p.rooms });
         continue;
       }
       if (!r.ok) errors += 1;
       issued += n;
+      if (n > 0) issuedHouses.push(p.houseId);
       lines.push(houseResultText(houseName(p.houseId), { ok: r.ok, issued: n, error: r.error }, several));
     }
     runningRef.current = false;
     refreshAll();
     if (lines.length) setNote({ ok: errors === 0, lines });
     if (issued > 0) onToast(`Đã tạo ${issued} hoá đơn tháng ${label}. Cư dân đã thấy và thanh toán được.`, 'success');
+    // "Tạo tất cả hoá đơn" also tells every resident of the houses that were just issued.
+    if (modeRef.current === 'all' && issuedHouses.length) {
+      const sent = await Promise.all(issuedHouses.map((houseId) => workerCall('/api/admin/notifications', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: `Thông báo thanh toán tiền phòng tháng ${label}`,
+          desc: `Ban Quản Lý đã gửi hoá đơn tiền phòng tháng ${label}. Quý cư dân vui lòng mở ứng dụng để xem chi tiết và thanh toán.`,
+          type: 'invoice', target: houseId, sender: 'Ban Quản Lý', time: 'Vừa xong',
+        }),
+      })));
+      const bad = sent.find((r) => !r.ok);
+      if (bad) onToast(`Đã tạo hoá đơn nhưng chưa gửi được thông báo thanh toán: ${bad.error}`, 'error');
+      else onToast('Đã gửi thông báo thanh toán cho cư dân.', 'success');
+    }
     if (errors > 0) onToast(lines.join(' · '), 'error');
     if (later.length) {
       const multi = later.length > 1 || several;
       const missing = later.flatMap((l) => l.rooms.map((room) => (multi ? `${room} (${houseName(l.houseId)})` : room)));
       const count = later.reduce((sum, l) => sum + (draftCounts.current.get(l.houseId) ?? l.rooms.length), 0);
       setPhase('confirm');
-      setDialog({ count, missing, plan: later.map((l) => ({ houseId: l.houseId, force: true })) });
+      setDialog({ count, missing, plan: later.map((l) => ({ houseId: l.houseId, force: true, rooms: l.pick })) });
       return;
     }
     stop();
@@ -122,8 +152,8 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   const disabled = busy || scope.drafts === 0;
   const text = phase === 'running' ? 'Đang tạo hoá đơn…'
     : phase === 'checking' ? 'Đang kiểm tra…'
-    : pill ? `Đã tạo hoá đơn tháng ${label}`
-    : `Tạo hoá đơn tháng ${label}`;
+    : pill ? 'Đã tạo tất cả hoá đơn'
+    : 'Tạo tất cả hoá đơn';
 
   return (
     <div className="soft-card kit-data-surface p-3 sm:p-4 space-y-2" data-testid="issue-bar">
@@ -138,7 +168,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
         <button
           type="button"
           data-testid="issue-button"
-          onClick={prepare}
+          onClick={() => prepare('all')}
           disabled={disabled}
           aria-busy={spinning}
           className={pill
@@ -151,6 +181,21 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
             <span className="tabular-nums rounded-full border border-current px-2 py-0.5 text-[11px] opacity-80">{scope.drafts}</span>
           )}
         </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200/60 pt-2 dark:border-neutral-700/60" data-testid="issue-selection-bar">
+        <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">{selected.length > 0 ? `Đã chọn ${selected.length} phòng` : 'Chưa chọn phòng'}</span>
+        <div className="relative">
+          <button type="button" onClick={() => { if (selected.length === 0) onToast('Chọn phòng để đổi tình trạng thanh toán.', 'info'); else setStatusMenu((v) => !v); }}
+            className="soft-button min-h-11 px-4 text-xs font-bold" aria-haspopup="menu" aria-expanded={statusMenu}>Tình trạng thanh toán</button>
+          {statusMenu && (
+            <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-40 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
+              <button type="button" role="menuitem" className="block min-h-11 w-full rounded-lg px-3 text-left text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800" onClick={() => { setStatusMenu(false); onSetStatus(selected, 'paid'); }}>Đã đóng</button>
+              <button type="button" role="menuitem" className="block min-h-11 w-full rounded-lg px-3 text-left text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800" onClick={() => { setStatusMenu(false); onSetStatus(selected, 'unpaid'); }}>Chưa đóng</button>
+            </div>
+          )}
+        </div>
+        <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} className="soft-button min-h-11 px-4 text-xs font-bold disabled:opacity-50">Tạo hoá đơn</button>
+        <button type="button" onClick={() => { if (selected.length !== 1) onToast('Chọn một phòng để sửa hoá đơn.', 'info'); else onEdit(selected[0]); }} className="soft-button min-h-11 px-4 text-xs font-bold">Sửa hoá đơn</button>
       </div>
       {note && (
         <ul role={note.ok ? 'status' : 'alert'} data-testid="issue-note" className={`text-xs font-bold space-y-0.5 ${note.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>

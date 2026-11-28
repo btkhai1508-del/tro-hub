@@ -295,16 +295,19 @@ export async function ensureDraftForRoom(env: Env, ownerId: number, houseId: str
  * decides its status). Without `force`, rooms that still miss new meter readings stop it: nothing changes
  * and their names are returned. `missingMeters` is informational when forced.
  */
-export async function issueMonth(env: Env, houseId: string, month: string, force: boolean): Promise<{ issued: number; missingMeters: string[] }> {
+export async function issueMonth(env: Env, houseId: string, month: string, force: boolean, rooms?: string[]): Promise<{ issued: number; missingMeters: string[] }> {
   const ownerId = await houseOwner(env.DB, houseId);
   if (ownerId === null) throw new Error(`House ${houseId} not found`);
   const db = await tenantOfOwner(env, ownerId);
-  const { results: drafts } = await db.prepare(
+  const { results: allDrafts } = await db.prepare(
     `SELECT i.id, rm.name, i.status, (m.room_id IS NULL OR m.electric_new IS NULL OR m.water_new IS NULL OR (m.electric_new = 0 AND m.water_new = 0)) AS missing
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id
        LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
       WHERE i.house_id = ? AND i.month = ? AND i.issued_at IS NULL ORDER BY rm.name`
   ).bind(houseId, month).all<{ id: number; name: string; status: InvoiceStatus; missing: number }>();
+  // `rooms` narrows to the rooms the admin ticked; without it every draft of the house is issued.
+  const only = rooms && rooms.length ? new Set(rooms) : null;
+  const drafts = only ? allDrafts.filter((d) => only.has(d.name)) : allDrafts;
   const missingMeters = drafts.filter((d) => d.missing).map((d) => d.name);
   if (!drafts.length || (!force && missingMeters.length)) return { issued: 0, missingMeters };
 

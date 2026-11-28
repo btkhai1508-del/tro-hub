@@ -472,6 +472,9 @@ export function AdminPortal() {
   const [openedSlots, setOpenedSlots] = useState<number[]>([]);
   useEffect(() => setOpenedSlots([]), [selectedRoomId]);
   const [billingList, setBillingList] = useState<any[]>([]);
+  // Worker mode, Hoá đơn tab: rooms ticked in the list (key = house|room).
+  const [pickedBilling, setPickedBilling] = useState<Set<string>>(new Set());
+  const billingKey = (item: any) => `${item.houseId || ''}|${item.room}`;
   const [adminSearch, setAdminSearch] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('all');
   const [houseFilter, setHouseFilter] = useState('all');
@@ -1826,6 +1829,12 @@ export function AdminPortal() {
   };
   const visibleRooms = roomsList.filter(filterAdminRows);
   const visibleBilling = billingList.filter(filterAdminRows);
+  const selectionOn = workerMode && isWorkerStaff;
+  useEffect(() => { setPickedBilling(new Set()); }, [selectedMonth, houseFilter]);
+  const pickedRows = visibleBilling.filter(item => pickedBilling.has(billingKey(item)));
+  const allPicked = visibleBilling.length > 0 && pickedRows.length === visibleBilling.length;
+  const togglePicked = (item: any) => setPickedBilling(prev => { const next = new Set(prev); const k = billingKey(item); if (next.has(k)) next.delete(k); else next.add(k); return next; });
+  const toggleAllPicked = () => setPickedBilling(allPicked ? new Set() : new Set(visibleBilling.map(billingKey)));
 
   const contractRooms = roomsList.filter((r: any) => houseFromRoom(r.room).key === contractHouse);
   const selectedContractRoom: any = contractRooms.find((r: any) => r.room === contractRoom);
@@ -2984,7 +2993,10 @@ export function AdminPortal() {
            ========================================================================= */}
         {activeMenu === 'billing' && (
           <div className="font-apple space-y-4 sm:space-y-6">
-            {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast} />}
+            {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast}
+              selected={pickedRows}
+              onEdit={(row) => openBillingInvoice(row)}
+              onSetStatus={async (rows, status) => { for (const r of rows as any[]) await updateRoomPaymentStatus(r.room, status, r.row, r.houseId); }} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
@@ -3003,13 +3015,15 @@ export function AdminPortal() {
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        <AppleSwitch
+                        {selectionOn
+                          ? <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-5 w-5 cursor-pointer" />
+                          : <AppleSwitch
                           checked={isPaid}
                           onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           color="emerald"
                           size="sm"
                           ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                        />
+                        />}
                         <span className={cn(
                           "text-[11px] font-semibold min-w-14 text-right transition-colors font-apple",
                           isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
@@ -3065,6 +3079,7 @@ export function AdminPortal() {
                 <table className="w-full text-left text-xs font-apple">
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
+                      {selectionOn && <th className="w-10 p-4"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /></th>}
                       <th className="p-4 font-semibold font-apple">Phòng</th>
                       {workerMode && <th className="p-4 font-semibold font-apple"><span className="sr-only">Mã QR thanh toán</span>QR</th>}
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
@@ -3082,6 +3097,7 @@ export function AdminPortal() {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
+                          {selectionOn && <td className="w-10 p-4" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-4 w-4 cursor-pointer" /></td>}
                           <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
                           {workerMode && <td className="p-2 font-apple" onClick={(e) => e.stopPropagation()}><InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} /></td>}
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
@@ -3095,13 +3111,13 @@ export function AdminPortal() {
                           </td>
                           <td className="p-4 font-apple" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-2.5 font-apple">
-                              <AppleSwitch
+                              {!selectionOn && <AppleSwitch
                                 checked={isPaid}
                                 onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                                 color="emerald"
                                 size="sm"
                                 ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                              />
+                              />}
                               <span className={cn(
                                 "text-xs font-semibold min-w-16 text-left transition-colors font-apple",
                                 isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
