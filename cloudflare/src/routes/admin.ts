@@ -99,7 +99,7 @@ interface RoomJoin {
   id: number; name: string; price: number; room_deposit: number; price_custom: number; deposit_custom: number; floor: number | null; capacity: number;
   invoice_id: number | null; room_rent: number | null; electricity: number | null; water: number | null; trash: number | null; internet: number | null;
   parking: number | null; other: number | null; deposit: number | null; total: number | null; status: InvoiceStatus | null; paid_at: string | null;
-  sheet_row: number | null; issued_at: string | null;
+  sheet_row: number | null; issued_at: string | null; inv_people: number | null; inv_vehicles: number | null;
   has_meter: number; electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null;
   prev_e: number | null; prev_w: number | null;
 }
@@ -117,7 +117,7 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
   const [{ results: rooms }, { results: people }, { results: optouts }, { results: banks }, view, waiting] = await Promise.all([
     db.prepare(
       `SELECT rm.id, rm.name, rm.price, rm.deposit AS room_deposit, rm.price_custom, rm.deposit_custom, rm.floor, rm.capacity,
-              i.id AS invoice_id, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking, i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, i.issued_at,
+              i.id AS invoice_id, i.room_rent, i.electricity, i.water, i.trash, i.internet, i.parking, i.other, i.deposit, i.total, i.status, i.paid_at, i.sheet_row, i.issued_at, i.people AS inv_people, i.vehicles AS inv_vehicles,
               (m.id IS NOT NULL) AS has_meter, m.electric_old, m.electric_new, m.water_old, m.water_new,
               ${prev('electric_new')} AS prev_e, ${prev('water_new')} AS prev_w
          FROM rooms rm
@@ -186,7 +186,9 @@ async function loadRooms(c: Context<App>, db: TenantDb, houseId: string, month: 
       nguoi1: p1.name, cccd1: '', sdt1: p1.phone, xe1: p1.plate,
       nguoi2: p2.name, cccd2: '', sdt2: p2.phone, xe2: p2.plate,
       nguoi3: p3.name, cccd3: '', sdt3: p3.phone, xe3: p3.plate,
-      soNguoi: occupants.length, soXe: occupants.filter((p) => (p.plate_number ?? '').trim().length > 0).length, soNet: 0,
+      // The month's own count (stored on its invoice); a month without one counts today's residents.
+      soNguoi: r.inv_people ?? occupants.length,
+      soXe: r.inv_vehicles ?? occupants.filter((p) => (p.plate_number ?? '').trim().length > 0).length, soNet: 0,
       optOut: optouts.filter((o) => o.room_id === r.id).map((o) => o.service_id),
     };
   }));
@@ -299,7 +301,7 @@ async function repriceOpenInvoices(c: Context<App>, db: TenantDb, roomId: number
     const inv = await invoiceFor(db, roomId, month);
     if (!inv) continue;
     try {
-      await recompute(db, inv.id, { central: c.env.DB });
+      await recompute(db, inv.id, { central: c.env.DB, recount: true });
     } catch (err) {
       if (err instanceof InvoiceLockedError) {
         if (month === now) locked = true;
@@ -739,11 +741,25 @@ export function registerAdmin(app: Hono<App>): void {
     if (houseId instanceof Response) return houseId;
     const asked = pickMonth(c, body.month);
     if (asked instanceof Response) return asked;
-    await tenantFor(c, houseId); // the access check (403 / 404) before anything is read or written
+    const db = await tenantFor(c, houseId); // the access check (403 / 404) before anything is read or written
     const month = pickFeeMonth(c, asked); // up to next month
     if (month instanceof Response) return month;
+    // roomIds (optional): only these rooms. Every id must be a room of this house, otherwise nothing is issued.
+    let roomIds: number[] | undefined;
+    if (body.roomIds !== undefined) {
+      const raw: unknown[] = Array.isArray(body.roomIds) ? body.roomIds.slice(0, 500) : [];
+      roomIds = [...new Set(raw.map(Number))];
+      if (!roomIds.length || roomIds.some((id) => !Number.isInteger(id) || id <= 0)) return fail(c, 400, 'ROOMS_INVALID', 'Danh sách phòng không hợp lệ.');
+      const { results } = await db.prepare(`SELECT id FROM rooms WHERE house_id = ? AND deleted_at IS NULL AND id IN (${roomIds.map(() => '?').join(',')})`)
+        .bind(houseId, ...roomIds).all<{ id: number }>();
+      if (results.length !== roomIds.length) return fail(c, 400, 'ROOM_NOT_IN_HOUSE', 'Có phòng không thuộc căn này.');
+    }
     // The next month can be issued as soon as it is prepared (pickMonth allows at most next month).
-    const { issued, missingMeters } = await issueMonth(c.env, houseId, month, body.force === true, Array.isArray(body.rooms) ? body.rooms.map(String).slice(0, 500) : undefined);
+    const { issued, missingMeters } = await issueMonth(c.env, houseId, month, body.force === true, {
+      roomIds,
+      rooms: Array.isArray(body.rooms) ? body.rooms.map(String).slice(0, 500) : undefined,
+      actor: actorOf(c.get('viewer')),
+    });
     if (issued > 0) await audit(c, actorOf(c.get('viewer')), 'admin_issue_month', houseId, `${month}:${issued}`);
     return c.json({ success: true, issued, missingMeters });
   });

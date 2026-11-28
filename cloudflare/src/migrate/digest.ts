@@ -44,6 +44,7 @@ const OWNER_HOUSES = 'SELECT id FROM houses WHERE owner_id = ?1';
 export function ownerChildWhere(table: string): string | null {
   if (table === 'invoice_lines') return `invoice_id IN (SELECT id FROM invoices WHERE house_id IN (${OWNER_HOUSES}))`;
   if (table === 'room_service_optouts') return `room_id IN (SELECT id FROM rooms WHERE house_id IN (${OWNER_HOUSES}))`;
+  if (table === 'admin_alert_reads') return `alert_id IN (SELECT id FROM admin_alerts WHERE house_id IN (${OWNER_HOUSES}))`;
   return null;
 }
 

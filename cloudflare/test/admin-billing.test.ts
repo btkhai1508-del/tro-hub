@@ -427,6 +427,72 @@ describe.each(BACKENDS)('API admin điện nước, phí, mở thu tiền [%s]',
     });
   });
 
+  describe('POST /api/admin/issue-month với roomIds (đợt 4)', () => {
+    /** LVC gets a second room 102 (id 7) with a resident, then both rooms have a draft of A. */
+    const twoRooms = async () => {
+      await startMonthA();
+      const db = await store();
+      await db.batch([
+        db.prepare(`INSERT INTO rooms (id, house_id, name, price) VALUES (7, 'LVC', '102', 2000000)`),
+        db.prepare(`INSERT INTO residents (id, house_id, room_id, full_name, phone, password_hash, status) VALUES (9007, 'LVC', 7, 'Người 102', '0900009007', 'x', 'approved')`),
+      ]);
+      await createDrafts(e, OWNER, A);
+    };
+    const notices = async () =>
+      (await (await store()).prepare(`SELECT room_names, type, dedupe_key, content FROM notifications WHERE house_id = 'LVC' ORDER BY id`).all<any>()).results;
+
+    it('chỉ phát hành phòng có id được chọn; không gửi roomIds thì phát hành cả căn như cũ', async () => {
+      await twoRooms();
+      const picked = await json(await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true, roomIds: [7] }));
+      expect(picked).toMatchObject({ success: true, issued: 1 });
+      expect((await invoiceOf('LVC', '102', A)).issued_at).not.toBeNull();
+      expect((await invoiceOf('LVC', '101', A)).issued_at).toBeNull();
+      const rest = await json(await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true }));
+      expect(rest).toMatchObject({ success: true, issued: 1 });
+      expect((await invoiceOf('LVC', '101', A)).issued_at).not.toBeNull();
+    });
+
+    it('phòng ngoài căn (căn khác của mình, căn của chủ trọ khác, id lạ) bị từ chối, không phát hành gì', async () => {
+      await twoRooms();
+      for (const roomIds of [[7, 1], [5], [999], [], ['x']]) {
+        const res = await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true, roomIds });
+        expect(res.status, JSON.stringify(roomIds)).toBe(400);
+        expect((await json(res)).success).toBe(false);
+      }
+      expect((await invoiceOf('LVC', '102', A)).issued_at).toBeNull();
+      expect((await invoiceOf('LVC', '101', A)).issued_at).toBeNull();
+      expect(await notices()).toEqual([]);
+    });
+
+    it('phát hành gửi mỗi phòng đúng một thông báo thanh toán; bấm lại không gửi trùng', async () => {
+      await twoRooms();
+      await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true, roomIds: [7] });
+      const inv102 = await invoiceOf('LVC', '102', A);
+      expect(await notices()).toEqual([
+        { room_names: '["102"]', type: 'invoice', dedupe_key: `invoice-issued:${inv102.id}`, content: expect.stringContaining('phòng 102') },
+      ]);
+      await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true });
+      await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true });
+      expect((await notices()).map((n: any) => n.room_names)).toEqual(['["102"]', '["101"]']);
+      // The resident of 101 sees exactly one payment notice.
+      const list = await json(await call(await login(PHONES.residentLvc), 'GET', '/api/notifications'));
+      expect(list.notifications.filter((n: any) => n.type === 'invoice')).toHaveLength(1);
+    });
+
+    it('số người của tháng được lưu trên hoá đơn và giữ nguyên sau khi phát hành', async () => {
+      await twoRooms();
+      expect((await invoiceOf('LVC', '102', A)).people).toBe(1);
+      await call(owner, 'POST', '/api/admin/issue-month', { houseId: 'LVC', month: A, force: true, roomIds: [7] });
+      const db = await store();
+      // A roommate added straight in the store (no route): the issued invoice keeps the count it was issued with.
+      await db.prepare(`INSERT INTO residents (id, house_id, room_id, full_name, phone, password_hash, status) VALUES (9008, 'LVC', 7, 'Người thứ hai', '0900009008', 'x', 'approved')`).run();
+      await enter(A, { dienCu: 1, dienMoi: 2 }, { room: '102' });
+      expect((await invoiceOf('LVC', '102', A)).people).toBe(1);
+      const rooms = await json(await call(owner, 'GET', `/api/admin/rooms?month=${A}&houseId=LVC`));
+      expect(rooms.rooms.find((r: any) => r.roomName === '102').soNguoi).toBe(1);
+    });
+  });
+
   describe('quyền', () => {
     const routes: [string, string, unknown?][] = [
       ['GET', `/api/admin/rooms?month=${A}&houseId=LVC`],

@@ -11,6 +11,7 @@ import type { Env } from '../app.ts';
 import { getStorage } from '../central/directory.ts';
 import { bankReceived, deferredByRoom, eventReference } from '../central/deferred.ts';
 import { allocate, openInvoices } from '../billing/roomDue.ts';
+import { addAlert, invoicePaidAlert } from '../billing/alerts.ts';
 import { invoiceFor, invoiceOrSync } from '../routes/rent.ts';
 import { paintSheetPayment } from '../sheetSync.ts';
 import { TenantLockedError, tenantOfOwner } from '../tenant/route.ts';
@@ -83,6 +84,8 @@ export async function settleRent(
   const paidAt = receivedAtUtc(t.transactionDate);
   const older = (await openInvoices(db, roomRow.id, month)).filter((o) => o.month < month);
   const booked = await db.prepare(`SELECT 1 AS one FROM payments WHERE reference = ? OR reference LIKE ? LIMIT 1`).bind(anchor, `${anchor}#%`).first();
+  // Money into an invoice the resident already paid (issued and paid/cash before this transfer): the landlord is told (tiền thừa).
+  const wasPaid = !!inv && inv.issued_at !== null && (inv.status === 'paid' || inv.status === 'cash');
   if (!booked) {
     const parts = allocate(amount, older, inv?.id ?? null);
     const rows = parts.map((p, i) => db.prepare(
@@ -93,13 +96,22 @@ export async function settleRent(
     // Several parts are written together (all or none); the usual single part is one plain insert.
     if (rows.length === 1) await rows[0].run();
     else await db.batch(rows);
+    const onInvoice = parts.filter((p) => inv && p.invoiceId === inv.id).reduce((sum, p) => sum + p.amount, 0);
+    if (wasPaid && onInvoice > 0) {
+      await addAlert(db, {
+        houseId, kind: 'overpaid', room, month, invoiceId: inv!.id, amount: onInvoice, receivedAt: paidAt, source: 'sepay', key: `sepay:${sepayId}`,
+      });
+    }
   }
   // Earlier invoices this money (or an earlier run of it) covered: marked paid, Sheet painted.
   for (const o of older) {
     if ((await bankReceived(db, o.id)) < o.total) continue;
     const r = await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = ?, status_by = 'sepay' WHERE id = ? AND status NOT IN ('paid', 'cash')`)
       .bind(paidAt, o.id).run();
-    if (r.meta?.changes) await paintSheetPayment(env, houseId, room, true, o.month, o.sheet_row);
+    if (r.meta?.changes) {
+      await invoicePaidAlert(db, o.id, 'sepay', paidAt);
+      await paintSheetPayment(env, houseId, room, true, o.month, o.sheet_row);
+    }
   }
   if (!inv) return { settled: false, reason: 'invoice' };
   const received = await bankReceived(db, inv.id);
@@ -114,6 +126,7 @@ export async function settleRent(
   if (received < inv.total) return { settled: false, reason: 'short', invoiceId: inv.id, received, total: inv.total };
   await db.prepare(`UPDATE invoices SET status = 'paid', paid_at = ?, status_by = 'sepay' WHERE id = ?`)
     .bind(paidAt, inv.id).run();
+  await invoicePaidAlert(db, inv.id, 'sepay', paidAt);
   await paintSheetPayment(env, houseId, room, true, month, inv.sheet_row);
   return { settled: true, invoiceId: inv.id, received, total: inv.total };
 }

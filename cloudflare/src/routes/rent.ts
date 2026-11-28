@@ -7,6 +7,7 @@
 import type { Context } from 'hono';
 import type { Hono } from 'hono';
 import { actorOf, audit, fail, staffOnly, type App, type Viewer } from '../app.ts';
+import { clearPaidAlert, invoicePaidAlert } from '../billing/alerts.ts';
 import { prepMonth } from '../billing/period.ts';
 import { isWorkerSource } from '../billing/source.ts';
 import { bankReceived, deferredByRoom, effectiveStatus, type InvoiceStatus } from '../central/deferred.ts';
@@ -103,6 +104,9 @@ export async function applyPaymentStatus(c: Context<App>, room: { db: TenantDb; 
   await room.db.prepare(
     `UPDATE invoices SET status = ?, paid_at = CASE WHEN ? THEN COALESCE(paid_at, datetime('now')) ELSE NULL END, status_by = ? WHERE id = ?`
   ).bind(status, paid ? 1 : 0, actorOf(v), inv.id).run();
+  // The bell: "đã thanh toán" once per invoice; taking it back removes that alert, so paying again later tells again.
+  if (paid) await invoicePaidAlert(room.db, inv.id, actorOf(v));
+  else await clearPaidAlert(room.db, inv.id);
   await audit(c, actorOf(v), `rent_status_${status}`, room.house_id, `invoice:${inv.id}`);
   if (status !== 'pending') c.executionCtx.waitUntil(paintSheetPayment(c.env, room.house_id, room.name, paid, month, inv.sheet_row));
 }

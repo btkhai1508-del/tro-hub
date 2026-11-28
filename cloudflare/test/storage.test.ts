@@ -88,7 +88,7 @@ describe.each(BACKENDS)('API kho lưu trữ (%s)', (backend) => {
     const body = (await res.json()) as any;
     expect(body.ownerId).toBe(1);
     expect(typeof body.exportedAt).toBe('string');
-    expect(Object.keys(body.tables).sort()).toEqual(['house_fee_months', 'house_fee_services', 'house_rates', 'house_services', 'houses', 'invoice_lines', 'invoices', 'meter_readings', 'notifications', 'payment_gates', 'payments', 'residents', 'room_service_optouts', 'rooms'].sort());
+    expect(Object.keys(body.tables).sort()).toEqual(['house_fee_months', 'house_fee_services', 'house_rates', 'house_services', 'houses', 'invoice_lines', 'invoices', 'meter_readings', 'notifications', 'payment_gates', 'payments', 'residents', 'room_service_optouts', 'rooms', 'admin_alerts', 'admin_alert_reads'].sort());
     expect(body.tables.houses.map((h: any) => h.id).sort()).toEqual(['LVC', 'TRUNG_KIM']);
     expect(body.tables.rooms.map((r: any) => r.house_id).every((h: string) => h !== 'NTTD')).toBe(true);
     expect(body.tables.rooms.length).toBe(2);

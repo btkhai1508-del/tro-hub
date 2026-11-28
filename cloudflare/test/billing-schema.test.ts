@@ -5,7 +5,7 @@ import { migrateOwner } from '../src/migrate/tenant.ts';
 import { TENANT_MIGRATIONS, TENANT_TABLES } from '../src/tenant/schema.ts';
 import type { TenantStore } from '../src/tenant/store.ts';
 import { tenantOfOwner } from '../src/tenant/route.ts';
-import { seedWorld } from './helpers.ts';
+import { seedWorld, undo0029 } from './helpers.ts';
 
 const e = env as unknown as Env & { TEST_MIGRATIONS: { name: string; queries: string[] }[]; TENANT: DurableObjectNamespace<TenantStore> };
 const DB = e.DB;
@@ -46,6 +46,7 @@ describe('lược đồ phí dịch vụ', () => {
       for (const col of ['price_custom', 'deposit_custom']) sql.exec(`ALTER TABLE rooms DROP COLUMN ${col}`);
       sql.exec(`ALTER TABLE invoices DROP COLUMN issued_at`);
       sql.exec(`ALTER TABLE houses DROP COLUMN actual_electric_price`);
+      undo0029(sql);
       sql.exec(`UPDATE meta SET value = '1' WHERE key = 'schema_version'`);
       sql.exec(
         `INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')`,

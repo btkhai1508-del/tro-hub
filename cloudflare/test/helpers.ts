@@ -53,7 +53,7 @@ const SERVICES: [string, number, string, number | null, string, number][] = [
   ['Xe máy', 50000, 'vehicle', null, 'M', 3],
 ];
 
-const BUSINESS_TABLES = ['invoice_lines', 'room_service_optouts', 'house_fee_services', 'house_fee_months', 'house_services', 'notifications', 'payment_gates', 'payments', 'meter_readings', 'invoices', 'residents', 'rooms', 'house_rates', 'houses'];
+const BUSINESS_TABLES = ['admin_alert_reads', 'admin_alerts', 'invoice_lines', 'room_service_optouts', 'house_fee_services', 'house_fee_months', 'house_services', 'notifications', 'payment_gates', 'payments', 'meter_readings', 'invoices', 'residents', 'rooms', 'house_rates', 'houses'];
 
 export async function seedWorld(backend: BackendName): Promise<void> {
   const DB = e.DB;
@@ -161,4 +161,14 @@ export function api(path: string, init: RequestInit = {}, token?: string): Promi
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
   return SELF.fetch(`${BASE}${path}`, { ...init, headers });
+}
+
+/** Takes a store back to before migration 0029 (for the tests that rewind the schema version and reopen). */
+export function undo0029(sql: SqlStorage): void {
+  sql.exec(`DROP TABLE admin_alert_reads`);
+  sql.exec(`DROP TABLE admin_alerts`);
+  sql.exec(`DROP INDEX notifications_dedupe`);
+  sql.exec(`ALTER TABLE notifications DROP COLUMN dedupe_key`);
+  sql.exec(`ALTER TABLE invoices DROP COLUMN people`);
+  sql.exec(`ALTER TABLE invoices DROP COLUMN vehicles`);
 }

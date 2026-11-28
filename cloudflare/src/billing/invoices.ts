@@ -12,6 +12,8 @@ import { currentMonth } from '../sheetSync.ts';
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantOfOwner } from '../tenant/route.ts';
 import { isWorkerSource } from './source.ts';
+import { prepMonth } from './period.ts';
+import { invoicePaidAlert } from './alerts.ts';
 import { feeConfigFor, mirrorTemplate } from './fees.ts';
 import { computeInvoice, type ServiceFee } from './compute.ts';
 
@@ -74,7 +76,32 @@ export function effectiveOld(rowOld: number | null, previous: number | null): nu
   return rowOld !== null && rowOld > 0 ? rowOld : previous;
 }
 
-interface InvoiceHead { id: number; house_id: string; room_id: number; month: string; status: InvoiceStatus; issued_at: string | null; room: string }
+interface InvoiceHead {
+  id: number; house_id: string; room_id: number; month: string; status: InvoiceStatus; issued_at: string | null; room: string;
+  people: number | null; vehicles: number | null;
+}
+
+/** 'YYYY-MM' of a stored move-in date ('dd/mm/yyyy' or 'yyyy-mm-dd'); null when it cannot be read. */
+export function moveInMonth(text: string | null | undefined): string | null {
+  const t = String(text ?? '').trim();
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(t);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}`;
+  m = /^(\d{4})-(\d{2})/.exec(t);
+  return m ? `${m[1]}-${m[2]}` : null;
+}
+
+/**
+ * The people and vehicles a room is billed for in `month`: approved residents who had moved in by the end of that
+ * month (an unreadable or missing move-in date counts, as before). A roommate added while the next month is being
+ * prepared moves in today, so they count for this month and the next one alike.
+ */
+export async function roomHeadcount(db: TenantDb, roomId: number, month: string): Promise<{ people: number; vehicles: number }> {
+  const { results } = await db.prepare(
+    `SELECT move_in_date, plate_number FROM residents WHERE room_id = ? AND status = 'approved' AND deleted_at IS NULL`
+  ).bind(roomId).all<{ move_in_date: string | null; plate_number: string | null }>();
+  const inMonth = results.filter((r) => { const m = moveInMonth(r.move_in_date); return m === null || m <= month; });
+  return { people: inMonth.length, vehicles: inMonth.filter((r) => String(r.plate_number ?? '').trim().length > 0).length };
+}
 
 const LEGACY_COLUMN = { K: 'trash', L: 'internet', M: 'parking' } as const;
 
@@ -83,6 +110,8 @@ export interface RecomputeOptions {
   central?: D1Database;
   /** Allow an issued invoice of an earlier month (default false: those are frozen). */
   allowPast?: boolean;
+  /** The room's residents changed: count the people of the month again even on an issued invoice (default: keep its count). */
+  recount?: boolean;
 }
 
 /**
@@ -99,7 +128,7 @@ export interface RecomputeOptions {
  */
 export async function recompute(db: TenantDb, invoiceId: number, opts: RecomputeOptions = {}): Promise<{ total: number; surplus: number }> {
   const inv = await db.prepare(
-    `SELECT i.id, i.house_id, i.room_id, i.month, i.status, i.issued_at, rm.name AS room
+    `SELECT i.id, i.house_id, i.room_id, i.month, i.status, i.issued_at, i.people, i.vehicles, rm.name AS room
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id WHERE i.id = ?`
   ).bind(invoiceId).first<InvoiceHead>();
   if (!inv) throw new Error(`Invoice ${invoiceId} not found`);
@@ -113,10 +142,11 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
     db.prepare(`SELECT electric_old, electric_new, water_old, water_new FROM meter_readings WHERE room_id = ? AND month = ?`)
       .bind(inv.room_id, inv.month).first<{ electric_old: number | null; electric_new: number | null; water_old: number | null; water_new: number | null }>(),
     db.prepare(`SELECT service_id FROM room_service_optouts WHERE room_id = ?`).bind(inv.room_id).all<{ service_id: number }>(),
-    db.prepare(
-      `SELECT COUNT(*) AS people, COALESCE(SUM(CASE WHEN LENGTH(TRIM(COALESCE(plate_number, ''))) > 0 THEN 1 ELSE 0 END), 0) AS vehicles
-         FROM residents WHERE room_id = ? AND status = 'approved' AND deleted_at IS NULL`
-    ).bind(inv.room_id).first<{ people: number; vehicles: number }>(),
+    // People of the invoice's month: an issued invoice keeps the count it was issued with; a draft (or an invoice
+    // from before the count was stored) counts the residents of that month.
+    inv.issued_at !== null && inv.people !== null && !opts.recount
+      ? Promise.resolve({ people: inv.people, vehicles: inv.vehicles ?? 0 })
+      : roomHeadcount(db, inv.room_id, inv.month),
   ]);
   const out = new Set(optouts.results.map((o) => o.service_id));
   const fees: ServiceFee[] = fee.services
@@ -136,7 +166,7 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
     electricOld: before.electricOld, electricNew: meter?.electric_new ?? null,
     waterOld: before.waterOld, waterNew: meter?.water_new ?? null,
     electricPrice: fee.electricPrice, waterPrice: fee.waterPrice, actualElectricPrice: house?.p ?? null,
-    services: fees, people: people?.people ?? 0, vehicles: people?.vehicles ?? 0,
+    services: fees, people: people.people, vehicles: people.vehicles,
   });
 
   const legacy = { trash: 0, internet: 0, parking: 0 };
@@ -154,8 +184,9 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
         .bind(inv.id, l.kind, l.serviceId, l.name, l.qty, l.unitPrice, l.amount)
     ),
     db.prepare(
-      `UPDATE invoices SET room_rent = ?, electricity = ?, water = ?, other = ?, trash = ?, internet = ?, parking = ?, total = ? WHERE id = ?`
-    ).bind(amountOf('room'), amountOf('electricity'), amountOf('water'), amountOf('other'), legacy.trash, legacy.internet, legacy.parking, calc.total, inv.id),
+      `UPDATE invoices SET room_rent = ?, electricity = ?, water = ?, other = ?, trash = ?, internet = ?, parking = ?, total = ?, people = ?, vehicles = ? WHERE id = ?`
+    ).bind(amountOf('room'), amountOf('electricity'), amountOf('water'), amountOf('other'), legacy.trash, legacy.internet, legacy.parking, calc.total,
+      people.people, people.vehicles, inv.id),
   ]);
 
   const bank = await bankReceived(db, inv.id);
@@ -165,11 +196,12 @@ export async function recompute(db: TenantDb, invoiceId: number, opts: Recompute
     // Guarded writes: a paid/cash set by someone else after our read is never overwritten.
     if (received > 0 && received >= calc.total) {
       // paid_at = when SePay received the last bank transfer (the one that covered the total), not when we noticed.
-      await db.prepare(
+      const r = await db.prepare(
         `UPDATE invoices SET status = 'paid', status_by = 'recompute',
                 paid_at = COALESCE(paid_at, (SELECT MAX(paid_at) FROM payments WHERE invoice_id = ?1 AND method = 'bank'), datetime('now'))
           WHERE id = ?1 AND status NOT IN ('paid', 'cash')`
       ).bind(inv.id).run();
+      if (r.meta?.changes) await invoicePaidAlert(db, inv.id, 'recompute');
     } else if (inv.status !== 'pending' && inv.status !== 'unpaid') {
       await db.prepare(`UPDATE invoices SET status = 'unpaid', paid_at = NULL WHERE id = ? AND status NOT IN ('paid', 'cash')`).bind(inv.id).run();
     }
@@ -277,14 +309,24 @@ export async function ensureDraft(db: TenantDb, houseId: string, roomId: number,
 }
 
 /**
- * A resident was approved into a room: when the Worker owns the invoices and the room has none for the
- * current month, make its draft. No-op on the old Sheet flow.
+ * The residents of a room changed (someone approved, added, moved out): when the Worker owns the invoices, the room's
+ * invoice of the current month and, during the last 5 days, of the month being prepared is made (a draft) when missing
+ * and an open one is priced again with the new count. A paid/cash invoice stays as it is. No-op on the old Sheet flow.
  */
 export async function ensureDraftForRoom(env: Env, ownerId: number, houseId: string, roomId: number): Promise<void> {
   if (!(await isWorkerSource(env.DB))) return;
   const db = await tenantOfOwner(env, ownerId);
-  const month = currentMonth();
-  for (const id of await roomsNeedingDraft(db, houseId, month, roomId)) await draftFor(db, houseId, id, month, env.DB);
+  const months = [currentMonth(), prepMonth(Date.now())].filter((m): m is string => !!m);
+  for (const month of months) {
+    const inv = await db.prepare(`SELECT id FROM invoices WHERE room_id = ? AND month = ?`).bind(roomId, month).first<{ id: number }>();
+    if (!inv) {
+      for (const id of await roomsNeedingDraft(db, houseId, month, roomId)) await draftFor(db, houseId, id, month, env.DB);
+      continue;
+    }
+    await recompute(db, inv.id, { central: env.DB, recount: true }).catch((err) => {
+      if (!(err instanceof InvoiceLockedError) && !(err instanceof InvoiceFrozenError)) throw err;
+    });
+  }
 }
 
 // ── Issuing ────────────────────────────────────────────────────────────────
@@ -295,19 +337,29 @@ export async function ensureDraftForRoom(env: Env, ownerId: number, houseId: str
  * decides its status). Without `force`, rooms that still miss new meter readings stop it: nothing changes
  * and their names are returned. `missingMeters` is informational when forced.
  */
-export async function issueMonth(env: Env, houseId: string, month: string, force: boolean, rooms?: string[]): Promise<{ issued: number; missingMeters: string[] }> {
+export interface IssueOptions {
+  /** Room names the admin ticked (older screens). */
+  rooms?: string[];
+  /** Room ids the admin ticked; the route checks they belong to the house. */
+  roomIds?: number[];
+  /** Who issues (written on the residents' notices). */
+  actor?: string;
+}
+
+export async function issueMonth(env: Env, houseId: string, month: string, force: boolean, opts: IssueOptions = {}): Promise<{ issued: number; missingMeters: string[] }> {
   const ownerId = await houseOwner(env.DB, houseId);
   if (ownerId === null) throw new Error(`House ${houseId} not found`);
   const db = await tenantOfOwner(env, ownerId);
   const { results: allDrafts } = await db.prepare(
-    `SELECT i.id, rm.name, i.status, (m.room_id IS NULL OR m.electric_new IS NULL OR m.water_new IS NULL OR (m.electric_new = 0 AND m.water_new = 0)) AS missing
+    `SELECT i.id, i.room_id, rm.name, i.status, (m.room_id IS NULL OR m.electric_new IS NULL OR m.water_new IS NULL OR (m.electric_new = 0 AND m.water_new = 0)) AS missing
        FROM invoices i JOIN rooms rm ON rm.id = i.room_id
        LEFT JOIN meter_readings m ON m.room_id = i.room_id AND m.month = i.month
       WHERE i.house_id = ? AND i.month = ? AND i.issued_at IS NULL ORDER BY rm.name`
-  ).bind(houseId, month).all<{ id: number; name: string; status: InvoiceStatus; missing: number }>();
-  // `rooms` narrows to the rooms the admin ticked; without it every draft of the house is issued.
-  const only = rooms && rooms.length ? new Set(rooms) : null;
-  const drafts = only ? allDrafts.filter((d) => only.has(d.name)) : allDrafts;
+  ).bind(houseId, month).all<{ id: number; room_id: number; name: string; status: InvoiceStatus; missing: number }>();
+  // `roomIds` / `rooms` narrow to the rooms the admin ticked; without them every draft of the house is issued.
+  const ids = opts.roomIds?.length ? new Set(opts.roomIds) : null;
+  const names = !ids && opts.rooms?.length ? new Set(opts.rooms) : null;
+  const drafts = ids ? allDrafts.filter((d) => ids.has(d.room_id)) : names ? allDrafts.filter((d) => names.has(d.name)) : allDrafts;
   const missingMeters = drafts.filter((d) => d.missing).map((d) => d.name);
   if (!drafts.length || (!force && missingMeters.length)) return { issued: 0, missingMeters };
 
@@ -346,5 +398,36 @@ export async function issueMonth(env: Env, houseId: string, month: string, force
     statements.push(db.prepare(sql).bind(...params));
   }
   await db.batch([...statements, gateStatement(db, houseId, month, 'START', 'issue')]);
+  await afterIssue(db, houseId, month, drafts.map((d) => d.id), opts.actor ?? 'system');
   return { issued: drafts.length, missingMeters };
+}
+
+const vnMoney = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} đ`;
+const sheetMonth = (month: string) => `${month.slice(5, 7)}/${month.slice(0, 4)}`;
+
+/**
+ * After issuing: one payment notice per issued invoice for the residents of its room (every resident of the room
+ * sees exactly one; the key `invoice-issued:<id>` makes a second press or a retry add nothing), and a bell alert for
+ * the invoices that money received while they were drafts already paid. Failures are logged, never thrown: the
+ * invoices are issued either way.
+ */
+async function afterIssue(db: TenantDb, houseId: string, month: string, invoiceIds: number[], actor: string): Promise<void> {
+  if (!invoiceIds.length) return;
+  try {
+    const { results } = await db.prepare(
+      `SELECT i.id, i.total, i.status, i.status_by, rm.name AS room FROM invoices i JOIN rooms rm ON rm.id = i.room_id
+        WHERE i.id IN (${invoiceIds.map(() => '?').join(',')}) AND i.issued_at IS NOT NULL`
+    ).bind(...invoiceIds).all<{ id: number; total: number; status: InvoiceStatus; status_by: string | null; room: string }>();
+    const label = sheetMonth(month);
+    const notices = results.filter((r) => r.status !== 'paid' && r.status !== 'cash').map((r) => db.prepare(
+      `INSERT OR IGNORE INTO notifications (house_id, room_names, title, content, type, sender, created_by, dedupe_key)
+       VALUES (?, ?, ?, ?, 'invoice', 'Ban Quản Lý', ?, ?)`
+    ).bind(houseId, JSON.stringify([r.room]), `Thông báo thanh toán tiền phòng tháng ${label}`,
+      `Hoá đơn tháng ${label} của phòng ${r.room}: tổng ${vnMoney(r.total)}. Quý cư dân vui lòng mở ứng dụng để xem chi tiết và thanh toán.`,
+      actor, `invoice-issued:${r.id}`));
+    for (let i = 0; i < notices.length; i += 50) await db.batch(notices.slice(i, i + 50));
+    for (const r of results) if (r.status === 'paid' && r.status_by === 'issue') await invoicePaidAlert(db, r.id, 'issue');
+  } catch (err) {
+    console.warn('[invoices] after issue', houseId, month, err);
+  }
 }

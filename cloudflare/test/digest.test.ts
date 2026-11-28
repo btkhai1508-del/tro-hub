@@ -68,6 +68,9 @@ async function seedExtras() {
     DB.prepare(`INSERT INTO invoice_lines (id, invoice_id, kind, service_id, name, qty, unit_price, amount) VALUES
       (950, 800, 'service', 1, 'Rác', 1, 30000, 30000), (951, 801, 'room', NULL, 'Tiền phòng', 1, 7, 7)`),
     DB.prepare(`INSERT INTO notifications (id, house_id, room_names, title, content, created_by) VALUES (500, 'TRUNG_KIM', NULL, 'Thông báo', 'Nội dung có dấu: ắ ề ỗ ữ 😀', 'staff:1'), (501, 'NTTD', '1', 't', 'c', 'x')`),
+    DB.prepare(`INSERT INTO admin_alerts (id, house_id, kind, room_name, month, invoice_id, amount, received_at, source, dedupe_key) VALUES
+      (600, 'TRUNG_KIM', 'invoice_paid', 'Phòng đặc biệt – ế', '2026-10', 800, ?, '2026-11-01 01:02:03', 'sepay', 'paid:800'), (601, 'NTTD', 'overpaid', '101', '2026-10', 801, 1, 'x', 'staff:4', 'sepay:x')`).bind(MAX),
+    DB.prepare(`INSERT INTO admin_alert_reads (alert_id, reader, read_at) VALUES (600, 'staff:1', '2026-11-02 00:00:00'), (600, 'staff:2', 'x'), (601, 'staff:4', 'x')`),
   ]);
 }
 

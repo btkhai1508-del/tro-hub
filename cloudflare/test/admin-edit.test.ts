@@ -5,7 +5,7 @@ import { ensureDraft } from '../src/billing/invoices.ts';
 import { TENANT_MIGRATIONS } from '../src/tenant/schema.ts';
 import type { TenantStore } from '../src/tenant/store.ts';
 import { tenantOfOwner } from '../src/tenant/route.ts';
-import { api, BACKENDS, login, PHONES, seedWorld } from './helpers.ts';
+import { api, BACKENDS, login, PHONES, seedWorld, undo0029 } from './helpers.ts';
 
 const e = env as unknown as Env & { TENANT: DurableObjectNamespace<TenantStore> };
 const store = () => tenantOfOwner(e, 1);
@@ -418,6 +418,7 @@ describe.each(BACKENDS)('admin sửa cư dân và tiền phòng [%s]', (backend)
           sql.exec(`ALTER TABLE houses DROP COLUMN default_deposit`);
           sql.exec(`ALTER TABLE rooms DROP COLUMN price_custom`);
           sql.exec(`ALTER TABLE rooms DROP COLUMN deposit_custom`);
+          undo0029(sql);
           sql.exec(`UPDATE meta SET value = '3' WHERE key = 'schema_version'`);
           sql.exec(`INSERT INTO houses (id,name,abbreviation,address_detail,ward,province,landlord_name,landlord_phone) VALUES ('H','n','a','d','w','p','l','0')`);
           sql.exec(`INSERT INTO rooms (house_id, name, price, deposit) VALUES ('H', '1', 2500000, 500000)`);

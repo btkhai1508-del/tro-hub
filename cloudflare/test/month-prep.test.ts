@@ -79,6 +79,37 @@ describe.each(BACKENDS)('chuẩn bị tháng sau 5 ngày cuối tháng [%s]', (b
     await e.DB.prepare(`DELETE FROM settings WHERE key = 'month_prepared'`).run();
   });
 
+  describe('thêm người ở ghép (đợt 4)', () => {
+    const addResident = (roomId: number, phone: string) =>
+      call(PHONES.owner, 'POST', '/api/houses/LVC/residents', { fullName: `Người ${phone}`, phone, password: '123456', roomId });
+
+    it('đang chuẩn bị tháng sau: phòng trống có người mới thì có nháp cả tháng này lẫn tháng sau', async () => {
+      vi.setSystemTime(vn(2026, 11, 27, 9));
+      await (await store()).prepare(`INSERT INTO rooms (id, house_id, name, price, capacity) VALUES (7, 'LVC', '102', 2000000, 3)`).run();
+      expect((await addResident(7, '0900007001')).status).toBe(200);
+      expect(await invoiceOf('LVC', '102', NOV)).toMatchObject({ issued_at: null, people: 1 });
+      expect(await invoiceOf('LVC', '102', DEC)).toMatchObject({ issued_at: null, people: 1 });
+    });
+
+    it('nháp tháng sau đã có thì được tính lại với số người mới', async () => {
+      vi.setSystemTime(vn(2026, 11, 27, 9));
+      await (await store()).prepare(`UPDATE rooms SET capacity = 3 WHERE id = 3`).run();
+      await runCron(FREQUENT_CRON, e, vn(2026, 11, 27, 9));
+      expect(await invoiceOf('LVC', '101', DEC)).toMatchObject({ people: 1 });
+      expect((await addResident(3, '0900007002')).status).toBe(200);
+      const dec = await invoiceOf('LVC', '101', DEC);
+      expect(dec.people).toBe(2);
+      expect(dec.internet).toBe(80_000); // Internet 40.000 đ/người
+    });
+
+    it('ngoài 5 ngày cuối tháng: chỉ tháng hiện tại', async () => {
+      await (await store()).prepare(`INSERT INTO rooms (id, house_id, name, price, capacity) VALUES (7, 'LVC', '102', 2000000, 3)`).run();
+      expect((await addResident(7, '0900007003')).status).toBe(200);
+      expect(await invoiceOf('LVC', '102', NOV)).not.toBeNull();
+      expect(await invoiceOf('LVC', '102', DEC)).toBeNull();
+    });
+  });
+
   it('ngày 25/11 chưa tạo gì; 00:00 ngày 26/11 tạo nháp tháng 12 cho mọi phòng có cư dân, chạy lại không ghi thêm', async () => {
     vi.setSystemTime(vn(2026, 11, 25, 23, 59));
     await runCron(MONTH_CRON, e, vn(2026, 11, 25, 23, 59));
