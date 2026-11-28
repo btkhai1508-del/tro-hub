@@ -8,7 +8,8 @@ import { qrPng } from '../../lib/invoicePayment';
  * pressing it opens two choices: Copy link (first) and Copy QR (the QR as an image, white background, ready
  * to paste into Zalo). The QR itself can also be scanned straight off the screen.
  */
-export function InvoiceQrThumb({ url, room, onCopied }: { url?: string; room: string; onCopied?: (message: string, ok: boolean) => void }) {
+/** `large`: about 15% bigger (the phone invoice card, next to the room number). */
+export function InvoiceQrThumb({ url, room, onCopied, large = false }: { url?: string; room: string; onCopied?: (message: string, ok: boolean) => void; large?: boolean }) {
   const [src, setSrc] = useState('');
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
@@ -82,7 +83,7 @@ export function InvoiceQrThumb({ url, room, onCopied }: { url?: string; room: st
           setOpen((v) => !v);
         }} aria-haspopup="menu" aria-expanded={open}
         aria-label={`Sao chép link hoặc QR thanh toán phòng ${room}`} title="Copy"
-        className="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-neutral-200 dark:ring-neutral-600 cursor-pointer">
+        className={`group relative flex ${large ? 'h-[46px] w-[46px]' : 'h-10 w-10'} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 ring-1 ring-neutral-200 dark:ring-neutral-600 cursor-pointer`}>
         {src ? <img src={src} alt="" className="h-full w-full" /> : <span className="ui-spinner h-3 w-3" aria-hidden="true" />}
         <span aria-hidden="true"
           className={`absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/85 via-black/60 to-black/30 text-[10px] font-bold text-white transition-opacity duration-150 ${open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}`}>

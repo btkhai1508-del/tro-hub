@@ -21,6 +21,8 @@ Giao diện không tự cập nhật khi sửa code: báo Claude bật lại `do
 - [ ] Điện thoại: tiêu đề trang không còn nền card phía sau.
 - [ ] Trang Hoá đơn không còn dòng mô tả "Hoá đơn từng phòng trong tháng…".
 - [ ] Không còn nút Làm mới (thanh bên trái, thanh bên thu gọn, thanh tháng trên điện thoại); dữ liệu vẫn tự cập nhật.
+- [ ] Điện thoại/tablet: ô Kỳ tháng giãn hết chỗ, nút Tự động cùng một dòng, không xuống dòng.
+- [ ] Chuông to hơn; điện thoại: góc trên bên phải; tablet: cuối hàng tiêu đề, sát mép phải màn hình (không đứng cạnh tiêu đề).
 
 ## 1. Phòng & Khách (giao diện cũ, có switch)
 - [ ] Thẻ phòng như trước: số phòng (nền đen giống Hoá đơn), switch Đã đóng/Chưa đóng, số người. Không có bảng phí trên thẻ.
@@ -28,10 +30,12 @@ Giao diện không tự cập nhật khi sửa code: báo Claude bật lại `do
 
 ## 2. Tab Hoá đơn
 - [ ] Bảng không còn nút Tạo / Sửa; cột cuối là **Tình trạng** (phòng nháp ghi "Chưa tạo", không còn chữ "Nháp", phòng đã tạo bấm đổi Đã đóng ↔ Chưa đóng). Bảng không tràn ngang ở ~1280px.
-- [ ] Điện thoại: ô chọn nằm sát số phòng, số phòng to hơn; trạng thái ở đầu thẻ; phần phí hiện sẵn, không gập.
+- [ ] Máy tính: rê chuột vào chữ Đã đóng/Chưa đóng → chữ đậm màu hơn, có nền nhạt.
+- [ ] Điện thoại: ô chọn sát số phòng (to hơn), QR to hơn nằm ngay cạnh số phòng, không còn mũi tên; Đã đóng/Chưa đóng là **switch**; số Tổng cộng to; bấm vào bất kỳ đâu trên thẻ → mở hoá đơn phòng (bấm ô chọn, QR, switch thì không mở).
 - [ ] Bấm vào một phòng → màn chi tiết hoá đơn giống layout Hợp đồng: card bên trái gồm bộ lọc **Căn** và **Phòng** (không còn chọn tháng, dùng tháng chung của trang) và 4 nút **màu đen**: Sao chép link thanh toán, **Sửa hoá đơn**, In, Lưu PDF; hoá đơn thu nhỏ bên phải. Điện thoại: lọc 2 cột, nút 2 cột (nút sao chép ghi gọn "Sao chép link"), hoá đơn bên dưới.
 - [ ] Đổi Căn → danh sách Phòng chỉ còn phòng của căn đó.
-- [ ] Bấm **Sửa hoá đơn** → mở màn chi tiết phòng của đúng phòng và tháng đó.
+- [ ] Bấm **Sửa hoá đơn** → mở màn chi tiết phòng của đúng phòng và tháng đó; menu vẫn sáng ở **Hoá đơn** (không nhảy sang Phòng).
+- [ ] Nút trên màn chi tiết phòng ghi **Quay lại**. Hoá đơn → hoá đơn phòng → Sửa hoá đơn → Quay lại về hoá đơn phòng → Quay lại Hoá đơn về danh sách Hoá đơn. Mở từ Phòng & Khách thì Quay lại về Phòng & Khách.
 
 ## 3. Chọn phòng rồi Tạo hoá đơn
 - [ ] Cột ô chọn trước số phòng; tiêu đề bảng không còn ô chọn; ô "Tất cả" nằm ngay cạnh nút Tạo hoá đơn (máy tính và điện thoại).

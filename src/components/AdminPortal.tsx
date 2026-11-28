@@ -461,6 +461,7 @@ export function AdminPortal() {
   const [savingServices, setSavingServices] = useState(false);
   const [confirmRoomSave, setConfirmRoomSave] = useState(false);
   const [confirmCheckout, setConfirmCheckout] = useState(false);
+  const [roomDetailFrom, setRoomDetailFrom] = useState<'rooms' | 'invoices'>('rooms');
   const [checkingOut, setCheckingOut] = useState(false);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [roomMoneyNote, setRoomMoneyNote] = useState('');
@@ -1166,8 +1167,10 @@ export function AdminPortal() {
       });
   };
 
-  const openRoomDetail = (room: string, houseId?: string) => {
+  /** `from`: the screen "Quay lại" returns to (the room list, or the room invoice that "Sửa hoá đơn" came from). */
+  const openRoomDetail = (room: string, houseId?: string, from: 'rooms' | 'invoices' = 'rooms') => {
     playSound('click');
+    setRoomDetailFrom(from);
     // Worker mode: the room is told apart by its house (the same name can exist in two houses), so the row's own code is kept.
     const byHouse = getSource() === 'worker' && !!houseId;
     const cleanId = byHouse ? String(room) : canonicalRoomId(room);
@@ -1435,7 +1438,7 @@ export function AdminPortal() {
     refreshRooms(selectedMonth);
     refreshBilling(selectedMonth);
     refreshDashboard(selectedMonth);
-    setActiveMenu('rooms');
+    setActiveMenu(roomDetailFrom);
   };
 
   const saveRoomWorker = async () => {
@@ -2035,7 +2038,7 @@ export function AdminPortal() {
               ].map(item => {
                 const Icon = item.icon;
                 const isActive = activeMenu === item.key ||
-                  (item.key === 'rooms' && activeMenu === 'roomDetail') || (item.key === 'billing' && activeMenu === 'invoices') ||
+                  (item.key === 'rooms' && activeMenu === 'roomDetail' && roomDetailFrom === 'rooms') || (item.key === 'billing' && (activeMenu === 'invoices' || (activeMenu === 'roomDetail' && roomDetailFrom === 'invoices'))) ||
                   (item.key === 'utilities' && ['meter', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
                 return (
 
@@ -2294,9 +2297,7 @@ export function AdminPortal() {
 
         {/* Welcome Header */}
         <header className="admin-page-header relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div data-brand-target="anchor" className={cn(workerMode && isWorkerStaff && 'max-lg:relative max-lg:pr-14')}>
-            {/* Payment bell: top right of the title card on a phone, of the page header on a computer. */}
-            {workerMode && isWorkerStaff && <AdminBell className="absolute right-2 top-2 z-30 lg:right-0 lg:top-0" />}
+          <div data-brand-target="anchor" className={cn(workerMode && isWorkerStaff && 'max-sm:pr-16')}>
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
               <span className="admin-role-badge px-2 py-0.5 rounded-md font-bold text-[10px] tracking-wide uppercase font-num">
@@ -2323,7 +2324,7 @@ export function AdminPortal() {
           </div>
 
           {/* Action Capsule: Month & Refresh - Only shown on mobile, moved to sidebar on desktop */}
-          <div className="admin-mobile-toolbar lg:hidden">
+          <div className="admin-mobile-toolbar lg:hidden sm:ml-auto">
             {/* Month Selector with interactive Previous/Next Arrows */}
             <div className="admin-month-control soft-card flex items-center gap-1">
               <button
@@ -2409,6 +2410,8 @@ export function AdminPortal() {
             </button>}
 
           </div>
+          {/* Payment bell: the top right corner on a phone; on a tablet or computer the last item of the header row. */}
+          {workerMode && isWorkerStaff && <AdminBell className="absolute right-0 top-0 z-30 sm:static sm:order-last sm:shrink-0" />}
         </header>
         {!adminLoadError && roomsLoadedMonth === selectedMonth && roomsList.length === 0 && (
           <p role="status" className="soft-card mb-5 p-4 apple-body kit-text-secondary">Chưa có dữ liệu tháng {selectedMonth}.</p>
@@ -2743,12 +2746,12 @@ export function AdminPortal() {
               <button
                 onClick={() => {
                   playSound('click');
-                  setActiveMenu('rooms');
+                  setActiveMenu(roomDetailFrom); // back along the way in: Hoá đơn → hoá đơn phòng → chi tiết phòng
                 }}
                 className="soft-button min-h-11 py-1.5 px-3 text-xs flex items-center gap-2 cursor-pointer font-bold"
               >
                 <ArrowLeft size={16} />
-                <span>Danh sách phòng</span>
+                <span>Quay lại</span>
               </button>
               <div className="flex items-center gap-2">
                 <AppleSwitch
@@ -3046,23 +3049,26 @@ export function AdminPortal() {
               {visibleBilling.map(item => {
                 const isPaid = item.paymentStatus === 'paid';
                 return (
-                  <div key={`${item.houseId || ''}|${item.room}`} className="soft-card p-4 space-y-3.5 font-apple">
-                    {/* Header: Room, AppleSwitch */}
+                  <div key={`${item.houseId || ''}|${item.room}`} data-testid="billing-card" onClick={() => openBillingInvoice(item)} className="soft-card p-4 space-y-3.5 font-apple cursor-pointer">
+                    {/* Header: tick box, room and QR on the left, payment state on the right. The whole card opens the room invoice. */}
                     <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-2.5 font-apple">
-                      {/* The tick box and the room sit together on the left. */}
                       <div className="flex items-center gap-3 min-w-0">
-                      {selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} aria-label={`Chọn phòng ${item.room}`} className="h-5 w-5 shrink-0 cursor-pointer" />}
-                      <button type="button" onClick={() => openBillingInvoice(item)} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="flex items-center gap-2 min-w-0 min-h-11 text-left cursor-pointer font-apple">
-                        <span className="px-3.5 py-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-bold text-base shrink-0 font-apple">
+                      {selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} onClick={(e) => e.stopPropagation()} aria-label={`Chọn phòng ${item.room}`} className="h-5 w-5 shrink-0 cursor-pointer" />}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="min-h-11 shrink-0 cursor-pointer font-apple">
+                        <span className="px-3.5 py-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-600 text-white font-bold text-base font-apple">
                           {item.room}
                         </span>
-                        <ChevronRight size={16} className="shrink-0 text-neutral-500" />
                       </button>
+                      {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} large />}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 font-apple">
-                        {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        {workerMode && item.draft
-                          ? <span className="whitespace-nowrap px-1 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo</span>
+                      <div className="flex items-center gap-2 shrink-0 font-apple" onClick={(e) => e.stopPropagation()}>
+                        {workerMode
+                          ? (item.draft
+                            ? <span className="whitespace-nowrap px-1 text-xs font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo</span>
+                            : <>
+                                <span className={cn("text-[11px] font-bold whitespace-nowrap", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>{isPaid ? 'Đã đóng' : 'Chưa đóng'}</span>
+                                <AppleSwitch checked={isPaid} onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)} color="emerald" size="sm" ariaLabel={`Tình trạng thanh toán phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}`} />
+                              </>)
                           : <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
                           className={cn("min-h-11 cursor-pointer whitespace-nowrap px-1 text-[11px] font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
@@ -3101,8 +3107,8 @@ export function AdminPortal() {
 
                     {/* Total Row */}
                     <div className="flex items-center justify-between pt-0.5 font-apple">
-                      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 font-apple">Tổng cộng:</span>
-                      <span className="whitespace-nowrap tabular-nums text-sm font-semibold font-apple text-neutral-900 dark:text-white">
+                      <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 font-apple">Tổng cộng:</span>
+                      <span className="whitespace-nowrap tabular-nums text-xl font-bold font-apple text-neutral-900 dark:text-white">
                         {fmt(item.tongTien)} đ
                       </span>
                     </div>
@@ -3153,7 +3159,7 @@ export function AdminPortal() {
                                 ? <span className="whitespace-nowrap px-2 text-xs font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo</span>
                                 : <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                                 aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
-                                className={cn("min-h-11 cursor-pointer whitespace-nowrap px-2 text-xs font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                className={cn("min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-xs font-semibold underline underline-offset-4 decoration-1 transition-colors font-apple hover:decoration-2", isPaid ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30" : "text-rose-600 dark:text-rose-400 hover:text-rose-800 hover:bg-rose-50 dark:hover:text-rose-300 dark:hover:bg-rose-900/30")}>
                                 {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                               </button>}
                             </div>
@@ -3297,7 +3303,7 @@ export function AdminPortal() {
                 )}
                 {/* Worker mode: edit this room's invoice (the room editor for the month shown), between copy link and print. */}
                 {workerMode && selectedInvoiceRoom && (
-                  <button type="button" data-testid="invoice-edit" onClick={() => openRoomDetail(selectedInvoiceRoom.room, selectedInvoiceRoom.houseId)}
+                  <button type="button" data-testid="invoice-edit" onClick={() => openRoomDetail(selectedInvoiceRoom.room, selectedInvoiceRoom.houseId, 'invoices')}
                     className="primary-button min-h-11 px-4 py-2.5 inline-flex items-center gap-2"><Pencil size={16} /><span>Sửa hoá đơn</span></button>
                 )}
                 <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" dark={workerMode} />
@@ -5003,7 +5009,7 @@ export function AdminPortal() {
             { key: 'billing', icon: NavIcons.Receipt, label: 'Hoá đơn' },
             { key: 'utilities', icon: NavIcons.LayoutGrid, label: 'Tiện ích' }
           ].map(({ key, icon: Icon, label }) => {
-            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail') || (key === 'billing' && activeMenu === 'invoices') || (key === 'utilities' && ['meter', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
+            const isActive = activeMenu === key || (key === 'rooms' && activeMenu === 'roomDetail' && roomDetailFrom === 'rooms') || (key === 'billing' && (activeMenu === 'invoices' || (activeMenu === 'roomDetail' && roomDetailFrom === 'invoices'))) || (key === 'utilities' && ['meter', 'contract', 'declaration', 'config', 'createNotification', 'laundry', 'accountManagement', 'paymentPortal'].includes(activeMenu));
             return <button type="button" key={key} aria-current={isActive ? 'page' : undefined} onClick={() => { playSound('click'); setActiveMenu(key as any); }} className={cn('kit-nav-item kit-admin-dock-item', isActive && 'kit-nav-active')}>
               <Icon size={21} /><span>{label}</span>
             </button>;

@@ -80,9 +80,9 @@ export default function AdminBell({ className }: { className?: string }) {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={unread > 0 ? `Thông báo thanh toán: ${unread} chưa đọc` : 'Thông báo thanh toán'}
-        className="soft-button relative w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white cursor-pointer"
+        className="soft-button relative w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white cursor-pointer"
       >
-        <Bell size={18} />
+        <Bell size={24} />
         {badge && (
           <span data-testid="admin-bell-badge" className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-rose-600 text-white text-[11px] font-bold leading-5 text-center tabular-nums">
             {badge}
@@ -95,7 +95,7 @@ export default function AdminBell({ className }: { className?: string }) {
           role="dialog"
           aria-label="Thông báo thanh toán"
           data-testid="admin-bell-panel"
-          className="absolute right-0 top-[52px] z-[60] w-[min(360px,calc(100vw-40px))] rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-xl overflow-hidden"
+          className="absolute right-0 top-[56px] z-[60] w-[min(360px,calc(100vw-40px))] rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-xl overflow-hidden"
         >
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
             <p className="text-sm font-bold text-neutral-900 dark:text-white">Thông báo thanh toán</p>
