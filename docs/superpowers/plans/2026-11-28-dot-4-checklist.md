@@ -22,9 +22,9 @@ Giao diện không tự cập nhật khi sửa code: báo Claude bật lại `do
 - [ ] Bấm số phòng → mở màn chi tiết phòng; màn này vẫn có switch ở góc trên.
 
 ## 2. Tab Hoá đơn
-- [ ] Bảng không còn nút Tạo / Sửa; cột cuối là **Tình trạng thanh toán** (phòng nháp ghi "Chưa tạo hoá đơn", phòng đã tạo bấm đổi Đã đóng ↔ Chưa đóng). Bảng không tràn ngang ở ~1280px.
+- [ ] Bảng không còn nút Tạo / Sửa; cột cuối là **Tình trạng** (phòng nháp ghi "Chưa tạo", không còn chữ "Nháp", phòng đã tạo bấm đổi Đã đóng ↔ Chưa đóng). Bảng không tràn ngang ở ~1280px.
 - [ ] Điện thoại: trạng thái nằm ở đầu thẻ như trước; phần phí hiện sẵn, không gập.
-- [ ] Bấm vào một phòng → màn chi tiết hoá đơn có 4 nút **màu đen** theo thứ tự: Sao chép link thanh toán, **Sửa hoá đơn**, In, Lưu PDF.
+- [ ] Bấm vào một phòng → màn chi tiết hoá đơn: card chọn phòng/tháng riêng, card nút riêng; 4 nút **màu đen** theo thứ tự: Sao chép link thanh toán, **Sửa hoá đơn**, In, Lưu PDF.
 - [ ] Bấm **Sửa hoá đơn** → mở màn chi tiết phòng của đúng phòng và tháng đó.
 
 ## 3. Chọn phòng rồi Tạo hoá đơn
