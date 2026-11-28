@@ -6,7 +6,7 @@ import { houseResultText, issueScope, missingMeterRooms, monthLabel, type IssueR
 import { refreshBilling, refreshDashboard, refreshGate, refreshRooms } from '../../lib/adminRefresh';
 
 interface House { id: string; name: string }
-interface Plan { houseId: string; force: boolean; rooms?: string[] }
+interface Plan { houseId: string; force: boolean; roomIds?: number[] }
 interface Dialog { count: number; missing: string[]; plan: Plan[] }
 
 /**
@@ -14,7 +14,7 @@ interface Dialog { count: number; missing: string[]; plan: Plan[] }
  * which also opens payment for the house). Scope = the house filter on screen, or every house for "Tất cả căn".
  * Until then the invoices are drafts ("Nháp") and residents do not see them.
  */
-export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected }: {
+export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onToast, selected, request, onIssued }: {
   month: string;
   rows: IssueRow[];
   houses: House[];
@@ -22,10 +22,14 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   onToast: (message: string, type: 'success' | 'error' | 'info') => void;
   /** Rooms ticked in the list below. */
   selected: IssueRow[];
+  /** A "Tạo hoá đơn" pressed on one row of the list: those rows are issued with the same checks and dialog. */
+  request?: { rows: IssueRow[]; seq: number } | null;
+  /** Called after invoices were issued (the list clears its ticks). */
+  onIssued?: () => void;
 }) {
-  const modeRef = useRef<'all' | 'selected'>('all');
-  const roomOf = (r: IssueRow) => r.roomName || r.room || '';
-  const keyOf = (r: IssueRow) => `${r.houseId || ''}|${roomOf(r)}`;
+  // The Hoá đơn list (/api/admin/billing) carries only the room code ('LVC-101'); the fresh read (/api/admin/rooms)
+  // carries the same code plus roomName and roomId. Rows are matched by house + code.
+  const keyOf = (r: IssueRow) => `${r.houseId || ''}|${r.room || r.roomName || ''}`;
   // checking: reading the scope fresh · confirm: the dialog is open · running: issuing. Any of them blocks a second press.
   const [phase, setPhase] = useState<'idle' | 'checking' | 'confirm' | 'running'>('idle');
   const busyRef = useRef(false);
@@ -54,15 +58,14 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
   };
 
   /** Reads the scope fresh from the Worker, then asks once (with the rooms still missing meters, if any). */
-  const prepare = async (mode: 'all' | 'selected' = 'all') => {
+  const prepare = async (mode: 'all' | 'selected' = 'all', pick: IssueRow[] = selected) => {
     if (busyRef.current) return;
-    if (mode === 'selected' && selected.length === 0) { onToast('Chọn phòng để tạo hoá đơn.', 'info'); return; }
-    modeRef.current = mode;
+    if (mode === 'selected' && pick.length === 0) { onToast('Vui lòng chọn phòng để tạo hoá đơn.', 'info'); return; }
     start();
     setNote(null);
-    const picked = new Set(selected.map(keyOf));
+    const picked = new Set(pick.map(keyOf));
     const ids = mode === 'selected'
-      ? [...new Set(selected.map((r) => r.houseId).filter((x): x is string => !!x))]
+      ? [...new Set(pick.map((r) => r.houseId).filter((x): x is string => !!x))]
       : houseFilter !== 'all'
       ? [houseFilter]
       : (houses.length ? houses.map((h) => h.id) : [...new Set(rows.map((r) => r.houseId).filter((x): x is string => !!x))]);
@@ -79,12 +82,21 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
       return;
     }
     draftCounts.current = new Map([...s.draftsByHouse.entries()].map(([id, list]) => [id, list.length]));
-    const plan: Plan[] = [...s.draftsByHouse.entries()].map(([houseId, list]) => ({ houseId, force: list.some((r) => r.missingMeters), rooms: mode === 'selected' ? list.map(roomOf) : undefined }));
+    const plan: Plan[] = [...s.draftsByHouse.entries()].map(([houseId, list]) => ({ houseId, force: list.some((r) => r.missingMeters), roomIds: mode === 'selected' ? list.map((r) => Number(r.roomId)).filter((n) => n > 0) : undefined }));
     setPhase('confirm');
     setDialog({ count: s.drafts, missing: missingMeterRooms(s, houseName, allHouses), plan });
   };
 
   const cancel = () => { setDialog(null); stop(); };
+
+  // One row's "Tạo hoá đơn": same path as the ticked rooms.
+  const lastRequest = useRef(0);
+  useEffect(() => {
+    if (!request || request.seq === lastRequest.current) return;
+    lastRequest.current = request.seq;
+    prepare('selected', request.rows);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request?.seq]);
 
   const runningRef = useRef(false);
   const run = async (plan: Plan[]) => {
@@ -96,42 +108,30 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
     const lines: string[] = [];
     let issued = 0;
     let errors = 0;
-    const later: { houseId: string; rooms: string[]; pick?: string[] }[] = [];
-    const issuedHouses: string[] = [];
+    const later: { houseId: string; rooms: string[]; pick?: number[] }[] = [];
     // One house after another: each house is its own batch on the server.
     for (const p of plan) {
       const r = await workerCall<{ issued: number; missingMeters: string[] }>('/api/admin/issue-month', {
-        method: 'POST', body: JSON.stringify({ houseId: p.houseId, month, force: p.force, rooms: p.rooms }),
+        method: 'POST', body: JSON.stringify({ houseId: p.houseId, month, force: p.force, roomIds: p.roomIds }),
       });
       const n = r.ok ? Number(r.data?.issued ?? 0) : 0;
       const missing = r.ok ? r.data?.missingMeters ?? [] : [];
       if (r.ok && !p.force && n === 0 && missing.length) {
         // The server found rooms without meters that the list did not show: ask about those too.
-        later.push({ houseId: p.houseId, rooms: missing, pick: p.rooms });
+        later.push({ houseId: p.houseId, rooms: missing, pick: p.roomIds });
         continue;
       }
       if (!r.ok) errors += 1;
       issued += n;
-      if (n > 0) issuedHouses.push(p.houseId);
       lines.push(houseResultText(houseName(p.houseId), { ok: r.ok, issued: n, error: r.error }, several));
     }
     runningRef.current = false;
     refreshAll();
     if (lines.length) setNote({ ok: errors === 0, lines });
-    if (issued > 0) onToast(`Đã tạo ${issued} hoá đơn tháng ${label}. Cư dân đã thấy và thanh toán được.`, 'success');
-    // "Tạo tất cả hoá đơn" also tells every resident of the houses that were just issued.
-    if (modeRef.current === 'all' && issuedHouses.length) {
-      const sent = await Promise.all(issuedHouses.map((houseId) => workerCall('/api/admin/notifications', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: `Thông báo thanh toán tiền phòng tháng ${label}`,
-          desc: `Ban Quản Lý đã gửi hoá đơn tiền phòng tháng ${label}. Quý cư dân vui lòng mở ứng dụng để xem chi tiết và thanh toán.`,
-          type: 'invoice', target: houseId, sender: 'Ban Quản Lý', time: 'Vừa xong',
-        }),
-      })));
-      const bad = sent.find((r) => !r.ok);
-      if (bad) onToast(`Đã tạo hoá đơn nhưng chưa gửi được thông báo thanh toán: ${bad.error}`, 'error');
-      else onToast('Đã gửi thông báo thanh toán cho cư dân.', 'success');
+    // The Worker also sends each issued room its payment notice (once per invoice).
+    if (issued > 0) {
+      onToast(`Đã tạo ${issued} hoá đơn tháng ${label} và gửi thông báo thanh toán cho cư dân.`, 'success');
+      onIssued?.();
     }
     if (errors > 0) onToast(lines.join(' · '), 'error');
     if (later.length) {
@@ -139,7 +139,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
       const missing = later.flatMap((l) => l.rooms.map((room) => (multi ? `${room} (${houseName(l.houseId)})` : room)));
       const count = later.reduce((sum, l) => sum + (draftCounts.current.get(l.houseId) ?? l.rooms.length), 0);
       setPhase('confirm');
-      setDialog({ count, missing, plan: later.map((l) => ({ houseId: l.houseId, force: true, rooms: l.pick })) });
+      setDialog({ count, missing, plan: later.map((l) => ({ houseId: l.houseId, force: true, roomIds: l.pick })) });
       return;
     }
     stop();

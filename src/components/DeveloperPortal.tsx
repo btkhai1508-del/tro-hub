@@ -2047,6 +2047,7 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
                       <button type="button" onClick={() => saveRoom(editing)} disabled={busy} className="primary-button min-h-11 px-4 text-sm font-semibold inline-flex items-center gap-1.5">
                         <Check size={15} /> Lưu
                       </button>
+                      <button type="button" onClick={() => setSelected(null)} disabled={busy} className="soft-button min-h-11 px-4 text-sm font-semibold">Huỷ</button>
                       <button
                         type="button"
                         onClick={() => deleteRoom(editing)}
@@ -2056,7 +2057,6 @@ function HouseEditor({ houseId, onClose, onDeleted }: { houseId: string; onClose
                       >
                         <Trash2 size={15} /> {confirmDelete ? `Bấm lần nữa để xoá ${editing.name}` : 'Xoá phòng'}
                       </button>
-                      <button type="button" onClick={() => setSelected(null)} disabled={busy} className="soft-button min-h-11 px-4 text-sm font-semibold">Huỷ</button>
                     </div>
                     {editing.occupants > 0 && (
                       <p className="text-[13px] leading-[18px] kit-text-secondary">Phòng đang có {editing.occupants} người nên chưa xoá được.</p>

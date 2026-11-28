@@ -63,3 +63,14 @@ test2('Hoá đơn filters: not issued, issued unpaid, paid', () => {
   assert2.deepEqual([draft, none, unpaid, paid].map((r) => matchesBillingFilters(r, 'all', 'issued-unpaid')), [false, false, true, false]);
   assert2.deepEqual([draft, none, unpaid, paid].map((r) => matchesBillingFilters(r, 'all', 'paid')), [false, false, false, true]);
 });
+
+test('roomFeeLines: invoice lines by name (zero services left out), else the classic columns', async () => {
+  const { roomFeeLines } = await import('../roomRow');
+  assert.deepEqual(roomFeeLines({ feeLines: [
+    { kind: 'room', name: 'Tiền phòng', amount: 3_500_000 }, { kind: 'electricity', name: 'Tiền điện', amount: 0 },
+    { kind: 'water', name: 'Tiền nước', amount: 80_000 }, { kind: 'service', name: 'Xe máy', amount: 0 }, { kind: 'service', name: 'Internet', amount: 40_000 },
+  ] }), [
+    { label: 'Tiền phòng', amount: 3_500_000 }, { label: 'Tiền điện', amount: 0 }, { label: 'Tiền nước', amount: 80_000 }, { label: 'Internet', amount: 40_000 },
+  ]);
+  assert.deepEqual(roomFeeLines({ tienPhong: 1, tienDien: 2, tienNuoc: 3, tienRac: 0, tienNet: 4, tienXe: 0 }).map((l) => l.label), ['Tiền phòng', 'Tiền điện', 'Tiền nước', 'Internet']);
+});

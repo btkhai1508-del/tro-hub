@@ -5,6 +5,7 @@
 
 export interface IssueRow {
   houseId?: string;
+  roomId?: number;
   roomName?: string;
   room?: string;
   invoiceId?: number | null;

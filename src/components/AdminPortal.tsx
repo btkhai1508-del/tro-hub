@@ -58,6 +58,8 @@ import MonthBilling from './admin/MonthBilling';
 import { meterMonthChoices } from '../lib/meterSheet';
 import ConfirmSaveDialog from './admin/ConfirmSaveDialog';
 import IssueInvoicesBar from './admin/IssueInvoicesBar';
+import AdminBell from './admin/AdminBell';
+import { workerCall } from './admin/workerAdmin';
 import { HOUSES, houseFromRoom } from '../lib/houses';
 import { buildContract, buildCt01, Person } from '../lib/documents/legalForms';
 import { buildDeclaration } from '../lib/documents/stateFormat';
@@ -105,7 +107,7 @@ import { PhoneHint } from './PhoneHint';
 import { STORAGE_KEYS } from '../lib/storage';
 import { soundFx } from '../lib/soundFx';
 import { OfflineBanner } from './OfflineBanner';
-import { matchesRoomFilters, occupiedSlots, roomCapacity, ROOM_SLOTS, sanitizeRoomRow } from '../lib/roomRow';
+import { matchesRoomFilters, occupiedSlots, roomCapacity, roomFeeLines, ROOM_SLOTS, sanitizeRoomRow } from '../lib/roomRow';
 
 // Unified UI Sound Manager with Low-Latency Acoustic Feedback
 const playSound = (type: 'click' | 'hover' | 'success' | 'tab' | 'alert') => {
@@ -462,6 +464,8 @@ export function AdminPortal() {
   const [roomConfig, setRoomConfig] = useState<{ electricPrice: number; waterPrice: number; services: { id: number; name: string; price: number; per: string }[] } | null>(null);
   const [savingServices, setSavingServices] = useState(false);
   const [confirmRoomSave, setConfirmRoomSave] = useState(false);
+  const [confirmCheckout, setConfirmCheckout] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [roomMoneyNote, setRoomMoneyNote] = useState('');
   const [roomFieldErrors, setRoomFieldErrors] = useState<Record<string, string>>({});
@@ -474,6 +478,8 @@ export function AdminPortal() {
   const [billingList, setBillingList] = useState<any[]>([]);
   // Worker mode, Hoá đơn tab: rooms ticked in the list (key = house|room).
   const [pickedBilling, setPickedBilling] = useState<Set<string>>(new Set());
+  // One row's "Tạo hoá đơn" (Hoá đơn tab): handed to IssueInvoicesBar, which checks, asks and issues.
+  const [issueRequest, setIssueRequest] = useState<{ rows: any[]; seq: number } | null>(null);
   const billingKey = (item: any) => `${item.houseId || ''}|${item.room}`;
   const [adminSearch, setAdminSearch] = useState('');
   const [collectionFilter, setCollectionFilter] = useState('all');
@@ -1421,6 +1427,23 @@ export function AdminPortal() {
   const ESTIMATE_FIELDS = ['tienDien', 'tienNuoc', 'tienNet', 'tienXe', 'tongTien', 'dienUsed', 'nuocUsed', 'soNguoi', 'soXe'];
 
   /** Save in worker mode: meters, then each changed resident, then rent / deposit; each step waits for the server. */
+  /** "Trả phòng" (worker mode): every resident leaves the room, then the lists reload and the room list opens. */
+  const checkoutRoom = async (room: any) => {
+    if (checkingOut || !room?.roomId || !room?.houseId) return;
+    setCheckingOut(true);
+    const r = await workerCall<{ movedOut: number; room: string }>(`/api/admin/rooms/${encodeURIComponent(String(room.roomId))}/checkout`, {
+      method: 'POST', body: JSON.stringify({ houseId: room.houseId }),
+    });
+    setCheckingOut(false);
+    if (!r.ok) { showPortalToast(r.error, 'error'); return; }
+    playSound('success');
+    showPortalToast(`Đã trả phòng ${r.data?.room ?? room.roomName ?? ''}: ${r.data?.movedOut ?? 0} người đã rời phòng.`, 'success');
+    refreshRooms(selectedMonth);
+    refreshBilling(selectedMonth);
+    refreshDashboard(selectedMonth);
+    setActiveMenu('rooms');
+  };
+
   const saveRoomWorker = async () => {
     const draft = currentRoomData;
     const base = roomBaselineRef.current;
@@ -2276,8 +2299,10 @@ export function AdminPortal() {
       )}>
 
         {/* Welcome Header */}
-        <header className="admin-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div data-brand-target="anchor">
+        <header className="admin-page-header relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div data-brand-target="anchor" className={cn(workerMode && isWorkerStaff && 'max-lg:relative max-lg:pr-14')}>
+            {/* Payment bell: top right of the title card on a phone, of the page header on a computer. */}
+            {workerMode && isWorkerStaff && <AdminBell className="absolute right-2 top-2 z-30 lg:right-0 lg:top-0" />}
             <div className="flex items-center gap-2 mb-1">
               <span className="apple-callout kit-text-secondary">Không gian quản lý chủ trọ</span>
               <span className="admin-role-badge px-2 py-0.5 rounded-md font-bold text-[10px] tracking-wide uppercase font-num">
@@ -2617,17 +2642,25 @@ export function AdminPortal() {
                 return (
                   <div
                     key={r.room}
+                    data-testid="admin-room-card"
+                    onClick={workerMode ? () => openRoomDetail(r.room, r.houseId) : undefined}
                     className="admin-room-card soft-card p-5 flex flex-col gap-4 hover:border-neutral-500 transition-all cursor-pointer group"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => openRoomDetail(r.room, r.houseId)}
+                        onClick={(e) => { e.stopPropagation(); openRoomDetail(r.room, r.houseId); }}
                         className="admin-room-open min-h-11 px-3.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-base hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                         aria-label={'Mở chi tiết phòng ' + r.room}
                       >
                         {r.room}
                       </button>
+                      {/* Worker mode: the paid state is set on the Hoá đơn tab (Tình trạng thanh toán); here it is only shown. */}
+                      {workerMode ? (
+                        <span className={cn('text-[11px] font-bold', r.draft || r.invoiceId == null ? 'text-neutral-500 dark:text-neutral-400' : isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                          {r.invoiceId == null ? 'Chưa có hoá đơn' : r.draft ? 'Chưa tạo hoá đơn' : isPaid ? 'Đã đóng' : 'Chưa đóng'}
+                        </span>
+                      ) : (
                       <div
                         className="flex items-center gap-2"
                         onClick={(e) => e.stopPropagation()}
@@ -2646,6 +2679,7 @@ export function AdminPortal() {
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
                         </span>
                       </div>
+                      )}
                     </div>
 
                     {workerMode && accountTargets.houses.length > 1 && (() => {
@@ -2653,6 +2687,24 @@ export function AdminPortal() {
                       return house ? <p className="-mt-2 text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 truncate">{house.abbreviation || house.name}</p> : null;
                     })()}
                     <RoomOccupancy count={residents.length} capacity={roomCapacity(r)} />
+
+                    {/* Worker mode: the fees of the month, always shown (no fold). */}
+                    {workerMode && (r.invoiceId == null
+                      ? <p className="text-xs text-neutral-600 dark:text-neutral-300">Chưa có hoá đơn tháng này.</p>
+                      : (
+                        <dl data-testid="admin-room-fees" className="kit-data-surface rounded-xl p-3 space-y-1 text-xs">
+                          {roomFeeLines(r).map(l => (
+                            <div key={l.label} className="flex items-center justify-between gap-2">
+                              <dt className="text-neutral-700 dark:text-neutral-200 truncate">{l.label}</dt>
+                              <dd className="whitespace-nowrap tabular-nums font-semibold text-neutral-900 dark:text-white">{fmt(l.amount)} đ</dd>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between gap-2 border-t border-neutral-200 dark:border-neutral-700 pt-1.5 mt-1.5">
+                            <dt className="font-bold text-neutral-900 dark:text-white">Tổng cộng</dt>
+                            <dd className="whitespace-nowrap tabular-nums font-bold text-neutral-900 dark:text-white">{fmt(r.tongTien)} đ</dd>
+                          </div>
+                        </dl>
+                      ))}
 
                     {/* A plate search shows which plate brought this room up. */}
                     {matchingPlates(r).length > 0 && (
@@ -2731,6 +2783,12 @@ export function AdminPortal() {
                 <ArrowLeft size={16} />
                 <span>Danh sách phòng</span>
               </button>
+              {workerMode ? (
+                // Worker mode: no collect switch here; the paid state is changed on the Hoá đơn tab (Tình trạng thanh toán).
+                <span className={cn('text-xs font-bold px-2', room.draft ? 'text-neutral-500 dark:text-neutral-400' : room.paymentStatus === 'paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                  {room.draft ? 'Chưa tạo hoá đơn' : room.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'}
+                </span>
+              ) : (
               <div className="flex items-center gap-2">
                 <AppleSwitch
                   checked={room.paymentStatus === 'paid'}
@@ -2743,6 +2801,7 @@ export function AdminPortal() {
                   {room.paymentStatus === 'paid' ? 'Đã đóng' : 'Chưa đóng'}
                 </span>
               </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] gap-3 items-start">
@@ -2936,6 +2995,27 @@ export function AdminPortal() {
                   <Save size={18} />
                   <span>{workerMode && isSavingRoom ? 'Đang lưu…' : 'Lưu thay đổi'}</span>
                 </button>
+                {workerMode && occupiedSlots(room).length > 0 && (
+                  <button
+                    type="button"
+                    data-testid="room-checkout"
+                    disabled={isSavingRoom || checkingOut}
+                    onClick={() => setConfirmCheckout(true)}
+                    className="soft-button mt-2 min-h-11 py-2.5 px-6 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer w-full text-rose-600 dark:text-rose-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <LogOut size={18} />
+                    <span>{checkingOut ? 'Đang trả phòng…' : 'Trả phòng'}</span>
+                  </button>
+                )}
+                <ConfirmSaveDialog
+                  open={confirmCheckout}
+                  title="Bạn có muốn trả phòng?"
+                  lines={occupiedSlots(room).map(slot => String(room[`nguoi${slot}`] || '')).filter(Boolean)}
+                  message={`Mọi người ở phòng ${room.roomName || selectedRoomId} sẽ rời phòng và phòng về trống. Hoá đơn đã tạo vẫn giữ nguyên.`}
+                  confirmLabel="Trả phòng"
+                  onCancel={() => setConfirmCheckout(false)}
+                  onConfirm={() => { setConfirmCheckout(false); checkoutRoom(room); }}
+                />
                 <ConfirmSaveDialog
                   open={confirmRoomSave}
                   title={`Lưu hoá đơn phòng ${room.roomName || selectedRoomId} tháng ${selectedMonth}: tổng ${estimate ? 'khoảng ' : ''}${fmt(room.tongTien)} đ?`}
@@ -2992,10 +3072,29 @@ export function AdminPortal() {
         {/* =========================================================================
             3. BILLING TAB (THU TIỀN THÁNG)
            ========================================================================= */}
-        {activeMenu === 'billing' && (
+        {activeMenu === 'billing' && (() => {
+          // Worker mode: the three actions of a room (Tình trạng thanh toán, Tạo hoá đơn, Sửa hoá đơn).
+          const actionCls = 'min-h-11 cursor-pointer whitespace-nowrap rounded-xl px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 font-apple';
+          const statusAction = (item: any, isPaid: boolean, short = false) => item.draft
+            ? <span className="whitespace-nowrap px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 font-apple">{short ? 'Chưa tạo' : 'Chưa tạo hoá đơn'}</span>
+            : <button type="button" data-testid="row-status" onClick={(e) => { e.stopPropagation(); updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId); }}
+                aria-label={`Tình trạng thanh toán phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`} title="Tình trạng thanh toán"
+                className={cn(actionCls, 'px-1 underline underline-offset-4', isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                {isPaid ? 'Đã đóng' : 'Chưa đóng'}
+              </button>;
+          // `short`: the desktop table, where the column header already says "Tạo hoá đơn" / "Sửa hoá đơn".
+          const createAction = (item: any, short = false) => item.draft
+            ? <button type="button" data-testid="row-issue" onClick={(e) => { e.stopPropagation(); setIssueRequest(prev => ({ rows: [item], seq: (prev?.seq ?? 0) + 1 })); }}
+                aria-label={`Tạo hoá đơn phòng ${item.room}`} className={cn(actionCls, 'primary-button px-3')}>{short ? 'Tạo' : 'Tạo hoá đơn'}</button>
+            : <span className="whitespace-nowrap px-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 font-apple">{item.invoiceId == null ? '—' : 'Đã tạo'}</span>;
+          const editAction = (item: any, short = false) => (
+            <button type="button" data-testid="row-edit" onClick={(e) => { e.stopPropagation(); openRoomDetail(item.room, item.houseId); }}
+              aria-label={`Sửa hoá đơn phòng ${item.room}`} className={cn(actionCls, 'soft-button px-3 text-neutral-800 dark:text-neutral-100')}>{short ? 'Sửa' : 'Sửa hoá đơn'}</button>
+          );
+          return (
           <div className="font-apple space-y-4 sm:space-y-6">
             {workerMode && isWorkerStaff && <IssueInvoicesBar month={selectedMonth} rows={billingList} houses={accountTargets.houses} houseFilter={houseFilter} onToast={showPortalToast}
-              selected={pickedRows} />}
+              selected={pickedRows} request={issueRequest} onIssued={() => setPickedBilling(new Set())} />}
             {visibleBilling.length === 0 && !isLoading && !adminLoadError && <AdminEmptyState filtered={Boolean(adminSearch || collectionFilter !== 'all' || (workerMode && houseFilter !== 'all'))} title="Chưa có khoản thu trong kỳ" />}
             {/* Mobile View: No Horizontal Scrolling, Touch-Friendly Cards */}
             <div className="block md:hidden space-y-3.5 font-apple">
@@ -3018,8 +3117,8 @@ export function AdminPortal() {
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        {workerMode && item.draft
-                          ? <span className="whitespace-nowrap px-1 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo hoá đơn</span>
+                        {workerMode
+                          ? null
                           : <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
                           className={cn("min-h-11 cursor-pointer whitespace-nowrap px-1 text-[11px] font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
@@ -3029,7 +3128,7 @@ export function AdminPortal() {
                     </div>
 
                     {/* Service breakdown in 3 columns without scrolling */}
-                    <details className="admin-billing-breakdown"><summary>Chi tiết các khoản phí<ChevronDown size={18} /></summary><div className="grid grid-cols-2 gap-3 kit-data-surface p-3 rounded-xl text-xs font-apple">
+                    <details className="admin-billing-breakdown" open={workerMode || undefined}><summary style={workerMode ? { display: 'none' } : undefined}>Chi tiết các khoản phí<ChevronDown size={18} /></summary><div className="grid grid-cols-2 gap-3 kit-data-surface p-3 rounded-xl text-xs font-apple">
                       <div className="font-apple">
                         <span className="text-[10px] text-neutral-600 uppercase font-semibold block font-apple dark:text-neutral-300">Phòng</span>
                         <span className="whitespace-nowrap tabular-nums font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienPhong)} đ</span>
@@ -3063,6 +3162,13 @@ export function AdminPortal() {
                         {fmt(item.tongTien)} đ
                       </span>
                     </div>
+                    {workerMode && (
+                      <div className="grid grid-cols-3 items-center gap-2 border-t border-neutral-100 dark:border-neutral-800 pt-2.5 font-apple" data-testid="row-actions">
+                        <div className="flex justify-center">{statusAction(item, isPaid)}</div>
+                        <div className="flex justify-center">{createAction(item)}</div>
+                        <div className="flex justify-center">{editAction(item)}</div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -3071,7 +3177,7 @@ export function AdminPortal() {
             {/* Desktop View: Full Spacious Table */}
             <div className="hidden md:block soft-card kit-data-surface overflow-hidden font-apple">
               <div className="overflow-x-auto font-apple">
-                <table className="w-full text-left text-xs font-apple">
+                <table className={cn("w-full text-left text-xs font-apple", workerMode && "admin-billing-compact")}>
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">{selectionOn
@@ -3085,7 +3191,11 @@ export function AdminPortal() {
                       <th className="p-4 font-semibold font-apple">Net</th>
                       <th className="p-4 font-semibold font-apple">Xe</th>
                       <th className="p-4 font-semibold text-neutral-900 dark:text-white font-apple">Tổng cộng</th>
-                      <th className="p-4 text-center font-semibold font-apple">Trạng thái</th>
+                      {workerMode ? <>
+                        <th className="p-4 text-center font-semibold font-apple whitespace-normal leading-tight w-24">Tình trạng thanh toán</th>
+                        <th className="p-4 text-center font-semibold font-apple whitespace-normal leading-tight min-w-16">Tạo hoá đơn</th>
+                        <th className="p-4 text-center font-semibold font-apple whitespace-normal leading-tight min-w-16">Sửa hoá đơn</th>
+                      </> : <th className="p-4 text-center font-semibold font-apple">Trạng thái</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 font-apple">
@@ -3093,7 +3203,7 @@ export function AdminPortal() {
                       const isPaid = item.paymentStatus === 'paid';
                       return (
                         <tr key={`${item.houseId || ''}|${item.room}`} onClick={() => openBillingInvoice(item)} className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors font-apple cursor-pointer">
-                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap">{selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} onClick={(e) => e.stopPropagation()} aria-label={`Chọn phòng ${item.room}`} className="mr-3 h-4 w-4 cursor-pointer align-middle" />}<span className="inline-block w-14 text-center"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button></span>{workerMode && item.draft && <DraftBadge className="ml-2" />}</td>
+                          <td className="p-4 font-semibold text-neutral-900 dark:text-white font-apple whitespace-nowrap">{selectionOn && <input type="checkbox" checked={pickedBilling.has(billingKey(item))} onChange={() => togglePicked(item)} onClick={(e) => e.stopPropagation()} aria-label={`Chọn phòng ${item.room}`} className="mr-3 h-4 w-4 cursor-pointer align-middle" />}<span className="inline-block w-14 text-center"><button type="button" onClick={(e) => { e.stopPropagation(); openBillingInvoice(item); }} aria-label={`Xem hoá đơn phòng ${item.roomName || item.room}`} className="underline-offset-2 hover:underline cursor-pointer">{item.room}</button></span></td>
                           {workerMode && <td className="p-2 font-apple" onClick={(e) => e.stopPropagation()}><InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} /></td>}
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold">{fmt(item.tienPhong)} đ</td>
                           <td className="whitespace-nowrap tabular-nums p-4 font-apple font-semibold text-neutral-800 dark:text-neutral-200">{fmt(item.tienDien)} đ</td>
@@ -3104,6 +3214,11 @@ export function AdminPortal() {
                           <td className="whitespace-nowrap tabular-nums p-4 font-semibold text-sm text-neutral-900 dark:text-white font-apple">
                             {fmt(item.tongTien)} đ
                           </td>
+                          {workerMode ? <>
+                            <td className="p-2 text-center font-apple" onClick={(e) => e.stopPropagation()}>{statusAction(item, isPaid, true)}</td>
+                            <td className="p-2 text-center font-apple" onClick={(e) => e.stopPropagation()}>{createAction(item, true)}</td>
+                            <td className="p-2 text-center font-apple" onClick={(e) => e.stopPropagation()}>{editAction(item, true)}</td>
+                          </> : (
                           <td className="p-4 font-apple" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center font-apple">
                               {workerMode && item.draft
@@ -3115,6 +3230,7 @@ export function AdminPortal() {
                               </button>}
                             </div>
                           </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -3123,7 +3239,8 @@ export function AdminPortal() {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* =========================================================================
             5. CONTRACT & CT01 (A4 PDF/PRINT FORMAT MATCHING USER CODE)

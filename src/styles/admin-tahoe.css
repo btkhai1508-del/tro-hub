@@ -160,3 +160,7 @@
   .admin-portal-root .admin-declaration-table input { font-size: 14px; }
   .admin-portal-root .kit-admin-dock-item > span:last-child { font-size: 12px; }
 }
+
+/* Worker mode Hoá đơn table: three action columns, so tighter cells keep it inside a laptop screen. */
+.admin-billing-compact th, .admin-billing-compact td { padding: 10px 6px; }
+.admin-billing-compact th:first-child, .admin-billing-compact td:first-child { padding-left: 16px; }
