@@ -3261,22 +3261,21 @@ export function AdminPortal() {
               </div>
             </div>
 
-            {/* Filters (room, month) and the actions are two separate cards. */}
-            <div className="soft-card p-4">
-              <div className="flex flex-wrap items-center gap-3">
+            {/* Same layout as Hợp đồng: one card on the left (filters on top, buttons below), the invoice beside it, scaled to the screen. */}
+            <div className="resident-document-workspace">
+            <aside className="resident-document-options soft-card p-4 space-y-4" aria-label="Chọn hoá đơn và thao tác">
+              <div className="flex flex-col gap-3 [&>select]:w-full">
                 <select
                   aria-label="Chọn phòng"
                   value={selectedInvoiceRoom ? `${selectedInvoiceRoom.houseId || ''}|${selectedInvoiceRoom.room}` : ''}
                   onChange={e => { const [h, ...rest] = e.target.value.split('|'); setInvoiceHouse(h); setInvoiceRoom(rest.join('|')); }}
-                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
+                  className="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold text-xs p-2.5 rounded-xl border border-transparent dark:border-neutral-700 outline-none cursor-pointer"
                 >
                   {roomsList.map((r: any) => <option key={`${r.houseId || ''}|${r.room}`} value={`${r.houseId || ''}|${r.room}`} className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white">Phòng {r.room}{r.nguoi1 ? ` – ${r.nguoi1}` : ''}</option>)}
                 </select>
                 {monthSelect}
               </div>
-            </div>
-            <div className="soft-card p-4 flex flex-wrap items-center gap-4">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="admin-invoice-actions flex flex-col gap-2">
                 {invoiceLinkTarget && (
                   <button type="button" onClick={copyInvoiceLink} disabled={linkBusy}
                     className={cn(workerMode ? 'primary-button' : 'soft-button', 'min-h-11 px-4 py-2.5')}>Sao chép link thanh toán</button>
@@ -3287,14 +3286,15 @@ export function AdminPortal() {
                     className="primary-button min-h-11 px-4 py-2.5 inline-flex items-center gap-2"><Pencil size={16} /><span>Sửa hoá đơn</span></button>
                 )}
                 <DocumentActions doc={selectedInvoiceRoom ? invoiceDoc : null} downloadLabel="Lưu PDF" dark={workerMode} />
+                {linkMessage && <p role={linkMessage.ok ? 'status' : 'alert'} className={`text-xs ${linkMessage.ok ? 'text-neutral-600 dark:text-neutral-300' : 'text-red-700 dark:text-red-300'} break-all`}>{linkMessage.text}</p>}
               </div>
-              {linkMessage && <p role={linkMessage.ok ? 'status' : 'alert'} className={`w-full text-xs ${linkMessage.ok ? 'text-neutral-600 dark:text-neutral-300' : 'text-red-700 dark:text-red-300'} break-all`}>{linkMessage.text}</p>}
-            </div>
+            </aside>
 
-            <div className="mx-auto w-full max-w-5xl">
+            <div className="resident-document-scroll min-w-0 overflow-x-auto">
               {selectedInvoiceRoom
-                ? <DocumentSheet doc={invoiceDoc} />
+                ? <div className="resident-document-sheet"><DocumentSheet doc={invoiceDoc} /></div>
                 : <p className="soft-card p-4 text-xs text-neutral-600 dark:text-neutral-300">Chưa có dữ liệu phòng của tháng {selectedMonth}.</p>}
+            </div>
             </div>
           </div>
         )}

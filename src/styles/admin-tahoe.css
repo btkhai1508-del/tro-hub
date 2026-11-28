@@ -164,3 +164,6 @@
 /* Worker mode Hoá đơn table: three action columns, so tighter cells keep it inside a laptop screen. */
 .admin-billing-compact th, .admin-billing-compact td { padding: 10px 6px; }
 .admin-billing-compact th:first-child, .admin-billing-compact td:first-child { padding-left: 16px; }
+
+/* Room invoice screen (Hợp đồng layout): the action buttons fill the left card, one per row. */
+.admin-invoice-actions button { width: 100%; justify-content: center; }
