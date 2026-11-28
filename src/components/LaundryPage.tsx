@@ -792,7 +792,7 @@ export function LaundryPage() {
                       }}
                       className="w-full soft-button py-3 apple-control font-semibold cursor-pointer"
                     >
-                      Quay lại danh sách máy
+                      Quay lại
                     </button>
                   </div>
                 );

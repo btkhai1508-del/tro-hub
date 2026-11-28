@@ -92,7 +92,7 @@ export function PaymentPortalSettings({ onBack }: { onBack: () => void }) {
           className="soft-button py-2 px-4 text-xs flex items-center gap-2 cursor-pointer font-bold text-neutral-700 dark:text-neutral-200 hover:text-neutral-600 dark:hover:text-neutral-400"
         >
           <ArrowLeft size={16} />
-          <span>Quay lại Tiện ích</span>
+          <span>Quay lại</span>
         </button>
         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200">
           <IconQr3D size={22} />

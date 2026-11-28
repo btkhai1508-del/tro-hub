@@ -243,7 +243,7 @@ export function PaymentPage() {
           <p className="apple-body kit-text-secondary">Hóa đơn của bạn sẽ xuất hiện tại đây khi được phát hành.</p>
           <button type="button" onClick={() => navigate('/invoices')} className="primary-button px-4 py-2 apple-control inline-flex items-center gap-2">
             <ChevronLeft size={16} />
-            <span>Quay lại hóa đơn</span>
+            <span>Quay lại</span>
           </button>
         </div>
       </div>
@@ -398,7 +398,7 @@ export function PaymentPage() {
                   onClick={() => navigate('/invoices')}
                   className="soft-button flex-1 min-h-12 px-4"
                 >
-                  Quay lại Hóa đơn
+                  Quay lại
                 </button>
               </div>
             </main>

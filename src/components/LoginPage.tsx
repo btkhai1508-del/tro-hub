@@ -424,7 +424,7 @@ export function LoginPage() {
                   onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
                   className="primary-button min-h-12 w-full px-4 py-3 apple-control"
                 >
-                  Quay lại màn hình đăng nhập
+                  Quay lại
                 </button>
               </div>
             </div>
@@ -451,7 +451,7 @@ export function LoginPage() {
               >
                 Gửi mã xác nhận OTP
               </button>
-              <button type="button" onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} className="soft-button min-h-11 w-full px-4 apple-control">Quay lại đăng nhập</button>
+              <button type="button" onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} className="soft-button min-h-11 w-full px-4 apple-control">Quay lại</button>
             </div>
           )}
         </div>
