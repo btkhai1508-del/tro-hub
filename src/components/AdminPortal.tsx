@@ -3017,19 +3017,11 @@ export function AdminPortal() {
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        <AppleSwitch
-                          checked={isPaid}
-                          onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
-                          color="emerald"
-                          size="sm"
-                          ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                        />
-                        <span className={cn(
-                          "text-[11px] font-semibold min-w-14 text-right transition-colors font-apple",
-                          isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
-                        )}>
+                        <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
+                          aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
+                          className={cn("min-h-11 cursor-pointer whitespace-nowrap px-1 text-[11px] font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300")}>
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
-                        </span>
+                        </button>
                       </div>
                     </div>
 
@@ -3110,20 +3102,12 @@ export function AdminPortal() {
                             {fmt(item.tongTien)} đ
                           </td>
                           <td className="p-4 font-apple" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-center gap-2.5 font-apple">
-                              <AppleSwitch
-                                checked={isPaid}
-                                onChange={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
-                                color="emerald"
-                                size="sm"
-                                ariaLabel={`Trạng thái đóng tiền phòng ${item.room}`}
-                              />
-                              <span className={cn(
-                                "text-xs font-semibold min-w-16 text-left transition-colors font-apple",
-                                isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300"
-                              )}>
+                            <div className="flex items-center justify-center font-apple">
+                              <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
+                                aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
+                                className={cn("min-h-11 cursor-pointer whitespace-nowrap px-2 text-xs font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300")}>
                                 {isPaid ? 'Đã đóng' : 'Chưa đóng'}
-                              </span>
+                              </button>
                             </div>
                           </td>
                         </tr>
