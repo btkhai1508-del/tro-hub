@@ -5,6 +5,7 @@ import { fail, type App, type Env } from './app.ts';
 import { TenantLockedError } from './tenant/route.ts';
 import { runCron } from './cron.ts';
 import { registerNotifications } from './routes/notifications.ts';
+import { registerAlerts } from './routes/alerts.ts';
 import { registerHouses } from './routes/houses.ts';
 import { registerPeople } from './routes/people.ts';
 import { registerRent } from './routes/rent.ts';
@@ -47,6 +48,7 @@ registerStorage(app); // after registerHouses: /api/dev/* is Developer-only ther
 registerSource(app);
 registerSession(app);
 registerNotifications(app);
+registerAlerts(app);
 
 app.notFound((c) => fail(c, 404, 'NOT_FOUND', 'Không tìm thấy.'));
 
