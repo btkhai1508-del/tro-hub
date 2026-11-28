@@ -50,3 +50,16 @@ test('house and status filters', () => {
   assert.equal(matchesRoomFilters(full, '', 'unpaid'), true);
   assert.equal(matchesRoomFilters(empty, '', 'paid'), true);
 });
+
+import { matchesRoomFilters as matchesBillingFilters } from '../roomRow.ts';
+import test2 from 'node:test';
+import assert2 from 'node:assert/strict';
+test2('Hoá đơn filters: not issued, issued unpaid, paid', () => {
+  const draft = { houseId: 'A', invoiceId: 1, draft: true, paymentStatus: 'unpaid' };
+  const none = { houseId: 'A', invoiceId: null, paymentStatus: 'unpaid' };
+  const unpaid = { houseId: 'A', invoiceId: 2, draft: false, paymentStatus: 'unpaid' };
+  const paid = { houseId: 'A', invoiceId: 3, draft: false, paymentStatus: 'paid' };
+  assert2.deepEqual([draft, none, unpaid, paid].map((r) => matchesBillingFilters(r, 'all', 'notissued')), [true, true, false, false]);
+  assert2.deepEqual([draft, none, unpaid, paid].map((r) => matchesBillingFilters(r, 'all', 'issued-unpaid')), [false, false, true, false]);
+  assert2.deepEqual([draft, none, unpaid, paid].map((r) => matchesBillingFilters(r, 'all', 'paid')), [false, false, false, true]);
+});

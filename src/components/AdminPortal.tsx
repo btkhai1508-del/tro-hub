@@ -1830,6 +1830,7 @@ export function AdminPortal() {
   const visibleRooms = roomsList.filter(filterAdminRows);
   const visibleBilling = billingList.filter(filterAdminRows);
   const selectionOn = workerMode && isWorkerStaff;
+  useEffect(() => { setCollectionFilter('all'); }, [activeMenu]);
   useEffect(() => { setPickedBilling(new Set()); }, [selectedMonth, houseFilter]);
   const pickedRows = visibleBilling.filter(item => pickedBilling.has(billingKey(item)));
   const allPicked = visibleBilling.length > 0 && pickedRows.length === visibleBilling.length;
@@ -2401,7 +2402,7 @@ export function AdminPortal() {
             {workerMode && accountTargets.houses.length > 0 && (
               <label className="admin-status-filter"><span className="sr-only">Căn</span><select data-stage-filter="admin-room-results" value={houseFilter} onChange={event => setHouseFilter(event.target.value)} aria-label="Lọc theo căn"><option value="all">Tất cả căn</option>{accountTargets.houses.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
             )}
-            <label className="admin-status-filter"><span className="sr-only">Trạng thái</span><select data-stage-filter="admin-room-results" value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái"><option value="all">Tất cả</option><option value="vacant">Còn trống</option><option value="occupied">Đã ở</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></select></label>
+            <label className="admin-status-filter"><span className="sr-only">Trạng thái</span><select data-stage-filter="admin-room-results" value={collectionFilter} onChange={event => setCollectionFilter(event.target.value)} aria-label="Lọc trạng thái">{workerMode && activeMenu === 'billing' ? <><option value="all">Tất cả</option><option value="paid">Đã đóng</option><option value="issued-unpaid">Chưa đóng</option><option value="notissued">Chưa tạo hoá đơn</option></> : <><option value="all">Tất cả</option><option value="vacant">Còn trống</option><option value="occupied">Đã ở</option><option value="unpaid">Chưa đóng</option><option value="pending">Chờ xác nhận</option><option value="paid">Đã đóng</option></>}</select></label>
           </div>
           <p role="status" className="admin-result-count apple-callout kit-text-secondary">{activeMenu === 'rooms' ? visibleRooms.length : visibleBilling.length} kết quả</p>
         </div>}
@@ -3017,11 +3018,13 @@ export function AdminPortal() {
                       </button>
                       <div className="flex items-center gap-2 shrink-0 font-apple">
                         {workerMode && <InvoiceQrThumb url={linkOf(item)} room={item.room} onCopied={copiedLinkToast} />}
-                        <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
+                        {workerMode && item.draft
+                          ? <span className="whitespace-nowrap px-1 text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo hoá đơn</span>
+                          : <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                           aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
-                          className={cn("min-h-11 cursor-pointer whitespace-nowrap px-1 text-[11px] font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300")}>
+                          className={cn("min-h-11 cursor-pointer whitespace-nowrap px-1 text-[11px] font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                           {isPaid ? 'Đã đóng' : 'Chưa đóng'}
-                        </button>
+                        </button>}
                       </div>
                     </div>
 
@@ -3072,7 +3075,7 @@ export function AdminPortal() {
                   <thead>
                     <tr className="whitespace-nowrap bg-neutral-50 dark:bg-neutral-800/80 border-b border-neutral-100 dark:border-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-200 uppercase tracking-wider font-apple">
                       <th className="p-4 font-semibold font-apple">{selectionOn
-                        ? <label className="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /><span>Tất cả</span></label>
+                        ? <label className="inline-flex cursor-pointer items-center gap-3 whitespace-nowrap"><input type="checkbox" checked={allPicked} onChange={toggleAllPicked} aria-label="Chọn tất cả phòng" className="h-4 w-4 cursor-pointer" /><span>Phòng</span></label>
                         : 'Phòng'}</th>
                       {workerMode && <th className="p-4 font-semibold font-apple"><span className="sr-only">Mã QR thanh toán</span>QR</th>}
                       <th className="p-4 font-semibold font-apple">Tiền phòng</th>
@@ -3103,11 +3106,13 @@ export function AdminPortal() {
                           </td>
                           <td className="p-4 font-apple" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center font-apple">
-                              <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
+                              {workerMode && item.draft
+                                ? <span className="whitespace-nowrap px-2 text-xs font-semibold text-neutral-400 dark:text-neutral-500 font-apple">Chưa tạo hoá đơn</span>
+                                : <button type="button" onClick={() => updateRoomPaymentStatus(item.room, isPaid ? 'unpaid' : 'paid', item.row, item.houseId)}
                                 aria-label={`Trạng thái đóng tiền phòng ${item.room}: ${isPaid ? 'đã đóng' : 'chưa đóng'}, bấm để đổi`}
-                                className={cn("min-h-11 cursor-pointer whitespace-nowrap px-2 text-xs font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-600 dark:text-neutral-300")}>
+                                className={cn("min-h-11 cursor-pointer whitespace-nowrap px-2 text-xs font-semibold underline underline-offset-4 transition-colors font-apple", isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                                 {isPaid ? 'Đã đóng' : 'Chưa đóng'}
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>

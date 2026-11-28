@@ -52,7 +52,7 @@ export function roomCapacity(room: any): number {
   return Number.isInteger(n) && n > 0 ? Math.max(n, people) : Math.max(ROOM_SLOTS.length, people);
 }
 
-export type RoomStatusFilter = 'all' | 'vacant' | 'occupied' | 'unpaid' | 'pending' | 'paid';
+export type RoomStatusFilter = 'all' | 'vacant' | 'occupied' | 'unpaid' | 'pending' | 'paid' | 'notissued' | 'issued-unpaid';
 
 /** House and status filters of the room / billing lists (the search box is applied separately). */
 export function matchesRoomFilters(row: any, houseId: string, status: RoomStatusFilter | string): boolean {
@@ -60,5 +60,9 @@ export function matchesRoomFilters(row: any, houseId: string, status: RoomStatus
   if (status === 'all' || !status) return true;
   if (status === 'vacant') return occupiedSlots(row).length === 0;
   if (status === 'occupied') return occupiedSlots(row).length > 0;
+  // Hoá đơn tab: a room with no invoice yet, or only a draft, is "not issued"; "issued-unpaid" is issued and not paid.
+  const notIssued = row?.invoiceId == null || row?.draft === true;
+  if (status === 'notissued') return notIssued;
+  if (status === 'issued-unpaid') return !notIssued && (row?.paymentStatus || row?.status || 'unpaid') === 'unpaid';
   return (row?.paymentStatus || row?.status || 'unpaid') === status;
 }

@@ -153,6 +153,7 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
     : 'Tạo tất cả hoá đơn';
 
   return (
+    <div className="space-y-3">
     <div className="soft-card kit-data-surface p-3 sm:p-4 space-y-2" data-testid="issue-bar">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <p className="text-xs text-neutral-700 dark:text-neutral-200 min-w-0">
@@ -179,10 +180,6 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
           )}
         </button>
       </div>
-      <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200/60 pt-2 dark:border-neutral-700/60" data-testid="issue-selection-bar">
-        <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">{selected.length > 0 ? `Đã chọn ${selected.length} phòng` : 'Chưa chọn phòng'}</span>
-        <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} className="primary-button min-h-11 px-5 text-xs font-bold disabled:opacity-50">Tạo hoá đơn</button>
-      </div>
       {note && (
         <ul role={note.ok ? 'status' : 'alert'} data-testid="issue-note" className={`text-xs font-bold space-y-0.5 ${note.ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
           {note.lines.map((l, i) => <li key={i}>{l}</li>)}
@@ -201,6 +198,11 @@ export default function IssueInvoicesBar({ month, rows, houses, houseFilter, onT
         onCancel={cancel}
         onConfirm={() => { if (dialog) run(dialog.plan); }}
       />
+    </div>
+    <div className="flex flex-wrap items-center gap-3" data-testid="issue-selection-bar">
+      <button type="button" data-testid="issue-selected-button" onClick={() => prepare('selected')} disabled={busy} className="primary-button min-h-11 px-5 text-xs font-bold disabled:opacity-50">{selected.length > 0 ? `Tạo ${selected.length} hoá đơn` : 'Tạo hoá đơn'}</button>
+      {selected.length === 0 && <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Vui lòng chọn phòng tạo hoá đơn</span>}
+    </div>
     </div>
   );
 }
