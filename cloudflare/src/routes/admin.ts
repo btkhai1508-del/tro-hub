@@ -19,6 +19,7 @@ import { currentMonth, legacyRoomCode, parseLegacyRoom, toSheetMonth } from '../
 import type { TenantDb } from '../tenant/db.ts';
 import { tenantFor } from '../tenant/route.ts';
 import { requireAuth } from './auth.ts';
+import { refreshCounts } from './houses.ts';
 import { applyPaymentStatus, findRentRoom, invoiceFor, parseMonth, paymentStatusOut, staffHouseIds, statusView, vnDate } from './rent.ts';
 
 const MAX_MONEY = 100_000_000;
@@ -762,5 +763,41 @@ export function registerAdmin(app: Hono<App>): void {
     });
     if (issued > 0) await audit(c, actorOf(c.get('viewer')), 'admin_issue_month', houseId, `${month}:${issued}`);
     return c.json({ success: true, issued, missingMeters });
+  });
+
+  /**
+   * "Trả phòng": every resident of the room leaves it (status moved_out, move-out date today, account kept but no longer
+   * able to sign in, as "Xoá khỏi phòng"), so the room is empty. Invoices already made stay (this month is still owed);
+   * drafts of LATER months that hold no money are removed so an empty room is not billed. Old Sheet: one export row each.
+   */
+  app.post('/api/admin/rooms/:roomId/checkout', async (c) => {
+    const body = await readBody(c);
+    const houseId = pickHouse(c, body.houseId);
+    if (houseId instanceof Response) return houseId;
+    const db = await tenantFor(c, houseId); // 403 for a house the caller does not manage
+    const roomId = Number(c.req.param('roomId'));
+    const room = Number.isInteger(roomId) && roomId > 0
+      ? await db.prepare(`SELECT id, name FROM rooms WHERE id = ? AND house_id = ? AND deleted_at IS NULL`).bind(roomId, houseId).first<{ id: number; name: string }>()
+      : null;
+    if (!room) return fail(c, 404, 'ROOM_NOT_FOUND', 'Không tìm thấy phòng trong nhà bạn quản lý.');
+    const { results: people } = await db.prepare(
+      `SELECT id, full_name, phone FROM residents WHERE room_id = ? AND status IN ('approved', 'pending') AND deleted_at IS NULL`
+    ).bind(room.id).all<{ id: number; full_name: string; phone: string | null }>();
+    if (!people.length) return fail(c, 400, 'ROOM_EMPTY', `Phòng ${room.name} đang trống.`);
+    const moveOut = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10).split('-').reverse().join('/');
+    const now = currentMonth();
+    await db.batch([
+      db.prepare(`UPDATE residents SET status = 'moved_out', move_out_date = ? WHERE room_id = ? AND status IN ('approved', 'pending') AND deleted_at IS NULL`)
+        .bind(moveOut, room.id),
+      db.prepare(`DELETE FROM invoice_lines WHERE invoice_id IN (SELECT id FROM invoices WHERE room_id = ?1 AND month > ?2 AND issued_at IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.invoice_id = invoices.id))`).bind(room.id, now),
+      db.prepare(`DELETE FROM invoices WHERE room_id = ?1 AND month > ?2 AND issued_at IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.invoice_id = invoices.id)`).bind(room.id, now),
+    ]);
+    await refreshCounts(c.env, db, houseId);
+    const code = legacyRoomCode(houseId, room.name);
+    for (const p of people) await enqueueExport(c.env.DB, 'delete_resident', { houseId, phone: p.phone ?? '', name: p.full_name, room: code, mode: 'resident' });
+    await audit(c, actorOf(c.get('viewer')), 'admin_room_checkout', houseId, `${room.name}:${people.map((p) => p.id).join(',')}`);
+    return c.json({ success: true, room: room.name, movedOut: people.length });
   });
 }
